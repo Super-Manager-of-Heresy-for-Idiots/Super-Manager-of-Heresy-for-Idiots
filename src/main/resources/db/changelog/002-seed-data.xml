@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-seed-stat-types" author="dnd-app">
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000001"/>
+            <column name="name" value="STR"/>
+            <column name="description" value="Strength — physical power"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000002"/>
+            <column name="name" value="DEX"/>
+            <column name="description" value="Dexterity — agility and reflexes"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000003"/>
+            <column name="name" value="CON"/>
+            <column name="description" value="Constitution — endurance and health"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000004"/>
+            <column name="name" value="INT"/>
+            <column name="description" value="Intelligence — reasoning and memory"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000005"/>
+            <column name="name" value="WIS"/>
+            <column name="description" value="Wisdom — perception and insight"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+        <insert tableName="stat_types">
+            <column name="id" value="a0000000-0000-0000-0000-000000000006"/>
+            <column name="name" value="CHA"/>
+            <column name="description" value="Charisma — force of personality"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="002-seed-character-classes" author="dnd-app">
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000001"/>
+            <column name="name" value="Fighter"/>
+            <column name="description" value="A master of martial combat, skilled with a variety of weapons and armor"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000002"/>
+            <column name="name" value="Wizard"/>
+            <column name="description" value="A scholarly magic-user capable of manipulating the structures of reality"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000003"/>
+            <column name="name" value="Rogue"/>
+            <column name="description" value="A scoundrel who uses stealth and trickery to overcome obstacles"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000004"/>
+            <column name="name" value="Cleric"/>
+            <column name="description" value="A priestly champion who wields divine magic in service of a higher power"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000005"/>
+            <column name="name" value="Ranger"/>
+            <column name="description" value="A warrior who combats threats on the edges of civilization"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000006"/>
+            <column name="name" value="Paladin"/>
+            <column name="description" value="A holy warrior bound to a sacred oath"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000007"/>
+            <column name="name" value="Bard"/>
+            <column name="description" value="An inspiring magician whose power echoes the music of creation"/>
+        </insert>
+        <insert tableName="character_classes">
+            <column name="id" value="b0000000-0000-0000-0000-000000000008"/>
+            <column name="name" value="Druid"/>
+            <column name="description" value="A priest of the Old Faith, wielding the powers of nature"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="002-seed-character-races" author="dnd-app">
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000001"/>
+            <column name="name" value="Human"/>
+            <column name="description" value="The most adaptable and ambitious people among the common races"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000002"/>
+            <column name="name" value="Elf"/>
+            <column name="description" value="A magical people of otherworldly grace"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000003"/>
+            <column name="name" value="Dwarf"/>
+            <column name="description" value="Bold and hardy, dwarves are known as skilled warriors and miners"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000004"/>
+            <column name="name" value="Halfling"/>
+            <column name="description" value="The diminutive halflings survive in a world full of larger creatures"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000005"/>
+            <column name="name" value="Gnome"/>
+            <column name="description" value="A people of endless curiosity and boundless enthusiasm"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000006"/>
+            <column name="name" value="Half-Elf"/>
+            <column name="description" value="Walking in two worlds but truly belonging to neither"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000007"/>
+            <column name="name" value="Tiefling"/>
+            <column name="description" value="Beings derived from human bloodlines linked to the Nine Hells"/>
+        </insert>
+        <insert tableName="character_races">
+            <column name="id" value="c0000000-0000-0000-0000-000000000008"/>
+            <column name="name" value="Dragonborn"/>
+            <column name="description" value="Born of dragons, walking proudly through a world that greets them with fearful incomprehension"/>
+        </insert>
+    </changeSet>
+
+    <!-- Admin user: password is BCrypt hash of "admin123" -->
+    <changeSet id="002-seed-admin-user" author="dnd-app">
+        <insert tableName="users">
+            <column name="id" value="00000000-0000-0000-0000-000000000001"/>
+            <column name="username" value="admin"/>
+            <column name="email" value="admin@dndapp.local"/>
+            <column name="password_hash" value="$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"/>
+            <column name="role" value="ADMIN"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
