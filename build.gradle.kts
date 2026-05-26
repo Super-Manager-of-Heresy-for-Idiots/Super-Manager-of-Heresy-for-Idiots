@@ -13,6 +13,10 @@ java {
     }
 }
 
+springBoot {
+    mainClass.set("com.dnd.SuperManagerofHeresyforIdiots.SuperManagerofHeresyforIdiotsApplication")
+}
+
 configurations {
     compileOnly {
         extendsFrom(configurations.annotationProcessor.get())

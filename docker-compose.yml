@@ -7,28 +7,31 @@ services:
       POSTGRES_DB: dndapp
       POSTGRES_USER: dnd
       POSTGRES_PASSWORD: dnd
+      POSTGRES_HOST_AUTH_METHOD: trust  # Добавьте эту строку для теста
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dnd -d dndapp"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
+    restart: unless-stopped
 
   app:
     build: .
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dndapp
       SPRING_DATASOURCE_USERNAME: dnd
       SPRING_DATASOURCE_PASSWORD: dnd
-      SPRING_PROFILES_ACTIVE: dev
-    depends_on:
-      postgres:
-        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:
