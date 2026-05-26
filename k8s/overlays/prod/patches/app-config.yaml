@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "false"
+  LOGGING_LEVEL_ORG_HIBERNATE_SQL: warn
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: warn

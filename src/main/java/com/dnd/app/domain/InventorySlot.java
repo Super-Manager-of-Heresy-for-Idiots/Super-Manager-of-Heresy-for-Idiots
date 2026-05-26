@@ -33,6 +33,10 @@ public class InventorySlot {
     @JoinColumn(name = "item_type_id")
     private ItemType itemType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artifact_id")
+    private Artifact artifact;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer quantity = 1;

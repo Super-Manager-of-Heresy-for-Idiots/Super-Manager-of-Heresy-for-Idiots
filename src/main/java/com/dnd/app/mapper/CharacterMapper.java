@@ -20,6 +20,8 @@ public interface CharacterMapper {
 
     @Mapping(target = "statTypeId", source = "statType.id")
     @Mapping(target = "statTypeName", source = "statType.name")
+    @Mapping(target = "effectiveValue", ignore = true)
+    @Mapping(target = "activeModifiers", ignore = true)
     CharacterStatResponse toStatResponse(CharacterStat stat);
 
     List<CharacterStatResponse> toStatResponseList(List<CharacterStat> stats);
@@ -27,6 +29,9 @@ public interface CharacterMapper {
     @Mapping(target = "slot", expression = "java(slot.getSlot().name())")
     @Mapping(target = "itemTypeId", source = "itemType.id")
     @Mapping(target = "itemTypeName", source = "itemType.name")
+    @Mapping(target = "artifactId", source = "artifact.id")
+    @Mapping(target = "artifactName", source = "artifact.name")
+    @Mapping(target = "artifactRarity", expression = "java(slot.getArtifact() != null ? slot.getArtifact().getRarity().name() : null)")
     InventorySlotResponse toInventorySlotResponse(InventorySlot slot);
 
     List<InventorySlotResponse> toInventorySlotResponseList(List<InventorySlot> slots);

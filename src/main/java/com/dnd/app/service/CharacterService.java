@@ -10,6 +10,7 @@ import com.dnd.app.dto.request.UpdateStatRequest;
 import com.dnd.app.dto.response.CharacterResponse;
 import com.dnd.app.dto.response.CharacterStatResponse;
 import com.dnd.app.dto.response.InventorySlotResponse;
+import com.dnd.app.dto.response.StatModifierDetail;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
@@ -34,6 +35,7 @@ public class CharacterService {
     private final CharacterStatRepository characterStatRepository;
     private final InventorySlotRepository inventorySlotRepository;
     private final ItemTypeRepository itemTypeRepository;
+    private final CharacterConditionRepository charCondRepository;
     private final CharacterMapper characterMapper;
 
     @Transactional
@@ -146,7 +148,29 @@ public class CharacterService {
         PlayerCharacter character = characterRepository.findById(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         enforceReadAccess(character, username);
-        return characterMapper.toStatResponseList(character.getStats());
+
+        List<CharacterCondition> activeConditions =
+                charCondRepository.findAllByCharacterIdAndActiveTrue(characterId);
+
+        return character.getStats().stream().map(stat -> {
+            CharacterStatResponse resp = characterMapper.toStatResponse(stat);
+            List<StatModifierDetail> modifiers = new java.util.ArrayList<>();
+            int totalMod = 0;
+            for (CharacterCondition cc : activeConditions) {
+                for (ConditionModifier cm : cc.getCondition().getModifiers()) {
+                    if (cm.getStatType().getId().equals(stat.getStatType().getId())) {
+                        modifiers.add(StatModifierDetail.builder()
+                                .source(cc.getCondition().getName())
+                                .modifierValue(cm.getModifierValue())
+                                .build());
+                        totalMod += cm.getModifierValue();
+                    }
+                }
+            }
+            resp.setEffectiveValue(stat.getValue() + totalMod);
+            resp.setActiveModifiers(modifiers.isEmpty() ? null : modifiers);
+            return resp;
+        }).toList();
     }
 
     @Transactional

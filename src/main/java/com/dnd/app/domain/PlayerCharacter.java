@@ -50,6 +50,10 @@ public class PlayerCharacter {
     @Builder.Default
     private List<InventorySlot> inventorySlots = new ArrayList<>();
 
+    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CharacterCondition> conditions = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
