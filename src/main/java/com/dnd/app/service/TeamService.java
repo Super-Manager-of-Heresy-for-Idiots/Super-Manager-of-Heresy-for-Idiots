@@ -39,7 +39,7 @@ public class TeamService {
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest request, String username) {
         User gm = getUser(username);
-        if (gm.getRole() != Role.GAME_MASTER) {
+        if (gm.getRole() != Role.GAME_MASTER && gm.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only game masters can create teams");
         }
         Team team = Team.builder()
@@ -85,7 +85,8 @@ public class TeamService {
         Team team = teamRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         User user = getUser(username);
-        if (user.getRole() != Role.GAME_MASTER || !team.getGameMaster().getId().equals(user.getId())) {
+        boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
+        if (!isTeamOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning game master can update this team");
         }
         team.setName(request.getName());
@@ -98,7 +99,8 @@ public class TeamService {
         Team team = teamRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         User user = getUser(username);
-        if (user.getRole() != Role.GAME_MASTER || !team.getGameMaster().getId().equals(user.getId())) {
+        boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
+        if (!isTeamOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning game master can delete this team");
         }
         log.info("Team deleted: id={}, name='{}', by user={}", id, team.getName(), username);
@@ -110,7 +112,8 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         User user = getUser(username);
-        if (user.getRole() != Role.GAME_MASTER || !team.getGameMaster().getId().equals(user.getId())) {
+        boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
+        if (!isTeamOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning game master can regenerate invite codes");
         }
         team.setInviteCode(InviteCodeGenerator.generate());
@@ -123,7 +126,8 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         User user = getUser(username);
-        if (user.getRole() != Role.GAME_MASTER || !team.getGameMaster().getId().equals(user.getId())) {
+        boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
+        if (!isTeamOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning game master can view invite codes");
         }
         return InviteCodeResponse.builder().inviteCode(team.getInviteCode()).build();

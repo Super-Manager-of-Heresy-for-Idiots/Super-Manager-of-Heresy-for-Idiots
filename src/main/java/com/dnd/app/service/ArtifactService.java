@@ -35,7 +35,7 @@ public class ArtifactService {
 
     @Transactional
     public ArtifactResponse createArtifact(CreateArtifactRequest request, String username) {
-        User gm = getGM(username);
+        User gm = getGMOrAdmin(username);
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item type not found"));
         Rarity rarity = Rarity.COMMON;
@@ -81,6 +81,9 @@ public class ArtifactService {
                 .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() == Role.PLAYER) {
+            throw new AccessDeniedException("Players cannot view artifact details");
+        }
         if (user.getRole() == Role.GAME_MASTER && !artifact.getCreatedBy().getId().equals(user.getId())) {
             throw new AccessDeniedException("You did not create this artifact");
         }
@@ -89,10 +92,10 @@ public class ArtifactService {
 
     @Transactional
     public ArtifactResponse updateArtifact(UUID id, CreateArtifactRequest request, String username) {
-        User gm = getGM(username);
+        User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
-        if (!artifact.getCreatedBy().getId().equals(gm.getId())) {
+        if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
             throw new AccessDeniedException("You did not create this artifact");
         }
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
@@ -115,10 +118,10 @@ public class ArtifactService {
 
     @Transactional
     public void deleteArtifact(UUID id, String username) {
-        User gm = getGM(username);
+        User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
-        if (!artifact.getCreatedBy().getId().equals(gm.getId())) {
+        if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
             throw new AccessDeniedException("You did not create this artifact");
         }
         log.info("Artifact deleted: id={}, name='{}', by gm={}", id, artifact.getName(), username);
@@ -127,10 +130,10 @@ public class ArtifactService {
 
     @Transactional
     public InventorySlotResponse placeArtifact(UUID characterId, String slotName, PlaceArtifactRequest request, String username) {
-        User gm = getGM(username);
+        User gm = getGMOrAdmin(username);
         PlayerCharacter character = characterRepository.findById(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
-        if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
+        if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
             throw new AccessDeniedException("This character's owner is not in any of your teams");
         }
         Artifact artifact = artifactRepository.findById(request.getArtifactId())
@@ -160,10 +163,10 @@ public class ArtifactService {
         return characterMapper.toInventorySlotResponse(invSlot);
     }
 
-    private User getGM(String username) {
+    private User getGMOrAdmin(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != Role.GAME_MASTER) {
+        if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only game masters can manage artifacts");
         }
         return user;

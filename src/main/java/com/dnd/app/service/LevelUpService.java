@@ -95,7 +95,8 @@ public class LevelUpService {
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != Role.PLAYER || !character.getOwner().getId().equals(user.getId())) {
+        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
+        if (!isOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning player can level up");
         }
 

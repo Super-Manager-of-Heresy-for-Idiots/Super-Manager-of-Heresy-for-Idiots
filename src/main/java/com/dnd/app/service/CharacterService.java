@@ -45,7 +45,7 @@ public class CharacterService {
     public CharacterResponse createCharacter(CreateCharacterRequest request, String username) {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (owner.getRole() != Role.PLAYER) {
+        if (owner.getRole() != Role.PLAYER && owner.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only players can create characters");
         }
         CharacterClass charClass = classRepository.findById(request.getClassId())
@@ -125,7 +125,8 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != Role.PLAYER || !character.getOwner().getId().equals(user.getId())) {
+        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
+        if (!isOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning player can update this character");
         }
         if (request.getName() != null) character.setName(request.getName());
@@ -144,7 +145,8 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != Role.PLAYER || !character.getOwner().getId().equals(user.getId())) {
+        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
+        if (!isOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning player can delete this character");
         }
         log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
@@ -196,9 +198,8 @@ public class CharacterService {
             if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
                 throw new AccessDeniedException("This character's owner is not in any of your teams");
             }
-        } else {
-            throw new AccessDeniedException("Admins cannot edit stats");
         }
+        // ADMIN can edit any stat
 
         CharacterStat stat = characterStatRepository.findById(statId)
                 .orElseThrow(() -> new ResourceNotFoundException("Stat not found"));
@@ -224,7 +225,8 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (user.getRole() != Role.PLAYER || !character.getOwner().getId().equals(user.getId())) {
+        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
+        if (!isOwner && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the owning player can update inventory");
         }
         EquipmentSlot equipSlot;
