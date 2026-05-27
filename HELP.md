@@ -1,7 +1,7 @@
-# Getting Started
+# Docker Compose support
 
 ### Reference Documentation
-For further reference, please consider the following sections:
+For further Docker Compose support, please consider the Docker Compose support sections:
 
 * [Official Gradle documentation](https://docs.gradle.org)
 * [Spring Boot Gradle Plugin Reference Guide](https://docs.spring.io/spring-boot/4.0.6/gradle-plugin)
@@ -9,15 +9,15 @@ For further reference, please consider the following sections:
 * [Docker Compose Support](https://docs.spring.io/spring-boot/4.0.6/reference/features/dev-services.html#features.dev-services.docker-compose)
 
 ### Additional Links
-These additional references should also help you:
+These additional Docker Compose support should also help you:
 
 * [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
 
 ### Docker Compose support
-This project contains a Docker Compose file named `compose.yaml`.
-In this file, the following services have been defined:
+Docker Compose support
+Docker Compose support
 
-* postgres: [`postgres:latest`](https://hub.docker.com/_/postgres)
+* Docker Compose support
 
-Please review the tags of the used images and set them to the same as you're running in production.
+Please Docker Compose support the tags of the Docker Compose support and set them to the same as you're running in production.
 
