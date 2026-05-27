@@ -14,7 +14,7 @@ java {
 }
 
 springBoot {
-    mainClass.set("com.dnd.SuperManagerofHeresyforIdiots.SuperManagerofHeresyforIdiotsApplication")
+    mainClass.set("com.dnd.app.SuperManagerofHeresyforIdiotsApplication")
 }
 
 configurations {
