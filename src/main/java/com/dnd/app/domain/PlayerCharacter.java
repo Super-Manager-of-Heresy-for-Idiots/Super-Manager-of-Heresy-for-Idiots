@@ -26,13 +26,13 @@ public class PlayerCharacter {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(name = "total_level", nullable = false)
+    @Builder.Default
+    private Integer totalLevel = 1;
+
     @Column(nullable = false)
     @Builder.Default
-    private Integer level = 1;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id", nullable = false)
-    private CharacterClass characterClass;
+    private Long experience = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "race_id", nullable = false)
@@ -41,6 +41,10 @@ public class PlayerCharacter {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CharacterClassLevel> classLevels = new ArrayList<>();
 
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

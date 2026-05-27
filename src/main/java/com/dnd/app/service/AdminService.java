@@ -1,14 +1,8 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.CharacterClass;
-import com.dnd.app.domain.CharacterRace;
-import com.dnd.app.domain.ItemType;
-import com.dnd.app.domain.StatType;
+import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.EquipmentSlot;
-import com.dnd.app.dto.request.CreateCharacterClassRequest;
-import com.dnd.app.dto.request.CreateCharacterRaceRequest;
-import com.dnd.app.dto.request.CreateItemTypeRequest;
-import com.dnd.app.dto.request.CreateStatTypeRequest;
+import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
@@ -17,6 +11,7 @@ import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.TeamMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,9 +29,14 @@ public class AdminService {
     private final CharacterRaceRepository raceRepository;
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
+    private final SkillRepository skillRepository;
+    private final SubclassRepository subclassRepository;
+    private final FeatRepository featRepository;
+    private final ClassLevelRewardRepository classLevelRewardRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final TeamMapper teamMapper;
+    private final RewardResolverRegistry rewardResolverRegistry;
 
     // --- Stat Types ---
 
@@ -222,6 +222,188 @@ public class AdminService {
         raceRepository.deleteById(id);
     }
 
+    // --- Skills ---
+
+    @Transactional(readOnly = true)
+    public List<SkillResponse> listSkills() {
+        return skillRepository.findAll().stream().map(this::toSkillResponse).toList();
+    }
+
+    @Transactional
+    public SkillResponse createSkill(CreateSkillRequest request) {
+        if (skillRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Skill name already exists");
+        }
+        Skill skill = Skill.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .skillType(request.getSkillType())
+                .build();
+        return toSkillResponse(skillRepository.save(skill));
+    }
+
+    @Transactional(readOnly = true)
+    public SkillResponse getSkill(UUID id) {
+        return toSkillResponse(skillRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Skill not found")));
+    }
+
+    @Transactional
+    public SkillResponse updateSkill(UUID id, CreateSkillRequest request) {
+        Skill skill = skillRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Skill not found"));
+        if (!skill.getName().equals(request.getName()) && skillRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Skill name already exists");
+        }
+        skill.setName(request.getName());
+        skill.setDescription(request.getDescription());
+        skill.setSkillType(request.getSkillType());
+        return toSkillResponse(skillRepository.save(skill));
+    }
+
+    @Transactional
+    public void deleteSkill(UUID id) {
+        if (!skillRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Skill not found");
+        }
+        skillRepository.deleteById(id);
+    }
+
+    // --- Subclasses ---
+
+    @Transactional(readOnly = true)
+    public List<SubclassResponse> listSubclasses() {
+        return subclassRepository.findAll().stream().map(this::toSubclassResponse).toList();
+    }
+
+    @Transactional
+    public SubclassResponse createSubclass(CreateSubclassRequest request) {
+        if (subclassRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Subclass name already exists");
+        }
+        CharacterClass parent = classRepository.findById(request.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+        Subclass sub = Subclass.builder()
+                .name(request.getName())
+                .parentClass(parent)
+                .description(request.getDescription())
+                .build();
+        return toSubclassResponse(subclassRepository.save(sub));
+    }
+
+    @Transactional(readOnly = true)
+    public SubclassResponse getSubclass(UUID id) {
+        return toSubclassResponse(subclassRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subclass not found")));
+    }
+
+    @Transactional
+    public SubclassResponse updateSubclass(UUID id, CreateSubclassRequest request) {
+        Subclass sub = subclassRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subclass not found"));
+        if (!sub.getName().equals(request.getName()) && subclassRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Subclass name already exists");
+        }
+        CharacterClass parent = classRepository.findById(request.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+        sub.setName(request.getName());
+        sub.setParentClass(parent);
+        sub.setDescription(request.getDescription());
+        return toSubclassResponse(subclassRepository.save(sub));
+    }
+
+    @Transactional
+    public void deleteSubclass(UUID id) {
+        if (!subclassRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Subclass not found");
+        }
+        subclassRepository.deleteById(id);
+    }
+
+    // --- Feats ---
+
+    @Transactional(readOnly = true)
+    public List<FeatResponse> listFeats() {
+        return featRepository.findAll().stream().map(this::toFeatResponse).toList();
+    }
+
+    @Transactional
+    public FeatResponse createFeat(CreateFeatRequest request) {
+        if (featRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Feat name already exists");
+        }
+        Feat feat = Feat.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .prerequisites(request.getPrerequisites())
+                .build();
+        return toFeatResponse(featRepository.save(feat));
+    }
+
+    @Transactional(readOnly = true)
+    public FeatResponse getFeat(UUID id) {
+        return toFeatResponse(featRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Feat not found")));
+    }
+
+    @Transactional
+    public FeatResponse updateFeat(UUID id, CreateFeatRequest request) {
+        Feat feat = featRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Feat not found"));
+        if (!feat.getName().equals(request.getName()) && featRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Feat name already exists");
+        }
+        feat.setName(request.getName());
+        feat.setDescription(request.getDescription());
+        feat.setPrerequisites(request.getPrerequisites());
+        return toFeatResponse(featRepository.save(feat));
+    }
+
+    @Transactional
+    public void deleteFeat(UUID id) {
+        if (!featRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Feat not found");
+        }
+        featRepository.deleteById(id);
+    }
+
+    // --- Class Level Rewards ---
+
+    @Transactional(readOnly = true)
+    public List<ClassLevelRewardResponse> listClassLevelRewards(UUID classId) {
+        if (!classRepository.existsById(classId)) {
+            throw new ResourceNotFoundException("Character class not found");
+        }
+        return classLevelRewardRepository.findAllByCharacterClassId(classId).stream()
+                .map(this::toClassLevelRewardResponse)
+                .toList();
+    }
+
+    @Transactional
+    public ClassLevelRewardResponse createClassLevelReward(UUID classId, CreateClassLevelRewardRequest request) {
+        CharacterClass cc = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+        rewardResolverRegistry.validate(request.getRewardType(), request.getRewardId());
+        ClassLevelReward clr = ClassLevelReward.builder()
+                .characterClass(cc)
+                .requiredLevel(request.getRequiredLevel())
+                .rewardType(request.getRewardType())
+                .rewardId(request.getRewardId())
+                .isChoice(request.getIsChoice() != null ? request.getIsChoice() : true)
+                .build();
+        return toClassLevelRewardResponse(classLevelRewardRepository.save(clr));
+    }
+
+    @Transactional
+    public void deleteClassLevelReward(UUID classId, UUID rewardEntryId) {
+        ClassLevelReward clr = classLevelRewardRepository.findById(rewardEntryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class level reward not found"));
+        if (!clr.getCharacterClass().getId().equals(classId)) {
+            throw new ResourceNotFoundException("Reward does not belong to this class");
+        }
+        classLevelRewardRepository.delete(clr);
+    }
+
     // --- Users & Teams (read-only) ---
 
     @Transactional(readOnly = true)
@@ -240,5 +422,40 @@ public class AdminService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid equipment slot: " + slot);
         }
+    }
+
+    private SkillResponse toSkillResponse(Skill s) {
+        return SkillResponse.builder()
+                .id(s.getId()).name(s.getName()).description(s.getDescription())
+                .skillType(s.getSkillType()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .build();
+    }
+
+    private SubclassResponse toSubclassResponse(Subclass s) {
+        return SubclassResponse.builder()
+                .id(s.getId()).name(s.getName())
+                .classId(s.getParentClass().getId()).className(s.getParentClass().getName())
+                .description(s.getDescription()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .build();
+    }
+
+    private FeatResponse toFeatResponse(Feat f) {
+        return FeatResponse.builder()
+                .id(f.getId()).name(f.getName()).description(f.getDescription())
+                .prerequisites(f.getPrerequisites()).createdAt(f.getCreatedAt()).updatedAt(f.getUpdatedAt())
+                .build();
+    }
+
+    private ClassLevelRewardResponse toClassLevelRewardResponse(ClassLevelReward clr) {
+        RewardDetailDto detail = rewardResolverRegistry.resolve(clr.getRewardType(), clr.getRewardId());
+        return ClassLevelRewardResponse.builder()
+                .id(clr.getId())
+                .classId(clr.getCharacterClass().getId())
+                .requiredLevel(clr.getRequiredLevel())
+                .rewardType(clr.getRewardType())
+                .rewardId(clr.getRewardId())
+                .rewardName(detail.getName())
+                .isChoice(clr.getIsChoice())
+                .build();
     }
 }

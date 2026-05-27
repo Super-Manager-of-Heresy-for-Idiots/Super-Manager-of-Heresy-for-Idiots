@@ -16,8 +16,9 @@ import java.util.UUID;
 public class CharacterResponse {
     private UUID id;
     private String name;
-    private Integer level;
-    private CharacterClassResponse characterClass;
+    private Integer totalLevel;
+    private Long experience;
+    private List<ClassLevelResponse> classLevels;
     private CharacterRaceResponse race;
     private UUID ownerId;
     private String ownerUsername;

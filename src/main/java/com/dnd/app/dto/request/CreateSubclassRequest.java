@@ -14,15 +14,14 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateCharacterRequest {
+public class CreateSubclassRequest {
 
-    @NotBlank(message = "Character name is required")
-    @Size(max = 100, message = "Character name must not exceed 100 characters")
+    @NotBlank(message = "Name is required")
+    @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
     @NotNull(message = "Class ID is required")
     private UUID classId;
 
-    @NotNull(message = "Race ID is required")
-    private UUID raceId;
+    private String description;
 }

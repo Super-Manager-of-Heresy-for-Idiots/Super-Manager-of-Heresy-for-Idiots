@@ -34,6 +34,8 @@ class CharacterServiceTest {
     @Mock private CharacterStatRepository characterStatRepository;
     @Mock private InventorySlotRepository inventorySlotRepository;
     @Mock private ItemTypeRepository itemTypeRepository;
+    @Mock private CharacterConditionRepository charCondRepository;
+    @Mock private CharacterClassLevelRepository classLevelRepository;
     @Mock private CharacterMapper characterMapper;
 
     @InjectMocks private CharacterService characterService;
@@ -53,16 +55,17 @@ class CharacterServiceTest {
         CharacterClass cc = CharacterClass.builder().id(UUID.randomUUID()).name("Fighter").build();
         CharacterRace race = CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
         CreateCharacterRequest req = CreateCharacterRequest.builder()
-                .name("Hero").level(1).classId(cc.getId()).raceId(race.getId()).build();
+                .name("Hero").classId(cc.getId()).raceId(race.getId()).build();
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(classRepository.findById(cc.getId())).thenReturn(Optional.of(cc));
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(statTypeRepository.findAll()).thenReturn(Collections.emptyList());
         PlayerCharacter saved = PlayerCharacter.builder()
-                .id(UUID.randomUUID()).name("Hero").level(1)
-                .characterClass(cc).race(race).owner(player).build();
+                .id(UUID.randomUUID()).name("Hero").totalLevel(1)
+                .race(race).owner(player).build();
         when(characterRepository.save(any(PlayerCharacter.class))).thenReturn(saved);
+        when(classLevelRepository.save(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
         CharacterResponse expected = CharacterResponse.builder().name("Hero").build();
         when(characterMapper.toResponse(saved)).thenReturn(expected);
 
@@ -70,6 +73,7 @@ class CharacterServiceTest {
 
         assertEquals("Hero", result.getName());
         verify(characterRepository).save(any(PlayerCharacter.class));
+        verify(classLevelRepository).save(any(CharacterClassLevel.class));
     }
 
     @Test

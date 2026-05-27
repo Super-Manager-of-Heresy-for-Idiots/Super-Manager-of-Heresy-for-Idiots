@@ -36,6 +36,7 @@ public class CharacterService {
     private final InventorySlotRepository inventorySlotRepository;
     private final ItemTypeRepository itemTypeRepository;
     private final CharacterConditionRepository charCondRepository;
+    private final CharacterClassLevelRepository classLevelRepository;
     private final CharacterMapper characterMapper;
 
     @Transactional
@@ -52,12 +53,20 @@ public class CharacterService {
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(request.getName())
-                .level(request.getLevel() != null ? request.getLevel() : 1)
-                .characterClass(charClass)
+                .totalLevel(1)
+                .experience(0L)
                 .race(race)
                 .owner(owner)
                 .build();
         character = characterRepository.save(character);
+
+        CharacterClassLevel ccl = CharacterClassLevel.builder()
+                .characterId(character.getId())
+                .classId(charClass.getId())
+                .classLevel(1)
+                .build();
+        classLevelRepository.save(ccl);
+        character.getClassLevels().add(ccl);
 
         List<StatType> allStatTypes = statTypeRepository.findAll();
         for (StatType st : allStatTypes) {
@@ -116,12 +125,6 @@ public class CharacterService {
             throw new AccessDeniedException("Only the owning player can update this character");
         }
         if (request.getName() != null) character.setName(request.getName());
-        if (request.getLevel() != null) character.setLevel(request.getLevel());
-        if (request.getClassId() != null) {
-            CharacterClass cc = classRepository.findById(request.getClassId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
-            character.setCharacterClass(cc);
-        }
         if (request.getRaceId() != null) {
             CharacterRace race = raceRepository.findById(request.getRaceId())
                     .orElseThrow(() -> new ResourceNotFoundException("Character race not found"));

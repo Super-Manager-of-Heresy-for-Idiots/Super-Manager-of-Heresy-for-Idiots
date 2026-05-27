@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("BAD_REQUEST", ex.getMessage()));
     }
 
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnprocessable(UnprocessableEntityException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error("UNPROCESSABLE_ENTITY", ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

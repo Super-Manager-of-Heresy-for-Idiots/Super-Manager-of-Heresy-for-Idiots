@@ -8,5 +8,6 @@
     <include file="db/changelog/001-create-schema.xml"/>
     <include file="db/changelog/002-seed-data.xml"/>
     <include file="db/changelog/003-artifacts-conditions.xml"/>
+    <include file="db/changelog/004-multiclass-levelup.xml"/>
 
 </databaseChangeLog>
