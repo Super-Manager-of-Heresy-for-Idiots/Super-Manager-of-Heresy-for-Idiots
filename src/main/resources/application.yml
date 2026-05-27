@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dndapp
+    username: dnd
+    password: dnd
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/master.xml
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  jwt:
+    secret: CHANGE_ME_IN_PRODUCTION_USE_256_BIT_KEY_THAT_IS_LONG_ENOUGH
+    expiration-ms: 86400000
+
+logging:
+  level:
+    org.hibernate.SQL: warn
+    org.springframework.security: DEBUG
+    org.springframework.security.web: DEBUG
+    org.springframework.web.filter: DEBUG
+    com.dnd.app.security: DEBUG
+    com.dnd.app.controller: DEBUG
+    com.dnd.app.service: DEBUG
+    com.dnd.app.config: DEBUG

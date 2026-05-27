@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: dndapp
+  labels:
+    app.kubernetes.io/name: dndapp-backend
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: dndapp
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dndapp
+  SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+  SPRING_LIQUIBASE_CHANGE_LOG: classpath:db/changelog/master.xml
+  SERVER_PORT: "8080"
+  SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
