@@ -13,12 +13,14 @@ import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminService {
@@ -55,7 +57,9 @@ public class AdminService {
                 .description(request.getDescription())
                 .isDefault(false)
                 .build();
-        return refMapper.toStatTypeResponse(statTypeRepository.save(st));
+        StatType saved = statTypeRepository.save(st);
+        log.info("Admin: stat type created — name='{}', id={}", saved.getName(), saved.getId());
+        return refMapper.toStatTypeResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +85,7 @@ public class AdminService {
         if (!statTypeRepository.existsById(id)) {
             throw new ResourceNotFoundException("Stat type not found");
         }
+        log.info("Admin: stat type deleted — id={}", id);
         statTypeRepository.deleteById(id);
     }
 
@@ -102,7 +107,9 @@ public class AdminService {
                 .description(request.getDescription())
                 .slot(slot)
                 .build();
-        return refMapper.toItemTypeResponse(itemTypeRepository.save(it));
+        ItemType saved = itemTypeRepository.save(it);
+        log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot(), saved.getId());
+        return refMapper.toItemTypeResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +136,7 @@ public class AdminService {
         if (!itemTypeRepository.existsById(id)) {
             throw new ResourceNotFoundException("Item type not found");
         }
+        log.info("Admin: item type deleted — id={}", id);
         itemTypeRepository.deleteById(id);
     }
 
@@ -148,7 +156,9 @@ public class AdminService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
-        return refMapper.toCharacterClassResponse(classRepository.save(cc));
+        CharacterClass saved = classRepository.save(cc);
+        log.info("Admin: character class created — name='{}', id={}", saved.getName(), saved.getId());
+        return refMapper.toCharacterClassResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -174,6 +184,7 @@ public class AdminService {
         if (!classRepository.existsById(id)) {
             throw new ResourceNotFoundException("Character class not found");
         }
+        log.info("Admin: character class deleted — id={}", id);
         classRepository.deleteById(id);
     }
 
@@ -193,7 +204,9 @@ public class AdminService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
-        return refMapper.toCharacterRaceResponse(raceRepository.save(cr));
+        CharacterRace saved = raceRepository.save(cr);
+        log.info("Admin: character race created — name='{}', id={}", saved.getName(), saved.getId());
+        return refMapper.toCharacterRaceResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -219,6 +232,7 @@ public class AdminService {
         if (!raceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Character race not found");
         }
+        log.info("Admin: character race deleted — id={}", id);
         raceRepository.deleteById(id);
     }
 
@@ -239,7 +253,9 @@ public class AdminService {
                 .description(request.getDescription())
                 .skillType(request.getSkillType())
                 .build();
-        return toSkillResponse(skillRepository.save(skill));
+        Skill saved = skillRepository.save(skill);
+        log.info("Admin: skill created — name='{}', type={}, id={}", saved.getName(), saved.getSkillType(), saved.getId());
+        return toSkillResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -266,6 +282,7 @@ public class AdminService {
         if (!skillRepository.existsById(id)) {
             throw new ResourceNotFoundException("Skill not found");
         }
+        log.info("Admin: skill deleted — id={}", id);
         skillRepository.deleteById(id);
     }
 
@@ -288,7 +305,9 @@ public class AdminService {
                 .parentClass(parent)
                 .description(request.getDescription())
                 .build();
-        return toSubclassResponse(subclassRepository.save(sub));
+        Subclass saved = subclassRepository.save(sub);
+        log.info("Admin: subclass created — name='{}', parentClass='{}', id={}", saved.getName(), parent.getName(), saved.getId());
+        return toSubclassResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -317,6 +336,7 @@ public class AdminService {
         if (!subclassRepository.existsById(id)) {
             throw new ResourceNotFoundException("Subclass not found");
         }
+        log.info("Admin: subclass deleted — id={}", id);
         subclassRepository.deleteById(id);
     }
 
@@ -337,7 +357,9 @@ public class AdminService {
                 .description(request.getDescription())
                 .prerequisites(request.getPrerequisites())
                 .build();
-        return toFeatResponse(featRepository.save(feat));
+        Feat saved = featRepository.save(feat);
+        log.info("Admin: feat created — name='{}', id={}", saved.getName(), saved.getId());
+        return toFeatResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -364,6 +386,7 @@ public class AdminService {
         if (!featRepository.existsById(id)) {
             throw new ResourceNotFoundException("Feat not found");
         }
+        log.info("Admin: feat deleted — id={}", id);
         featRepository.deleteById(id);
     }
 
@@ -391,7 +414,10 @@ public class AdminService {
                 .rewardId(request.getRewardId())
                 .isChoice(request.getIsChoice() != null ? request.getIsChoice() : true)
                 .build();
-        return toClassLevelRewardResponse(classLevelRewardRepository.save(clr));
+        ClassLevelReward saved = classLevelRewardRepository.save(clr);
+        log.info("Admin: class level reward created — classId={}, level={}, type={}, rewardId={}, id={}",
+                classId, saved.getRequiredLevel(), saved.getRewardType(), saved.getRewardId(), saved.getId());
+        return toClassLevelRewardResponse(saved);
     }
 
     @Transactional
@@ -401,6 +427,7 @@ public class AdminService {
         if (!clr.getCharacterClass().getId().equals(classId)) {
             throw new ResourceNotFoundException("Reward does not belong to this class");
         }
+        log.info("Admin: class level reward deleted — classId={}, rewardEntryId={}", classId, rewardEntryId);
         classLevelRewardRepository.delete(clr);
     }
 

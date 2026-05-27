@@ -13,12 +13,14 @@ import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LevelUpService {
@@ -207,6 +209,9 @@ public class LevelUpService {
                     .name(detail.getName())
                     .build());
         }
+
+        log.info("Level up committed: characterId={}, class='{}', newClassLevel={}, newTotalLevel={}, rewardsAcquired={}, user={}",
+                characterId, targetClass.getName(), newClassLevel, character.getTotalLevel(), summaries.size(), username);
 
         return LevelUpResultResponse.builder()
                 .newTotalLevel(character.getTotalLevel())

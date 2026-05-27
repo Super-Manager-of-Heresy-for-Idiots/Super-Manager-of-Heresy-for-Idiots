@@ -14,12 +14,14 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.mapper.CharacterMapper;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArtifactService {
@@ -54,6 +56,7 @@ public class ArtifactService {
                 .createdBy(gm)
                 .build();
         artifact = artifactRepository.save(artifact);
+        log.info("Artifact created: id={}, name='{}', rarity={}, by gm={}", artifact.getId(), artifact.getName(), artifact.getRarity(), username);
         return toResponse(artifact);
     }
 
@@ -118,6 +121,7 @@ public class ArtifactService {
         if (!artifact.getCreatedBy().getId().equals(gm.getId())) {
             throw new AccessDeniedException("You did not create this artifact");
         }
+        log.info("Artifact deleted: id={}, name='{}', by gm={}", id, artifact.getName(), username);
         artifactRepository.delete(artifact);
     }
 
@@ -151,6 +155,8 @@ public class ArtifactService {
         invSlot.setQuantity(1);
         invSlot.setNotes(artifact.getName() + " [" + artifact.getRarity() + "]");
         invSlot = inventorySlotRepository.save(invSlot);
+        log.info("Artifact placed: artifact='{}', slot={}, characterId={}, by gm={}",
+                artifact.getName(), equipSlot, characterId, username);
         return characterMapper.toInventorySlotResponse(invSlot);
     }
 

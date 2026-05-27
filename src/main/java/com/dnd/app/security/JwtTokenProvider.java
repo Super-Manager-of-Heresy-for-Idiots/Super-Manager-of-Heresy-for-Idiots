@@ -3,6 +3,7 @@ package com.dnd.app.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class JwtTokenProvider {
 
@@ -21,6 +23,7 @@ public class JwtTokenProvider {
             @Value("${app.jwt.expiration-ms}") long expirationMs) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
+        log.info("JwtTokenProvider initialized, token TTL={}ms", expirationMs);
     }
 
     public String generateToken(String username, String role) {
@@ -44,6 +47,7 @@ public class JwtTokenProvider {
             parseClaims(token);
             return true;
         } catch (Exception e) {
+            log.warn("JWT validation failed: {} — {}", e.getClass().getSimpleName(), e.getMessage());
             return false;
         }
     }

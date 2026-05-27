@@ -11,6 +11,7 @@ import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -31,9 +33,11 @@ public class AuthService {
     @Transactional
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
+            log.warn("Registration rejected — username already taken: {}", request.getUsername());
             throw new DuplicateResourceException("Username already exists");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("Registration rejected — email already taken: {}", request.getEmail());
             throw new DuplicateResourceException("Email already exists");
         }
         User user = User.builder()
@@ -43,6 +47,7 @@ public class AuthService {
                 .role(Role.valueOf(request.getRole()))
                 .build();
         user = userRepository.save(user);
+        log.info("User registered: username={}, role={}, id={}", user.getUsername(), user.getRole(), user.getId());
         return userMapper.toResponse(user);
     }
 
@@ -52,6 +57,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         String token = tokenProvider.generateToken(user.getUsername(), user.getRole().name());
+        log.info("User logged in: username={}, role={}", user.getUsername(), user.getRole());
         return AuthResponse.builder()
                 .token(token)
                 .expiresIn(tokenProvider.getExpirationMs())

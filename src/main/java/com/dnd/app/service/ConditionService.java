@@ -13,12 +13,14 @@ import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConditionService {
@@ -42,6 +44,7 @@ public class ConditionService {
                 .createdBy(gm)
                 .build();
         condition = conditionRepository.save(condition);
+        log.info("Condition created: id={}, name='{}', by gm={}", condition.getId(), condition.getName(), username);
         return toResponse(condition);
     }
 
@@ -92,6 +95,7 @@ public class ConditionService {
         if (!condition.getCreatedBy().getId().equals(gm.getId())) {
             throw new AccessDeniedException("You did not create this condition");
         }
+        log.info("Condition deleted: id={}, name='{}', by gm={}", id, condition.getName(), username);
         conditionRepository.delete(condition);
     }
 
@@ -155,6 +159,7 @@ public class ConditionService {
                 .active(true)
                 .build();
         cc = charCondRepository.save(cc);
+        log.info("Condition applied: condition='{}', characterId={}, by gm={}", condition.getName(), characterId, username);
         return toCharCondResponse(cc);
     }
 
@@ -179,6 +184,7 @@ public class ConditionService {
         }
         cc.setActive(false);
         charCondRepository.save(cc);
+        log.info("Condition removed: conditionId={}, characterId={}, by gm={}", charConditionId, characterId, username);
     }
 
     private User getGM(String username) {

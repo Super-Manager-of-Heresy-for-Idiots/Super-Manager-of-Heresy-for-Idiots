@@ -19,12 +19,14 @@ import com.dnd.app.repository.TeamRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.util.InviteCodeGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TeamService {
@@ -46,6 +48,7 @@ public class TeamService {
                 .inviteCode(InviteCodeGenerator.generate())
                 .build();
         team = teamRepository.save(team);
+        log.info("Team created: id={}, name='{}', gm={}", team.getId(), team.getName(), username);
         return teamMapper.toResponse(team);
     }
 
@@ -98,6 +101,7 @@ public class TeamService {
         if (user.getRole() != Role.GAME_MASTER || !team.getGameMaster().getId().equals(user.getId())) {
             throw new AccessDeniedException("Only the owning game master can delete this team");
         }
+        log.info("Team deleted: id={}, name='{}', by user={}", id, team.getName(), username);
         teamRepository.delete(team);
     }
 
@@ -143,6 +147,7 @@ public class TeamService {
                 .player(player)
                 .build();
         teamMemberRepository.save(member);
+        log.info("Player joined team: player={}, teamId={}, teamName='{}'", username, team.getId(), team.getName());
         team = teamRepository.findById(team.getId()).orElseThrow();
         return teamMapper.toResponse(team);
     }

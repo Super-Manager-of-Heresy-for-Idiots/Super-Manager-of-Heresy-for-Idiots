@@ -17,12 +17,14 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.mapper.CharacterMapper;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CharacterService {
@@ -59,6 +61,8 @@ public class CharacterService {
                 .owner(owner)
                 .build();
         character = characterRepository.save(character);
+        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}",
+                character.getId(), character.getName(), charClass.getName(), race.getName(), username);
 
         CharacterClassLevel ccl = CharacterClassLevel.builder()
                 .characterId(character.getId())
@@ -143,6 +147,7 @@ public class CharacterService {
         if (user.getRole() != Role.PLAYER || !character.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("Only the owning player can delete this character");
         }
+        log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
         characterRepository.delete(character);
     }
 
