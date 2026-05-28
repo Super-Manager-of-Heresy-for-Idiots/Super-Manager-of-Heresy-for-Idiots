@@ -28,4 +28,12 @@ public class ItemType {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EquipmentSlot slot;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_homebrew_id")
+    private HomebrewPackage sourceHomebrew;
 }

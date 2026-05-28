@@ -9,5 +9,6 @@
     <include file="db/changelog/002-seed-data.xml"/>
     <include file="db/changelog/003-artifacts-conditions.xml"/>
     <include file="db/changelog/004-multiclass-levelup.xml"/>
+    <include file="db/changelog/005-homebrew-marketplace.xml"/>
 
 </databaseChangeLog>

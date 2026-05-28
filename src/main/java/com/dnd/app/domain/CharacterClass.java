@@ -23,4 +23,12 @@ public class CharacterClass {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_homebrew_id")
+    private HomebrewPackage sourceHomebrew;
 }

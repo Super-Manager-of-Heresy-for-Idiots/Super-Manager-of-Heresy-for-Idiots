@@ -3,13 +3,17 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.AdminService;
+import com.dnd.app.service.homebrew.HomebrewAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -18,6 +22,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminService adminService;
+    private final HomebrewAdminService homebrewAdminService;
 
     // --- Stat Types ---
 
@@ -268,5 +273,31 @@ public class AdminController {
     @GetMapping("/teams")
     public ResponseEntity<ApiResponse<List<TeamResponse>>> listTeams() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.listAllTeams()));
+    }
+
+    // --- Homebrew Admin ---
+
+    @GetMapping("/homebrew")
+    public ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>> listAllHomebrewPackages(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID authorId,
+            Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.ok(homebrewAdminService.listAllPackages(status, authorId, pageable)));
+    }
+
+    @DeleteMapping("/homebrew/{id}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> hardDeleteHomebrew(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(homebrewAdminService.hardDelete(id)));
+    }
+
+    @GetMapping("/homebrew/tags")
+    public ResponseEntity<ApiResponse<List<HomebrewTagResponse>>> listHomebrewTags() {
+        return ResponseEntity.ok(ApiResponse.ok(homebrewAdminService.listTagsWithUsageCount()));
+    }
+
+    @DeleteMapping("/homebrew/tags/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteHomebrewTag(@PathVariable UUID id) {
+        homebrewAdminService.deleteTag(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Tag deleted"));
     }
 }

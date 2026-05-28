@@ -30,6 +30,14 @@ public class Skill {
     @Column(name = "skill_type", length = 50)
     private String skillType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_homebrew_id")
+    private HomebrewPackage sourceHomebrew;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

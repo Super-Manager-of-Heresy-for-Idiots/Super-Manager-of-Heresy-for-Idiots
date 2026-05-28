@@ -30,6 +30,14 @@ public class Feat {
     @Column(columnDefinition = "text")
     private String prerequisites;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_homebrew_id")
+    private HomebrewPackage sourceHomebrew;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
