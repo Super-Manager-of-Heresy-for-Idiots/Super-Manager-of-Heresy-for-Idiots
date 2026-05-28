@@ -23,7 +23,7 @@ public class SubclassRewardResolver implements RewardResolver {
     @Override
     public RewardDetailDto resolve(UUID rewardId) {
         Subclass subclass = subclassRepository.findById(rewardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subclass not found: " + rewardId));
+                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден: " + rewardId));
         return RewardDetailDto.builder()
                 .rewardId(subclass.getId())
                 .name(subclass.getName())
@@ -34,7 +34,7 @@ public class SubclassRewardResolver implements RewardResolver {
     @Override
     public void validateRewardId(UUID rewardId) {
         if (!subclassRepository.existsById(rewardId)) {
-            throw new ResourceNotFoundException("Subclass not found: " + rewardId);
+            throw new ResourceNotFoundException("Подкласс не найден: " + rewardId);
         }
     }
 }

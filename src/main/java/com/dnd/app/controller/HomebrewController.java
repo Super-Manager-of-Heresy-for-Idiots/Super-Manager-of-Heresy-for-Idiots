@@ -34,7 +34,7 @@ public class HomebrewController {
             @Valid @RequestBody CreateHomebrewRequest request, Authentication auth) {
         HomebrewDetailResponse data = authoringService.createPackage(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Package created"));
+                .body(ApiResponse.ok(data, "Пакет создан"));
     }
 
     @GetMapping("/my")
@@ -56,7 +56,7 @@ public class HomebrewController {
     public ResponseEntity<ApiResponse<HomebrewDetailResponse>> updatePackage(
             @PathVariable UUID id, @Valid @RequestBody UpdateHomebrewRequest request, Authentication auth) {
         HomebrewDetailResponse data = authoringService.updatePackage(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Package updated"));
+        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет обновлен"));
     }
 
     @PostMapping("/my/{id}/content")
@@ -64,28 +64,28 @@ public class HomebrewController {
             @PathVariable UUID id, @Valid @RequestBody AddContentRequest request, Authentication auth) {
         HomebrewDetailResponse data = authoringService.addContent(id, request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Content added"));
+                .body(ApiResponse.ok(data, "Контент добавлен"));
     }
 
     @DeleteMapping("/my/{id}/content/{contentItemId}")
     public ResponseEntity<ApiResponse<Void>> removeContent(
             @PathVariable UUID id, @PathVariable UUID contentItemId, Authentication auth) {
         authoringService.removeContent(id, contentItemId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Content removed"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Контент удален"));
     }
 
     @PostMapping("/my/{id}/publish")
     public ResponseEntity<ApiResponse<HomebrewDetailResponse>> publish(
             @PathVariable UUID id, Authentication auth) {
         HomebrewDetailResponse data = authoringService.publish(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Package published"));
+        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет опубликован"));
     }
 
     @PostMapping("/my/{id}/unpublish")
     public ResponseEntity<ApiResponse<HomebrewDetailResponse>> unpublish(
             @PathVariable UUID id, Authentication auth) {
         HomebrewDetailResponse data = authoringService.unpublish(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Package unpublished"));
+        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет снят с публикации"));
     }
 
     @DeleteMapping("/my/{id}")
@@ -122,7 +122,7 @@ public class HomebrewController {
             @PathVariable UUID id, Authentication auth) {
         Map<String, Object> data = marketplaceService.installPackage(id, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Package installed"));
+                .body(ApiResponse.ok(data, "Пакет установлен"));
     }
 
     // === Installed ===
@@ -138,6 +138,6 @@ public class HomebrewController {
     public ResponseEntity<ApiResponse<Void>> uninstall(
             @PathVariable UUID installationId, Authentication auth) {
         marketplaceService.uninstall(installationId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Package uninstalled"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Пакет удален из установленных"));
     }
 }

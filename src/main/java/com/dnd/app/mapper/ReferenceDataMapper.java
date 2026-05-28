@@ -16,7 +16,7 @@ public interface ReferenceDataMapper {
 
     StatTypeResponse toStatTypeResponse(StatType statType);
 
-    @Mapping(target = "slot", expression = "java(itemType.getSlot().name())")
+    @Mapping(target = "slot", expression = "java(com.dnd.app.util.ResponseLocalizer.equipmentSlot(itemType.getSlot()))")
     ItemTypeResponse toItemTypeResponse(ItemType itemType);
 
     CharacterClassResponse toCharacterClassResponse(CharacterClass characterClass);

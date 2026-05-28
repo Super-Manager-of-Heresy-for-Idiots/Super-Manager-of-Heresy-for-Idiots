@@ -47,7 +47,7 @@ public class HomebrewContentValidatorRegistry {
         HomebrewContentValidator validator = validators.get(contentType);
         if (validator == null) {
             log.error("Unknown content type: '{}', available types: {}", contentType, validators.keySet());
-            throw new IllegalArgumentException("Unknown content type: " + contentType);
+            throw new IllegalArgumentException("Неизвестный тип контента: " + contentType);
         }
         return validator;
     }

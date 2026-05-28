@@ -14,9 +14,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AddConditionModifierRequest {
 
-    @NotNull(message = "Stat type ID is required")
+    @NotNull(message = "ID характеристики обязателен")
     private UUID statTypeId;
 
-    @NotNull(message = "Modifier value is required")
+    @NotNull(message = "Значение модификатора обязательно")
     private Integer modifierValue;
 }

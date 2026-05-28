@@ -15,9 +15,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AddContentRequest {
 
-    @NotBlank(message = "Content type is required")
+    @NotBlank(message = "Тип контента обязателен")
     private String contentType;
 
-    @NotNull(message = "Content ID is required")
+    @NotNull(message = "ID контента обязателен")
     private UUID contentId;
 }

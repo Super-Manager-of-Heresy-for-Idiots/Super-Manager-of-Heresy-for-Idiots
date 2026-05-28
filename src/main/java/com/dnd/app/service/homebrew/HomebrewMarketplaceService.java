@@ -61,7 +61,7 @@ public class HomebrewMarketplaceService {
     public HomebrewDetailResponse getMarketplacePackage(UUID id, String username) {
         getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findPublishedById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
         return authoringService.toDetailResponse(pkg);
     }
 
@@ -69,14 +69,14 @@ public class HomebrewMarketplaceService {
     public Map<String, Object> installPackage(UUID packageId, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findById(packageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.PUBLISHED || pkg.isDeleted()) {
-            throw new ResourceNotFoundException("Package not found");
+            throw new ResourceNotFoundException("Пакет не найден");
         }
 
         if (installationRepository.existsByHomebrewPackageIdAndInstallerId(packageId, gm.getId())) {
-            throw new DuplicateResourceException("Package already installed");
+            throw new DuplicateResourceException("Пакет уже установлен");
         }
 
         HomebrewInstallation installation = HomebrewInstallation.builder()
@@ -112,7 +112,7 @@ public class HomebrewMarketplaceService {
             HomebrewPackage pkg = inst.getHomebrewPackage();
             String title = pkg.getTitle();
             if (pkg.isDeleted()) {
-                title = "[DELETED] " + title;
+                title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
             }
             return InstalledHomebrewResponse.builder()
                     .installationId(inst.getId())
@@ -131,7 +131,7 @@ public class HomebrewMarketplaceService {
     public void uninstall(UUID installationId, String username) {
         User gm = getGameMaster(username);
         HomebrewInstallation installation = installationRepository.findByIdAndInstallerId(installationId, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Installation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Установка не найдена"));
         installationRepository.delete(installation);
         log.info("Package uninstalled: installationId={}, packageId={}, by={}",
                 installationId, installation.getHomebrewPackage().getId(), username);
@@ -139,9 +139,9 @@ public class HomebrewMarketplaceService {
 
     private User getGameMaster(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only game masters can access the marketplace");
+            throw new AccessDeniedException("Только мастера игры могут открывать каталог");
         }
         return user;
     }

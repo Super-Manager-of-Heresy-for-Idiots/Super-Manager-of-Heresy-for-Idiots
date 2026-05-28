@@ -14,6 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PlaceArtifactRequest {
 
-    @NotNull(message = "Artifact ID is required")
+    @NotNull(message = "ID артефакта обязателен")
     private UUID artifactId;
 }

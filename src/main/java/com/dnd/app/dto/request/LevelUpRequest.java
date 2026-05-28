@@ -16,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class LevelUpRequest {
 
-    @NotNull(message = "Class ID is required")
+    @NotNull(message = "ID класса обязателен")
     private UUID classId;
 
     @Valid
@@ -27,10 +27,10 @@ public class LevelUpRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RewardSelection {
-        @NotNull(message = "Reward type is required")
+        @NotNull(message = "Тип награды обязателен")
         private String rewardType;
 
-        @NotNull(message = "Reward entry ID is required")
+        @NotNull(message = "ID записи награды обязателен")
         private UUID rewardEntryId;
     }
 }

@@ -18,10 +18,6 @@ public interface HomebrewTagRepository extends JpaRepository<HomebrewTag, UUID> 
             "WHERE p.id = :packageId")
     List<UUID> findTagIdsByPackageId(UUID packageId);
 
-    @Query("SELECT t.name, COUNT(p) FROM HomebrewTag t LEFT JOIN t.id tid " +
-            "GROUP BY t.id, t.name")
-    List<Object[]> findAllWithUsageCountRaw();
-
     @Query(value = "SELECT t.id, t.name, COUNT(pt.package_id) as usage_count " +
             "FROM homebrew_tags t LEFT JOIN homebrew_package_tags pt ON t.id = pt.tag_id " +
             "GROUP BY t.id, t.name ORDER BY t.name",

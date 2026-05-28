@@ -23,14 +23,14 @@ public class FeatContentValidator implements HomebrewContentValidator {
     @Override
     public void validateExists(UUID contentId) {
         if (!featRepository.existsById(contentId)) {
-            throw new ResourceNotFoundException("Feat not found: " + contentId);
+            throw new ResourceNotFoundException("Черта не найдена: " + contentId);
         }
     }
 
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
         Feat feat = featRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Feat not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + contentId));
         return ContentSummaryDto.builder()
                 .id(feat.getId())
                 .name(feat.getName())
@@ -42,7 +42,7 @@ public class FeatContentValidator implements HomebrewContentValidator {
     @Override
     public UUID getOwnerId(UUID contentId) {
         Feat feat = featRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Feat not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + contentId));
         return feat.getOwner() != null ? feat.getOwner().getId() : null;
     }
 }

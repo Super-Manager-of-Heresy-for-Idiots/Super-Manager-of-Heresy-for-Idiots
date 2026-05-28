@@ -14,8 +14,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateStatRequest {
 
-    @NotNull(message = "Value is required")
-    @Min(value = 1, message = "Stat value must be between 1 and 30")
-    @Max(value = 30, message = "Stat value must be between 1 and 30")
+    @NotNull(message = "Значение обязательно")
+    @Min(value = 1, message = "Значение характеристики должно быть от 1 до 30")
+    @Max(value = 30, message = "Значение характеристики должно быть от 1 до 30")
     private Integer value;
 }

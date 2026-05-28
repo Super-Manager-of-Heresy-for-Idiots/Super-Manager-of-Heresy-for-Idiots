@@ -16,7 +16,7 @@ public class UpdateInventorySlotRequest {
 
     private UUID itemTypeId;
 
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @Min(value = 1, message = "Количество должно быть не меньше 1")
     @Builder.Default
     private Integer quantity = 1;
 

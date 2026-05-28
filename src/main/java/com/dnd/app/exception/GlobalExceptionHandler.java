@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         log.warn("Authentication failed: bad credentials");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("BAD_CREDENTIALS", "Invalid username or password"));
+                .body(ApiResponse.error("BAD_CREDENTIALS", "Неверное имя пользователя или пароль"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

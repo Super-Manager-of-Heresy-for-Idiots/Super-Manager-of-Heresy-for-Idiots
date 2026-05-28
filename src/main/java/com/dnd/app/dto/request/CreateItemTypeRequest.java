@@ -14,12 +14,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateItemTypeRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 50, message = "Name must not exceed 50 characters")
+    @NotBlank(message = "Название обязательно")
+    @Size(max = 50, message = "Название не должно превышать 50 символов")
     private String name;
 
     private String description;
 
-    @NotNull(message = "Slot is required")
+    @NotNull(message = "Слот обязателен")
     private String slot;
 }

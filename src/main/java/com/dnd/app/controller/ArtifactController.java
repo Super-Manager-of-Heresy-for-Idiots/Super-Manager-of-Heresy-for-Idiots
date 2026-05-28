@@ -28,7 +28,7 @@ public class ArtifactController {
             @Valid @RequestBody CreateArtifactRequest request, Authentication auth) {
         ArtifactResponse artifact = artifactService.createArtifact(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(artifact, "Artifact created"));
+                .body(ApiResponse.ok(artifact, "Артефакт создан"));
     }
 
     @GetMapping
@@ -44,13 +44,13 @@ public class ArtifactController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ArtifactResponse>> update(
             @PathVariable UUID id, @Valid @RequestBody CreateArtifactRequest request, Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(artifactService.updateArtifact(id, request, auth.getName()), "Artifact updated"));
+        return ResponseEntity.ok(ApiResponse.ok(artifactService.updateArtifact(id, request, auth.getName()), "Артефакт обновлен"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id, Authentication auth) {
         artifactService.deleteArtifact(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Artifact deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Артефакт удален"));
     }
 
     @PutMapping("/place/{characterId}/{slot}")
@@ -58,6 +58,6 @@ public class ArtifactController {
             @PathVariable UUID characterId, @PathVariable String slot,
             @Valid @RequestBody PlaceArtifactRequest request, Authentication auth) {
         InventorySlotResponse resp = artifactService.placeArtifact(characterId, slot, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(resp, "Artifact placed in inventory"));
+        return ResponseEntity.ok(ApiResponse.ok(resp, "Артефакт помещен в инвентарь"));
     }
 }

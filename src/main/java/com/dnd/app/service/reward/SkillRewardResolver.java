@@ -23,7 +23,7 @@ public class SkillRewardResolver implements RewardResolver {
     @Override
     public RewardDetailDto resolve(UUID rewardId) {
         Skill skill = skillRepository.findById(rewardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + rewardId));
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + rewardId));
         return RewardDetailDto.builder()
                 .rewardId(skill.getId())
                 .name(skill.getName())
@@ -34,7 +34,7 @@ public class SkillRewardResolver implements RewardResolver {
     @Override
     public void validateRewardId(UUID rewardId) {
         if (!skillRepository.existsById(rewardId)) {
-            throw new ResourceNotFoundException("Skill not found: " + rewardId);
+            throw new ResourceNotFoundException("Умение не найдено: " + rewardId);
         }
     }
 }

@@ -35,7 +35,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<StatTypeResponse>> createStatType(
             @Valid @RequestBody CreateStatTypeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createStatType(request), "Stat type created"));
+                .body(ApiResponse.ok(adminService.createStatType(request), "Характеристика создана"));
     }
 
     @GetMapping("/stat-types/{id}")
@@ -46,13 +46,13 @@ public class AdminController {
     @PutMapping("/stat-types/{id}")
     public ResponseEntity<ApiResponse<StatTypeResponse>> updateStatType(
             @PathVariable UUID id, @Valid @RequestBody CreateStatTypeRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateStatType(id, request), "Stat type updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateStatType(id, request), "Характеристика обновлена"));
     }
 
     @DeleteMapping("/stat-types/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteStatType(@PathVariable UUID id) {
         adminService.deleteStatType(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Stat type deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Характеристика удалена"));
     }
 
     // --- Item Types ---
@@ -66,7 +66,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<ItemTypeResponse>> createItemType(
             @Valid @RequestBody CreateItemTypeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createItemType(request), "Item type created"));
+                .body(ApiResponse.ok(adminService.createItemType(request), "Тип предмета создан"));
     }
 
     @GetMapping("/item-types/{id}")
@@ -77,13 +77,13 @@ public class AdminController {
     @PutMapping("/item-types/{id}")
     public ResponseEntity<ApiResponse<ItemTypeResponse>> updateItemType(
             @PathVariable UUID id, @Valid @RequestBody CreateItemTypeRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateItemType(id, request), "Item type updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateItemType(id, request), "Тип предмета обновлен"));
     }
 
     @DeleteMapping("/item-types/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteItemType(@PathVariable UUID id) {
         adminService.deleteItemType(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Item type deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Тип предмета удален"));
     }
 
     // --- Character Classes ---
@@ -97,7 +97,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<CharacterClassResponse>> createClass(
             @Valid @RequestBody CreateCharacterClassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createCharacterClass(request), "Character class created"));
+                .body(ApiResponse.ok(adminService.createCharacterClass(request), "Класс персонажа создан"));
     }
 
     @GetMapping("/character-classes/{id}")
@@ -108,13 +108,13 @@ public class AdminController {
     @PutMapping("/character-classes/{id}")
     public ResponseEntity<ApiResponse<CharacterClassResponse>> updateClass(
             @PathVariable UUID id, @Valid @RequestBody CreateCharacterClassRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterClass(id, request), "Character class updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterClass(id, request), "Класс персонажа обновлен"));
     }
 
     @DeleteMapping("/character-classes/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteClass(@PathVariable UUID id) {
         adminService.deleteCharacterClass(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Character class deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Класс персонажа удален"));
     }
 
     // --- Character Races ---
@@ -128,7 +128,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<CharacterRaceResponse>> createRace(
             @Valid @RequestBody CreateCharacterRaceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createCharacterRace(request), "Character race created"));
+                .body(ApiResponse.ok(adminService.createCharacterRace(request), "Раса персонажа создана"));
     }
 
     @GetMapping("/character-races/{id}")
@@ -139,13 +139,13 @@ public class AdminController {
     @PutMapping("/character-races/{id}")
     public ResponseEntity<ApiResponse<CharacterRaceResponse>> updateRace(
             @PathVariable UUID id, @Valid @RequestBody CreateCharacterRaceRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterRace(id, request), "Character race updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterRace(id, request), "Раса персонажа обновлена"));
     }
 
     @DeleteMapping("/character-races/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteRace(@PathVariable UUID id) {
         adminService.deleteCharacterRace(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Character race deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Раса персонажа удалена"));
     }
 
     // --- Skills ---
@@ -159,7 +159,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<SkillResponse>> createSkill(
             @Valid @RequestBody CreateSkillRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createSkill(request), "Skill created"));
+                .body(ApiResponse.ok(adminService.createSkill(request), "Умение создано"));
     }
 
     @GetMapping("/skills/{id}")
@@ -170,13 +170,13 @@ public class AdminController {
     @PutMapping("/skills/{id}")
     public ResponseEntity<ApiResponse<SkillResponse>> updateSkill(
             @PathVariable UUID id, @Valid @RequestBody CreateSkillRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateSkill(id, request), "Skill updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateSkill(id, request), "Умение обновлено"));
     }
 
     @DeleteMapping("/skills/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteSkill(@PathVariable UUID id) {
         adminService.deleteSkill(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Skill deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Умение удалено"));
     }
 
     // --- Subclasses ---
@@ -190,7 +190,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<SubclassResponse>> createSubclass(
             @Valid @RequestBody CreateSubclassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createSubclass(request), "Subclass created"));
+                .body(ApiResponse.ok(adminService.createSubclass(request), "Подкласс создан"));
     }
 
     @GetMapping("/subclasses/{id}")
@@ -201,13 +201,13 @@ public class AdminController {
     @PutMapping("/subclasses/{id}")
     public ResponseEntity<ApiResponse<SubclassResponse>> updateSubclass(
             @PathVariable UUID id, @Valid @RequestBody CreateSubclassRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateSubclass(id, request), "Subclass updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateSubclass(id, request), "Подкласс обновлен"));
     }
 
     @DeleteMapping("/subclasses/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteSubclass(@PathVariable UUID id) {
         adminService.deleteSubclass(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Subclass deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Подкласс удален"));
     }
 
     // --- Feats ---
@@ -221,7 +221,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<FeatResponse>> createFeat(
             @Valid @RequestBody CreateFeatRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createFeat(request), "Feat created"));
+                .body(ApiResponse.ok(adminService.createFeat(request), "Черта создана"));
     }
 
     @GetMapping("/feats/{id}")
@@ -232,13 +232,13 @@ public class AdminController {
     @PutMapping("/feats/{id}")
     public ResponseEntity<ApiResponse<FeatResponse>> updateFeat(
             @PathVariable UUID id, @Valid @RequestBody CreateFeatRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.updateFeat(id, request), "Feat updated"));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateFeat(id, request), "Черта обновлена"));
     }
 
     @DeleteMapping("/feats/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteFeat(@PathVariable UUID id) {
         adminService.deleteFeat(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Feat deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Черта удалена"));
     }
 
     // --- Class Level Rewards ---
@@ -253,14 +253,14 @@ public class AdminController {
     public ResponseEntity<ApiResponse<ClassLevelRewardResponse>> createClassLevelReward(
             @PathVariable UUID classId, @Valid @RequestBody CreateClassLevelRewardRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(adminService.createClassLevelReward(classId, request), "Level reward created"));
+                .body(ApiResponse.ok(adminService.createClassLevelReward(classId, request), "Награда за уровень создана"));
     }
 
     @DeleteMapping("/classes/{classId}/level-rewards/{rewardEntryId}")
     public ResponseEntity<ApiResponse<Void>> deleteClassLevelReward(
             @PathVariable UUID classId, @PathVariable UUID rewardEntryId) {
         adminService.deleteClassLevelReward(classId, rewardEntryId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Level reward deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Награда за уровень удалена"));
     }
 
     // --- Users & Teams (read-only) ---
@@ -298,6 +298,6 @@ public class AdminController {
     @DeleteMapping("/homebrew/tags/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteHomebrewTag(@PathVariable UUID id) {
         homebrewAdminService.deleteTag(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Tag deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Тег удален"));
     }
 }

@@ -13,12 +13,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateSkillRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank(message = "Название обязательно")
+    @Size(max = 100, message = "Название не должно превышать 100 символов")
     private String name;
 
     private String description;
 
-    @Size(max = 50, message = "Skill type must not exceed 50 characters")
+    @Size(max = 50, message = "Тип умения не должен превышать 50 символов")
     private String skillType;
 }

@@ -23,7 +23,7 @@ public class FeatRewardResolver implements RewardResolver {
     @Override
     public RewardDetailDto resolve(UUID rewardId) {
         Feat feat = featRepository.findById(rewardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Feat not found: " + rewardId));
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + rewardId));
         return RewardDetailDto.builder()
                 .rewardId(feat.getId())
                 .name(feat.getName())
@@ -34,7 +34,7 @@ public class FeatRewardResolver implements RewardResolver {
     @Override
     public void validateRewardId(UUID rewardId) {
         if (!featRepository.existsById(rewardId)) {
-            throw new ResourceNotFoundException("Feat not found: " + rewardId);
+            throw new ResourceNotFoundException("Черта не найдена: " + rewardId);
         }
     }
 }

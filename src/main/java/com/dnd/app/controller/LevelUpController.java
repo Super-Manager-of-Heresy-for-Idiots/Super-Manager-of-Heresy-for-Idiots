@@ -31,7 +31,7 @@ public class LevelUpController {
     public ResponseEntity<ApiResponse<LevelUpResultResponse>> levelUp(
             @PathVariable UUID id, @Valid @RequestBody LevelUpRequest request, Authentication auth) {
         LevelUpResultResponse result = levelUpService.commitLevelUp(id, auth.getName(), request);
-        return ResponseEntity.ok(ApiResponse.ok(result, "Level up successful"));
+        return ResponseEntity.ok(ApiResponse.ok(result, "Уровень повышен"));
     }
 
     @GetMapping("/{id}/rewards")

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateTeamRequest {
 
-    @NotBlank(message = "Team name is required")
-    @Size(max = 80, message = "Team name must not exceed 80 characters")
+    @NotBlank(message = "Название команды обязательно")
+    @Size(max = 80, message = "Название команды не должно превышать 80 символов")
     private String name;
 }

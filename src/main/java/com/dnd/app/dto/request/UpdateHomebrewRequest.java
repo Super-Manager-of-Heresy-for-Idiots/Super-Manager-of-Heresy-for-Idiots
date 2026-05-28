@@ -14,12 +14,12 @@ import java.util.List;
 @AllArgsConstructor
 public class UpdateHomebrewRequest {
 
-    @Size(max = 120, message = "Title must not exceed 120 characters")
+    @Size(max = 120, message = "Заголовок не должен превышать 120 символов")
     private String title;
 
-    @Size(max = 2000, message = "Description must not exceed 2000 characters")
+    @Size(max = 2000, message = "Описание не должно превышать 2000 символов")
     private String description;
 
-    @Size(max = 10, message = "Maximum 10 tags per package")
+    @Size(max = 10, message = "В пакете может быть не больше 10 тегов")
     private List<String> tagNames;
 }

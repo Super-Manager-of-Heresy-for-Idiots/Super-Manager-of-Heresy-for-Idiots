@@ -16,13 +16,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateArtifactRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank(message = "Название обязательно")
+    @Size(max = 100, message = "Название не должно превышать 100 символов")
     private String name;
 
     private String description;
 
-    @NotNull(message = "Item type ID is required")
+    @NotNull(message = "ID типа предмета обязателен")
     private UUID itemTypeId;
 
     private String rarity;

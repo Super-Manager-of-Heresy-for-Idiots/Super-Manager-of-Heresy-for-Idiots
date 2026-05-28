@@ -34,11 +34,11 @@ public class AuthService {
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             log.warn("Registration rejected — username already taken: {}", request.getUsername());
-            throw new DuplicateResourceException("Username already exists");
+            throw new DuplicateResourceException("Имя пользователя уже занято");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration rejected — email already taken: {}", request.getEmail());
-            throw new DuplicateResourceException("Email already exists");
+            throw new DuplicateResourceException("Эта электронная почта уже занята");
         }
         User user = User.builder()
                 .username(request.getUsername())

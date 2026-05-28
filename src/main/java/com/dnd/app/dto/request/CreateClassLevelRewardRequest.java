@@ -17,15 +17,15 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateClassLevelRewardRequest {
 
-    @NotNull(message = "Required level is required")
-    @Min(value = 1, message = "Required level must be between 1 and 20")
-    @Max(value = 20, message = "Required level must be between 1 and 20")
+    @NotNull(message = "Требуемый уровень обязателен")
+    @Min(value = 1, message = "Требуемый уровень должен быть от 1 до 20")
+    @Max(value = 20, message = "Требуемый уровень должен быть от 1 до 20")
     private Integer requiredLevel;
 
-    @NotBlank(message = "Reward type is required")
+    @NotBlank(message = "Тип награды обязателен")
     private String rewardType;
 
-    @NotNull(message = "Reward ID is required")
+    @NotNull(message = "ID награды обязателен")
     private UUID rewardId;
 
     private Boolean isChoice;

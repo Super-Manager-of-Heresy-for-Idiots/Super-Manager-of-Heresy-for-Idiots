@@ -23,14 +23,14 @@ public class CharacterClassContentValidator implements HomebrewContentValidator 
     @Override
     public void validateExists(UUID contentId) {
         if (!characterClassRepository.existsById(contentId)) {
-            throw new ResourceNotFoundException("Character class not found: " + contentId);
+            throw new ResourceNotFoundException("Класс персонажа не найден: " + contentId);
         }
     }
 
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
         CharacterClass cc = characterClassRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден: " + contentId));
         return ContentSummaryDto.builder()
                 .id(cc.getId())
                 .name(cc.getName())
@@ -41,7 +41,7 @@ public class CharacterClassContentValidator implements HomebrewContentValidator 
     @Override
     public UUID getOwnerId(UUID contentId) {
         CharacterClass cc = characterClassRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден: " + contentId));
         return cc.getOwner() != null ? cc.getOwner().getId() : null;
     }
 }

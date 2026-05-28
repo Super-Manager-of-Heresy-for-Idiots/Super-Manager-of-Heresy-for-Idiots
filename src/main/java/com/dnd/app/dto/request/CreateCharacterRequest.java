@@ -16,13 +16,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateCharacterRequest {
 
-    @NotBlank(message = "Character name is required")
-    @Size(max = 100, message = "Character name must not exceed 100 characters")
+    @NotBlank(message = "Имя персонажа обязательно")
+    @Size(max = 100, message = "Имя персонажа не должно превышать 100 символов")
     private String name;
 
-    @NotNull(message = "Class ID is required")
+    @NotNull(message = "ID класса обязателен")
     private UUID classId;
 
-    @NotNull(message = "Race ID is required")
+    @NotNull(message = "ID расы обязателен")
     private UUID raceId;
 }

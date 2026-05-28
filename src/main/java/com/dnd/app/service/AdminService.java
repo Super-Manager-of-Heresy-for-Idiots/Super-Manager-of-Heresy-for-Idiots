@@ -50,7 +50,7 @@ public class AdminService {
     @Transactional
     public StatTypeResponse createStatType(CreateStatTypeRequest request) {
         if (statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Stat type name already exists");
+            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
         }
         StatType st = StatType.builder()
                 .name(request.getName())
@@ -65,15 +65,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public StatTypeResponse getStatType(UUID id) {
         return refMapper.toStatTypeResponse(statTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Stat type not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена")));
     }
 
     @Transactional
     public StatTypeResponse updateStatType(UUID id, CreateStatTypeRequest request) {
         StatType st = statTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Stat type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
         if (!st.getName().equals(request.getName()) && statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Stat type name already exists");
+            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
         }
         st.setName(request.getName());
         st.setDescription(request.getDescription());
@@ -83,7 +83,7 @@ public class AdminService {
     @Transactional
     public void deleteStatType(UUID id) {
         if (!statTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Stat type not found");
+            throw new ResourceNotFoundException("Характеристика не найдена");
         }
         log.info("Admin: stat type deleted — id={}", id);
         statTypeRepository.deleteById(id);
@@ -99,7 +99,7 @@ public class AdminService {
     @Transactional
     public ItemTypeResponse createItemType(CreateItemTypeRequest request) {
         if (itemTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Item type name already exists");
+            throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
         }
         EquipmentSlot slot = parseSlot(request.getSlot());
         ItemType it = ItemType.builder()
@@ -115,15 +115,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public ItemTypeResponse getItemType(UUID id) {
         return refMapper.toItemTypeResponse(itemTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Item type not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден")));
     }
 
     @Transactional
     public ItemTypeResponse updateItemType(UUID id, CreateItemTypeRequest request) {
         ItemType it = itemTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Item type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
         if (!it.getName().equals(request.getName()) && itemTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Item type name already exists");
+            throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
         }
         it.setName(request.getName());
         it.setDescription(request.getDescription());
@@ -134,7 +134,7 @@ public class AdminService {
     @Transactional
     public void deleteItemType(UUID id) {
         if (!itemTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Item type not found");
+            throw new ResourceNotFoundException("Тип предмета не найден");
         }
         log.info("Admin: item type deleted — id={}", id);
         itemTypeRepository.deleteById(id);
@@ -150,7 +150,7 @@ public class AdminService {
     @Transactional
     public CharacterClassResponse createCharacterClass(CreateCharacterClassRequest request) {
         if (classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Character class name already exists");
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
         }
         CharacterClass cc = CharacterClass.builder()
                 .name(request.getName())
@@ -164,15 +164,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public CharacterClassResponse getCharacterClass(UUID id) {
         return refMapper.toCharacterClassResponse(classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден")));
     }
 
     @Transactional
     public CharacterClassResponse updateCharacterClass(UUID id, CreateCharacterClassRequest request) {
         CharacterClass cc = classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         if (!cc.getName().equals(request.getName()) && classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Character class name already exists");
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
         }
         cc.setName(request.getName());
         cc.setDescription(request.getDescription());
@@ -182,7 +182,7 @@ public class AdminService {
     @Transactional
     public void deleteCharacterClass(UUID id) {
         if (!classRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Character class not found");
+            throw new ResourceNotFoundException("Класс персонажа не найден");
         }
         log.info("Admin: character class deleted — id={}", id);
         classRepository.deleteById(id);
@@ -198,7 +198,7 @@ public class AdminService {
     @Transactional
     public CharacterRaceResponse createCharacterRace(CreateCharacterRaceRequest request) {
         if (raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Character race name already exists");
+            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
         }
         CharacterRace cr = CharacterRace.builder()
                 .name(request.getName())
@@ -212,15 +212,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public CharacterRaceResponse getCharacterRace(UUID id) {
         return refMapper.toCharacterRaceResponse(raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character race not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена")));
     }
 
     @Transactional
     public CharacterRaceResponse updateCharacterRace(UUID id, CreateCharacterRaceRequest request) {
         CharacterRace cr = raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character race not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
         if (!cr.getName().equals(request.getName()) && raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Character race name already exists");
+            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
         }
         cr.setName(request.getName());
         cr.setDescription(request.getDescription());
@@ -230,7 +230,7 @@ public class AdminService {
     @Transactional
     public void deleteCharacterRace(UUID id) {
         if (!raceRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Character race not found");
+            throw new ResourceNotFoundException("Раса персонажа не найдена");
         }
         log.info("Admin: character race deleted — id={}", id);
         raceRepository.deleteById(id);
@@ -246,7 +246,7 @@ public class AdminService {
     @Transactional
     public SkillResponse createSkill(CreateSkillRequest request) {
         if (skillRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Skill name already exists");
+            throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
         Skill skill = Skill.builder()
                 .name(request.getName())
@@ -261,15 +261,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public SkillResponse getSkill(UUID id) {
         return toSkillResponse(skillRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено")));
     }
 
     @Transactional
     public SkillResponse updateSkill(UUID id, CreateSkillRequest request) {
         Skill skill = skillRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
         if (!skill.getName().equals(request.getName()) && skillRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Skill name already exists");
+            throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
         skill.setName(request.getName());
         skill.setDescription(request.getDescription());
@@ -280,7 +280,7 @@ public class AdminService {
     @Transactional
     public void deleteSkill(UUID id) {
         if (!skillRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Skill not found");
+            throw new ResourceNotFoundException("Умение не найдено");
         }
         log.info("Admin: skill deleted — id={}", id);
         skillRepository.deleteById(id);
@@ -296,10 +296,10 @@ public class AdminService {
     @Transactional
     public SubclassResponse createSubclass(CreateSubclassRequest request) {
         if (subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Subclass name already exists");
+            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
         }
         CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         Subclass sub = Subclass.builder()
                 .name(request.getName())
                 .parentClass(parent)
@@ -313,18 +313,18 @@ public class AdminService {
     @Transactional(readOnly = true)
     public SubclassResponse getSubclass(UUID id) {
         return toSubclassResponse(subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subclass not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден")));
     }
 
     @Transactional
     public SubclassResponse updateSubclass(UUID id, CreateSubclassRequest request) {
         Subclass sub = subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subclass not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден"));
         if (!sub.getName().equals(request.getName()) && subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Subclass name already exists");
+            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
         }
         CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         sub.setName(request.getName());
         sub.setParentClass(parent);
         sub.setDescription(request.getDescription());
@@ -334,7 +334,7 @@ public class AdminService {
     @Transactional
     public void deleteSubclass(UUID id) {
         if (!subclassRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Subclass not found");
+            throw new ResourceNotFoundException("Подкласс не найден");
         }
         log.info("Admin: subclass deleted — id={}", id);
         subclassRepository.deleteById(id);
@@ -350,7 +350,7 @@ public class AdminService {
     @Transactional
     public FeatResponse createFeat(CreateFeatRequest request) {
         if (featRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Feat name already exists");
+            throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
         Feat feat = Feat.builder()
                 .name(request.getName())
@@ -365,15 +365,15 @@ public class AdminService {
     @Transactional(readOnly = true)
     public FeatResponse getFeat(UUID id) {
         return toFeatResponse(featRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Feat not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена")));
     }
 
     @Transactional
     public FeatResponse updateFeat(UUID id, CreateFeatRequest request) {
         Feat feat = featRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Feat not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена"));
         if (!feat.getName().equals(request.getName()) && featRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Feat name already exists");
+            throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
         feat.setName(request.getName());
         feat.setDescription(request.getDescription());
@@ -384,7 +384,7 @@ public class AdminService {
     @Transactional
     public void deleteFeat(UUID id) {
         if (!featRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Feat not found");
+            throw new ResourceNotFoundException("Черта не найдена");
         }
         log.info("Admin: feat deleted — id={}", id);
         featRepository.deleteById(id);
@@ -395,7 +395,7 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<ClassLevelRewardResponse> listClassLevelRewards(UUID classId) {
         if (!classRepository.existsById(classId)) {
-            throw new ResourceNotFoundException("Character class not found");
+            throw new ResourceNotFoundException("Класс персонажа не найден");
         }
         return classLevelRewardRepository.findAllByCharacterClassId(classId).stream()
                 .map(this::toClassLevelRewardResponse)
@@ -405,7 +405,7 @@ public class AdminService {
     @Transactional
     public ClassLevelRewardResponse createClassLevelReward(UUID classId, CreateClassLevelRewardRequest request) {
         CharacterClass cc = classRepository.findById(classId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         rewardResolverRegistry.validate(request.getRewardType(), request.getRewardId());
         ClassLevelReward clr = ClassLevelReward.builder()
                 .characterClass(cc)
@@ -423,9 +423,9 @@ public class AdminService {
     @Transactional
     public void deleteClassLevelReward(UUID classId, UUID rewardEntryId) {
         ClassLevelReward clr = classLevelRewardRepository.findById(rewardEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Class level reward not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Награда за уровень не найдена"));
         if (!clr.getCharacterClass().getId().equals(classId)) {
-            throw new ResourceNotFoundException("Reward does not belong to this class");
+            throw new ResourceNotFoundException("Награда не относится к этому классу");
         }
         log.info("Admin: class level reward deleted — classId={}, rewardEntryId={}", classId, rewardEntryId);
         classLevelRewardRepository.delete(clr);
@@ -447,14 +447,14 @@ public class AdminService {
         try {
             return EquipmentSlot.valueOf(slot);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid equipment slot: " + slot);
+            throw new BadRequestException("Некорректный слот экипировки: " + slot);
         }
     }
 
     private SkillResponse toSkillResponse(Skill s) {
         return SkillResponse.builder()
                 .id(s.getId()).name(s.getName()).description(s.getDescription())
-                .skillType(s.getSkillType()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .skillType(com.dnd.app.util.ResponseLocalizer.skillType(s.getSkillType())).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
     }
 
@@ -479,7 +479,7 @@ public class AdminService {
                 .id(clr.getId())
                 .classId(clr.getCharacterClass().getId())
                 .requiredLevel(clr.getRequiredLevel())
-                .rewardType(clr.getRewardType())
+                .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(clr.getRewardType()))
                 .rewardId(clr.getRewardId())
                 .rewardName(detail.getName())
                 .isChoice(clr.getIsChoice())

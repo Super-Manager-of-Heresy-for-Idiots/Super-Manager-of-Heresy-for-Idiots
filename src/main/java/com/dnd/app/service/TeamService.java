@@ -40,7 +40,7 @@ public class TeamService {
     public TeamResponse createTeam(CreateTeamRequest request, String username) {
         User gm = getUser(username);
         if (gm.getRole() != Role.GAME_MASTER && gm.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only game masters can create teams");
+            throw new AccessDeniedException("Только мастера игры могут создавать команды");
         }
         Team team = Team.builder()
                 .name(request.getName())
@@ -61,7 +61,7 @@ public class TeamService {
         } else if (user.getRole() == Role.GAME_MASTER) {
             teams = teamRepository.findAllByGameMasterId(user.getId());
         } else {
-            throw new AccessDeniedException("Players cannot list teams");
+            throw new AccessDeniedException("Игроки не могут просматривать список команд");
         }
         return teams.stream().map(teamMapper::toResponse).toList();
     }
@@ -69,13 +69,13 @@ public class TeamService {
     @Transactional(readOnly = true)
     public TeamResponse getTeamById(UUID id, String username) {
         Team team = teamRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
         User user = getUser(username);
         if (user.getRole() == Role.GAME_MASTER && !team.getGameMaster().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You do not own this team");
+            throw new AccessDeniedException("Эта команда вам не принадлежит");
         }
         if (user.getRole() == Role.PLAYER) {
-            throw new AccessDeniedException("Players cannot view team details directly");
+            throw new AccessDeniedException("Игроки не могут напрямую просматривать детали команды");
         }
         return teamMapper.toResponse(team);
     }
@@ -83,11 +83,11 @@ public class TeamService {
     @Transactional
     public TeamResponse updateTeam(UUID id, CreateTeamRequest request, String username) {
         Team team = teamRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
         User user = getUser(username);
         boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
         if (!isTeamOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning game master can update this team");
+            throw new AccessDeniedException("Только владелец-мастер может обновлять эту команду");
         }
         team.setName(request.getName());
         team = teamRepository.save(team);
@@ -97,11 +97,11 @@ public class TeamService {
     @Transactional
     public void deleteTeam(UUID id, String username) {
         Team team = teamRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
         User user = getUser(username);
         boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
         if (!isTeamOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning game master can delete this team");
+            throw new AccessDeniedException("Только владелец-мастер может удалить эту команду");
         }
         log.info("Team deleted: id={}, name='{}', by user={}", id, team.getName(), username);
         teamRepository.delete(team);
@@ -110,11 +110,11 @@ public class TeamService {
     @Transactional
     public InviteCodeResponse regenerateInviteCode(UUID teamId, String username) {
         Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
         User user = getUser(username);
         boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
         if (!isTeamOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning game master can regenerate invite codes");
+            throw new AccessDeniedException("Только владелец-мастер может обновлять коды приглашения");
         }
         team.setInviteCode(InviteCodeGenerator.generate());
         teamRepository.save(team);
@@ -124,11 +124,11 @@ public class TeamService {
     @Transactional(readOnly = true)
     public InviteCodeResponse getInviteCode(UUID teamId, String username) {
         Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
         User user = getUser(username);
         boolean isTeamOwner = user.getRole() == Role.GAME_MASTER && team.getGameMaster().getId().equals(user.getId());
         if (!isTeamOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning game master can view invite codes");
+            throw new AccessDeniedException("Только владелец-мастер может просматривать коды приглашения");
         }
         return InviteCodeResponse.builder().inviteCode(team.getInviteCode()).build();
     }
@@ -137,13 +137,13 @@ public class TeamService {
     public TeamResponse joinTeam(JoinTeamRequest request, String username) {
         User player = getUser(username);
         if (player.getRole() != Role.PLAYER) {
-            throw new AccessDeniedException("Only players can join teams");
+            throw new AccessDeniedException("Только игроки могут вступать в команды");
         }
         Team team = teamRepository.findByInviteCode(request.getInviteCode())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid invite code"));
+                .orElseThrow(() -> new ResourceNotFoundException("Некорректный код приглашения"));
         TeamMemberId memberId = new TeamMemberId(team.getId(), player.getId());
         if (teamMemberRepository.existsById(memberId)) {
-            throw new DuplicateResourceException("You are already a member of this team");
+            throw new DuplicateResourceException("Вы уже состоите в этой команде");
         }
         TeamMember member = TeamMember.builder()
                 .id(memberId)
@@ -158,6 +158,6 @@ public class TeamService {
 
     private User getUser(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
     }
 }

@@ -15,20 +15,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username must contain only alphanumeric characters and underscores")
+    @NotBlank(message = "Имя пользователя обязательно")
+    @Size(min = 3, max = 30, message = "Имя пользователя должно быть от 3 до 30 символов")
+    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Имя пользователя может содержать только латинские буквы, цифры и подчеркивания")
     private String username;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Must be a valid email address")
+    @NotBlank(message = "Электронная почта обязательна")
+    @Email(message = "Введите корректную электронную почту")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @NotBlank(message = "Пароль обязателен")
+    @Size(min = 8, message = "Пароль должен быть не короче 8 символов")
     private String password;
 
-    @NotBlank(message = "Role is required")
-    @Pattern(regexp = "^(PLAYER|GAME_MASTER)$", message = "Role must be PLAYER or GAME_MASTER")
+    @NotBlank(message = "Роль обязательна")
+    @Pattern(regexp = "^(PLAYER|GAME_MASTER)$", message = "Роль должна быть PLAYER или GAME_MASTER")
     private String role;
 }

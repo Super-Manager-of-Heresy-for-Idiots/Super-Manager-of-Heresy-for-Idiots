@@ -29,7 +29,7 @@ public class ConditionController {
             @Valid @RequestBody CreateConditionRequest request, Authentication auth) {
         ConditionResponse condition = conditionService.createCondition(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(condition, "Condition created"));
+                .body(ApiResponse.ok(condition, "Состояние создано"));
     }
 
     @GetMapping
@@ -45,27 +45,27 @@ public class ConditionController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ConditionResponse>> update(
             @PathVariable UUID id, @Valid @RequestBody CreateConditionRequest request, Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(conditionService.updateCondition(id, request, auth.getName()), "Condition updated"));
+        return ResponseEntity.ok(ApiResponse.ok(conditionService.updateCondition(id, request, auth.getName()), "Состояние обновлено"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id, Authentication auth) {
         conditionService.deleteCondition(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Condition deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Состояние удалено"));
     }
 
     @PostMapping("/{id}/modifiers")
     public ResponseEntity<ApiResponse<ConditionResponse>> addModifier(
             @PathVariable UUID id, @Valid @RequestBody AddConditionModifierRequest request, Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(conditionService.addModifier(id, request, auth.getName()), "Modifier added"));
+                .body(ApiResponse.ok(conditionService.addModifier(id, request, auth.getName()), "Модификатор добавлен"));
     }
 
     @DeleteMapping("/{condId}/modifiers/{modId}")
     public ResponseEntity<ApiResponse<Void>> deleteModifier(
             @PathVariable UUID condId, @PathVariable UUID modId, Authentication auth) {
         conditionService.deleteModifier(condId, modId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Modifier removed"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Модификатор удален"));
     }
 
     @PostMapping("/apply/{characterId}")
@@ -73,7 +73,7 @@ public class ConditionController {
             @PathVariable UUID characterId, @Valid @RequestBody ApplyConditionRequest request, Authentication auth) {
         CharacterConditionResponse resp = conditionService.applyCondition(characterId, request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(resp, "Condition applied"));
+                .body(ApiResponse.ok(resp, "Состояние применено"));
     }
 
     @GetMapping("/character/{characterId}")
@@ -86,6 +86,6 @@ public class ConditionController {
     public ResponseEntity<ApiResponse<Void>> remove(
             @PathVariable UUID characterId, @PathVariable UUID charConditionId, Authentication auth) {
         conditionService.removeCondition(characterId, charConditionId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Condition removed"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Состояние снято"));
     }
 }

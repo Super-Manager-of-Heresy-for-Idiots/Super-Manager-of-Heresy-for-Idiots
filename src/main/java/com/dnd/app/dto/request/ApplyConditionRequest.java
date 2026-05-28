@@ -14,6 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ApplyConditionRequest {
 
-    @NotNull(message = "Condition ID is required")
+    @NotNull(message = "ID состояния обязателен")
     private UUID conditionId;
 }

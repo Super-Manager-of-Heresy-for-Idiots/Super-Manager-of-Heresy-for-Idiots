@@ -49,7 +49,7 @@ public class HomebrewAdminService {
     @Transactional
     public Map<String, Object> hardDelete(UUID id) {
         HomebrewPackage pkg = packageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         long affectedInstallations = installationRepository.countByHomebrewPackageId(id);
         log.info("Admin hard-deleting package: id={}, title='{}', author={}, installCount={}",
@@ -82,13 +82,13 @@ public class HomebrewAdminService {
     @Transactional
     public void deleteTag(UUID tagId) {
         HomebrewTag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тег не найден"));
 
         long usageCount = packageRepository.findAll().stream()
                 .filter(p -> p.getTags().contains(tag))
                 .count();
         if (usageCount > 0) {
-            throw new DuplicateResourceException("Tag is still used by " + usageCount + " package(s)");
+            throw new DuplicateResourceException("Тег все еще используется в " + usageCount + " пакетах");
         }
 
         tagRepository.delete(tag);

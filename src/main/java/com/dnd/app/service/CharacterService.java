@@ -44,14 +44,14 @@ public class CharacterService {
     @Transactional
     public CharacterResponse createCharacter(CreateCharacterRequest request, String username) {
         User owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (owner.getRole() != Role.PLAYER && owner.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only players can create characters");
+            throw new AccessDeniedException("Только игроки могут создавать персонажей");
         }
         CharacterClass charClass = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         CharacterRace race = raceRepository.findById(request.getRaceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Character race not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(request.getName())
@@ -100,13 +100,13 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public List<CharacterResponse> listCharacters(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<PlayerCharacter> characters;
         switch (user.getRole()) {
             case PLAYER -> characters = characterRepository.findAllByOwnerId(user.getId());
             case GAME_MASTER -> characters = characterRepository.findAllByGameMasterId(user.getId());
             case ADMIN -> characters = characterRepository.findAll();
-            default -> throw new AccessDeniedException("Unknown role");
+            default -> throw new AccessDeniedException("Неизвестная роль");
         }
         return characters.stream().map(characterMapper::toResponse).toList();
     }
@@ -114,7 +114,7 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public CharacterResponse getCharacterById(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
         return characterMapper.toResponse(character);
     }
@@ -122,17 +122,17 @@ public class CharacterService {
     @Transactional
     public CharacterResponse updateCharacter(UUID id, UpdateCharacterRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
         if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning player can update this character");
+            throw new AccessDeniedException("Только владелец может обновлять этого персонажа");
         }
         if (request.getName() != null) character.setName(request.getName());
         if (request.getRaceId() != null) {
             CharacterRace race = raceRepository.findById(request.getRaceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Character race not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
             character.setRace(race);
         }
         character = characterRepository.save(character);
@@ -142,12 +142,12 @@ public class CharacterService {
     @Transactional
     public void deleteCharacter(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
         if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning player can delete this character");
+            throw new AccessDeniedException("Только владелец может удалить этого персонажа");
         }
         log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
         characterRepository.delete(character);
@@ -156,7 +156,7 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public List<CharacterStatResponse> getStats(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
 
         List<CharacterCondition> activeConditions =
@@ -186,25 +186,25 @@ public class CharacterService {
     @Transactional
     public CharacterStatResponse updateStatValue(UUID characterId, UUID statId, UpdateStatRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
 
         if (user.getRole() == Role.PLAYER) {
             if (!character.getOwner().getId().equals(user.getId())) {
-                throw new AccessDeniedException("You do not own this character");
+                throw new AccessDeniedException("Этот персонаж вам не принадлежит");
             }
         } else if (user.getRole() == Role.GAME_MASTER) {
             if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                throw new AccessDeniedException("This character's owner is not in any of your teams");
+                throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
             }
         }
         // ADMIN can edit any stat
 
         CharacterStat stat = characterStatRepository.findById(statId)
-                .orElseThrow(() -> new ResourceNotFoundException("Stat not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Характеристика персонажа не найдена"));
         if (!stat.getCharacter().getId().equals(characterId)) {
-            throw new BadRequestException("Stat does not belong to this character");
+            throw new BadRequestException("Характеристика не относится к этому персонажу");
         }
         stat.setValue(request.getValue());
         stat = characterStatRepository.save(stat);
@@ -214,7 +214,7 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public List<InventorySlotResponse> getInventory(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
         return characterMapper.toInventorySlotResponseList(character.getInventorySlots());
     }
@@ -222,27 +222,29 @@ public class CharacterService {
     @Transactional
     public InventorySlotResponse updateInventorySlot(UUID characterId, String slotName, UpdateInventorySlotRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
         if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning player can update inventory");
+            throw new AccessDeniedException("Только владелец может обновлять инвентарь");
         }
         EquipmentSlot equipSlot;
         try {
             equipSlot = EquipmentSlot.valueOf(slotName);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid equipment slot: " + slotName);
+            throw new BadRequestException("Некорректный слот экипировки: " + slotName);
         }
         InventorySlot invSlot = inventorySlotRepository.findByCharacterIdAndSlot(characterId, equipSlot)
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory slot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Слот инвентаря не найден"));
 
         if (request.getItemTypeId() != null) {
             ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Item type not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
             if (itemType.getSlot() != equipSlot) {
-                throw new BadRequestException("Item type slot mismatch — expected " + equipSlot + " but item type requires " + itemType.getSlot());
+                throw new BadRequestException("Несоответствие слота типа предмета — ожидался " +
+                        com.dnd.app.util.ResponseLocalizer.equipmentSlot(equipSlot) +
+                        ", а типу предмета нужен " + com.dnd.app.util.ResponseLocalizer.equipmentSlot(itemType.getSlot()));
             }
             invSlot.setItemType(itemType);
         } else {
@@ -256,16 +258,16 @@ public class CharacterService {
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         switch (user.getRole()) {
             case PLAYER -> {
                 if (!character.getOwner().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("You do not own this character");
+                    throw new AccessDeniedException("Этот персонаж вам не принадлежит");
                 }
             }
             case GAME_MASTER -> {
                 if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("This character's owner is not in any of your teams");
+                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
                 }
             }
             case ADMIN -> { /* admins can view all */ }

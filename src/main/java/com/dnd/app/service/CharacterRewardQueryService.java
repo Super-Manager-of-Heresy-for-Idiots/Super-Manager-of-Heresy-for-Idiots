@@ -28,7 +28,7 @@ public class CharacterRewardQueryService {
     @Transactional(readOnly = true)
     public CharacterRewardsResponse getCharacterRewards(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
 
         List<CharacterClassLevel> classLevels = classLevelRepository.findAllByCharacterId(characterId);
@@ -56,7 +56,7 @@ public class CharacterRewardQueryService {
                             .build();
                 }
 
-                rewardsByType.computeIfAbsent(clr.getRewardType(), k -> new ArrayList<>())
+                rewardsByType.computeIfAbsent(com.dnd.app.util.ResponseLocalizer.rewardType(clr.getRewardType()), k -> new ArrayList<>())
                         .add(CharacterRewardsResponse.AcquiredReward.builder()
                                 .name(detail.getName())
                                 .acquiredAt(ar.getAcquiredAt())
@@ -81,16 +81,16 @@ public class CharacterRewardQueryService {
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         switch (user.getRole()) {
             case PLAYER -> {
                 if (!character.getOwner().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("You do not own this character");
+                    throw new AccessDeniedException("Этот персонаж вам не принадлежит");
                 }
             }
             case GAME_MASTER -> {
                 if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("This character's owner is not in any of your teams");
+                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
                 }
             }
             case ADMIN -> { }

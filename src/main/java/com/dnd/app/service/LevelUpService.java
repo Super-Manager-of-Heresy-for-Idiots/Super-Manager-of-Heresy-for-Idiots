@@ -37,11 +37,11 @@ public class LevelUpService {
     @Transactional(readOnly = true)
     public LevelUpOptionsResponse getLevelUpOptions(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
 
         if (!thresholdService.isReadyToLevelUp(character.getExperience(), character.getTotalLevel())) {
-            throw new DuplicateResourceException("Character is not ready to level up");
+            throw new DuplicateResourceException("Персонаж еще не готов к повышению уровня");
         }
 
         List<CharacterClassLevel> existingLevels = classLevelRepository.findAllByCharacterId(characterId);
@@ -91,21 +91,21 @@ public class LevelUpService {
     @Transactional
     public LevelUpResultResponse commitLevelUp(UUID characterId, String username, LevelUpRequest request) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
 
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
         if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the owning player can level up");
+            throw new AccessDeniedException("Только владелец может повышать уровень персонажа");
         }
 
         if (!thresholdService.isReadyToLevelUp(character.getExperience(), character.getTotalLevel())) {
-            throw new DuplicateResourceException("Character is not ready to level up");
+            throw new DuplicateResourceException("Персонаж еще не готов к повышению уровня");
         }
 
         CharacterClass targetClass = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
 
         Optional<CharacterClassLevel> existingLevel = classLevelRepository
                 .findByCharacterIdAndClassId(characterId, targetClass.getId());
@@ -113,7 +113,7 @@ public class LevelUpService {
         int newClassLevel = currentClassLevel + 1;
 
         if (newClassLevel > 20) {
-            throw new UnprocessableEntityException("Class level cannot exceed 20");
+            throw new UnprocessableEntityException("Уровень класса не может быть выше 20");
         }
 
         List<ClassLevelReward> availableRewards = rewardCatalogRepository
@@ -152,22 +152,22 @@ public class LevelUpService {
                         .toList();
 
                 if (chosen.isEmpty()) {
-                    throw new UnprocessableEntityException("Missing selection for reward type: " + type);
+                    throw new UnprocessableEntityException("Не выбран вариант для типа награды: " + type);
                 }
 
                 for (ClassLevelReward c : chosen) {
                     if (!c.getCharacterClass().getId().equals(targetClass.getId()) ||
                             !c.getRequiredLevel().equals(newClassLevel)) {
                         throw new UnprocessableEntityException(
-                                "Reward entry " + c.getId() + " does not belong to this class/level");
+                                "Запись награды " + c.getId() + " не относится к этому классу или уровню");
                     }
                     if (acquiredRewardIds.contains(c.getId())) {
-                        throw new UnprocessableEntityException("Reward already acquired: " + c.getId());
+                        throw new UnprocessableEntityException("Награда уже получена: " + c.getId());
                     }
                     if ("SUBCLASS".equals(c.getRewardType())) {
                         boolean hasSubclass = hasAcquiredSubclassForClass(characterId, targetClass.getId(), acquiredRewardIds);
                         if (hasSubclass) {
-                            throw new UnprocessableEntityException("Character already has a subclass for this class");
+                            throw new UnprocessableEntityException("У персонажа уже есть подкласс для этого класса");
                         }
                     }
                     toAcquire.add(c);
@@ -206,7 +206,7 @@ public class LevelUpService {
 
             RewardDetailDto detail = rewardResolverRegistry.resolve(reward.getRewardType(), reward.getRewardId());
             summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
-                    .rewardType(reward.getRewardType())
+                    .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(reward.getRewardType()))
                     .name(detail.getName())
                     .build());
         }
@@ -252,7 +252,7 @@ public class LevelUpService {
             boolean isChoice = entry.getValue().stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsChoice()));
 
             groups.add(LevelUpOptionsResponse.RewardGroup.builder()
-                    .rewardType(type)
+                    .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(type))
                     .isChoice(isChoice)
                     .rewards(entries)
                     .build());
@@ -277,16 +277,16 @@ public class LevelUpService {
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         switch (user.getRole()) {
             case PLAYER -> {
                 if (!character.getOwner().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("You do not own this character");
+                    throw new AccessDeniedException("Этот персонаж вам не принадлежит");
                 }
             }
             case GAME_MASTER -> {
                 if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("This character's owner is not in any of your teams");
+                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
                 }
             }
             case ADMIN -> { }

@@ -28,7 +28,7 @@ public class TeamController {
             @Valid @RequestBody CreateTeamRequest request, Authentication auth) {
         TeamResponse team = teamService.createTeam(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(team, "Team created"));
+                .body(ApiResponse.ok(team, "Команда создана"));
     }
 
     @GetMapping
@@ -47,20 +47,20 @@ public class TeamController {
     public ResponseEntity<ApiResponse<TeamResponse>> updateTeam(
             @PathVariable UUID id, @Valid @RequestBody CreateTeamRequest request, Authentication auth) {
         TeamResponse team = teamService.updateTeam(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(team, "Team updated"));
+        return ResponseEntity.ok(ApiResponse.ok(team, "Команда обновлена"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTeam(@PathVariable UUID id, Authentication auth) {
         teamService.deleteTeam(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Team deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Команда удалена"));
     }
 
     @PostMapping("/{id}/regenerate-invite")
     public ResponseEntity<ApiResponse<InviteCodeResponse>> regenerateInvite(
             @PathVariable UUID id, Authentication auth) {
         InviteCodeResponse code = teamService.regenerateInviteCode(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(code, "Invite code regenerated"));
+        return ResponseEntity.ok(ApiResponse.ok(code, "Код приглашения обновлен"));
     }
 
     @GetMapping("/{id}/invite-code")
@@ -74,6 +74,6 @@ public class TeamController {
     public ResponseEntity<ApiResponse<TeamResponse>> joinTeam(
             @Valid @RequestBody JoinTeamRequest request, Authentication auth) {
         TeamResponse team = teamService.joinTeam(request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(team, "Joined team successfully"));
+        return ResponseEntity.ok(ApiResponse.ok(team, "Вы вступили в команду"));
     }
 }

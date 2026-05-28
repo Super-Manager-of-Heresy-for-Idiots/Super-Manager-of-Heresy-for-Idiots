@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginRequest {
 
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "Имя пользователя обязательно")
     private String username;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "Пароль обязателен")
     private String password;
 }

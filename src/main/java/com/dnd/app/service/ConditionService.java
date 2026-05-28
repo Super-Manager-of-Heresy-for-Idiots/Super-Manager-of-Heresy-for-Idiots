@@ -36,7 +36,7 @@ public class ConditionService {
     public ConditionResponse createCondition(CreateConditionRequest request, String username) {
         User gm = getGMOrAdmin(username);
         if (conditionRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Condition name already exists");
+            throw new DuplicateResourceException("Состояние с таким названием уже существует");
         }
         Condition condition = Condition.builder()
                 .name(request.getName())
@@ -51,14 +51,14 @@ public class ConditionService {
     @Transactional(readOnly = true)
     public List<ConditionResponse> listConditions(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<Condition> conditions;
         if (user.getRole() == Role.ADMIN) {
             conditions = conditionRepository.findAll();
         } else if (user.getRole() == Role.GAME_MASTER) {
             conditions = conditionRepository.findAllByCreatedById(user.getId());
         } else {
-            throw new AccessDeniedException("Players cannot list conditions");
+            throw new AccessDeniedException("Игроки не могут просматривать список состояний");
         }
         return conditions.stream().map(this::toResponse).toList();
     }
@@ -66,7 +66,7 @@ public class ConditionService {
     @Transactional(readOnly = true)
     public ConditionResponse getCondition(UUID id, String username) {
         Condition condition = conditionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         return toResponse(condition);
     }
 
@@ -74,12 +74,12 @@ public class ConditionService {
     public ConditionResponse updateCondition(UUID id, CreateConditionRequest request, String username) {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this condition");
+            throw new AccessDeniedException("Вы не создавали это состояние");
         }
         if (!condition.getName().equals(request.getName()) && conditionRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Condition name already exists");
+            throw new DuplicateResourceException("Состояние с таким названием уже существует");
         }
         condition.setName(request.getName());
         condition.setDescription(request.getDescription());
@@ -91,9 +91,9 @@ public class ConditionService {
     public void deleteCondition(UUID id, String username) {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this condition");
+            throw new AccessDeniedException("Вы не создавали это состояние");
         }
         log.info("Condition deleted: id={}, name='{}', by gm={}", id, condition.getName(), username);
         conditionRepository.delete(condition);
@@ -103,14 +103,14 @@ public class ConditionService {
     public ConditionResponse addModifier(UUID conditionId, AddConditionModifierRequest request, String username) {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(conditionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this condition");
+            throw new AccessDeniedException("Вы не создавали это состояние");
         }
         StatType statType = statTypeRepository.findById(request.getStatTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Stat type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
         if (modifierRepository.existsByConditionIdAndStatTypeId(conditionId, request.getStatTypeId())) {
-            throw new DuplicateResourceException("Modifier for this stat type already exists on this condition");
+            throw new DuplicateResourceException("Модификатор этой характеристики уже есть у состояния");
         }
         ConditionModifier modifier = ConditionModifier.builder()
                 .condition(condition)
@@ -126,14 +126,14 @@ public class ConditionService {
     public void deleteModifier(UUID conditionId, UUID modifierId, String username) {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(conditionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this condition");
+            throw new AccessDeniedException("Вы не создавали это состояние");
         }
         ConditionModifier modifier = modifierRepository.findById(modifierId)
-                .orElseThrow(() -> new ResourceNotFoundException("Modifier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Модификатор не найден"));
         if (!modifier.getCondition().getId().equals(conditionId)) {
-            throw new ResourceNotFoundException("Modifier does not belong to this condition");
+            throw new ResourceNotFoundException("Модификатор не относится к этому состоянию");
         }
         condition.getModifiers().remove(modifier);
         modifierRepository.delete(modifier);
@@ -143,14 +143,14 @@ public class ConditionService {
     public CharacterConditionResponse applyCondition(UUID characterId, ApplyConditionRequest request, String username) {
         User gm = getGMOrAdmin(username);
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("This character's owner is not in any of your teams");
+            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
         }
         Condition condition = conditionRepository.findById(request.getConditionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
         if (charCondRepository.existsByCharacterIdAndConditionIdAndActiveTrue(characterId, condition.getId())) {
-            throw new DuplicateResourceException("This condition is already active on this character");
+            throw new DuplicateResourceException("Это состояние уже активно у персонажа");
         }
         CharacterCondition cc = CharacterCondition.builder()
                 .character(character)
@@ -166,14 +166,14 @@ public class ConditionService {
     @Transactional(readOnly = true)
     public List<CharacterConditionResponse> getActiveConditions(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() == Role.PLAYER && !character.getOwner().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You do not own this character");
+            throw new AccessDeniedException("Этот персонаж вам не принадлежит");
         }
         if (user.getRole() == Role.GAME_MASTER && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-            throw new AccessDeniedException("This character's owner is not in any of your teams");
+            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
         }
         List<CharacterCondition> conditions = charCondRepository.findAllByCharacterIdAndActiveTrue(characterId);
         return conditions.stream().map(this::toCharCondResponse).toList();
@@ -183,12 +183,12 @@ public class ConditionService {
     public void removeCondition(UUID characterId, UUID charConditionId, String username) {
         User gm = getGMOrAdmin(username);
         CharacterCondition cc = charCondRepository.findById(charConditionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character condition not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Состояние персонажа не найдено"));
         if (!cc.getCharacter().getId().equals(characterId)) {
-            throw new ResourceNotFoundException("Condition does not belong to this character");
+            throw new ResourceNotFoundException("Состояние не относится к этому персонажу");
         }
         if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(cc.getCharacter().getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("This character's owner is not in any of your teams");
+            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
         }
         cc.setActive(false);
         charCondRepository.save(cc);
@@ -197,9 +197,9 @@ public class ConditionService {
 
     private User getGMOrAdmin(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only game masters can manage conditions");
+            throw new AccessDeniedException("Только мастера игры могут управлять состояниями");
         }
         return user;
     }

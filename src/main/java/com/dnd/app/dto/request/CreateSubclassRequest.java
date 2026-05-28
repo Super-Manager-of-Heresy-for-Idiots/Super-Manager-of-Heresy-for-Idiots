@@ -16,11 +16,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateSubclassRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank(message = "Название обязательно")
+    @Size(max = 100, message = "Название не должно превышать 100 символов")
     private String name;
 
-    @NotNull(message = "Class ID is required")
+    @NotNull(message = "ID класса обязателен")
     private UUID classId;
 
     private String description;

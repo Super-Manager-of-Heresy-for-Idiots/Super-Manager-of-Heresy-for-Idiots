@@ -6,127 +6,130 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="002-seed-stat-types" author="dnd-app">
+        <validCheckSum>9:3d79b59bfe1b9171d49c9bd6a21803f3</validCheckSum>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000001"/>
-            <column name="name" value="STR"/>
-            <column name="description" value="Strength — physical power"/>
+            <column name="name" value="СИЛ"/>
+            <column name="description" value="Сила — физическая мощь"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000002"/>
-            <column name="name" value="DEX"/>
-            <column name="description" value="Dexterity — agility and reflexes"/>
+            <column name="name" value="ЛОВ"/>
+            <column name="description" value="Ловкость — проворство и реакция"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000003"/>
-            <column name="name" value="CON"/>
-            <column name="description" value="Constitution — endurance and health"/>
+            <column name="name" value="ТЕЛ"/>
+            <column name="description" value="Телосложение — выносливость и здоровье"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000004"/>
-            <column name="name" value="INT"/>
-            <column name="description" value="Intelligence — reasoning and memory"/>
+            <column name="name" value="ИНТ"/>
+            <column name="description" value="Интеллект — логика и память"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000005"/>
-            <column name="name" value="WIS"/>
-            <column name="description" value="Wisdom — perception and insight"/>
+            <column name="name" value="МДР"/>
+            <column name="description" value="Мудрость — восприятие и проницательность"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
         <insert tableName="stat_types">
             <column name="id" value="a0000000-0000-0000-0000-000000000006"/>
-            <column name="name" value="CHA"/>
-            <column name="description" value="Charisma — force of personality"/>
+            <column name="name" value="ХАР"/>
+            <column name="description" value="Харизма — сила личности"/>
             <column name="is_default" valueBoolean="true"/>
         </insert>
     </changeSet>
 
     <changeSet id="002-seed-character-classes" author="dnd-app">
+        <validCheckSum>9:2294d3b25c5eb9c53dd7edbe526922ab</validCheckSum>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000001"/>
-            <column name="name" value="Fighter"/>
-            <column name="description" value="A master of martial combat, skilled with a variety of weapons and armor"/>
+            <column name="name" value="Воин"/>
+            <column name="description" value="Мастер воинского боя, владеющий множеством видов оружия и доспехов"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000002"/>
-            <column name="name" value="Wizard"/>
-            <column name="description" value="A scholarly magic-user capable of manipulating the structures of reality"/>
+            <column name="name" value="Волшебник"/>
+            <column name="description" value="Ученый маг, способный изменять саму ткань реальности"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000003"/>
-            <column name="name" value="Rogue"/>
-            <column name="description" value="A scoundrel who uses stealth and trickery to overcome obstacles"/>
+            <column name="name" value="Плут"/>
+            <column name="description" value="Ловкач, который преодолевает препятствия скрытностью и хитростью"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000004"/>
-            <column name="name" value="Cleric"/>
-            <column name="description" value="A priestly champion who wields divine magic in service of a higher power"/>
+            <column name="name" value="Жрец"/>
+            <column name="description" value="Священный воитель, владеющий божественной магией высших сил"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000005"/>
-            <column name="name" value="Ranger"/>
-            <column name="description" value="A warrior who combats threats on the edges of civilization"/>
+            <column name="name" value="Следопыт"/>
+            <column name="description" value="Воин, противостоящий угрозам на границах цивилизации"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000006"/>
-            <column name="name" value="Paladin"/>
-            <column name="description" value="A holy warrior bound to a sacred oath"/>
+            <column name="name" value="Паладин"/>
+            <column name="description" value="Святой воин, связанный священной клятвой"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000007"/>
-            <column name="name" value="Bard"/>
-            <column name="description" value="An inspiring magician whose power echoes the music of creation"/>
+            <column name="name" value="Бард"/>
+            <column name="description" value="Вдохновляющий маг, чья сила отзывается музыкой творения"/>
         </insert>
         <insert tableName="character_classes">
             <column name="id" value="b0000000-0000-0000-0000-000000000008"/>
-            <column name="name" value="Druid"/>
-            <column name="description" value="A priest of the Old Faith, wielding the powers of nature"/>
+            <column name="name" value="Друид"/>
+            <column name="description" value="Жрец древней веры, владеющий силами природы"/>
         </insert>
     </changeSet>
 
     <changeSet id="002-seed-character-races" author="dnd-app">
+        <validCheckSum>9:2769a3faca9ffb40d03466d61203045a</validCheckSum>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000001"/>
-            <column name="name" value="Human"/>
-            <column name="description" value="The most adaptable and ambitious people among the common races"/>
+            <column name="name" value="Человек"/>
+            <column name="description" value="Самые гибкие и амбициозные среди распространенных народов"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000002"/>
-            <column name="name" value="Elf"/>
-            <column name="description" value="A magical people of otherworldly grace"/>
+            <column name="name" value="Эльф"/>
+            <column name="description" value="Волшебный народ неземной грации"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000003"/>
-            <column name="name" value="Dwarf"/>
-            <column name="description" value="Bold and hardy, dwarves are known as skilled warriors and miners"/>
+            <column name="name" value="Дварф"/>
+            <column name="description" value="Смелые и крепкие, дварфы известны как искусные воины и рудокопы"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000004"/>
-            <column name="name" value="Halfling"/>
-            <column name="description" value="The diminutive halflings survive in a world full of larger creatures"/>
+            <column name="name" value="Полурослик"/>
+            <column name="description" value="Невысокие полурослики выживают в мире, полном существ крупнее их"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000005"/>
-            <column name="name" value="Gnome"/>
-            <column name="description" value="A people of endless curiosity and boundless enthusiasm"/>
+            <column name="name" value="Гном"/>
+            <column name="description" value="Народ бесконечного любопытства и неуемного энтузиазма"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000006"/>
-            <column name="name" value="Half-Elf"/>
-            <column name="description" value="Walking in two worlds but truly belonging to neither"/>
+            <column name="name" value="Полуэльф"/>
+            <column name="description" value="Идущие между двумя мирами, но не принадлежащие ни одному из них"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000007"/>
-            <column name="name" value="Tiefling"/>
-            <column name="description" value="Beings derived from human bloodlines linked to the Nine Hells"/>
+            <column name="name" value="Тифлинг"/>
+            <column name="description" value="Существа из человеческих родов, связанных с Девятью Преисподними"/>
         </insert>
         <insert tableName="character_races">
             <column name="id" value="c0000000-0000-0000-0000-000000000008"/>
-            <column name="name" value="Dragonborn"/>
-            <column name="description" value="Born of dragons, walking proudly through a world that greets them with fearful incomprehension"/>
+            <column name="name" value="Драконорожденный"/>
+            <column name="description" value="Рожденные драконами, гордо идущие по миру, который встречает их страхом и непониманием"/>
         </insert>
     </changeSet>
 

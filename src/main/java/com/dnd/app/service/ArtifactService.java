@@ -37,13 +37,13 @@ public class ArtifactService {
     public ArtifactResponse createArtifact(CreateArtifactRequest request, String username) {
         User gm = getGMOrAdmin(username);
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
         Rarity rarity = Rarity.COMMON;
         if (request.getRarity() != null) {
             try {
                 rarity = Rarity.valueOf(request.getRarity());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid rarity: " + request.getRarity());
+                throw new BadRequestException("Некорректная редкость: " + request.getRarity());
             }
         }
         Artifact artifact = Artifact.builder()
@@ -63,14 +63,14 @@ public class ArtifactService {
     @Transactional(readOnly = true)
     public List<ArtifactResponse> listArtifacts(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<Artifact> artifacts;
         if (user.getRole() == Role.ADMIN) {
             artifacts = artifactRepository.findAll();
         } else if (user.getRole() == Role.GAME_MASTER) {
             artifacts = artifactRepository.findAllByCreatedById(user.getId());
         } else {
-            throw new AccessDeniedException("Players cannot list artifacts");
+            throw new AccessDeniedException("Игроки не могут просматривать список артефактов");
         }
         return artifacts.stream().map(this::toResponse).toList();
     }
@@ -78,14 +78,14 @@ public class ArtifactService {
     @Transactional(readOnly = true)
     public ArtifactResponse getArtifact(UUID id, String username) {
         Artifact artifact = artifactRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() == Role.PLAYER) {
-            throw new AccessDeniedException("Players cannot view artifact details");
+            throw new AccessDeniedException("Игроки не могут просматривать детали артефакта");
         }
         if (user.getRole() == Role.GAME_MASTER && !artifact.getCreatedBy().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You did not create this artifact");
+            throw new AccessDeniedException("Вы не создавали этот артефакт");
         }
         return toResponse(artifact);
     }
@@ -94,12 +94,12 @@ public class ArtifactService {
     public ArtifactResponse updateArtifact(UUID id, CreateArtifactRequest request, String username) {
         User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
         if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this artifact");
+            throw new AccessDeniedException("Вы не создавали этот артефакт");
         }
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
         artifact.setName(request.getName());
         artifact.setDescription(request.getDescription());
         artifact.setItemType(itemType);
@@ -107,7 +107,7 @@ public class ArtifactService {
             try {
                 artifact.setRarity(Rarity.valueOf(request.getRarity()));
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid rarity: " + request.getRarity());
+                throw new BadRequestException("Некорректная редкость: " + request.getRarity());
             }
         }
         artifact.setProperties(request.getProperties());
@@ -120,9 +120,9 @@ public class ArtifactService {
     public void deleteArtifact(UUID id, String username) {
         User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
         if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("You did not create this artifact");
+            throw new AccessDeniedException("Вы не создавали этот артефакт");
         }
         log.info("Artifact deleted: id={}, name='{}', by gm={}", id, artifact.getName(), username);
         artifactRepository.delete(artifact);
@@ -132,31 +132,32 @@ public class ArtifactService {
     public InventorySlotResponse placeArtifact(UUID characterId, String slotName, PlaceArtifactRequest request, String username) {
         User gm = getGMOrAdmin(username);
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("This character's owner is not in any of your teams");
+            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
         }
         Artifact artifact = artifactRepository.findById(request.getArtifactId())
-                .orElseThrow(() -> new ResourceNotFoundException("Artifact not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
 
         EquipmentSlot equipSlot;
         try {
             equipSlot = EquipmentSlot.valueOf(slotName);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid equipment slot: " + slotName);
+            throw new BadRequestException("Некорректный слот экипировки: " + slotName);
         }
 
         if (artifact.getItemType().getSlot() != equipSlot) {
-            throw new BadRequestException("Artifact slot mismatch — artifact requires " +
-                    artifact.getItemType().getSlot() + " but target slot is " + equipSlot);
+            throw new BadRequestException("Несоответствие слота артефакта — артефакту нужен " +
+                    com.dnd.app.util.ResponseLocalizer.equipmentSlot(artifact.getItemType().getSlot()) +
+                    ", а выбранный слот: " + com.dnd.app.util.ResponseLocalizer.equipmentSlot(equipSlot));
         }
 
         InventorySlot invSlot = inventorySlotRepository.findByCharacterIdAndSlot(characterId, equipSlot)
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory slot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Слот инвентаря не найден"));
         invSlot.setArtifact(artifact);
         invSlot.setItemType(artifact.getItemType());
         invSlot.setQuantity(1);
-        invSlot.setNotes(artifact.getName() + " [" + artifact.getRarity() + "]");
+        invSlot.setNotes(artifact.getName() + " [" + com.dnd.app.util.ResponseLocalizer.rarity(artifact.getRarity()) + "]");
         invSlot = inventorySlotRepository.save(invSlot);
         log.info("Artifact placed: artifact='{}', slot={}, characterId={}, by gm={}",
                 artifact.getName(), equipSlot, characterId, username);
@@ -165,9 +166,9 @@ public class ArtifactService {
 
     private User getGMOrAdmin(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only game masters can manage artifacts");
+            throw new AccessDeniedException("Только мастера игры могут управлять артефактами");
         }
         return user;
     }
@@ -179,8 +180,8 @@ public class ArtifactService {
                 .description(a.getDescription())
                 .itemTypeId(a.getItemType().getId())
                 .itemTypeName(a.getItemType().getName())
-                .itemTypeSlot(a.getItemType().getSlot().name())
-                .rarity(a.getRarity().name())
+                .itemTypeSlot(com.dnd.app.util.ResponseLocalizer.equipmentSlot(a.getItemType().getSlot()))
+                .rarity(com.dnd.app.util.ResponseLocalizer.rarity(a.getRarity()))
                 .properties(a.getProperties())
                 .specialAbilities(a.getSpecialAbilities())
                 .createdById(a.getCreatedBy().getId())

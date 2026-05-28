@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class JoinTeamRequest {
 
-    @NotBlank(message = "Invite code is required")
+    @NotBlank(message = "Код приглашения обязателен")
     private String inviteCode;
 }

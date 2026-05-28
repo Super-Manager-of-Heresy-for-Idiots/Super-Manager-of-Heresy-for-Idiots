@@ -28,7 +28,7 @@ public class CharacterController {
             @Valid @RequestBody CreateCharacterRequest request, Authentication auth) {
         CharacterResponse character = characterService.createCharacter(request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(character, "Character created"));
+                .body(ApiResponse.ok(character, "Персонаж создан"));
     }
 
     @GetMapping
@@ -48,13 +48,13 @@ public class CharacterController {
     public ResponseEntity<ApiResponse<CharacterResponse>> updateCharacter(
             @PathVariable UUID id, @Valid @RequestBody UpdateCharacterRequest request, Authentication auth) {
         CharacterResponse character = characterService.updateCharacter(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(character, "Character updated"));
+        return ResponseEntity.ok(ApiResponse.ok(character, "Персонаж обновлен"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCharacter(@PathVariable UUID id, Authentication auth) {
         characterService.deleteCharacter(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Character deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Персонаж удален"));
     }
 
     @GetMapping("/{id}/stats")
@@ -69,7 +69,7 @@ public class CharacterController {
             @PathVariable UUID id, @PathVariable UUID statId,
             @Valid @RequestBody UpdateStatRequest request, Authentication auth) {
         CharacterStatResponse stat = characterService.updateStatValue(id, statId, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(stat, "Stat updated"));
+        return ResponseEntity.ok(ApiResponse.ok(stat, "Характеристика обновлена"));
     }
 
     @GetMapping("/{id}/inventory")
@@ -84,6 +84,6 @@ public class CharacterController {
             @PathVariable UUID id, @PathVariable String slot,
             @Valid @RequestBody UpdateInventorySlotRequest request, Authentication auth) {
         InventorySlotResponse invSlot = characterService.updateInventorySlot(id, slot, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(invSlot, "Inventory slot updated"));
+        return ResponseEntity.ok(ApiResponse.ok(invSlot, "Слот инвентаря обновлен"));
     }
 }

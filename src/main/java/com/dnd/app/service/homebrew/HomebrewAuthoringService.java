@@ -72,7 +72,7 @@ public class HomebrewAuthoringService {
     public HomebrewDetailResponse getMyPackage(UUID id, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
         return toDetailResponse(pkg);
     }
 
@@ -80,10 +80,10 @@ public class HomebrewAuthoringService {
     public HomebrewDetailResponse updatePackage(UUID id, UpdateHomebrewRequest request, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Package can only be edited in DRAFT status");
+            throw new DuplicateResourceException("Пакет можно редактировать только в статусе черновика (DRAFT)");
         }
 
         if (request.getTitle() != null) {
@@ -106,28 +106,28 @@ public class HomebrewAuthoringService {
     public HomebrewDetailResponse addContent(UUID packageId, AddContentRequest request, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(packageId, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Content can only be added in DRAFT status");
+            throw new DuplicateResourceException("Контент можно добавлять только в статусе черновика (DRAFT)");
         }
 
         String contentTypeStr = request.getContentType();
         if (!validatorRegistry.isKnownType(contentTypeStr)) {
-            throw new DuplicateResourceException("Unknown content type: " + contentTypeStr);
+            throw new DuplicateResourceException("Неизвестный тип контента: " + contentTypeStr);
         }
 
         validatorRegistry.validate(contentTypeStr, request.getContentId());
 
         UUID ownerId = validatorRegistry.getOwnerId(contentTypeStr, request.getContentId());
         if (ownerId != null && !ownerId.equals(gm.getId())) {
-            throw new AccessDeniedException("Content is not owned by you");
+            throw new AccessDeniedException("Этот контент вам не принадлежит");
         }
 
         ContentType contentType = ContentType.valueOf(contentTypeStr);
         if (contentItemRepository.existsByHomebrewPackageIdAndContentTypeAndContentId(
                 packageId, contentType, request.getContentId())) {
-            throw new DuplicateResourceException("Content already exists in this package");
+            throw new DuplicateResourceException("Этот контент уже есть в пакете");
         }
 
         HomebrewContentItem item = HomebrewContentItem.builder()
@@ -145,17 +145,17 @@ public class HomebrewAuthoringService {
     public void removeContent(UUID packageId, UUID contentItemId, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(packageId, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Content can only be removed in DRAFT status");
+            throw new DuplicateResourceException("Контент можно удалять только в статусе черновика (DRAFT)");
         }
 
         HomebrewContentItem item = contentItemRepository.findById(contentItemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Content item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Элемент контента не найден"));
 
         if (!item.getHomebrewPackage().getId().equals(packageId)) {
-            throw new ResourceNotFoundException("Content item not found in this package");
+            throw new ResourceNotFoundException("Элемент контента не найден в этом пакете");
         }
 
         contentItemRepository.delete(item);
@@ -166,19 +166,19 @@ public class HomebrewAuthoringService {
     public HomebrewDetailResponse publish(UUID id, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT && pkg.getStatus() != HomebrewStatus.UNPUBLISHED) {
-            throw new DuplicateResourceException("Package can only be published from DRAFT or UNPUBLISHED status");
+            throw new DuplicateResourceException("Пакет можно опубликовать только из статуса черновика (DRAFT) или снятого с публикации (UNPUBLISHED)");
         }
 
         long contentCount = contentItemRepository.countByHomebrewPackageId(id);
         if (contentCount == 0) {
-            throw new UnprocessableEntityException("Package must have at least 1 content item to publish");
+            throw new UnprocessableEntityException("Для публикации в пакете должен быть минимум 1 элемент контента");
         }
 
         if (pkg.getTitle() == null || pkg.getTitle().isBlank()) {
-            throw new UnprocessableEntityException("Package must have a non-empty title to publish");
+            throw new UnprocessableEntityException("Для публикации у пакета должен быть непустой заголовок");
         }
 
         if (pkg.getPublishedAt() == null) {
@@ -195,10 +195,10 @@ public class HomebrewAuthoringService {
     public HomebrewDetailResponse unpublish(UUID id, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.PUBLISHED) {
-            throw new DuplicateResourceException("Only published packages can be unpublished");
+            throw new DuplicateResourceException("Снять с публикации можно только опубликованные пакеты");
         }
 
         pkg.setStatus(HomebrewStatus.UNPUBLISHED);
@@ -211,7 +211,7 @@ public class HomebrewAuthoringService {
     public Map<String, Object> softDelete(UUID id, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         long installCount = installationRepository.countByHomebrewPackageId(id);
 
@@ -221,7 +221,7 @@ public class HomebrewAuthoringService {
         log.info("Homebrew package soft-deleted: id={}, installationCount={}, by={}", id, installCount, username);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("message", "Package deleted successfully");
+        result.put("message", "Пакет удален");
         result.put("installationCount", installCount);
         return result;
     }
@@ -231,14 +231,14 @@ public class HomebrewAuthoringService {
     HomebrewPackageResponse toPackageResponse(HomebrewPackage pkg) {
         String title = pkg.getTitle();
         if (pkg.isDeleted()) {
-            title = "[DELETED] " + title;
+            title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
         }
 
         return HomebrewPackageResponse.builder()
                 .id(pkg.getId())
                 .title(title)
                 .description(pkg.getDescription())
-                .status(pkg.getStatus().name())
+                .status(com.dnd.app.util.ResponseLocalizer.homebrewStatus(pkg.getStatus()))
                 .version(pkg.getVersion())
                 .downloadCount(pkg.getDownloadCount())
                 .authorUsername(pkg.getAuthor().getUsername())
@@ -253,14 +253,14 @@ public class HomebrewAuthoringService {
     HomebrewDetailResponse toDetailResponse(HomebrewPackage pkg) {
         String title = pkg.getTitle();
         if (pkg.isDeleted()) {
-            title = "[DELETED] " + title;
+            title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
         }
 
         return HomebrewDetailResponse.builder()
                 .id(pkg.getId())
                 .title(title)
                 .description(pkg.getDescription())
-                .status(pkg.getStatus().name())
+                .status(com.dnd.app.util.ResponseLocalizer.homebrewStatus(pkg.getStatus()))
                 .version(pkg.getVersion())
                 .downloadCount(pkg.getDownloadCount())
                 .authorUsername(pkg.getAuthor().getUsername())
@@ -294,7 +294,7 @@ public class HomebrewAuthoringService {
         Map<String, List<ContentSummaryDto>> result = new LinkedHashMap<>();
 
         Map<String, List<HomebrewContentItem>> grouped = items.stream()
-                .collect(Collectors.groupingBy(i -> i.getContentType().name()));
+                .collect(Collectors.groupingBy(i -> com.dnd.app.util.ResponseLocalizer.contentType(i.getContentType().name())));
 
         for (Map.Entry<String, List<HomebrewContentItem>> entry : grouped.entrySet()) {
             List<ContentSummaryDto> summaries = entry.getValue().stream()
@@ -307,9 +307,9 @@ public class HomebrewAuthoringService {
 
     private User getGameMaster(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only game masters can manage homebrew packages");
+            throw new AccessDeniedException("Только мастера игры могут управлять homebrew-пакетами");
         }
         return user;
     }
@@ -318,7 +318,7 @@ public class HomebrewAuthoringService {
         try {
             return HomebrewStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new com.dnd.app.exception.BadRequestException("Invalid status: " + status);
+            throw new com.dnd.app.exception.BadRequestException("Некорректный статус: " + status);
         }
     }
 }

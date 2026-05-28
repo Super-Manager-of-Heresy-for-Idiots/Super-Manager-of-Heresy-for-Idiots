@@ -23,26 +23,26 @@ public class SkillContentValidator implements HomebrewContentValidator {
     @Override
     public void validateExists(UUID contentId) {
         if (!skillRepository.existsById(contentId)) {
-            throw new ResourceNotFoundException("Skill not found: " + contentId);
+            throw new ResourceNotFoundException("Умение не найдено: " + contentId);
         }
     }
 
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
         Skill skill = skillRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + contentId));
         return ContentSummaryDto.builder()
                 .id(skill.getId())
                 .name(skill.getName())
                 .description(skill.getDescription())
-                .skillType(skill.getSkillType())
+                .skillType(com.dnd.app.util.ResponseLocalizer.skillType(skill.getSkillType()))
                 .build();
     }
 
     @Override
     public UUID getOwnerId(UUID contentId) {
         Skill skill = skillRepository.findById(contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Skill not found: " + contentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + contentId));
         return skill.getOwner() != null ? skill.getOwner().getId() : null;
     }
 }

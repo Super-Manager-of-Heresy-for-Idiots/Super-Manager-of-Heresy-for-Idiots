@@ -46,7 +46,7 @@ public class AuthController {
                     duration);
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(user, "Registration successful"));
+                    .body(ApiResponse.ok(user, "Регистрация успешна"));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -88,7 +88,7 @@ public class AuthController {
                     : "N/A";
             log.debug("Token generated for user: {}, token preview: {}", request.getUsername(), tokenPreview);
 
-            return ResponseEntity.ok(ApiResponse.ok(auth, "Login successful"));
+            return ResponseEntity.ok(ApiResponse.ok(auth, "Вход выполнен"));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
