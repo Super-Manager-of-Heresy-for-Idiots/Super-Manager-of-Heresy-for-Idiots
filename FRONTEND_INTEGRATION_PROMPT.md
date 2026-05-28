@@ -1296,4 +1296,774 @@ interface ClassLevelRewardResponse { id: string; classId: string; requiredLevel:
   - /admin/skills, /admin/subclasses, /admin/feats
   - /admin/classes/:id/rewards — настройка наград за уровни
 - /admin/users — список пользователей (ADMIN)
+- /homebrew/my — мои homebrew-пакеты (GAME_MASTER)
+- /homebrew/my/:id — редактор пакета
+- /homebrew/marketplace — маркетплейс (GAME_MASTER)
+- /homebrew/marketplace/:id — страница пакета в маркетплейсе
+- /homebrew/installed — установленные пакеты
+- /admin/homebrew — управление homebrew (ADMIN)
+```
+
+---
+
+## БЛОК 12 — Homebrew Marketplace: Концепция и роли
+
+```
+В приложение добавлена система Homebrew Marketplace.
+"Homebrew" — именованный пакет пользовательского игрового контента,
+созданный Game Master-ом и опционально опубликованный в маркетплейсе,
+где другие GM могут находить и устанавливать его.
+
+КЛЮЧЕВЫЕ ПРИНЦИПЫ:
+
+1. SHARED REFERENCE, NOT COPY:
+   Установка homebrew НЕ копирует данные. Создаётся только строка в homebrew_installations,
+   которая ссылается на оригинальный пакет. Все GM, установившие пакет, разделяют одни данные.
+   Контент (классы, навыки, предметы, черты) из пакета становится доступен
+   в игровом контексте установившего GM.
+
+2. SOFT DELETE ONLY:
+   Автор никогда не удаляет пакет физически. Удаление ставит deleted_at.
+   GM, которые уже установили пакет, сохраняют доступ.
+   При отображении удалённого пакета в UI к title добавляется префикс "[DELETED] "
+   (бэкенд уже возвращает title с этим префиксом).
+
+3. ЖИЗНЕННЫЙ ЦИКЛ: DRAFT → PUBLISHED → (опционально) UNPUBLISHED
+   Редактировать контент можно только в статусе DRAFT.
+   Publish можно повторно из UNPUBLISHED (version инкрементируется).
+
+4. ТИПЫ КОНТЕНТА в пакете:
+   ITEM_TYPE, CHARACTER_CLASS, SKILL, FEAT
+   Каждый элемент контента — ссылка на существующую запись в справочнике.
+
+ДОСТУП ПО РОЛЯМ:
+- GAME_MASTER: создание пакетов, публикация, маркетплейс, установка/удаление
+- ADMIN: модерация — просмотр всех пакетов, хард-делит, управление тегами
+- PLAYER: НЕ имеет доступа к homebrew
+```
+
+---
+
+## БЛОК 13 — Homebrew: Авторство пакетов (GAME_MASTER)
+
+```
+Все эндпоинты авторства требуют JWT и роль GAME_MASTER.
+Все ответы обёрнуты в стандартный ApiResponse<T>.
+
+
+СОЗДАТЬ ПАКЕТ (DRAFT):
+POST /api/homebrew
+Authorization: Bearer <token>
+
+Request:
+{
+  "title": string,            // обязательно, до 120 символов
+  "description": string,      // опционально, до 2000 символов
+  "tagNames": ["tag1", "tag2"] // опционально, до 10 тегов
+}
+
+Теги автоматически нормализуются: trim, lowercase, пробелы→дефисы.
+Паттерн: ^[a-z0-9-]{1,50}$
+Несуществующие теги создаются автоматически.
+
+Response (201):
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Dark Fantasy Pack",
+    "description": "Custom content...",
+    "status": "DRAFT",
+    "version": 1,
+    "downloadCount": 0,
+    "authorUsername": "gm_john",
+    "tags": ["dark-fantasy", "horror"],
+    "contentSummary": {
+      "itemTypeCount": 0,
+      "classCount": 0,
+      "skillCount": 0,
+      "featCount": 0
+    },
+    "contentByType": {},
+    "publishedAt": null,
+    "createdAt": "2025-06-01T12:00:00Z",
+    "isDeleted": false
+  },
+  "message": "Package created"
+}
+
+
+СПИСОК МОИХ ПАКЕТОВ:
+GET /api/homebrew/my?status=DRAFT&page=0&size=20
+Authorization: Bearer <token>
+
+Query params:
+  status — DRAFT | PUBLISHED | UNPUBLISHED | DELETED (опционально, без фильтра — все)
+  page   — номер страницы (с 0)
+  size   — размер страницы
+
+Response (200): пагинированный список HomebrewPackageResponse
+{
+  "success": true,
+  "data": {
+    "content": [ ...массив HomebrewPackageResponse... ],
+    "totalElements": 15,
+    "totalPages": 1,
+    "number": 0,
+    "size": 20
+  }
+}
+
+Все статусы включая DELETED видны автору.
+
+
+ДЕТАЛИ МОЕГО ПАКЕТА:
+GET /api/homebrew/my/{id}
+Authorization: Bearer <token>
+
+Response (200): HomebrewDetailResponse (включает contentByType)
+
+
+ОБНОВИТЬ ПАКЕТ (только DRAFT):
+PUT /api/homebrew/my/{id}
+Authorization: Bearer <token>
+
+Request:
+{
+  "title": string,           // опционально
+  "description": string,     // опционально
+  "tagNames": ["new-tag"]    // опционально, заменяет все теги
+}
+
+Ошибки:
+- 409 если статус != DRAFT
+
+
+ДОБАВИТЬ КОНТЕНТ В ПАКЕТ (только DRAFT):
+POST /api/homebrew/my/{id}/content
+Authorization: Bearer <token>
+
+Request:
+{
+  "contentType": "SKILL",    // ITEM_TYPE | CHARACTER_CLASS | SKILL | FEAT
+  "contentId": "uuid"        // ID существующей записи в справочнике
+}
+
+Валидация бэкенда:
+- Пакет должен быть в DRAFT
+- contentType должен быть известным типом
+- contentId должен существовать в соответствующей таблице
+- Контент должен принадлежать текущему GM (owner_id = caller) ИЛИ быть глобальным (owner_id = null)
+- Такая пара (contentType, contentId) не должна уже быть в пакете
+
+Ошибки:
+- 409 если статус != DRAFT, дублирование, неизвестный тип
+- 403 если контент не принадлежит текущему GM
+- 404 если contentId не найден
+
+Response (201): обновлённый HomebrewDetailResponse
+
+
+УДАЛИТЬ КОНТЕНТ ИЗ ПАКЕТА (только DRAFT):
+DELETE /api/homebrew/my/{id}/content/{contentItemId}
+Authorization: Bearer <token>
+
+contentItemId — это UUID конкретного элемента контента В ПАКЕТЕ
+(НЕ contentId из справочника, а id из homebrew_content_items).
+Этот id можно взять из contentByType в HomebrewDetailResponse.
+
+Ошибки:
+- 409 если статус != DRAFT
+- 404 если contentItemId не найден
+
+
+ОПУБЛИКОВАТЬ ПАКЕТ:
+POST /api/homebrew/my/{id}/publish
+Authorization: Bearer <token>
+
+Допустимые переходы: DRAFT → PUBLISHED, UNPUBLISHED → PUBLISHED.
+Инкрементирует version. При первой публикации ставит publishedAt.
+
+Валидация:
+- Минимум 1 элемент контента
+- Непустой title
+
+Ошибки:
+- 409 если текущий статус не DRAFT и не UNPUBLISHED
+- 422 если нет контента или пустой title
+
+
+СНЯТЬ С ПУБЛИКАЦИИ:
+POST /api/homebrew/my/{id}/unpublish
+Authorization: Bearer <token>
+
+Переход: PUBLISHED → UNPUBLISHED.
+Скрывает из маркетплейса. Установки не затрагиваются.
+
+Ошибки:
+- 409 если статус != PUBLISHED
+
+
+УДАЛИТЬ ПАКЕТ (soft delete):
+DELETE /api/homebrew/my/{id}
+Authorization: Bearer <token>
+
+Работает для любого статуса (DRAFT, PUBLISHED, UNPUBLISHED).
+Ставит deleted_at, скрывает из маркетплейса. Установки сохраняются.
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "message": "Package deleted successfully",
+    "installationCount": 5
+  }
+}
+
+installationCount — сколько GM установили этот пакет.
+```
+
+---
+
+## БЛОК 14 — Homebrew: Маркетплейс (GAME_MASTER)
+
+```
+Маркетплейс — витрина опубликованных homebrew-пакетов.
+Все эндпоинты требуют JWT и роль GAME_MASTER.
+
+
+ОБЗОР МАРКЕТПЛЕЙСА:
+GET /api/homebrew/marketplace?search=pirates&tags=dark-fantasy,pirates&sort=downloads&page=0&size=20
+Authorization: Bearer <token>
+
+Query params:
+  search — поиск по title И description (ILIKE, регистронезависимый)
+  tags   — фильтр по тегам через запятую; пакет должен иметь ВСЕ перечисленные теги (AND логика)
+  sort   — downloads | newest | oldest (по умолчанию newest)
+  page   — номер страницы (с 0)
+  size   — размер страницы (по умолчанию 20)
+
+Все параметры опциональны. Без параметров — все опубликованные, отсортированы по дате (newest).
+Маркетплейс НИКОГДА не показывает удалённые и неопубликованные пакеты.
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": "uuid",
+        "title": "Dark Fantasy Pack",
+        "description": "...",
+        "status": "PUBLISHED",
+        "version": 3,
+        "downloadCount": 42,
+        "authorUsername": "gm_john",
+        "tags": ["dark-fantasy", "horror"],
+        "contentSummary": {
+          "itemTypeCount": 5,
+          "classCount": 2,
+          "skillCount": 8,
+          "featCount": 3
+        },
+        "publishedAt": "2025-05-15T10:00:00Z",
+        "createdAt": "2025-05-01T08:00:00Z",
+        "isDeleted": false
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0,
+    "size": 20
+  }
+}
+
+
+ДЕТАЛИ ПАКЕТА В МАРКЕТПЛЕЙСЕ:
+GET /api/homebrew/marketplace/{id}
+Authorization: Bearer <token>
+
+Только для PUBLISHED и не-deleted пакетов.
+Ошибки: 404 если пакет удалён или не опубликован.
+
+Response (200): HomebrewDetailResponse с contentByType:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Dark Fantasy Pack",
+    "description": "...",
+    "status": "PUBLISHED",
+    "version": 3,
+    "downloadCount": 42,
+    "authorUsername": "gm_john",
+    "tags": ["dark-fantasy", "horror"],
+    "contentSummary": {
+      "itemTypeCount": 5,
+      "classCount": 2,
+      "skillCount": 8,
+      "featCount": 3
+    },
+    "contentByType": {
+      "SKILL": [
+        {
+          "id": "uuid",
+          "name": "Dark Strike",
+          "description": "Deal necrotic damage...",
+          "skillType": "COMBAT"
+        }
+      ],
+      "FEAT": [
+        {
+          "id": "uuid",
+          "name": "Shadow Resilience",
+          "description": "Resist shadow damage",
+          "prerequisites": "Level 5+"
+        }
+      ],
+      "ITEM_TYPE": [
+        {
+          "id": "uuid",
+          "name": "Shadow Blade",
+          "description": "A blade forged in darkness",
+          "slot": "MAIN_HAND"
+        }
+      ],
+      "CHARACTER_CLASS": [
+        {
+          "id": "uuid",
+          "name": "Shadow Knight",
+          "description": "A warrior of darkness"
+        }
+      ]
+    },
+    "publishedAt": "2025-05-15T10:00:00Z",
+    "createdAt": "2025-05-01T08:00:00Z",
+    "isDeleted": false
+  }
+}
+
+Поля ContentSummaryDto зависят от типа контента:
+- ITEM_TYPE: id, name, description, slot
+- CHARACTER_CLASS: id, name, description
+- SKILL: id, name, description, skillType
+- FEAT: id, name, description, prerequisites
+Поля, которые не применимы к типу — отсутствуют (NON_NULL).
+
+
+УСТАНОВИТЬ ПАКЕТ:
+POST /api/homebrew/marketplace/{id}/install
+Authorization: Bearer <token>
+
+Без тела запроса.
+
+Валидация:
+- Пакет должен быть PUBLISHED и не удалён
+- GM не должен уже иметь установку этого пакета
+
+Ошибки:
+- 404 если пакет не опубликован или удалён
+- 409 если уже установлен
+
+Response (201):
+{
+  "success": true,
+  "data": {
+    "installedAt": "2025-06-01T14:00:00Z",
+    "sourceVersion": 3,
+    "contentCount": 18
+  },
+  "message": "Package installed"
+}
+
+contentCount — общее количество элементов контента в пакете.
+При установке download_count пакета увеличивается на 1.
+```
+
+---
+
+## БЛОК 15 — Homebrew: Установленные пакеты (GAME_MASTER)
+
+```
+СПИСОК УСТАНОВЛЕННЫХ:
+GET /api/homebrew/installed?page=0&size=20
+Authorization: Bearer <token>
+
+Показывает ВСЕ установленные пакеты, включая удалённые автором.
+Удалённые пакеты приходят с title = "[DELETED] Original Title".
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "installationId": "uuid",
+        "packageId": "uuid",
+        "title": "Dark Fantasy Pack",
+        "authorUsername": "gm_john",
+        "isDeleted": false,
+        "installedAt": "2025-06-01T14:00:00Z",
+        "sourceVersion": 3,
+        "contentSummary": {
+          "itemTypeCount": 5,
+          "classCount": 2,
+          "skillCount": 8,
+          "featCount": 3
+        }
+      },
+      {
+        "installationId": "uuid",
+        "packageId": "uuid",
+        "title": "[DELETED] Old Pack",
+        "authorUsername": "gm_jane",
+        "isDeleted": true,
+        "installedAt": "2025-04-10T09:00:00Z",
+        "sourceVersion": 1,
+        "contentSummary": {
+          "itemTypeCount": 2,
+          "classCount": 0,
+          "skillCount": 3,
+          "featCount": 1
+        }
+      }
+    ],
+    "totalElements": 2,
+    "totalPages": 1,
+    "number": 0,
+    "size": 20
+  }
+}
+
+UI рекомендации:
+- Для isDeleted: true — показывай визуальный индикатор (серый фон, иконка, бейдж)
+- Кнопка "Uninstall" доступна для всех, включая удалённые
+- sourceVersion позволяет показать: "Installed at version 3"
+
+
+УДАЛИТЬ УСТАНОВКУ (Uninstall):
+DELETE /api/homebrew/installed/{installationId}
+Authorization: Bearer <token>
+
+installationId — UUID из поля installationId в InstalledHomebrewResponse.
+НЕ packageId!
+
+Response (200):
+{
+  "success": true,
+  "message": "Package uninstalled"
+}
+
+Деинсталляция удаляет только строку установки.
+Контент в справочниках остаётся (глобальный контент доступен всем).
+```
+
+---
+
+## БЛОК 16 — Homebrew: Админ-модерация (ADMIN)
+
+```
+Эндпоинты модерации доступны только для роли ADMIN.
+
+
+СПИСОК ВСЕХ ПАКЕТОВ:
+GET /api/admin/homebrew?status=PUBLISHED&authorId=uuid&page=0&size=20
+Authorization: Bearer <token>
+
+Query params:
+  status   — DRAFT | PUBLISHED | UNPUBLISHED (опционально)
+  authorId — UUID автора (опционально)
+  page, size — пагинация
+
+Показывает ВСЕ пакеты всех авторов, всех статусов.
+
+Response (200): Page<HomebrewPackageResponse>
+
+
+ХАРД-ДЕЛИТ ПАКЕТА (модерация):
+DELETE /api/admin/homebrew/{id}
+Authorization: Bearer <token>
+
+Физически удаляет пакет, его контент-элементы и теги-связи.
+Установки других GM также удаляются.
+
+Response (200):
+{
+  "success": true,
+  "data": {
+    "deletedPackageId": "uuid",
+    "affectedInstallations": 12
+  }
+}
+
+
+СПИСОК ТЕГОВ С КОЛИЧЕСТВОМ ИСПОЛЬЗОВАНИЙ:
+GET /api/admin/homebrew/tags
+Authorization: Bearer <token>
+
+Response (200):
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "dark-fantasy",
+      "usageCount": 15
+    },
+    {
+      "id": "uuid",
+      "name": "horror",
+      "usageCount": 3
+    }
+  ]
+}
+
+
+УДАЛИТЬ ТЕГ:
+DELETE /api/admin/homebrew/tags/{id}
+Authorization: Bearer <token>
+
+Ошибки:
+- 409 если тег используется хотя бы одним пакетом
+- 404 если тег не найден
+
+Response (200):
+{
+  "success": true,
+  "message": "Tag deleted"
+}
+```
+
+---
+
+## БЛОК 17 — Homebrew: TypeScript типы
+
+```
+TypeScript типы для Homebrew Marketplace API.
+Добавь их к существующим типам проекта.
+
+// === Homebrew Types ===
+
+type HomebrewStatus = "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
+
+type ContentType = "ITEM_TYPE" | "CHARACTER_CLASS" | "SKILL" | "FEAT";
+
+// --- Requests ---
+
+interface CreateHomebrewRequest {
+  title: string;            // обязательно, max 120
+  description?: string;     // max 2000
+  tagNames?: string[];      // max 10 тегов, каждый: lowercase, [a-z0-9-], max 50
+}
+
+interface UpdateHomebrewRequest {
+  title?: string;           // max 120
+  description?: string;     // max 2000
+  tagNames?: string[];      // max 10, если передан — заменяет все теги
+}
+
+interface AddContentRequest {
+  contentType: ContentType; // "ITEM_TYPE" | "CHARACTER_CLASS" | "SKILL" | "FEAT"
+  contentId: string;        // UUID существующей записи в справочнике
+}
+
+// --- Responses ---
+
+interface HomebrewContentSummary {
+  itemTypeCount: number;
+  classCount: number;
+  skillCount: number;
+  featCount: number;
+}
+
+interface ContentSummaryDto {
+  id: string;               // UUID
+  name: string;
+  description?: string;
+  slot?: string;            // только для ITEM_TYPE
+  skillType?: string;       // только для SKILL
+  prerequisites?: string;   // только для FEAT
+}
+
+interface HomebrewPackageResponse {
+  id: string;
+  title: string;            // "[DELETED] " prefix если удалён
+  description?: string;
+  status: HomebrewStatus;
+  version: number;
+  downloadCount: number;
+  authorUsername: string;
+  tags: string[];
+  contentSummary: HomebrewContentSummary;
+  publishedAt?: string;     // ISO-8601
+  createdAt: string;
+  isDeleted: boolean;
+}
+
+interface HomebrewDetailResponse extends HomebrewPackageResponse {
+  contentByType: Record<ContentType, ContentSummaryDto[]>;
+}
+
+interface InstalledHomebrewResponse {
+  installationId: string;   // UUID — использовать для uninstall
+  packageId: string;
+  title: string;            // "[DELETED] " prefix если удалён
+  authorUsername: string;
+  isDeleted: boolean;
+  installedAt: string;      // ISO-8601
+  sourceVersion: number;
+  contentSummary: HomebrewContentSummary;
+}
+
+interface InstallResponse {
+  installedAt: string;
+  sourceVersion: number;
+  contentCount: number;
+}
+
+interface SoftDeleteResponse {
+  message: string;
+  installationCount: number;
+}
+
+interface HardDeleteResponse {
+  deletedPackageId: string;
+  affectedInstallations: number;
+}
+
+interface HomebrewTagResponse {
+  id: string;
+  name: string;
+  usageCount: number;
+}
+
+// --- Paginated response wrapper ---
+// Все списочные эндпоинты homebrew возвращают Spring Page:
+interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;           // текущая страница (с 0)
+  size: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+// Пример: ApiResponse<Page<HomebrewPackageResponse>>
+```
+
+---
+
+## БЛОК 18 — Homebrew: Пользовательские сценарии
+
+```
+СЦЕНАРИЙ: GM создаёт и публикует homebrew-пакет
+
+1. Создать контент в справочниках (если ещё нет):
+   - POST /api/admin/skills        → получить skillId
+   - POST /api/admin/feats         → получить featId
+   - POST /api/admin/item-types    → получить itemTypeId
+   - POST /api/admin/character-classes → получить classId
+
+2. Создать DRAFT пакет:
+   POST /api/homebrew
+   { title: "My Pack", description: "...", tagNames: ["dark-fantasy"] }
+   → получить packageId
+
+3. Наполнить контентом (повторять для каждого элемента):
+   POST /api/homebrew/my/{packageId}/content
+   { contentType: "SKILL", contentId: "uuid" }
+
+4. Просмотреть что получилось:
+   GET /api/homebrew/my/{packageId}
+   → contentByType показывает весь контент по типам
+
+5. Опубликовать:
+   POST /api/homebrew/my/{packageId}/publish
+   → статус меняется на PUBLISHED, version инкрементируется
+
+6. (Опционально) Снять с публикации и доработать:
+   POST /api/homebrew/my/{packageId}/unpublish → UNPUBLISHED
+   — Чтобы снова редактировать контент, нужно вернуть в DRAFT?
+   — Нет! Редактирование title/description/tags доступно только в DRAFT.
+   — Добавление/удаление контента — тоже только DRAFT.
+   — Для повторной правки: создай новый пакет или удали (soft) и создай заново.
+
+
+СЦЕНАРИЙ: GM находит и устанавливает пакет из маркетплейса
+
+1. Открыть маркетплейс:
+   GET /api/homebrew/marketplace?sort=downloads
+   → список популярных пакетов
+
+2. Поиск по тегам/тексту:
+   GET /api/homebrew/marketplace?search=pirates&tags=adventure
+
+3. Посмотреть детали:
+   GET /api/homebrew/marketplace/{id}
+   → contentByType показывает что внутри
+
+4. Установить:
+   POST /api/homebrew/marketplace/{id}/install
+   → контент пакета теперь доступен в играх этого GM
+
+5. Посмотреть установленные:
+   GET /api/homebrew/installed
+
+
+СЦЕНАРИЙ: GM удаляет установленный пакет
+
+1. GET /api/homebrew/installed → найти installationId
+2. DELETE /api/homebrew/installed/{installationId}
+   Глобальный контент (owner_id = null) остаётся доступен.
+
+
+СЦЕНАРИЙ: Автор удаляет свой пакет
+
+1. DELETE /api/homebrew/my/{id}
+   → Soft delete. Пакет скрыт из маркетплейса.
+   → GM, которые установили пакет, сохраняют доступ.
+   → В их списке установленных title = "[DELETED] Original Title".
+
+
+СЦЕНАРИЙ: Админ модерирует маркетплейс
+
+1. GET /api/admin/homebrew → все пакеты всех авторов
+2. DELETE /api/admin/homebrew/{id} → хард-делит (физическое удаление)
+3. GET /api/admin/homebrew/tags → список тегов с количеством использований
+4. DELETE /api/admin/homebrew/tags/{id} → удалить неиспользуемый тег
+
+
+РЕКОМЕНДАЦИИ ПО UI ДЛЯ HOMEBREW:
+
+Структура страниц:
+- /homebrew/my — таблица/список пакетов GM с фильтром по статусу, кнопка "Create"
+- /homebrew/my/:id — детальная страница: метаданные + список контента по типам
+  - В DRAFT: кнопки "Add Content", "Remove", "Publish"
+  - В PUBLISHED: кнопки "Unpublish", "Delete"
+  - В UNPUBLISHED: кнопки "Publish", "Delete"
+- /homebrew/marketplace — карточки пакетов, поиск, фильтры по тегам, сортировка
+- /homebrew/marketplace/:id — страница пакета: описание + контент + кнопка "Install"
+- /homebrew/installed — список установленных с кнопкой "Uninstall"
+
+Визуальные индикаторы:
+- Статус пакета: DRAFT (серый), PUBLISHED (зелёный), UNPUBLISHED (жёлтый)
+- Удалённый пакет: красный бейдж "[DELETED]", серый фон
+- downloadCount: иконка скачивания + число
+- Теги: chip/badge компоненты, кликабельные для фильтрации
+- contentSummary: 4 иконки с числами (меч=items, щит=classes, звезда=skills, свиток=feats)
+
+Форма добавления контента в пакет:
+- Dropdown для contentType (4 варианта)
+- При выборе типа — загружать список доступных записей из справочника
+  (GET /api/admin/item-types, GET /api/admin/character-classes и т.д.)
+- Показывать только записи, которые ещё не добавлены в пакет
+- Кнопка "Add" → POST /api/homebrew/my/{id}/content
+
+Маркетплейс:
+- Строка поиска (search)
+- Фильтр тегов: мульти-селект (AND логика)
+- Сортировка: "Newest" | "Oldest" | "Most Downloaded"
+- Пагинация
+- На карточке: title, description (truncated), tags, downloadCount, authorUsername
 ```
