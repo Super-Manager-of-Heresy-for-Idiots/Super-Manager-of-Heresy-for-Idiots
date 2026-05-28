@@ -35,7 +35,7 @@ public class SkillContentValidator implements HomebrewContentValidator {
                 .id(skill.getId())
                 .name(skill.getName())
                 .description(skill.getDescription())
-                .skillType(com.dnd.app.util.ResponseLocalizer.skillType(skill.getSkillType()))
+                .skillType(skill.getSkillType())
                 .build();
     }
 

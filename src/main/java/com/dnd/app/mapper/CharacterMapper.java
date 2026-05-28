@@ -34,12 +34,12 @@ public interface CharacterMapper {
 
     List<CharacterStatResponse> toStatResponseList(List<CharacterStat> stats);
 
-    @Mapping(target = "slot", expression = "java(com.dnd.app.util.ResponseLocalizer.equipmentSlot(slot.getSlot()))")
+    @Mapping(target = "slot", expression = "java(slot.getSlot().name())")
     @Mapping(target = "itemTypeId", source = "itemType.id")
     @Mapping(target = "itemTypeName", source = "itemType.name")
     @Mapping(target = "artifactId", source = "artifact.id")
     @Mapping(target = "artifactName", source = "artifact.name")
-    @Mapping(target = "artifactRarity", expression = "java(slot.getArtifact() != null ? com.dnd.app.util.ResponseLocalizer.rarity(slot.getArtifact().getRarity()) : null)")
+    @Mapping(target = "artifactRarity", expression = "java(slot.getArtifact() != null ? slot.getArtifact().getRarity().name() : null)")
     InventorySlotResponse toInventorySlotResponse(InventorySlot slot);
 
     List<InventorySlotResponse> toInventorySlotResponseList(List<InventorySlot> slots);

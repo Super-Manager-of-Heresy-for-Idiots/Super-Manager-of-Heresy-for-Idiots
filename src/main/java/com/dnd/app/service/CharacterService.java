@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -60,17 +61,11 @@ public class CharacterService {
                 .race(race)
                 .owner(owner)
                 .build();
-        character = characterRepository.save(character);
+        character = characterRepository.saveAndFlush(character);
         log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}",
                 character.getId(), character.getName(), charClass.getName(), race.getName(), username);
 
-        CharacterClassLevel ccl = CharacterClassLevel.builder()
-                .characterId(character.getId())
-                .classId(charClass.getId())
-                .classLevel(1)
-                .build();
-        classLevelRepository.save(ccl);
-        character.getClassLevels().add(ccl);
+        addOrUpdateClassLevel(character, charClass.getId(), 1);
 
         List<StatType> allStatTypes = statTypeRepository.findAll();
         for (StatType st : allStatTypes) {
@@ -95,6 +90,25 @@ public class CharacterService {
         }
 
         return characterMapper.toResponse(character);
+    }
+
+    public void addOrUpdateClassLevel(PlayerCharacter character, UUID classId, int level) {
+        CharacterClassLevelId cclId = new CharacterClassLevelId(character.getId(), classId);
+        Optional<CharacterClassLevel> existing = classLevelRepository.findById(cclId);
+
+        if (existing.isPresent()) {
+            CharacterClassLevel ccl = existing.get();
+            ccl.setClassLevel(level);
+            classLevelRepository.save(ccl);
+        } else {
+            CharacterClassLevel ccl = CharacterClassLevel.builder()
+                    .characterId(character.getId())
+                    .classId(classId)
+                    .classLevel(level)
+                    .build();
+            ccl = classLevelRepository.saveAndFlush(ccl);
+            character.getClassLevels().add(ccl);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -242,9 +256,7 @@ public class CharacterService {
             ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
             if (itemType.getSlot() != equipSlot) {
-                throw new BadRequestException("Несоответствие слота типа предмета — ожидался " +
-                        com.dnd.app.util.ResponseLocalizer.equipmentSlot(equipSlot) +
-                        ", а типу предмета нужен " + com.dnd.app.util.ResponseLocalizer.equipmentSlot(itemType.getSlot()));
+                throw new BadRequestException("Несоответствие слота типа предмета — ожидался " + equipSlot + ", а типу предмета нужен " + itemType.getSlot());
             }
             invSlot.setItemType(itemType);
         } else {

@@ -454,7 +454,7 @@ public class AdminService {
     private SkillResponse toSkillResponse(Skill s) {
         return SkillResponse.builder()
                 .id(s.getId()).name(s.getName()).description(s.getDescription())
-                .skillType(com.dnd.app.util.ResponseLocalizer.skillType(s.getSkillType())).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .skillType(s.getSkillType()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
     }
 
@@ -479,7 +479,7 @@ public class AdminService {
                 .id(clr.getId())
                 .classId(clr.getCharacterClass().getId())
                 .requiredLevel(clr.getRequiredLevel())
-                .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(clr.getRewardType()))
+                .rewardType(clr.getRewardType())
                 .rewardId(clr.getRewardId())
                 .rewardName(detail.getName())
                 .isChoice(clr.getIsChoice())

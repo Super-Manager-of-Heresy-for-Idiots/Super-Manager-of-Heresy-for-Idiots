@@ -112,7 +112,7 @@ public class HomebrewMarketplaceService {
             HomebrewPackage pkg = inst.getHomebrewPackage();
             String title = pkg.getTitle();
             if (pkg.isDeleted()) {
-                title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
+                title = "[УДАЛЕНО] " + title;
             }
             return InstalledHomebrewResponse.builder()
                     .installationId(inst.getId())

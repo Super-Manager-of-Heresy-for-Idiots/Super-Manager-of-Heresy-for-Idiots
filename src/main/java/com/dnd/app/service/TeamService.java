@@ -61,7 +61,7 @@ public class TeamService {
         } else if (user.getRole() == Role.GAME_MASTER) {
             teams = teamRepository.findAllByGameMasterId(user.getId());
         } else {
-            throw new AccessDeniedException("Игроки не могут просматривать список команд");
+            teams = teamRepository.findAllByPlayerId(user.getId());
         }
         return teams.stream().map(teamMapper::toResponse).toList();
     }
@@ -75,7 +75,11 @@ public class TeamService {
             throw new AccessDeniedException("Эта команда вам не принадлежит");
         }
         if (user.getRole() == Role.PLAYER) {
-            throw new AccessDeniedException("Игроки не могут напрямую просматривать детали команды");
+            boolean isMember = team.getMembers().stream()
+                    .anyMatch(m -> m.getPlayer().getId().equals(user.getId()));
+            if (!isMember) {
+                throw new AccessDeniedException("Вы не состоите в этой команде");
+            }
         }
         return teamMapper.toResponse(team);
     }

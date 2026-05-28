@@ -206,7 +206,7 @@ public class LevelUpService {
 
             RewardDetailDto detail = rewardResolverRegistry.resolve(reward.getRewardType(), reward.getRewardId());
             summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
-                    .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(reward.getRewardType()))
+                    .rewardType(reward.getRewardType())
                     .name(detail.getName())
                     .build());
         }
@@ -252,7 +252,7 @@ public class LevelUpService {
             boolean isChoice = entry.getValue().stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsChoice()));
 
             groups.add(LevelUpOptionsResponse.RewardGroup.builder()
-                    .rewardType(com.dnd.app.util.ResponseLocalizer.rewardType(type))
+                    .rewardType(type)
                     .isChoice(isChoice)
                     .rewards(entries)
                     .build());

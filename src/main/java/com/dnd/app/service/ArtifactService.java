@@ -148,8 +148,7 @@ public class ArtifactService {
 
         if (artifact.getItemType().getSlot() != equipSlot) {
             throw new BadRequestException("Несоответствие слота артефакта — артефакту нужен " +
-                    com.dnd.app.util.ResponseLocalizer.equipmentSlot(artifact.getItemType().getSlot()) +
-                    ", а выбранный слот: " + com.dnd.app.util.ResponseLocalizer.equipmentSlot(equipSlot));
+                    artifact.getItemType().getSlot() + ", а выбранный слот: " + equipSlot);
         }
 
         InventorySlot invSlot = inventorySlotRepository.findByCharacterIdAndSlot(characterId, equipSlot)
@@ -157,7 +156,7 @@ public class ArtifactService {
         invSlot.setArtifact(artifact);
         invSlot.setItemType(artifact.getItemType());
         invSlot.setQuantity(1);
-        invSlot.setNotes(artifact.getName() + " [" + com.dnd.app.util.ResponseLocalizer.rarity(artifact.getRarity()) + "]");
+        invSlot.setNotes(artifact.getName() + " [" + artifact.getRarity() + "]");
         invSlot = inventorySlotRepository.save(invSlot);
         log.info("Artifact placed: artifact='{}', slot={}, characterId={}, by gm={}",
                 artifact.getName(), equipSlot, characterId, username);
@@ -180,8 +179,8 @@ public class ArtifactService {
                 .description(a.getDescription())
                 .itemTypeId(a.getItemType().getId())
                 .itemTypeName(a.getItemType().getName())
-                .itemTypeSlot(com.dnd.app.util.ResponseLocalizer.equipmentSlot(a.getItemType().getSlot()))
-                .rarity(com.dnd.app.util.ResponseLocalizer.rarity(a.getRarity()))
+                .itemTypeSlot(a.getItemType().getSlot().name())
+                .rarity(a.getRarity().name())
                 .properties(a.getProperties())
                 .specialAbilities(a.getSpecialAbilities())
                 .createdById(a.getCreatedBy().getId())

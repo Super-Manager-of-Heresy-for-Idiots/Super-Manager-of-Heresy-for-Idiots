@@ -56,7 +56,7 @@ public class CharacterRewardQueryService {
                             .build();
                 }
 
-                rewardsByType.computeIfAbsent(com.dnd.app.util.ResponseLocalizer.rewardType(clr.getRewardType()), k -> new ArrayList<>())
+                rewardsByType.computeIfAbsent(clr.getRewardType(), k -> new ArrayList<>())
                         .add(CharacterRewardsResponse.AcquiredReward.builder()
                                 .name(detail.getName())
                                 .acquiredAt(ar.getAcquiredAt())

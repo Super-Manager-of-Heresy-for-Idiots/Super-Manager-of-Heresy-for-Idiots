@@ -2,6 +2,7 @@ package com.dnd.app.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CharacterClassLevel {
+public class CharacterClassLevel implements Persistable<CharacterClassLevelId> {
 
     @Id
     @Column(name = "character_id")
@@ -34,4 +35,24 @@ public class CharacterClassLevel {
     @Column(name = "class_level", nullable = false)
     @Builder.Default
     private Integer classLevel = 1;
+
+    @Transient
+    @Builder.Default
+    private boolean newEntity = true;
+
+    @Override
+    public CharacterClassLevelId getId() {
+        return new CharacterClassLevelId(characterId, classId);
+    }
+
+    @Override
+    public boolean isNew() {
+        return newEntity;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.newEntity = false;
+    }
 }

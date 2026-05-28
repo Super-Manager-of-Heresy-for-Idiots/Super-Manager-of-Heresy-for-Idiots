@@ -231,14 +231,14 @@ public class HomebrewAuthoringService {
     HomebrewPackageResponse toPackageResponse(HomebrewPackage pkg) {
         String title = pkg.getTitle();
         if (pkg.isDeleted()) {
-            title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
+            title = "[УДАЛЕНО] " + title;
         }
 
         return HomebrewPackageResponse.builder()
                 .id(pkg.getId())
                 .title(title)
                 .description(pkg.getDescription())
-                .status(com.dnd.app.util.ResponseLocalizer.homebrewStatus(pkg.getStatus()))
+                .status(pkg.getStatus().name())
                 .version(pkg.getVersion())
                 .downloadCount(pkg.getDownloadCount())
                 .authorUsername(pkg.getAuthor().getUsername())
@@ -253,14 +253,14 @@ public class HomebrewAuthoringService {
     HomebrewDetailResponse toDetailResponse(HomebrewPackage pkg) {
         String title = pkg.getTitle();
         if (pkg.isDeleted()) {
-            title = com.dnd.app.util.ResponseLocalizer.deletedTitle(title);
+            title = "[УДАЛЕНО] " + title;
         }
 
         return HomebrewDetailResponse.builder()
                 .id(pkg.getId())
                 .title(title)
                 .description(pkg.getDescription())
-                .status(com.dnd.app.util.ResponseLocalizer.homebrewStatus(pkg.getStatus()))
+                .status(pkg.getStatus().name())
                 .version(pkg.getVersion())
                 .downloadCount(pkg.getDownloadCount())
                 .authorUsername(pkg.getAuthor().getUsername())
@@ -294,7 +294,7 @@ public class HomebrewAuthoringService {
         Map<String, List<ContentSummaryDto>> result = new LinkedHashMap<>();
 
         Map<String, List<HomebrewContentItem>> grouped = items.stream()
-                .collect(Collectors.groupingBy(i -> com.dnd.app.util.ResponseLocalizer.contentType(i.getContentType().name())));
+                .collect(Collectors.groupingBy(i -> i.getContentType().name()));
 
         for (Map.Entry<String, List<HomebrewContentItem>> entry : grouped.entrySet()) {
             List<ContentSummaryDto> summaries = entry.getValue().stream()
