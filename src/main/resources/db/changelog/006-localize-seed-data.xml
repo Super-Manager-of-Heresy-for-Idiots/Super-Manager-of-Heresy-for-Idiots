@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-localize-stat-types" author="dnd-app">
+        <update tableName="stat_types"><column name="name" value="СИЛ"/><column name="description" value="Сила — физическая мощь"/><where>id = 'a0000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="stat_types"><column name="name" value="ЛОВ"/><column name="description" value="Ловкость — проворство и реакция"/><where>id = 'a0000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="stat_types"><column name="name" value="ТЕЛ"/><column name="description" value="Телосложение — выносливость и здоровье"/><where>id = 'a0000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="stat_types"><column name="name" value="ИНТ"/><column name="description" value="Интеллект — логика и память"/><where>id = 'a0000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="stat_types"><column name="name" value="МДР"/><column name="description" value="Мудрость — восприятие и проницательность"/><where>id = 'a0000000-0000-0000-0000-000000000005'</where></update>
+        <update tableName="stat_types"><column name="name" value="ХАР"/><column name="description" value="Харизма — сила личности"/><where>id = 'a0000000-0000-0000-0000-000000000006'</where></update>
+    </changeSet>
+
+    <changeSet id="006-localize-character-classes" author="dnd-app">
+        <update tableName="character_classes"><column name="name" value="Воин"/><column name="description" value="Мастер воинского боя, владеющий множеством видов оружия и доспехов"/><where>id = 'b0000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="character_classes"><column name="name" value="Волшебник"/><column name="description" value="Ученый маг, способный изменять саму ткань реальности"/><where>id = 'b0000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="character_classes"><column name="name" value="Плут"/><column name="description" value="Ловкач, который преодолевает препятствия скрытностью и хитростью"/><where>id = 'b0000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="character_classes"><column name="name" value="Жрец"/><column name="description" value="Священный воитель, владеющий божественной магией высших сил"/><where>id = 'b0000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="character_classes"><column name="name" value="Следопыт"/><column name="description" value="Воин, противостоящий угрозам на границах цивилизации"/><where>id = 'b0000000-0000-0000-0000-000000000005'</where></update>
+        <update tableName="character_classes"><column name="name" value="Паладин"/><column name="description" value="Святой воин, связанный священной клятвой"/><where>id = 'b0000000-0000-0000-0000-000000000006'</where></update>
+        <update tableName="character_classes"><column name="name" value="Бард"/><column name="description" value="Вдохновляющий маг, чья сила отзывается музыкой творения"/><where>id = 'b0000000-0000-0000-0000-000000000007'</where></update>
+        <update tableName="character_classes"><column name="name" value="Друид"/><column name="description" value="Жрец древней веры, владеющий силами природы"/><where>id = 'b0000000-0000-0000-0000-000000000008'</where></update>
+    </changeSet>
+
+    <changeSet id="006-localize-character-races" author="dnd-app">
+        <update tableName="character_races"><column name="name" value="Человек"/><column name="description" value="Самые гибкие и амбициозные среди распространенных народов"/><where>id = 'c0000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="character_races"><column name="name" value="Эльф"/><column name="description" value="Волшебный народ неземной грации"/><where>id = 'c0000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="character_races"><column name="name" value="Дварф"/><column name="description" value="Смелые и крепкие, дварфы известны как искусные воины и рудокопы"/><where>id = 'c0000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="character_races"><column name="name" value="Полурослик"/><column name="description" value="Невысокие полурослики выживают в мире, полном существ крупнее их"/><where>id = 'c0000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="character_races"><column name="name" value="Гном"/><column name="description" value="Народ бесконечного любопытства и неуемного энтузиазма"/><where>id = 'c0000000-0000-0000-0000-000000000005'</where></update>
+        <update tableName="character_races"><column name="name" value="Полуэльф"/><column name="description" value="Идущие между двумя мирами, но не принадлежащие ни одному из них"/><where>id = 'c0000000-0000-0000-0000-000000000006'</where></update>
+        <update tableName="character_races"><column name="name" value="Тифлинг"/><column name="description" value="Существа из человеческих родов, связанных с Девятью Преисподними"/><where>id = 'c0000000-0000-0000-0000-000000000007'</where></update>
+        <update tableName="character_races"><column name="name" value="Драконорожденный"/><column name="description" value="Рожденные драконами, гордо идущие по миру, который встречает их страхом и непониманием"/><where>id = 'c0000000-0000-0000-0000-000000000008'</where></update>
+    </changeSet>
+
+    <changeSet id="006-localize-skills" author="dnd-app">
+        <update tableName="skills"><column name="name" value="Второе дыхание"/><column name="description" value="Восстановите хиты бонусным действием"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="skills"><column name="name" value="Всплеск действий"/><column name="description" value="Совершите дополнительное действие в свой ход"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="skills"><column name="name" value="Дополнительная атака"/><column name="description" value="Атакуйте дважды, когда совершаете действие Атака"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="skills"><column name="name" value="Неукротимость"/><column name="description" value="Перебросьте проваленный спасбросок"/><column name="skill_type" value="Пассивный"/><where>id = 'd1000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="skills"><column name="name" value="Магическое восстановление"/><column name="description" value="Восстановите ячейки заклинаний во время короткого отдыха"/><column name="skill_type" value="Вспомогательный"/><where>id = 'd1000000-0000-0000-0000-000000000010'</where></update>
+        <update tableName="skills"><column name="name" value="Мастерство заклинаний"/><column name="description" value="Произносите заклинание 1-го или 2-го уровня без траты ячеек"/><column name="skill_type" value="Вспомогательный"/><where>id = 'd1000000-0000-0000-0000-000000000011'</where></update>
+        <update tableName="skills"><column name="name" value="Избранные заклинания"/><column name="description" value="Два заклинания 3-го уровня всегда подготовлены и по разу не тратят ячейку"/><column name="skill_type" value="Вспомогательный"/><where>id = 'd1000000-0000-0000-0000-000000000012'</where></update>
+        <update tableName="skills"><column name="name" value="Скрытая атака"/><column name="description" value="Нанесите дополнительный урон фехтовальным или дальнобойным оружием"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000020'</where></update>
+        <update tableName="skills"><column name="name" value="Хитрое действие"/><column name="description" value="Совершите Рывок, Отход или Засаду бонусным действием"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000021'</where></update>
+        <update tableName="skills"><column name="name" value="Невероятное уклонение"/><column name="description" value="Уменьшите вдвое урон от видимой атаки"/><column name="skill_type" value="Пассивный"/><where>id = 'd1000000-0000-0000-0000-000000000022'</where></update>
+        <update tableName="skills"><column name="name" value="Уклонение"/><column name="description" value="Не получайте урон при успешном спасброске ЛОВ"/><column name="skill_type" value="Пассивный"/><where>id = 'd1000000-0000-0000-0000-000000000023'</where></update>
+        <update tableName="skills"><column name="name" value="Надежный талант"/><column name="description" value="Минимум 10 на проверках характеристик с владением"/><column name="skill_type" value="Пассивный"/><where>id = 'd1000000-0000-0000-0000-000000000024'</where></update>
+        <update tableName="skills"><column name="name" value="Божественный канал"/><column name="description" value="Направьте божественную энергию для особых эффектов"/><column name="skill_type" value="Вспомогательный"/><where>id = 'd1000000-0000-0000-0000-000000000030'</where></update>
+        <update tableName="skills"><column name="name" value="Изгнание нежити"/><column name="description" value="Нежить вынуждена бежать от вас"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000031'</where></update>
+        <update tableName="skills"><column name="name" value="Уничтожение нежити"/><column name="description" value="Мгновенно уничтожайте слабую нежить"/><column name="skill_type" value="Боевой"/><where>id = 'd1000000-0000-0000-0000-000000000032'</where></update>
+        <update tableName="skills"><column name="name" value="Божественное вмешательство"/><column name="description" value="Воззовите к своему божеству за помощью"/><column name="skill_type" value="Вспомогательный"/><where>id = 'd1000000-0000-0000-0000-000000000033'</where></update>
+    </changeSet>
+
+    <changeSet id="006-localize-subclasses" author="dnd-app">
+        <update tableName="subclasses"><column name="name" value="Чемпион"/><column name="description" value="Сосредоточьтесь на грубой физической силе и критических ударах"/><where>id = 'd2000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="subclasses"><column name="name" value="Мастер боя"/><column name="description" value="Используйте приемы, чтобы контролировать поле боя"/><where>id = 'd2000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="subclasses"><column name="name" value="Мистический рыцарь"/><column name="description" value="Сочетайте боевое мастерство с тайной магией"/><where>id = 'd2000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="subclasses"><column name="name" value="Школа воплощения"/><column name="description" value="Мастер разрушительных заклинаний"/><where>id = 'd2000000-0000-0000-0000-000000000010'</where></update>
+        <update tableName="subclasses"><column name="name" value="Школа ограждения"/><column name="description" value="Специалист защитной магии"/><where>id = 'd2000000-0000-0000-0000-000000000011'</where></update>
+        <update tableName="subclasses"><column name="name" value="Школа прорицания"/><column name="description" value="Видьте будущее и меняйте судьбу"/><where>id = 'd2000000-0000-0000-0000-000000000012'</where></update>
+        <update tableName="subclasses"><column name="name" value="Вор"/><column name="description" value="Мастер скрытности и ловкости"/><where>id = 'd2000000-0000-0000-0000-000000000020'</where></update>
+        <update tableName="subclasses"><column name="name" value="Убийца"/><column name="description" value="Эксперт маскировки и смертельных ударов"/><where>id = 'd2000000-0000-0000-0000-000000000021'</where></update>
+        <update tableName="subclasses"><column name="name" value="Мистический ловкач"/><column name="description" value="Усиливайте плутовские способности магией"/><where>id = 'd2000000-0000-0000-0000-000000000022'</where></update>
+        <update tableName="subclasses"><column name="name" value="Домен жизни"/><column name="description" value="Сосредоточьтесь на исцелении и восстановлении"/><where>id = 'd2000000-0000-0000-0000-000000000030'</where></update>
+        <update tableName="subclasses"><column name="name" value="Домен света"/><column name="description" value="Владейте силой огня и света"/><where>id = 'd2000000-0000-0000-0000-000000000031'</where></update>
+        <update tableName="subclasses"><column name="name" value="Домен войны"/><column name="description" value="Направляйте божественную силу для битвы"/><where>id = 'd2000000-0000-0000-0000-000000000032'</where></update>
+    </changeSet>
+
+    <changeSet id="006-localize-feats" author="dnd-app">
+        <update tableName="feats"><column name="name" value="Удачливый"/><column name="description" value="У вас есть 3 очка удачи для переброса кубиков"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="feats"><column name="name" value="Крепкий"/><column name="description" value="Ваш максимум хитов увеличивается на 2 за каждый уровень"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="feats"><column name="name" value="Бдительный"/><column name="description" value="+5 к инициативе; вас нельзя застать врасплох, пока вы в сознании"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="feats"><column name="name" value="Снайпер"/><column name="description" value="Игнорируйте укрытие и штрафы дальней дистанции для дальнобойных атак"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="feats"><column name="name" value="Мастер большого оружия"/><column name="description" value="Получите -5 к атаке ради +10 к урону тяжелым оружием"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000005'</where></update>
+        <update tableName="feats"><column name="name" value="Боевой заклинатель"/><column name="description" value="Преимущество на спасбросках ТЕЛ; произносите заклинания как провоцированные атаки"/><column name="prerequisites" value="Способность сотворить хотя бы одно заклинание"/><where>id = 'd3000000-0000-0000-0000-000000000006'</where></update>
+        <update tableName="feats"><column name="name" value="Страж"/><column name="description" value="Существа провоцируют атаки даже после Отхода"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000007'</where></update>
+        <update tableName="feats"><column name="name" value="Устойчивый"/><column name="description" value="Получите владение одним спасброском"/><column name="prerequisites" value="Нет"/><where>id = 'd3000000-0000-0000-0000-000000000008'</where></update>
+    </changeSet>
+
+</databaseChangeLog>

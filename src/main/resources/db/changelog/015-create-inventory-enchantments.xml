@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="015-create-inventory-enchantments" author="dnd-app">
+        <createTable tableName="inventory_enchantments">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="inventory_slot_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enchantment_type_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="applied_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="varchar(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="inventory_enchantments"
+                baseColumnNames="inventory_slot_id"
+                referencedTableName="inventory_slots"
+                referencedColumnNames="id"
+                constraintName="fk_invench_slot"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="inventory_enchantments"
+                baseColumnNames="enchantment_type_id"
+                referencedTableName="enchantment_types"
+                referencedColumnNames="id"
+                constraintName="fk_invench_enchtype"/>
+
+        <addUniqueConstraint
+                tableName="inventory_enchantments"
+                columnNames="inventory_slot_id, enchantment_type_id"
+                constraintName="uq_slot_enchtype"/>
+    </changeSet>
+
+</databaseChangeLog>

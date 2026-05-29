@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="007-restore-skill-type-enums" author="dnd-app">
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000001'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000002'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000003'</where></update>
+        <update tableName="skills"><column name="skill_type" value="PASSIVE"/><where>id = 'd1000000-0000-0000-0000-000000000004'</where></update>
+        <update tableName="skills"><column name="skill_type" value="UTILITY"/><where>id = 'd1000000-0000-0000-0000-000000000010'</where></update>
+        <update tableName="skills"><column name="skill_type" value="UTILITY"/><where>id = 'd1000000-0000-0000-0000-000000000011'</where></update>
+        <update tableName="skills"><column name="skill_type" value="UTILITY"/><where>id = 'd1000000-0000-0000-0000-000000000012'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000020'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000021'</where></update>
+        <update tableName="skills"><column name="skill_type" value="PASSIVE"/><where>id = 'd1000000-0000-0000-0000-000000000022'</where></update>
+        <update tableName="skills"><column name="skill_type" value="PASSIVE"/><where>id = 'd1000000-0000-0000-0000-000000000023'</where></update>
+        <update tableName="skills"><column name="skill_type" value="PASSIVE"/><where>id = 'd1000000-0000-0000-0000-000000000024'</where></update>
+        <update tableName="skills"><column name="skill_type" value="UTILITY"/><where>id = 'd1000000-0000-0000-0000-000000000030'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000031'</where></update>
+        <update tableName="skills"><column name="skill_type" value="COMBAT"/><where>id = 'd1000000-0000-0000-0000-000000000032'</where></update>
+        <update tableName="skills"><column name="skill_type" value="UTILITY"/><where>id = 'd1000000-0000-0000-0000-000000000033'</where></update>
+    </changeSet>
+
+</databaseChangeLog>
