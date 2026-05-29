@@ -1,6 +1,7 @@
 package com.dnd.app.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,4 +22,11 @@ public class CreateSkillRequest {
 
     @Size(max = 50, message = "Тип умения не должен превышать 50 символов")
     private String skillType;
+
+    @Pattern(regexp = "^(\\d+)?d(\\d+)$", message = "Формат должен быть NdM или dM")
+    private String damageDice;
+
+    private Integer damageBonus;
+
+    private String damageType;
 }

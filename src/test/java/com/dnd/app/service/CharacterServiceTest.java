@@ -64,16 +64,16 @@ class CharacterServiceTest {
         PlayerCharacter saved = PlayerCharacter.builder()
                 .id(UUID.randomUUID()).name("Hero").totalLevel(1)
                 .race(race).owner(player).build();
-        when(characterRepository.save(any(PlayerCharacter.class))).thenReturn(saved);
-        when(classLevelRepository.save(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(characterRepository.saveAndFlush(any(PlayerCharacter.class))).thenReturn(saved);
+        when(classLevelRepository.saveAndFlush(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
         CharacterResponse expected = CharacterResponse.builder().name("Hero").build();
         when(characterMapper.toResponse(saved)).thenReturn(expected);
 
         CharacterResponse result = characterService.createCharacter(req, "player1");
 
         assertEquals("Hero", result.getName());
-        verify(characterRepository).save(any(PlayerCharacter.class));
-        verify(classLevelRepository).save(any(CharacterClassLevel.class));
+        verify(characterRepository).saveAndFlush(any(PlayerCharacter.class));
+        verify(classLevelRepository).saveAndFlush(any(CharacterClassLevel.class));
     }
 
     @Test

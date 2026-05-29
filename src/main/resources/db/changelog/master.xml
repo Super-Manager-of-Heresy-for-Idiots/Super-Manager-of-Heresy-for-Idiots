@@ -12,5 +12,13 @@
     <include file="db/changelog/005-homebrew-marketplace.xml"/>
     <include file="db/changelog/006-localize-seed-data.xml"/>
     <include file="db/changelog/007-restore-system-enums.xml"/>
+    <include file="db/changelog/008-create-buffs-debuffs.xml"/>
+    <include file="db/changelog/009-seed-buffs-debuffs.xml"/>
+    <include file="db/changelog/010-add-damage-to-item-types.xml"/>
+    <include file="db/changelog/011-add-damage-to-skills.xml"/>
+    <include file="db/changelog/012-create-skill-effects.xml"/>
+    <include file="db/changelog/013-create-enchantment-types.xml"/>
+    <include file="db/changelog/014-seed-enchantment-types.xml"/>
+    <include file="db/changelog/015-create-inventory-enchantments.xml"/>
 
 </databaseChangeLog>

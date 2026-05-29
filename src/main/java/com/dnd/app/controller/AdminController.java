@@ -179,6 +179,19 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Умение удалено"));
     }
 
+    // --- Skill Effects ---
+
+    @GetMapping("/skills/{id}/effects")
+    public ResponseEntity<ApiResponse<List<SkillEffectResponse>>> getSkillEffects(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getSkillEffects(id)));
+    }
+
+    @PutMapping("/skills/{id}/effects")
+    public ResponseEntity<ApiResponse<List<SkillEffectResponse>>> setSkillEffects(
+            @PathVariable UUID id, @Valid @RequestBody SetSkillEffectsRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.setSkillEffects(id, request), "Эффекты умения обновлены"));
+    }
+
     // --- Subclasses ---
 
     @GetMapping("/subclasses")

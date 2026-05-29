@@ -1,12 +1,16 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.enums.DamageType;
+import com.dnd.app.domain.enums.EffectRole;
 import com.dnd.app.domain.enums.EquipmentSlot;
+import com.dnd.app.domain.enums.SkillActivation;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.TeamMapper;
 import com.dnd.app.mapper.UserMapper;
@@ -17,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +40,8 @@ public class AdminService {
     private final SubclassRepository subclassRepository;
     private final FeatRepository featRepository;
     private final ClassLevelRewardRepository classLevelRewardRepository;
+    private final SkillEffectRepository skillEffectRepository;
+    private final BuffDebuffRepository buffDebuffRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final TeamMapper teamMapper;
@@ -93,7 +100,7 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public List<ItemTypeResponse> listItemTypes() {
-        return itemTypeRepository.findAll().stream().map(refMapper::toItemTypeResponse).toList();
+        return itemTypeRepository.findAll().stream().map(this::toItemTypeResponse).toList();
     }
 
     @Transactional
@@ -102,19 +109,31 @@ public class AdminService {
             throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
         }
         EquipmentSlot slot = parseSlot(request.getSlot());
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateItemTypeSkillFields(request.getSkillId(), request.getSkillActivation());
+
         ItemType it = ItemType.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .slot(slot)
+                .damageDice(request.getDamageDice())
+                .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
+                .damageType(parseDamageType(request.getDamageType()))
                 .build();
+        if (request.getSkillId() != null) {
+            Skill skill = skillRepository.findById(request.getSkillId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+            it.setSkill(skill);
+            it.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
+        }
         ItemType saved = itemTypeRepository.save(it);
         log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot(), saved.getId());
-        return refMapper.toItemTypeResponse(saved);
+        return toItemTypeResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public ItemTypeResponse getItemType(UUID id) {
-        return refMapper.toItemTypeResponse(itemTypeRepository.findById(id)
+        return toItemTypeResponse(itemTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден")));
     }
 
@@ -125,10 +144,25 @@ public class AdminService {
         if (!it.getName().equals(request.getName()) && itemTypeRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
         }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateItemTypeSkillFields(request.getSkillId(), request.getSkillActivation());
+
         it.setName(request.getName());
         it.setDescription(request.getDescription());
         it.setSlot(parseSlot(request.getSlot()));
-        return refMapper.toItemTypeResponse(itemTypeRepository.save(it));
+        it.setDamageDice(request.getDamageDice());
+        it.setDamageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0);
+        it.setDamageType(parseDamageType(request.getDamageType()));
+        if (request.getSkillId() != null) {
+            Skill skill = skillRepository.findById(request.getSkillId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+            it.setSkill(skill);
+            it.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
+        } else {
+            it.setSkill(null);
+            it.setSkillActivation(null);
+        }
+        return toItemTypeResponse(itemTypeRepository.save(it));
     }
 
     @Transactional
@@ -248,10 +282,14 @@ public class AdminService {
         if (skillRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
         Skill skill = Skill.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .skillType(request.getSkillType())
+                .damageDice(request.getDamageDice())
+                .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
+                .damageType(parseDamageType(request.getDamageType()))
                 .build();
         Skill saved = skillRepository.save(skill);
         log.info("Admin: skill created — name='{}', type={}, id={}", saved.getName(), saved.getSkillType(), saved.getId());
@@ -271,9 +309,13 @@ public class AdminService {
         if (!skill.getName().equals(request.getName()) && skillRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
         skill.setName(request.getName());
         skill.setDescription(request.getDescription());
         skill.setSkillType(request.getSkillType());
+        skill.setDamageDice(request.getDamageDice());
+        skill.setDamageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0);
+        skill.setDamageType(parseDamageType(request.getDamageType()));
         return toSkillResponse(skillRepository.save(skill));
     }
 
@@ -451,10 +493,144 @@ public class AdminService {
         }
     }
 
+    private DamageType parseDamageType(String damageType) {
+        if (damageType == null) return null;
+        try {
+            return DamageType.valueOf(damageType);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный тип урона: " + damageType);
+        }
+    }
+
+    private SkillActivation parseSkillActivation(String activation) {
+        if (activation == null) return null;
+        try {
+            return SkillActivation.valueOf(activation);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный тип активации: " + activation + ". Допустимо: PASSIVE, ACTIVE");
+        }
+    }
+
+    private EffectRole parseEffectRole(String role) {
+        try {
+            return EffectRole.valueOf(role);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректная роль эффекта: " + role + ". Допустимо: BUFF, DEBUFF");
+        }
+    }
+
+    private void validateDamageFields(String damageDice, String damageType) {
+        if (damageDice != null && damageType == null) {
+            throw new BadRequestException("Если указан damage_dice, damage_type обязателен");
+        }
+        if (damageType != null) {
+            parseDamageType(damageType);
+        }
+    }
+
+    private void validateItemTypeSkillFields(UUID skillId, String skillActivation) {
+        if (skillId != null && skillActivation == null) {
+            throw new BadRequestException("Если указан skillId, skillActivation обязателен");
+        }
+        if (skillActivation != null && skillId == null) {
+            throw new BadRequestException("Если указан skillActivation, skillId обязателен");
+        }
+        if (skillActivation != null) {
+            parseSkillActivation(skillActivation);
+        }
+    }
+
+    // --- Skill Effects ---
+
+    @Transactional(readOnly = true)
+    public List<SkillEffectResponse> getSkillEffects(UUID skillId) {
+        if (!skillRepository.existsById(skillId)) {
+            throw new ResourceNotFoundException("Умение не найдено");
+        }
+        return skillEffectRepository.findAllBySkillId(skillId).stream()
+                .map(this::toSkillEffectResponse).toList();
+    }
+
+    @Transactional
+    public List<SkillEffectResponse> setSkillEffects(UUID skillId, SetSkillEffectsRequest request) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+
+        for (SkillEffectRequest er : request.getEffects()) {
+            EffectRole role = parseEffectRole(er.getEffectRole());
+            BuffDebuff bd = buffDebuffRepository.findById(er.getBuffDebuffId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден: " + er.getBuffDebuffId()));
+            if (role == EffectRole.BUFF && !bd.getIsBuff()) {
+                throw new UnprocessableEntityException("Роль BUFF несовместима с дебаффом '" + bd.getName() + "'");
+            }
+            if (role == EffectRole.DEBUFF && bd.getIsBuff()) {
+                throw new UnprocessableEntityException("Роль DEBUFF несовместима с баффом '" + bd.getName() + "'");
+            }
+        }
+
+        skillEffectRepository.deleteAllBySkillId(skillId);
+        skillEffectRepository.flush();
+
+        List<SkillEffect> newEffects = new ArrayList<>();
+        for (SkillEffectRequest er : request.getEffects()) {
+            BuffDebuff bd = buffDebuffRepository.findById(er.getBuffDebuffId()).orElseThrow();
+            SkillEffect se = SkillEffect.builder()
+                    .skill(skill)
+                    .buffDebuff(bd)
+                    .effectRole(parseEffectRole(er.getEffectRole()))
+                    .chancePercent(er.getChancePercent())
+                    .build();
+            newEffects.add(skillEffectRepository.save(se));
+        }
+        log.info("Admin: skill effects updated — skillId={}, effectCount={}", skillId, newEffects.size());
+        return newEffects.stream().map(this::toSkillEffectResponse).toList();
+    }
+
     private SkillResponse toSkillResponse(Skill s) {
+        List<SkillEffectResponse> effectResponses = s.getEffects() != null
+                ? s.getEffects().stream().map(this::toSkillEffectResponse).toList()
+                : List.of();
         return SkillResponse.builder()
                 .id(s.getId()).name(s.getName()).description(s.getDescription())
-                .skillType(s.getSkillType()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .skillType(s.getSkillType())
+                .damageDice(s.getDamageDice())
+                .damageBonus(s.getDamageBonus())
+                .damageType(s.getDamageType() != null ? s.getDamageType().name() : null)
+                .effects(effectResponses)
+                .createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
+                .build();
+    }
+
+    private ItemTypeResponse toItemTypeResponse(ItemType it) {
+        return ItemTypeResponse.builder()
+                .id(it.getId()).name(it.getName()).description(it.getDescription())
+                .slot(it.getSlot().name())
+                .damageDice(it.getDamageDice())
+                .damageBonus(it.getDamageBonus())
+                .damageType(it.getDamageType() != null ? it.getDamageType().name() : null)
+                .skillId(it.getSkill() != null ? it.getSkill().getId() : null)
+                .skillName(it.getSkill() != null ? it.getSkill().getName() : null)
+                .skillActivation(it.getSkillActivation() != null ? it.getSkillActivation().name() : null)
+                .build();
+    }
+
+    private SkillEffectResponse toSkillEffectResponse(SkillEffect se) {
+        BuffDebuff bd = se.getBuffDebuff();
+        BuffDebuffResponse bdResp = BuffDebuffResponse.builder()
+                .id(bd.getId()).name(bd.getName()).description(bd.getDescription())
+                .effectType(bd.getEffectType())
+                .targetStatId(bd.getTargetStat() != null ? bd.getTargetStat().getId() : null)
+                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getName() : null)
+                .modifierValue(bd.getModifierValue())
+                .durationRounds(bd.getDurationRounds())
+                .isBuff(bd.getIsBuff())
+                .createdAt(bd.getCreatedAt())
+                .build();
+        return SkillEffectResponse.builder()
+                .id(se.getId())
+                .buffDebuff(bdResp)
+                .effectRole(se.getEffectRole().name())
+                .chancePercent(se.getChancePercent())
                 .build();
     }
 

@@ -2067,3 +2067,281 @@ interface Page<T> {
 - Пагинация
 - На карточке: title, description (truncated), tags, downloadCount, authorUsername
 ```
+
+---
+
+## БЛОК 19 — Баффы/дебаффы (справочные данные, только ADMIN)
+
+```
+Система баффов и дебаффов — справочная таблица эффектов.
+Умения и зачарования ссылаются на записи из этой таблицы.
+
+CRUD ЭНДПОИНТЫ (только ADMIN):
+
+GET    /api/admin/buffs-debuffs
+  Query params: ?is_buff=true|false, ?effect_type=STAT_MODIFIER
+  Response: массив BuffDebuffResponse
+
+POST   /api/admin/buffs-debuffs
+  Body:
+  {
+    "name": string,           // обязательно, до 100 символов, уникальное
+    "description": string,    // опционально
+    "effectType": string,     // обязательно: STAT_MODIFIER | CONDITION | DAMAGE_OVER_TIME
+                              //   | HEAL_OVER_TIME | IMMUNITY | VULNERABILITY
+    "targetStatId": "uuid",   // обязательно при effectType = STAT_MODIFIER
+    "modifierValue": integer, // опционально, +2 или -3
+    "durationRounds": integer,// опционально, null = перманентный
+    "isBuff": boolean         // обязательно: true = бафф, false = дебафф
+  }
+
+GET    /api/admin/buffs-debuffs/{id}
+PUT    /api/admin/buffs-debuffs/{id}
+DELETE /api/admin/buffs-debuffs/{id}
+  Возвращает 409 если используется в эффектах умений или типах зачарований.
+
+Response: BuffDebuffResponse
+{
+  "id": "uuid",
+  "name": "Blessed",
+  "description": "Божественное благословение",
+  "effectType": "STAT_MODIFIER",
+  "targetStatId": "uuid",
+  "targetStatName": "STR",
+  "modifierValue": 2,
+  "durationRounds": null,
+  "isBuff": true,
+  "createdAt": "..."
+}
+
+Предустановленные записи:
+- Blessed (STAT_MODIFIER, STR +2, бафф)
+- Hasted (CONDITION, бафф, 10 раундов)
+- Poisoned (CONDITION, дебафф, 5 раундов)
+- Weakened (STAT_MODIFIER, STR -3, дебафф)
+- Burning (DAMAGE_OVER_TIME, дебафф, 3 раунда)
+- Regenerating (HEAL_OVER_TIME, бафф, 5 раундов)
+- Stunned (CONDITION, дебафф, 2 раунда)
+- Frightened (CONDITION, дебафф, 4 раунда)
+```
+
+---
+
+## БЛОК 20 — Урон, умения и эффекты умений
+
+```
+Типы предметов и умения теперь поддерживают урон и привязку к умениям/эффектам.
+
+ОБНОВЛЁННЫЕ ТИПЫ ПРЕДМЕТОВ:
+POST/PUT /api/admin/item-types теперь принимают дополнительные поля:
+{
+  "name": string,
+  "description": string,
+  "slot": string,
+  "damageDice": string,       // опционально, формат: "2d6", "1d8", "d4"
+  "damageBonus": integer,     // по умолчанию 0
+  "damageType": string,       // обязательно если есть damageDice
+                              // SLASHING | PIERCING | BLUDGEONING | FIRE | COLD
+                              // | LIGHTNING | POISON | NECROTIC | RADIANT
+                              // | PSYCHIC | FORCE | THUNDER | ACID
+  "skillId": "uuid",          // опционально, ссылка на умение
+  "skillActivation": string   // обязательно если есть skillId: PASSIVE | ACTIVE
+}
+
+Response ItemTypeResponse теперь включает:
+  damageDice, damageBonus, damageType, skillId, skillName, skillActivation
+
+
+ОБНОВЛЁННЫЕ УМЕНИЯ:
+POST/PUT /api/admin/skills теперь принимают:
+{
+  "name": string,
+  "description": string,
+  "skillType": string,
+  "damageDice": string,       // опционально
+  "damageBonus": integer,     // по умолчанию 0
+  "damageType": string        // обязательно если есть damageDice
+}
+
+Response SkillResponse теперь включает:
+  damageDice, damageBonus, damageType,
+  effects: SkillEffectResponse[]
+
+
+ЭФФЕКТЫ УМЕНИЙ (подресурс):
+GET /api/admin/skills/{id}/effects
+  Response: массив SkillEffectResponse
+
+PUT /api/admin/skills/{id}/effects
+  Полная замена всех эффектов (идемпотентная).
+  Body:
+  {
+    "effects": [
+      {
+        "buffDebuffId": "uuid",
+        "effectRole": "BUFF" | "DEBUFF",
+        "chancePercent": integer  // 1-100
+      }
+    ]
+  }
+  Пустой массив = удалить все эффекты.
+  effectRole должен совпадать с isBuff записи:
+    BUFF → isBuff=true, DEBUFF → isBuff=false
+
+Response: SkillEffectResponse
+{
+  "id": "uuid",
+  "buffDebuff": { ...BuffDebuffResponse... },
+  "effectRole": "DEBUFF",
+  "chancePercent": 75
+}
+```
+
+---
+
+## БЛОК 21 — Зачарования (Enchantments)
+
+```
+Зачарования — эффекты, накладываемые игроком на экипированные предметы.
+
+СПРАВОЧНИК ТИПОВ ЗАЧАРОВАНИЙ:
+
+GET /api/enchantment-types
+  Доступ: все авторизованные пользователи (PLAYER, GAME_MASTER, ADMIN).
+  Каталог доступных зачарований для выбора.
+
+ADMIN CRUD:
+GET    /api/admin/enchantment-types
+POST   /api/admin/enchantment-types
+  Body:
+  {
+    "name": string,           // обязательно, уникальное
+    "description": string,
+    "damageDice": string,     // "1d4", "1d6" и т.д.
+    "damageBonus": integer,   // по умолчанию 0
+    "damageType": string,     // обязательно если есть damageDice
+    "buffDebuffId": "uuid"    // опционально
+  }
+GET    /api/admin/enchantment-types/{id}
+PUT    /api/admin/enchantment-types/{id}
+DELETE /api/admin/enchantment-types/{id}
+  Возвращает 409 если зачарование применено к инвентарю.
+
+Response: EnchantmentTypeResponse
+{
+  "id": "uuid",
+  "name": "Flaming",
+  "description": "Огненное зачарование",
+  "damageDice": "1d4",
+  "damageBonus": 0,
+  "damageType": "FIRE",
+  "buffDebuff": { ...BuffDebuffResponse или null... }
+}
+
+Предустановленные зачарования:
+- Flaming (1d4 FIRE, связан с Burning)
+- Frost Touch (1d6 COLD, без баффа)
+- Holy (1d8 RADIANT, связан с Blessed)
+- Venomous (1d4 POISON, связан с Poisoned)
+- Thunderous (1d6 THUNDER, связан с Stunned)
+
+
+ЗАЧАРОВАНИЯ ИНВЕНТАРЯ (PLAYER):
+
+GET /api/characters/{characterId}/inventory/{slotId}/enchantments
+  Доступ: PLAYER (свой), GAME_MASTER (участник команды), ADMIN (любой).
+
+POST /api/characters/{characterId}/inventory/{slotId}/enchantments
+  Доступ: только PLAYER (свой персонаж) или ADMIN.
+  Body:
+  {
+    "enchantmentTypeId": "uuid",
+    "notes": string          // опционально, до 255 символов
+  }
+  Ошибки:
+  - 409 если слот пустой (нет предмета)
+  - 409 если зачарование уже наложено на этот слот
+
+DELETE /api/characters/{characterId}/inventory/{slotId}/enchantments/{enchantmentId}
+  Доступ: только PLAYER (свой) или ADMIN.
+
+Response: EnchantmentResponse
+{
+  "id": "uuid",
+  "enchantmentType": { ...EnchantmentTypeResponse... },
+  "appliedAt": "2026-05-29T12:00:00Z",
+  "notes": "Наложено после боя с драконом"
+}
+
+slotId — это UUID слота инвентаря (поле id из InventorySlotResponse).
+enchantmentId — это UUID конкретного зачарования на слоте.
+
+
+TypeScript типы:
+
+interface BuffDebuffResponse {
+  id: string;
+  name: string;
+  description?: string;
+  effectType: string;
+  targetStatId?: string;
+  targetStatName?: string;
+  modifierValue?: number;
+  durationRounds?: number;
+  isBuff: boolean;
+  createdAt: string;
+}
+
+interface EnchantmentTypeResponse {
+  id: string;
+  name: string;
+  description?: string;
+  damageDice?: string;
+  damageBonus: number;
+  damageType?: string;
+  buffDebuff?: BuffDebuffResponse;
+}
+
+interface EnchantmentResponse {
+  id: string;
+  enchantmentType: EnchantmentTypeResponse;
+  appliedAt: string;
+  notes?: string;
+}
+
+interface SkillEffectResponse {
+  id: string;
+  buffDebuff: BuffDebuffResponse;
+  effectRole: "BUFF" | "DEBUFF";
+  chancePercent: number;
+}
+
+// Updated existing types:
+interface ItemTypeResponse {
+  id: string;
+  name: string;
+  description?: string;
+  slot: string;
+  damageDice?: string;
+  damageBonus?: number;
+  damageType?: string;
+  skillId?: string;
+  skillName?: string;
+  skillActivation?: "PASSIVE" | "ACTIVE";
+}
+
+interface SkillResponse {
+  id: string;
+  name: string;
+  description?: string;
+  skillType?: string;
+  damageDice?: string;
+  damageBonus?: number;
+  damageType?: string;
+  effects?: SkillEffectResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+type DamageType = "SLASHING" | "PIERCING" | "BLUDGEONING" | "FIRE" | "COLD" | "LIGHTNING" | "POISON" | "NECROTIC" | "RADIANT" | "PSYCHIC" | "FORCE" | "THUNDER" | "ACID";
+```
