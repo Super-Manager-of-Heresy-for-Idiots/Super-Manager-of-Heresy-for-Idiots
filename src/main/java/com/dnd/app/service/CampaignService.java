@@ -9,6 +9,9 @@ import com.dnd.app.repository.*;
 import com.dnd.app.util.InviteCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,19 +90,17 @@ public class CampaignService {
     }
 
     @Transactional(readOnly = true)
-    public List<CampaignResponse> listMyCampaigns(String username) {
+    public Page<CampaignResponse> listMyCampaigns(String username, Pageable pageable) {
         User user = getUser(username);
         if (user.getRole() == Role.ADMIN) {
-            return campaignRepository.findAll().stream()
-                    .map(c -> toCampaignResponse(c, user))
-                    .toList();
+            Page<Campaign> page = campaignRepository.findAll(pageable);
+            return page.map(c -> toCampaignResponse(c, user));
         }
         List<CampaignMember> memberships = campaignMemberRepository.findByUserIdAndKickedFalse(user.getId());
         List<UUID> campaignIds = memberships.stream().map(m -> m.getCampaign().getId()).toList();
-        if (campaignIds.isEmpty()) return List.of();
-        return campaignRepository.findByIdIn(campaignIds).stream()
-                .map(c -> toCampaignResponse(c, user))
-                .toList();
+        if (campaignIds.isEmpty()) return new PageImpl<>(List.of(), pageable, 0);
+        Page<Campaign> page = campaignRepository.findByIdIn(campaignIds, pageable);
+        return page.map(c -> toCampaignResponse(c, user));
     }
 
     @Transactional

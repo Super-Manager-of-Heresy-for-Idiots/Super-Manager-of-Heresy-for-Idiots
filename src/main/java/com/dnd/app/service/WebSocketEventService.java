@@ -28,7 +28,7 @@ public class WebSocketEventService {
                 .triggeredBy(triggeredBy)
                 .build();
 
-        String destination = "/topic/campaign." + campaignId;
+        String destination = "/topic/campaign/" + campaignId;
         messagingTemplate.convertAndSend(destination, payload);
         log.debug("WebSocket event sent: type={}, campaignId={}, destination={}", type, campaignId, destination);
     }
@@ -46,7 +46,7 @@ public class WebSocketEventService {
                 .triggeredBy(triggeredBy)
                 .build();
 
-        messagingTemplate.convertAndSendToUser(username, "/queue/events", payload);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", payload);
         log.debug("WebSocket user event sent: type={}, user={}", type, username);
     }
 }

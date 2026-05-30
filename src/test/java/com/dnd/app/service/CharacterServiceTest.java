@@ -32,13 +32,12 @@ class CharacterServiceTest {
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private CharacterStatRepository characterStatRepository;
-    @Mock private InventorySlotRepository inventorySlotRepository;
-    @Mock private ItemTypeRepository itemTypeRepository;
     @Mock private CharacterConditionRepository charCondRepository;
     @Mock private CharacterClassLevelRepository classLevelRepository;
-    @Mock private TeamRepository teamRepository;
-    @Mock private TeamMemberRepository teamMemberRepository;
-    @Mock private TeamContentService teamContentService;
+    @Mock private CampaignRepository campaignRepository;
+    @Mock private CampaignMemberRepository campaignMemberRepository;
+    @Mock private CampaignContentService campaignContentService;
+    @Mock private CampaignService campaignService;
     @Mock private CharacterMapper characterMapper;
 
     @InjectMocks private CharacterService characterService;
@@ -54,32 +53,31 @@ class CharacterServiceTest {
     @Test
     void createCharacter_success() {
         UUID playerId = UUID.randomUUID();
-        UUID teamId = UUID.randomUUID();
+        UUID campaignId = UUID.randomUUID();
         User player = makePlayer(playerId, "player1");
-        User gm = makeGM(UUID.randomUUID(), "gm1");
-        Team team = Team.builder().id(teamId).name("Party").gameMaster(gm).build();
+        Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
         CharacterClass cc = CharacterClass.builder().id(UUID.randomUUID()).name("Fighter").build();
         CharacterRace race = CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
         CreateCharacterRequest req = CreateCharacterRequest.builder()
-                .name("Hero").classId(cc.getId()).raceId(race.getId()).teamId(teamId).build();
+                .name("Hero").classId(cc.getId()).raceId(race.getId()).campaignId(campaignId).build();
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
-        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
-        when(teamMemberRepository.existsByIdTeamIdAndIdPlayerId(teamId, playerId)).thenReturn(true);
-        when(teamContentService.isClassAvailableInTeam(teamId, cc.getId())).thenReturn(true);
-        when(teamContentService.isRaceAvailableInTeam(teamId, race.getId())).thenReturn(true);
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
+        when(campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaignId, playerId)).thenReturn(true);
+        when(campaignContentService.isClassAvailableInCampaign(campaignId, cc.getId())).thenReturn(true);
+        when(campaignContentService.isRaceAvailableInCampaign(campaignId, race.getId())).thenReturn(true);
         when(classRepository.findById(cc.getId())).thenReturn(Optional.of(cc));
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(statTypeRepository.findAll()).thenReturn(Collections.emptyList());
         PlayerCharacter saved = PlayerCharacter.builder()
                 .id(UUID.randomUUID()).name("Hero").totalLevel(1)
-                .race(race).owner(player).team(team).build();
+                .race(race).owner(player).campaign(campaign).build();
         when(characterRepository.saveAndFlush(any(PlayerCharacter.class))).thenReturn(saved);
         when(classLevelRepository.saveAndFlush(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
         CharacterResponse expected = CharacterResponse.builder().name("Hero").build();
         when(characterMapper.toResponse(saved)).thenReturn(expected);
 
-        CharacterResponse result = characterService.createCharacter(req, "player1");
+        CharacterResponse result = characterService.createCharacter(campaignId, req, "player1");
 
         assertEquals("Hero", result.getName());
         verify(characterRepository).saveAndFlush(any(PlayerCharacter.class));
@@ -103,23 +101,25 @@ class CharacterServiceTest {
     }
 
     @Test
-    void updateStatValue_gmCanEditTeamMember() {
+    void updateStatValue_gmCanEditCampaignMember() {
         UUID gmId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
         UUID charId = UUID.randomUUID();
         UUID statId = UUID.randomUUID();
+        UUID campaignId = UUID.randomUUID();
 
         User gm = makeGM(gmId, "gm1");
         User player = makePlayer(playerId, "player1");
-        Team team = Team.builder().id(UUID.randomUUID()).name("Party").gameMaster(gm).build();
+        Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
         PlayerCharacter character = PlayerCharacter.builder()
-                .id(charId).name("Hero").owner(player).team(team).build();
+                .id(charId).name("Hero").owner(player).campaign(campaign).build();
         StatType st = StatType.builder().id(UUID.randomUUID()).name("STR").build();
         CharacterStat stat = CharacterStat.builder()
                 .id(statId).character(character).statType(st).value(10).build();
 
         when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gm));
+        when(campaignService.isGmInCampaign(campaignId, gmId)).thenReturn(true);
         when(characterStatRepository.findById(statId)).thenReturn(Optional.of(stat));
         when(characterStatRepository.save(any())).thenReturn(stat);
         CharacterStatResponse expected = CharacterStatResponse.builder().value(15).build();
@@ -132,20 +132,21 @@ class CharacterServiceTest {
     }
 
     @Test
-    void updateStatValue_gmCannotEditNonTeamMember() {
+    void updateStatValue_gmCannotEditNonCampaignMember() {
         UUID gmId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
         UUID charId = UUID.randomUUID();
+        UUID campaignId = UUID.randomUUID();
 
         User gm = makeGM(gmId, "gm1");
-        User otherGm = makeGM(UUID.randomUUID(), "gm2");
         User player = makePlayer(playerId, "player1");
-        Team team = Team.builder().id(UUID.randomUUID()).name("Party").gameMaster(otherGm).build();
+        Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
         PlayerCharacter character = PlayerCharacter.builder()
-                .id(charId).name("Hero").owner(player).team(team).build();
+                .id(charId).name("Hero").owner(player).campaign(campaign).build();
 
         when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gm));
+        when(campaignService.isGmInCampaign(campaignId, gmId)).thenReturn(false);
 
         UpdateStatRequest req = UpdateStatRequest.builder().value(15).build();
         assertThrows(AccessDeniedException.class,
@@ -155,6 +156,7 @@ class CharacterServiceTest {
     @Test
     void createCharacter_gameMasterCannotCreate() {
         UUID gmId = UUID.randomUUID();
+        UUID campaignId = UUID.randomUUID();
         User gm = makeGM(gmId, "gm1");
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gm));
 
@@ -162,6 +164,6 @@ class CharacterServiceTest {
                 .name("Hero").classId(UUID.randomUUID()).raceId(UUID.randomUUID()).build();
 
         assertThrows(AccessDeniedException.class,
-                () -> characterService.createCharacter(req, "gm1"));
+                () -> characterService.createCharacter(campaignId, req, "gm1"));
     }
 }

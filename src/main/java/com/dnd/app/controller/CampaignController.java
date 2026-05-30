@@ -2,11 +2,14 @@ package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.service.CampaignContentService;
 import com.dnd.app.service.CampaignService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +25,7 @@ import java.util.UUID;
 public class CampaignController {
 
     private final CampaignService campaignService;
+    private final CampaignContentService campaignContentService;
 
     @PostMapping
     @Operation(summary = "Create a new campaign")
@@ -33,9 +37,10 @@ public class CampaignController {
     }
 
     @GetMapping
-    @Operation(summary = "List my campaigns")
-    public ResponseEntity<ApiResponse<List<CampaignResponse>>> listCampaigns(Authentication auth) {
-        List<CampaignResponse> campaigns = campaignService.listMyCampaigns(auth.getName());
+    @Operation(summary = "List my campaigns (paginated)")
+    public ResponseEntity<ApiResponse<Page<CampaignResponse>>> listCampaigns(
+            Pageable pageable, Authentication auth) {
+        Page<CampaignResponse> campaigns = campaignService.listMyCampaigns(auth.getName(), pageable);
         return ResponseEntity.ok(ApiResponse.ok(campaigns));
     }
 
@@ -112,5 +117,41 @@ public class CampaignController {
             @PathVariable UUID id, Authentication auth) {
         InviteCodeResponse response = campaignService.regenerateInviteCode(id, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Invite code regenerated"));
+    }
+
+    // --- Homebrew ---
+
+    @PostMapping("/{id}/homebrew")
+    @Operation(summary = "Attach homebrew package to campaign (GM only)")
+    public ResponseEntity<ApiResponse<CampaignHomebrewResponse>> activateHomebrew(
+            @PathVariable UUID id,
+            @Valid @RequestBody ActivateHomebrewRequest request, Authentication auth) {
+        CampaignHomebrewResponse resp = campaignContentService.activateHomebrew(id, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(resp, "Хомбрю-пакет активирован для кампании"));
+    }
+
+    @DeleteMapping("/{id}/homebrew/{packageId}")
+    @Operation(summary = "Detach homebrew package from campaign (GM only)")
+    public ResponseEntity<ApiResponse<Void>> deactivateHomebrew(
+            @PathVariable UUID id, @PathVariable UUID packageId, Authentication auth) {
+        campaignContentService.deactivateHomebrew(id, packageId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Хомбрю-пакет деактивирован для кампании"));
+    }
+
+    @GetMapping("/{id}/homebrew")
+    @Operation(summary = "List active homebrew packages in campaign")
+    public ResponseEntity<ApiResponse<List<CampaignHomebrewResponse>>> listActiveHomebrew(
+            @PathVariable UUID id, Authentication auth) {
+        List<CampaignHomebrewResponse> list = campaignContentService.listActiveHomebrew(id, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(list));
+    }
+
+    @GetMapping("/{id}/available-content")
+    @Operation(summary = "Get available content for campaign (global + homebrew)")
+    public ResponseEntity<ApiResponse<TeamAvailableContentResponse>> getAvailableContent(
+            @PathVariable UUID id, Authentication auth) {
+        TeamAvailableContentResponse content = campaignContentService.getAvailableContent(id, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(content));
     }
 }

@@ -4,12 +4,11 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateCharacterRequest;
+import com.dnd.app.dto.request.ModifyHpRequest;
 import com.dnd.app.dto.request.UpdateCharacterRequest;
-import com.dnd.app.dto.request.UpdateInventorySlotRequest;
 import com.dnd.app.dto.request.UpdateStatRequest;
 import com.dnd.app.dto.response.CharacterResponse;
 import com.dnd.app.dto.response.CharacterStatResponse;
-import com.dnd.app.dto.response.InventorySlotResponse;
 import com.dnd.app.dto.response.StatModifierDetail;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
@@ -36,38 +35,37 @@ public class CharacterService {
     private final CharacterRaceRepository raceRepository;
     private final StatTypeRepository statTypeRepository;
     private final CharacterStatRepository characterStatRepository;
-    private final InventorySlotRepository inventorySlotRepository;
-    private final ItemTypeRepository itemTypeRepository;
     private final CharacterConditionRepository charCondRepository;
     private final CharacterClassLevelRepository classLevelRepository;
-    private final TeamRepository teamRepository;
-    private final TeamMemberRepository teamMemberRepository;
-    private final TeamContentService teamContentService;
+    private final CampaignRepository campaignRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
+    private final CampaignContentService campaignContentService;
+    private final CampaignService campaignService;
     private final CharacterMapper characterMapper;
 
     @Transactional
-    public CharacterResponse createCharacter(CreateCharacterRequest request, String username) {
+    public CharacterResponse createCharacter(UUID campaignId, CreateCharacterRequest request, String username) {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (owner.getRole() != Role.PLAYER && owner.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Только игроки могут создавать персонажей");
         }
 
-        Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+        Campaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Кампания не найдена"));
 
         if (owner.getRole() == Role.PLAYER) {
-            boolean isMember = teamMemberRepository.existsByIdTeamIdAndIdPlayerId(team.getId(), owner.getId());
+            boolean isMember = campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaign.getId(), owner.getId());
             if (!isMember) {
-                throw new AccessDeniedException("Вы не являетесь участником этой команды");
+                throw new AccessDeniedException("Вы не являетесь участником этой кампании");
             }
         }
 
-        if (!teamContentService.isClassAvailableInTeam(team.getId(), request.getClassId())) {
-            throw new BadRequestException("Выбранный класс недоступен в контексте этой команды");
+        if (!campaignContentService.isClassAvailableInCampaign(campaign.getId(), request.getClassId())) {
+            throw new BadRequestException("Выбранный класс недоступен в контексте этой кампании");
         }
-        if (!teamContentService.isRaceAvailableInTeam(team.getId(), request.getRaceId())) {
-            throw new BadRequestException("Выбранная раса недоступна в контексте этой команды");
+        if (!campaignContentService.isRaceAvailableInCampaign(campaign.getId(), request.getRaceId())) {
+            throw new BadRequestException("Выбранная раса недоступна в контексте этой кампании");
         }
 
         CharacterClass charClass = classRepository.findById(request.getClassId())
@@ -81,11 +79,11 @@ public class CharacterService {
                 .experience(0L)
                 .race(race)
                 .owner(owner)
-                .team(team)
+                .campaign(campaign)
                 .build();
         character = characterRepository.saveAndFlush(character);
-        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}, teamId={}",
-                character.getId(), character.getName(), charClass.getName(), race.getName(), username, team.getId());
+        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}, campaignId={}",
+                character.getId(), character.getName(), charClass.getName(), race.getName(), username, campaign.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
 
@@ -98,17 +96,6 @@ public class CharacterService {
                     .build();
             characterStatRepository.save(stat);
             character.getStats().add(stat);
-        }
-
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            InventorySlot invSlot = InventorySlot.builder()
-                    .character(character)
-                    .slot(slot)
-                    .itemType(null)
-                    .quantity(1)
-                    .build();
-            inventorySlotRepository.save(invSlot);
-            character.getInventorySlots().add(invSlot);
         }
 
         return characterMapper.toResponse(character);
@@ -134,32 +121,18 @@ public class CharacterService {
     }
 
     @Transactional(readOnly = true)
-    public List<CharacterResponse> listCharacters(String username, UUID teamId) {
+    public List<CharacterResponse> listCharacters(UUID campaignId, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+
+        Campaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Кампания не найдена"));
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+
         List<PlayerCharacter> characters;
         switch (user.getRole()) {
-            case PLAYER -> {
-                if (teamId != null) {
-                    characters = characterRepository.findAllByOwnerIdAndTeamId(user.getId(), teamId);
-                } else {
-                    characters = characterRepository.findAllByOwnerId(user.getId());
-                }
-            }
-            case GAME_MASTER -> {
-                if (teamId != null) {
-                    characters = characterRepository.findAllByGameMasterIdAndTeamId(user.getId(), teamId);
-                } else {
-                    characters = characterRepository.findAllByGameMasterId(user.getId());
-                }
-            }
-            case ADMIN -> {
-                if (teamId != null) {
-                    characters = characterRepository.findAllByTeamId(teamId);
-                } else {
-                    characters = characterRepository.findAll();
-                }
-            }
+            case PLAYER -> characters = characterRepository.findByCampaignIdAndOwnerId(campaignId, user.getId());
+            case GAME_MASTER, ADMIN -> characters = characterRepository.findByCampaignId(campaignId);
             default -> throw new AccessDeniedException("Неизвестная роль");
         }
         return characters.stream().map(characterMapper::toResponse).toList();
@@ -179,12 +152,8 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
-        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        boolean isTeamGM = user.getRole() == Role.GAME_MASTER && character.getTeam() != null
-                && character.getTeam().getGameMaster().getId().equals(user.getId());
-        if (!isOwner && !isTeamGM && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Нет прав на обновление этого персонажа");
-        }
+        enforceWriteAccess(character, user);
+
         if (request.getName() != null) character.setName(request.getName());
         if (request.getRaceId() != null) {
             CharacterRace race = raceRepository.findById(request.getRaceId())
@@ -201,12 +170,7 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
-        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        boolean isTeamGM = user.getRole() == Role.GAME_MASTER && character.getTeam() != null
-                && character.getTeam().getGameMaster().getId().equals(user.getId());
-        if (!isOwner && !isTeamGM && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Нет прав на удаление этого персонажа");
-        }
+        enforceWriteAccess(character, user);
         log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
         characterRepository.delete(character);
     }
@@ -247,17 +211,7 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
-
-        if (user.getRole() == Role.PLAYER) {
-            if (!character.getOwner().getId().equals(user.getId())) {
-                throw new AccessDeniedException("Этот персонаж вам не принадлежит");
-            }
-        } else if (user.getRole() == Role.GAME_MASTER) {
-            if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(user.getId())) {
-                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
-            }
-        }
-        // ADMIN can edit any stat
+        enforceWriteAccess(character, user);
 
         CharacterStat stat = characterStatRepository.findById(statId)
                 .orElseThrow(() -> new ResourceNotFoundException("Характеристика персонажа не найдена"));
@@ -269,47 +223,25 @@ public class CharacterService {
         return characterMapper.toStatResponse(stat);
     }
 
-    @Transactional(readOnly = true)
-    public List<InventorySlotResponse> getInventory(UUID characterId, String username) {
-        PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
-        enforceReadAccess(character, username);
-        return characterMapper.toInventorySlotResponseList(character.getInventorySlots());
-    }
-
     @Transactional
-    public InventorySlotResponse updateInventorySlot(UUID characterId, String slotName, UpdateInventorySlotRequest request, String username) {
+    public CharacterResponse modifyHp(UUID campaignId, UUID characterId, ModifyHpRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
-        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Только владелец может обновлять инвентарь");
-        }
-        EquipmentSlot equipSlot;
-        try {
-            equipSlot = EquipmentSlot.valueOf(slotName);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный слот экипировки: " + slotName);
-        }
-        InventorySlot invSlot = inventorySlotRepository.findByCharacterIdAndSlot(characterId, equipSlot)
-                .orElseThrow(() -> new ResourceNotFoundException("Слот инвентаря не найден"));
+        enforceWriteAccess(character, user);
 
-        if (request.getItemTypeId() != null) {
-            ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
-            if (itemType.getSlot() != equipSlot) {
-                throw new BadRequestException("Несоответствие слота типа предмета — ожидался " + equipSlot + ", а типу предмета нужен " + itemType.getSlot());
-            }
-            invSlot.setItemType(itemType);
-        } else {
-            invSlot.setItemType(null);
+        if (character.getMaxHp() == null) {
+            throw new BadRequestException("Максимальные HP персонажа не установлены");
         }
-        invSlot.setQuantity(request.getQuantity() != null ? request.getQuantity() : 1);
-        invSlot.setNotes(request.getNotes());
-        invSlot = inventorySlotRepository.save(invSlot);
-        return characterMapper.toInventorySlotResponse(invSlot);
+
+        int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
+        int newHp = Math.max(0, Math.min(currentHp + request.getAmount(), character.getMaxHp()));
+        character.setCurrentHp(newHp);
+        character = characterRepository.save(character);
+
+        log.info("HP modified: characterId={}, amount={}, newHp={}, by user={}", characterId, request.getAmount(), newHp, username);
+        return characterMapper.toResponse(character);
     }
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
@@ -322,11 +254,21 @@ public class CharacterService {
                 }
             }
             case GAME_MASTER -> {
-                if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
+                if (character.getCampaign() == null
+                        || !campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId())) {
+                    throw new AccessDeniedException("Этот персонаж не принадлежит вашей кампании");
                 }
             }
             case ADMIN -> { /* admins can view all */ }
+        }
+    }
+
+    private void enforceWriteAccess(PlayerCharacter character, User user) {
+        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
+        boolean isCampaignGM = user.getRole() == Role.GAME_MASTER && character.getCampaign() != null
+                && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId());
+        if (!isOwner && !isCampaignGM && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Нет прав на изменение этого персонажа");
         }
     }
 }

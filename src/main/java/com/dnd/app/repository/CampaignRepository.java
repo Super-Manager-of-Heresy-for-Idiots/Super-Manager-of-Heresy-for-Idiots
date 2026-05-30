@@ -1,6 +1,8 @@
 package com.dnd.app.repository;
 
 import com.dnd.app.domain.Campaign;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,4 +14,8 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
     Optional<Campaign> findByInviteCode(String inviteCode);
 
     List<Campaign> findByIdIn(List<UUID> ids);
+
+    Page<Campaign> findByIdIn(List<UUID> ids, Pageable pageable);
+
+    Page<Campaign> findAll(Pageable pageable);
 }

@@ -21,10 +21,81 @@ import java.util.UUID;
 @Tag(name = "Campaign Characters", description = "Character management within campaigns")
 public class CampaignCharacterController {
 
+    private final CharacterService characterService;
     private final ItemInstanceService itemInstanceService;
     private final CharacterEffectService characterEffectService;
     private final WalletService walletService;
     private final CharacterResourceService characterResourceService;
+
+    // --- Character CRUD ---
+
+    @PostMapping
+    @Operation(summary = "Create a character in campaign")
+    public ResponseEntity<ApiResponse<CharacterResponse>> createCharacter(
+            @PathVariable UUID campaignId,
+            @Valid @RequestBody CreateCharacterRequest request, Authentication auth) {
+        CharacterResponse character = characterService.createCharacter(campaignId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(character, "Персонаж создан"));
+    }
+
+    @GetMapping
+    @Operation(summary = "List characters in campaign")
+    public ResponseEntity<ApiResponse<List<CharacterResponse>>> listCharacters(
+            @PathVariable UUID campaignId, Authentication auth) {
+        List<CharacterResponse> characters = characterService.listCharacters(campaignId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(characters));
+    }
+
+    @GetMapping("/{characterId}")
+    @Operation(summary = "Get character by ID")
+    public ResponseEntity<ApiResponse<CharacterResponse>> getCharacter(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId, Authentication auth) {
+        CharacterResponse character = characterService.getCharacterById(characterId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(character));
+    }
+
+    @PutMapping("/{characterId}")
+    @Operation(summary = "Update character")
+    public ResponseEntity<ApiResponse<CharacterResponse>> updateCharacter(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody UpdateCharacterRequest request, Authentication auth) {
+        CharacterResponse character = characterService.updateCharacter(characterId, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(character, "Персонаж обновлен"));
+    }
+
+    @DeleteMapping("/{characterId}")
+    @Operation(summary = "Delete character")
+    public ResponseEntity<ApiResponse<Void>> deleteCharacter(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId, Authentication auth) {
+        characterService.deleteCharacter(characterId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Персонаж удален"));
+    }
+
+    // --- Stats ---
+
+    @GetMapping("/{characterId}/stats")
+    @Operation(summary = "Get character stats")
+    public ResponseEntity<ApiResponse<List<CharacterStatResponse>>> getStats(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId, Authentication auth) {
+        List<CharacterStatResponse> stats = characterService.getStats(characterId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(stats));
+    }
+
+    @PutMapping("/{characterId}/stats/{statId}")
+    @Operation(summary = "Update character stat")
+    public ResponseEntity<ApiResponse<CharacterStatResponse>> updateStat(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @PathVariable UUID statId,
+            @Valid @RequestBody UpdateStatRequest request, Authentication auth) {
+        CharacterStatResponse stat = characterService.updateStatValue(characterId, statId, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(stat, "Характеристика обновлена"));
+    }
 
     // --- Inventory ---
 
@@ -205,11 +276,11 @@ public class CampaignCharacterController {
 
     @PostMapping("/{characterId}/hp")
     @Operation(summary = "Modify character HP")
-    public ResponseEntity<ApiResponse<Void>> modifyHp(
+    public ResponseEntity<ApiResponse<CharacterResponse>> modifyHp(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @Valid @RequestBody ModifyHpRequest request, Authentication auth) {
-        // This would be handled by CharacterService - delegating for now
-        return ResponseEntity.ok(ApiResponse.ok(null, "HP modified"));
+        CharacterResponse response = characterService.modifyHp(campaignId, characterId, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(response, "HP modified"));
     }
 }

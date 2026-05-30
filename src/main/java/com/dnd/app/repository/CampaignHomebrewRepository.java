@@ -4,7 +4,11 @@ import com.dnd.app.domain.CampaignHomebrew;
 import com.dnd.app.domain.CampaignHomebrewId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface CampaignHomebrewRepository extends JpaRepository<CampaignHomebrew, CampaignHomebrewId> {
@@ -14,4 +18,7 @@ public interface CampaignHomebrewRepository extends JpaRepository<CampaignHomebr
     boolean existsByCampaignIdAndPackageId(UUID campaignId, UUID packageId);
 
     void deleteByCampaignIdAndPackageId(UUID campaignId, UUID packageId);
+
+    @Query("SELECT ch.packageId FROM CampaignHomebrew ch WHERE ch.campaignId = :campaignId")
+    Set<UUID> findPackageIdsByCampaignId(@Param("campaignId") UUID campaignId);
 }

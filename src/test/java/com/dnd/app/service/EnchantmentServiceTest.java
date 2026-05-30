@@ -28,9 +28,12 @@ class EnchantmentServiceTest {
     @Mock private EnchantmentTypeRepository enchantmentTypeRepository;
     @Mock private InventoryEnchantmentRepository inventoryEnchantmentRepository;
     @Mock private InventorySlotRepository inventorySlotRepository;
+    @Mock private ItemEnchantmentRepository itemEnchantmentRepository;
+    @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private PlayerCharacterRepository playerCharacterRepository;
     @Mock private BuffDebuffRepository buffDebuffRepository;
     @Mock private UserRepository userRepository;
+    @Mock private CampaignService campaignService;
 
     @InjectMocks private EnchantmentService enchantmentService;
 
@@ -45,7 +48,8 @@ class EnchantmentServiceTest {
     }
 
     private PlayerCharacter buildCharacter(UUID id, User owner) {
-        return PlayerCharacter.builder().id(id).name("Hero").owner(owner).build();
+        return PlayerCharacter.builder().id(id).name("Hero").owner(owner)
+                .campaign(Campaign.builder().id(UUID.randomUUID()).name("Campaign").build()).build();
     }
 
     private InventorySlot buildSlot(UUID id, PlayerCharacter pc, ItemType itemType) {
@@ -147,7 +151,7 @@ class EnchantmentServiceTest {
 
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gm));
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
-        when(playerCharacterRepository.isPlayerInGameMasterTeam(owner.getId(), gm.getId())).thenReturn(true);
+        when(campaignService.isGmInCampaign(pc.getCampaign().getId(), gm.getId())).thenReturn(true);
         when(inventorySlotRepository.findById(slotId)).thenReturn(Optional.of(slot));
         when(inventoryEnchantmentRepository.findAllByInventorySlotId(slotId)).thenReturn(List.of());
 
@@ -169,7 +173,7 @@ class EnchantmentServiceTest {
 
         when(userRepository.findByUsername("gm2")).thenReturn(Optional.of(gm));
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
-        when(playerCharacterRepository.isPlayerInGameMasterTeam(owner.getId(), gm.getId())).thenReturn(false);
+        when(campaignService.isGmInCampaign(pc.getCampaign().getId(), gm.getId())).thenReturn(false);
 
         assertThrows(AccessDeniedException.class, () -> enchantmentService.getSlotEnchantments(charId, slotId, "gm2"));
     }

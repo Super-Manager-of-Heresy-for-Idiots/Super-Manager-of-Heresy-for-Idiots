@@ -26,6 +26,6 @@ public class CreateCharacterRequest {
     @NotNull(message = "ID расы обязателен")
     private UUID raceId;
 
-    @NotNull(message = "ID команды обязателен")
-    private UUID teamId;
+    @NotNull(message = "ID кампании обязателен")
+    private UUID campaignId;
 }

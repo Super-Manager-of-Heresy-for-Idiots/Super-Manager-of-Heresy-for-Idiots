@@ -31,9 +31,12 @@ public class EnchantmentService {
     private final EnchantmentTypeRepository enchantmentTypeRepository;
     private final InventoryEnchantmentRepository inventoryEnchantmentRepository;
     private final InventorySlotRepository inventorySlotRepository;
+    private final ItemEnchantmentRepository itemEnchantmentRepository;
+    private final ItemInstanceRepository itemInstanceRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
     private final BuffDebuffRepository buffDebuffRepository;
     private final UserRepository userRepository;
+    private final CampaignService campaignService;
 
     // ==================== Enchantment Type CRUD (admin) ====================
 
@@ -175,6 +178,84 @@ public class EnchantmentService {
                 .collect(Collectors.toList());
     }
 
+    // ==================== Item instance enchantment operations ====================
+
+    @Transactional
+    public EnchantmentResponse addItemEnchantment(UUID characterId, UUID instanceId, AddEnchantmentRequest request, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
+
+        PlayerCharacter character = playerCharacterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден с id: " + characterId));
+
+        checkOwnerOrGmOrAdmin(user, character);
+
+        ItemInstance item = itemInstanceRepository.findById(instanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Предмет не найден с id: " + instanceId));
+
+        if (item.getOwnerCharacter() == null || !item.getOwnerCharacter().getId().equals(characterId)) {
+            throw new BadRequestException("Предмет не принадлежит указанному персонажу");
+        }
+
+        EnchantmentType enchantmentType = enchantmentTypeRepository.findById(request.getEnchantmentTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Тип зачарования не найден с id: " + request.getEnchantmentTypeId()));
+
+        if (itemEnchantmentRepository.existsByItemInstanceIdAndEnchantmentTypeId(instanceId, request.getEnchantmentTypeId())) {
+            throw new DuplicateResourceException("Данное зачарование уже применено к этому предмету");
+        }
+
+        ItemEnchantment enchantment = new ItemEnchantment();
+        enchantment.setItemInstance(item);
+        enchantment.setEnchantmentType(enchantmentType);
+        enchantment.setNotes(request.getNotes());
+
+        ItemEnchantment saved = itemEnchantmentRepository.save(enchantment);
+        log.info("Добавлено зачарование {} к предмету {} персонажа {}", enchantmentType.getName(), instanceId, characterId);
+        return toItemEnchantmentResponse(saved);
+    }
+
+    @Transactional
+    public void removeItemEnchantment(UUID characterId, UUID enchantmentId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
+
+        ItemEnchantment enchantment = itemEnchantmentRepository.findById(enchantmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Зачарование не найдено с id: " + enchantmentId));
+
+        if (enchantment.getItemInstance().getOwnerCharacter() == null
+                || !enchantment.getItemInstance().getOwnerCharacter().getId().equals(characterId)) {
+            throw new BadRequestException("Зачарование не принадлежит указанному персонажу");
+        }
+
+        PlayerCharacter character = enchantment.getItemInstance().getOwnerCharacter();
+        checkOwnerOrGmOrAdmin(user, character);
+
+        itemEnchantmentRepository.deleteById(enchantmentId);
+        log.info("Удалено зачарование {} с предмета персонажа {}", enchantmentId, characterId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnchantmentResponse> getItemEnchantments(UUID characterId, UUID instanceId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
+
+        PlayerCharacter character = playerCharacterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден с id: " + characterId));
+
+        checkReadAccess(user, character);
+
+        ItemInstance item = itemInstanceRepository.findById(instanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Предмет не найден с id: " + instanceId));
+
+        if (item.getOwnerCharacter() == null || !item.getOwnerCharacter().getId().equals(characterId)) {
+            throw new BadRequestException("Предмет не принадлежит указанному персонажу");
+        }
+
+        return itemEnchantmentRepository.findByItemInstanceId(instanceId).stream()
+                .map(this::toItemEnchantmentResponse)
+                .collect(Collectors.toList());
+    }
+
     // ==================== Access checks ====================
 
     private void checkOwnerOrAdmin(User user, PlayerCharacter character) {
@@ -187,6 +268,20 @@ public class EnchantmentService {
         throw new AccessDeniedException("У вас нет доступа к этому персонажу");
     }
 
+    private void checkOwnerOrGmOrAdmin(User user, PlayerCharacter character) {
+        if (user.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId())) {
+            return;
+        }
+        if (user.getRole() == Role.GAME_MASTER && character.getCampaign() != null
+                && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId())) {
+            return;
+        }
+        throw new AccessDeniedException("У вас нет доступа к этому персонажу");
+    }
+
     private void checkReadAccess(User user, PlayerCharacter character) {
         if (user.getRole() == Role.ADMIN) {
             return;
@@ -194,8 +289,8 @@ public class EnchantmentService {
         if (user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId())) {
             return;
         }
-        if (user.getRole() == Role.GAME_MASTER
-                && playerCharacterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
+        if (user.getRole() == Role.GAME_MASTER && character.getCampaign() != null
+                && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId())) {
             return;
         }
         throw new AccessDeniedException("У вас нет доступа к этому персонажу");
@@ -278,6 +373,15 @@ public class EnchantmentService {
     }
 
     private EnchantmentResponse toEnchantmentResponse(InventoryEnchantment ie) {
+        return EnchantmentResponse.builder()
+                .id(ie.getId())
+                .enchantmentType(toEnchantmentTypeResponse(ie.getEnchantmentType()))
+                .appliedAt(ie.getAppliedAt())
+                .notes(ie.getNotes())
+                .build();
+    }
+
+    private EnchantmentResponse toItemEnchantmentResponse(ItemEnchantment ie) {
         return EnchantmentResponse.builder()
                 .id(ie.getId())
                 .enchantmentType(toEnchantmentTypeResponse(ie.getEnchantmentType()))
