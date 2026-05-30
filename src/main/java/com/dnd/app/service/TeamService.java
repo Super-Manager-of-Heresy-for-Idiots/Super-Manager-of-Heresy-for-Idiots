@@ -160,6 +160,22 @@ public class TeamService {
         return teamMapper.toResponse(team);
     }
 
+    @Transactional
+    public void leaveTeam(UUID teamId, String username) {
+        User player = getUser(username);
+        if (player.getRole() != Role.PLAYER) {
+            throw new AccessDeniedException("Только игроки могут покидать команды");
+        }
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+        TeamMemberId memberId = new TeamMemberId(team.getId(), player.getId());
+        if (!teamMemberRepository.existsById(memberId)) {
+            throw new BadRequestException("Вы не состоите в этой команде");
+        }
+        teamMemberRepository.deleteById(memberId);
+        log.info("Player left team: player={}, teamId={}, teamName='{}'", username, team.getId(), team.getName());
+    }
+
     private User getUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
