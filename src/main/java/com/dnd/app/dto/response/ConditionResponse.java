@@ -19,5 +19,6 @@ public class ConditionResponse {
     private String description;
     private List<ConditionModifierResponse> modifiers;
     private UUID createdById;
+    private UUID teamId;
     private Instant createdAt;
 }

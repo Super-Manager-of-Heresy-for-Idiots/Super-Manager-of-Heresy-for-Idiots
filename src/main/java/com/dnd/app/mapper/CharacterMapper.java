@@ -18,6 +18,8 @@ public interface CharacterMapper {
 
     @Mapping(target = "ownerId", source = "owner.id")
     @Mapping(target = "ownerUsername", source = "owner.username")
+    @Mapping(target = "teamId", source = "team.id")
+    @Mapping(target = "teamName", source = "team.name")
     CharacterResponse toResponse(PlayerCharacter character);
 
     @Mapping(target = "classId", source = "classId")

@@ -32,8 +32,9 @@ public class ArtifactController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ArtifactResponse>>> list(Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(artifactService.listArtifacts(auth.getName())));
+    public ResponseEntity<ApiResponse<List<ArtifactResponse>>> list(
+            @RequestParam(required = false) UUID teamId, Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(artifactService.listArtifacts(auth.getName(), teamId)));
     }
 
     @GetMapping("/{id}")

@@ -32,8 +32,9 @@ public class CharacterController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CharacterResponse>>> listCharacters(Authentication auth) {
-        List<CharacterResponse> characters = characterService.listCharacters(auth.getName());
+    public ResponseEntity<ApiResponse<List<CharacterResponse>>> listCharacters(
+            @RequestParam(required = false) UUID teamId, Authentication auth) {
+        List<CharacterResponse> characters = characterService.listCharacters(auth.getName(), teamId);
         return ResponseEntity.ok(ApiResponse.ok(characters));
     }
 

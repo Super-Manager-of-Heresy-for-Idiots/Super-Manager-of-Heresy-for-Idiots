@@ -33,8 +33,9 @@ public class ConditionController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ConditionResponse>>> list(Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(conditionService.listConditions(auth.getName())));
+    public ResponseEntity<ApiResponse<List<ConditionResponse>>> list(
+            @RequestParam(required = false) UUID teamId, Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(conditionService.listConditions(auth.getName(), teamId)));
     }
 
     @GetMapping("/{id}")

@@ -37,6 +37,10 @@ public class Team {
     @Builder.Default
     private List<TeamMember> members = new ArrayList<>();
 
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TeamHomebrewActivation> homebrewActivations = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

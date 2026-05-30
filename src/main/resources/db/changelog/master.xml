@@ -20,5 +20,6 @@
     <include file="db/changelog/013-create-enchantment-types.xml"/>
     <include file="db/changelog/014-seed-enchantment-types.xml"/>
     <include file="db/changelog/015-create-inventory-enchantments.xml"/>
+    <include file="db/changelog/016-role-model-rework.xml"/>
 
 </databaseChangeLog>

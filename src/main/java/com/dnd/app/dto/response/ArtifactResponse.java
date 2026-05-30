@@ -23,5 +23,6 @@ public class ArtifactResponse {
     private String properties;
     private String specialAbilities;
     private UUID createdById;
+    private UUID teamId;
     private Instant createdAt;
 }

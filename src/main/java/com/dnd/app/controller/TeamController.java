@@ -1,10 +1,10 @@
 package com.dnd.app.controller;
 
+import com.dnd.app.dto.request.ActivateHomebrewRequest;
 import com.dnd.app.dto.request.CreateTeamRequest;
 import com.dnd.app.dto.request.JoinTeamRequest;
-import com.dnd.app.dto.response.ApiResponse;
-import com.dnd.app.dto.response.InviteCodeResponse;
-import com.dnd.app.dto.response.TeamResponse;
+import com.dnd.app.dto.response.*;
+import com.dnd.app.service.TeamContentService;
 import com.dnd.app.service.TeamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,7 @@ import java.util.UUID;
 public class TeamController {
 
     private final TeamService teamService;
+    private final TeamContentService teamContentService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TeamResponse>> createTeam(
@@ -75,5 +76,34 @@ public class TeamController {
             @Valid @RequestBody JoinTeamRequest request, Authentication auth) {
         TeamResponse team = teamService.joinTeam(request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(team, "Вы вступили в команду"));
+    }
+
+    @PostMapping("/{teamId}/homebrew")
+    public ResponseEntity<ApiResponse<TeamHomebrewActivationResponse>> activateHomebrew(
+            @PathVariable UUID teamId, @Valid @RequestBody ActivateHomebrewRequest request, Authentication auth) {
+        TeamHomebrewActivationResponse resp = teamContentService.activateHomebrew(teamId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(resp, "Хомбрю-пакет активирован для команды"));
+    }
+
+    @DeleteMapping("/{teamId}/homebrew/{packageId}")
+    public ResponseEntity<ApiResponse<Void>> deactivateHomebrew(
+            @PathVariable UUID teamId, @PathVariable UUID packageId, Authentication auth) {
+        teamContentService.deactivateHomebrew(teamId, packageId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Хомбрю-пакет деактивирован для команды"));
+    }
+
+    @GetMapping("/{teamId}/homebrew")
+    public ResponseEntity<ApiResponse<List<TeamHomebrewActivationResponse>>> listActiveHomebrew(
+            @PathVariable UUID teamId, Authentication auth) {
+        List<TeamHomebrewActivationResponse> list = teamContentService.listActiveHomebrew(teamId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(list));
+    }
+
+    @GetMapping("/{teamId}/available-content")
+    public ResponseEntity<ApiResponse<TeamAvailableContentResponse>> getAvailableContent(
+            @PathVariable UUID teamId, Authentication auth) {
+        TeamAvailableContentResponse content = teamContentService.getAvailableContent(teamId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(content));
     }
 }

@@ -32,6 +32,10 @@ public class Condition {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
+
     @OneToMany(mappedBy = "condition", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ConditionModifier> modifiers = new ArrayList<>();

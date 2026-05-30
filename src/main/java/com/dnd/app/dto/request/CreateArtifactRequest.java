@@ -30,4 +30,6 @@ public class CreateArtifactRequest {
     private String properties;
 
     private String specialAbilities;
+
+    private UUID teamId;
 }

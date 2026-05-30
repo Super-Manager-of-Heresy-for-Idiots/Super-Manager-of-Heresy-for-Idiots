@@ -9,6 +9,7 @@ import com.dnd.app.dto.response.CharacterConditionResponse;
 import com.dnd.app.dto.response.ConditionModifierResponse;
 import com.dnd.app.dto.response.ConditionResponse;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
@@ -31,10 +32,27 @@ public class ConditionService {
     private final StatTypeRepository statTypeRepository;
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
+    private final TeamRepository teamRepository;
 
     @Transactional
     public ConditionResponse createCondition(CreateConditionRequest request, String username) {
         User gm = getGMOrAdmin(username);
+
+        Team team = null;
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (request.getTeamId() == null) {
+                throw new BadRequestException("Мастер игры должен указать команду для состояния");
+            }
+            team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+            if (!team.getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Вы не являетесь мастером этой команды");
+            }
+        } else if (gm.getRole() == Role.ADMIN && request.getTeamId() != null) {
+            team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+        }
+
         if (conditionRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Состояние с таким названием уже существует");
         }
@@ -42,21 +60,35 @@ public class ConditionService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .createdBy(gm)
+                .team(team)
                 .build();
         condition = conditionRepository.save(condition);
-        log.info("Condition created: id={}, name='{}', by gm={}", condition.getId(), condition.getName(), username);
+        log.info("Condition created: id={}, name='{}', teamId={}, by gm={}", condition.getId(), condition.getName(), team != null ? team.getId() : "global", username);
         return toResponse(condition);
     }
 
     @Transactional(readOnly = true)
-    public List<ConditionResponse> listConditions(String username) {
+    public List<ConditionResponse> listConditions(String username, UUID teamId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<Condition> conditions;
         if (user.getRole() == Role.ADMIN) {
-            conditions = conditionRepository.findAll();
+            if (teamId != null) {
+                conditions = conditionRepository.findAllByTeamId(teamId);
+            } else {
+                conditions = conditionRepository.findAll();
+            }
         } else if (user.getRole() == Role.GAME_MASTER) {
-            conditions = conditionRepository.findAllByCreatedById(user.getId());
+            if (teamId != null) {
+                Team team = teamRepository.findById(teamId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+                if (!team.getGameMaster().getId().equals(user.getId())) {
+                    throw new AccessDeniedException("Вы не являетесь мастером этой команды");
+                }
+                conditions = conditionRepository.findAllByTeamId(teamId);
+            } else {
+                conditions = conditionRepository.findAllByGameMasterId(user.getId());
+            }
         } else {
             throw new AccessDeniedException("Игроки не могут просматривать список состояний");
         }
@@ -75,8 +107,10 @@ public class ConditionService {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
-        if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали это состояние");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (condition.getTeam() == null || !condition.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Это состояние не принадлежит вашей команде");
+            }
         }
         if (!condition.getName().equals(request.getName()) && conditionRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Состояние с таким названием уже существует");
@@ -92,8 +126,10 @@ public class ConditionService {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
-        if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали это состояние");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (condition.getTeam() == null || !condition.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Это состояние не принадлежит вашей команде");
+            }
         }
         log.info("Condition deleted: id={}, name='{}', by gm={}", id, condition.getName(), username);
         conditionRepository.delete(condition);
@@ -104,8 +140,10 @@ public class ConditionService {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(conditionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
-        if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали это состояние");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (condition.getTeam() == null || !condition.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Это состояние не принадлежит вашей команде");
+            }
         }
         StatType statType = statTypeRepository.findById(request.getStatTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
@@ -127,8 +165,10 @@ public class ConditionService {
         User gm = getGMOrAdmin(username);
         Condition condition = conditionRepository.findById(conditionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
-        if (gm.getRole() != Role.ADMIN && !condition.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали это состояние");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (condition.getTeam() == null || !condition.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Это состояние не принадлежит вашей команде");
+            }
         }
         ConditionModifier modifier = modifierRepository.findById(modifierId)
                 .orElseThrow(() -> new ResourceNotFoundException("Модификатор не найден"));
@@ -144,11 +184,17 @@ public class ConditionService {
         User gm = getGMOrAdmin(username);
         PlayerCharacter character = characterRepository.findById(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
-        if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
+            }
         }
         Condition condition = conditionRepository.findById(request.getConditionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Состояние не найдено"));
+        if (gm.getRole() == Role.GAME_MASTER && condition.getTeam() != null
+                && !condition.getTeam().getGameMaster().getId().equals(gm.getId())) {
+            throw new AccessDeniedException("Это состояние не принадлежит вашей команде");
+        }
         if (charCondRepository.existsByCharacterIdAndConditionIdAndActiveTrue(characterId, condition.getId())) {
             throw new DuplicateResourceException("Это состояние уже активно у персонажа");
         }
@@ -172,8 +218,10 @@ public class ConditionService {
         if (user.getRole() == Role.PLAYER && !character.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("Этот персонаж вам не принадлежит");
         }
-        if (user.getRole() == Role.GAME_MASTER && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+        if (user.getRole() == Role.GAME_MASTER) {
+            if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
+            }
         }
         List<CharacterCondition> conditions = charCondRepository.findAllByCharacterIdAndActiveTrue(characterId);
         return conditions.stream().map(this::toCharCondResponse).toList();
@@ -187,8 +235,10 @@ public class ConditionService {
         if (!cc.getCharacter().getId().equals(characterId)) {
             throw new ResourceNotFoundException("Состояние не относится к этому персонажу");
         }
-        if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(cc.getCharacter().getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (cc.getCharacter().getTeam() == null || !cc.getCharacter().getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
+            }
         }
         cc.setActive(false);
         charCondRepository.save(cc);
@@ -219,6 +269,7 @@ public class ConditionService {
                 .description(c.getDescription())
                 .modifiers(mods)
                 .createdById(c.getCreatedBy().getId())
+                .teamId(c.getTeam() != null ? c.getTeam().getId() : null)
                 .createdAt(c.getCreatedAt())
                 .build();
     }

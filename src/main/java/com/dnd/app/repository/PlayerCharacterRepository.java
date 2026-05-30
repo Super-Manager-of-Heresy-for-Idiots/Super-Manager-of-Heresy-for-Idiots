@@ -12,9 +12,15 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
 
     List<PlayerCharacter> findAllByOwnerId(UUID ownerId);
 
-    @Query("SELECT pc FROM PlayerCharacter pc WHERE pc.owner.id IN " +
-           "(SELECT tm.id.playerId FROM TeamMember tm WHERE tm.team.gameMaster.id = :gmId)")
+    List<PlayerCharacter> findAllByOwnerIdAndTeamId(UUID ownerId, UUID teamId);
+
+    List<PlayerCharacter> findAllByTeamId(UUID teamId);
+
+    @Query("SELECT pc FROM PlayerCharacter pc WHERE pc.team.gameMaster.id = :gmId")
     List<PlayerCharacter> findAllByGameMasterId(@Param("gmId") UUID gmId);
+
+    @Query("SELECT pc FROM PlayerCharacter pc WHERE pc.team.gameMaster.id = :gmId AND pc.team.id = :teamId")
+    List<PlayerCharacter> findAllByGameMasterIdAndTeamId(@Param("gmId") UUID gmId, @Param("teamId") UUID teamId);
 
     @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMember tm " +
            "WHERE tm.id.playerId = :playerId AND tm.team.gameMaster.id = :gmId")

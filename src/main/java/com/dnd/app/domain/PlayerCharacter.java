@@ -42,6 +42,10 @@ public class PlayerCharacter {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
+
     @OneToMany(mappedBy = "character", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     @Builder.Default
     private List<CharacterClassLevel> classLevels = new ArrayList<>();

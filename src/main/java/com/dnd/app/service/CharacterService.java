@@ -40,6 +40,9 @@ public class CharacterService {
     private final ItemTypeRepository itemTypeRepository;
     private final CharacterConditionRepository charCondRepository;
     private final CharacterClassLevelRepository classLevelRepository;
+    private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
+    private final TeamContentService teamContentService;
     private final CharacterMapper characterMapper;
 
     @Transactional
@@ -49,6 +52,24 @@ public class CharacterService {
         if (owner.getRole() != Role.PLAYER && owner.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Только игроки могут создавать персонажей");
         }
+
+        Team team = teamRepository.findById(request.getTeamId())
+                .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+
+        if (owner.getRole() == Role.PLAYER) {
+            boolean isMember = teamMemberRepository.existsByIdTeamIdAndIdPlayerId(team.getId(), owner.getId());
+            if (!isMember) {
+                throw new AccessDeniedException("Вы не являетесь участником этой команды");
+            }
+        }
+
+        if (!teamContentService.isClassAvailableInTeam(team.getId(), request.getClassId())) {
+            throw new BadRequestException("Выбранный класс недоступен в контексте этой команды");
+        }
+        if (!teamContentService.isRaceAvailableInTeam(team.getId(), request.getRaceId())) {
+            throw new BadRequestException("Выбранная раса недоступна в контексте этой команды");
+        }
+
         CharacterClass charClass = classRepository.findById(request.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
         CharacterRace race = raceRepository.findById(request.getRaceId())
@@ -60,10 +81,11 @@ public class CharacterService {
                 .experience(0L)
                 .race(race)
                 .owner(owner)
+                .team(team)
                 .build();
         character = characterRepository.saveAndFlush(character);
-        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}",
-                character.getId(), character.getName(), charClass.getName(), race.getName(), username);
+        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}, teamId={}",
+                character.getId(), character.getName(), charClass.getName(), race.getName(), username, team.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
 
@@ -112,14 +134,32 @@ public class CharacterService {
     }
 
     @Transactional(readOnly = true)
-    public List<CharacterResponse> listCharacters(String username) {
+    public List<CharacterResponse> listCharacters(String username, UUID teamId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<PlayerCharacter> characters;
         switch (user.getRole()) {
-            case PLAYER -> characters = characterRepository.findAllByOwnerId(user.getId());
-            case GAME_MASTER -> characters = characterRepository.findAllByGameMasterId(user.getId());
-            case ADMIN -> characters = characterRepository.findAll();
+            case PLAYER -> {
+                if (teamId != null) {
+                    characters = characterRepository.findAllByOwnerIdAndTeamId(user.getId(), teamId);
+                } else {
+                    characters = characterRepository.findAllByOwnerId(user.getId());
+                }
+            }
+            case GAME_MASTER -> {
+                if (teamId != null) {
+                    characters = characterRepository.findAllByGameMasterIdAndTeamId(user.getId(), teamId);
+                } else {
+                    characters = characterRepository.findAllByGameMasterId(user.getId());
+                }
+            }
+            case ADMIN -> {
+                if (teamId != null) {
+                    characters = characterRepository.findAllByTeamId(teamId);
+                } else {
+                    characters = characterRepository.findAll();
+                }
+            }
             default -> throw new AccessDeniedException("Неизвестная роль");
         }
         return characters.stream().map(characterMapper::toResponse).toList();
@@ -140,8 +180,10 @@ public class CharacterService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Только владелец может обновлять этого персонажа");
+        boolean isTeamGM = user.getRole() == Role.GAME_MASTER && character.getTeam() != null
+                && character.getTeam().getGameMaster().getId().equals(user.getId());
+        if (!isOwner && !isTeamGM && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Нет прав на обновление этого персонажа");
         }
         if (request.getName() != null) character.setName(request.getName());
         if (request.getRaceId() != null) {
@@ -160,8 +202,10 @@ public class CharacterService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Только владелец может удалить этого персонажа");
+        boolean isTeamGM = user.getRole() == Role.GAME_MASTER && character.getTeam() != null
+                && character.getTeam().getGameMaster().getId().equals(user.getId());
+        if (!isOwner && !isTeamGM && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Нет прав на удаление этого персонажа");
         }
         log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
         characterRepository.delete(character);
@@ -209,8 +253,8 @@ public class CharacterService {
                 throw new AccessDeniedException("Этот персонаж вам не принадлежит");
             }
         } else if (user.getRole() == Role.GAME_MASTER) {
-            if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+            if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
             }
         }
         // ADMIN can edit any stat
@@ -278,8 +322,8 @@ public class CharacterService {
                 }
             }
             case GAME_MASTER -> {
-                if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+                if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(user.getId())) {
+                    throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
                 }
             }
             case ADMIN -> { /* admins can view all */ }

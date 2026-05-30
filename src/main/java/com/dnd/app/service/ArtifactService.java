@@ -31,11 +31,28 @@ public class ArtifactService {
     private final UserRepository userRepository;
     private final PlayerCharacterRepository characterRepository;
     private final InventorySlotRepository inventorySlotRepository;
+    private final TeamRepository teamRepository;
     private final CharacterMapper characterMapper;
 
     @Transactional
     public ArtifactResponse createArtifact(CreateArtifactRequest request, String username) {
         User gm = getGMOrAdmin(username);
+
+        Team team = null;
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (request.getTeamId() == null) {
+                throw new BadRequestException("Мастер игры должен указать команду для артефакта");
+            }
+            team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+            if (!team.getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Вы не являетесь мастером этой команды");
+            }
+        } else if (gm.getRole() == Role.ADMIN && request.getTeamId() != null) {
+            team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+        }
+
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
         Rarity rarity = Rarity.COMMON;
@@ -54,21 +71,35 @@ public class ArtifactService {
                 .properties(request.getProperties())
                 .specialAbilities(request.getSpecialAbilities())
                 .createdBy(gm)
+                .team(team)
                 .build();
         artifact = artifactRepository.save(artifact);
-        log.info("Artifact created: id={}, name='{}', rarity={}, by gm={}", artifact.getId(), artifact.getName(), artifact.getRarity(), username);
+        log.info("Artifact created: id={}, name='{}', rarity={}, teamId={}, by gm={}", artifact.getId(), artifact.getName(), artifact.getRarity(), team != null ? team.getId() : "global", username);
         return toResponse(artifact);
     }
 
     @Transactional(readOnly = true)
-    public List<ArtifactResponse> listArtifacts(String username) {
+    public List<ArtifactResponse> listArtifacts(String username, UUID teamId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         List<Artifact> artifacts;
         if (user.getRole() == Role.ADMIN) {
-            artifacts = artifactRepository.findAll();
+            if (teamId != null) {
+                artifacts = artifactRepository.findAllByTeamId(teamId);
+            } else {
+                artifacts = artifactRepository.findAll();
+            }
         } else if (user.getRole() == Role.GAME_MASTER) {
-            artifacts = artifactRepository.findAllByCreatedById(user.getId());
+            if (teamId != null) {
+                Team team = teamRepository.findById(teamId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Команда не найдена"));
+                if (!team.getGameMaster().getId().equals(user.getId())) {
+                    throw new AccessDeniedException("Вы не являетесь мастером этой команды");
+                }
+                artifacts = artifactRepository.findAllByTeamId(teamId);
+            } else {
+                artifacts = artifactRepository.findAllByGameMasterId(user.getId());
+            }
         } else {
             throw new AccessDeniedException("Игроки не могут просматривать список артефактов");
         }
@@ -84,8 +115,10 @@ public class ArtifactService {
         if (user.getRole() == Role.PLAYER) {
             throw new AccessDeniedException("Игроки не могут просматривать детали артефакта");
         }
-        if (user.getRole() == Role.GAME_MASTER && !artifact.getCreatedBy().getId().equals(user.getId())) {
-            throw new AccessDeniedException("Вы не создавали этот артефакт");
+        if (user.getRole() == Role.GAME_MASTER) {
+            if (artifact.getTeam() == null || !artifact.getTeam().getGameMaster().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Этот артефакт не принадлежит вашей команде");
+            }
         }
         return toResponse(artifact);
     }
@@ -95,8 +128,10 @@ public class ArtifactService {
         User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
-        if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали этот артефакт");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (artifact.getTeam() == null || !artifact.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Этот артефакт не принадлежит вашей команде");
+            }
         }
         ItemType itemType = itemTypeRepository.findById(request.getItemTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
@@ -121,8 +156,10 @@ public class ArtifactService {
         User gm = getGMOrAdmin(username);
         Artifact artifact = artifactRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
-        if (gm.getRole() != Role.ADMIN && !artifact.getCreatedBy().getId().equals(gm.getId())) {
-            throw new AccessDeniedException("Вы не создавали этот артефакт");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (artifact.getTeam() == null || !artifact.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Этот артефакт не принадлежит вашей команде");
+            }
         }
         log.info("Artifact deleted: id={}, name='{}', by gm={}", id, artifact.getName(), username);
         artifactRepository.delete(artifact);
@@ -133,11 +170,17 @@ public class ArtifactService {
         User gm = getGMOrAdmin(username);
         PlayerCharacter character = characterRepository.findById(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
-        if (gm.getRole() != Role.ADMIN && !characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), gm.getId())) {
-            throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+        if (gm.getRole() == Role.GAME_MASTER) {
+            if (character.getTeam() == null || !character.getTeam().getGameMaster().getId().equals(gm.getId())) {
+                throw new AccessDeniedException("Этот персонаж не принадлежит вашей команде");
+            }
         }
         Artifact artifact = artifactRepository.findById(request.getArtifactId())
                 .orElseThrow(() -> new ResourceNotFoundException("Артефакт не найден"));
+        if (gm.getRole() == Role.GAME_MASTER && artifact.getTeam() != null
+                && !artifact.getTeam().getGameMaster().getId().equals(gm.getId())) {
+            throw new AccessDeniedException("Этот артефакт не принадлежит вашей команде");
+        }
 
         EquipmentSlot equipSlot;
         try {
@@ -184,6 +227,7 @@ public class ArtifactService {
                 .properties(a.getProperties())
                 .specialAbilities(a.getSpecialAbilities())
                 .createdById(a.getCreatedBy().getId())
+                .teamId(a.getTeam() != null ? a.getTeam().getId() : null)
                 .createdAt(a.getCreatedAt())
                 .build();
     }
