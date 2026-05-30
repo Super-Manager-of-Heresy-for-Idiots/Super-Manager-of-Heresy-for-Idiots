@@ -76,4 +76,10 @@ public class TeamController {
         TeamResponse team = teamService.joinTeam(request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(team, "Вы вступили в команду"));
     }
+
+    @DeleteMapping("/{id}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveTeam(@PathVariable UUID id, Authentication auth) {
+        teamService.leaveTeam(id, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Вы покинули команду"));
+    }
 }

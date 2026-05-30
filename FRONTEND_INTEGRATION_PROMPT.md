@@ -2345,3 +2345,135 @@ interface SkillResponse {
 
 type DamageType = "SLASHING" | "PIERCING" | "BLUDGEONING" | "FIRE" | "COLD" | "LIGHTNING" | "POISON" | "NECROTIC" | "RADIANT" | "PSYCHIC" | "FORCE" | "THUNDER" | "ACID";
 ```
+
+---
+
+## БЛОК 22 — Сумка (инвентарь-рюкзак)
+
+Помимо 10 фиксированных слотов экипировки у каждого персонажа есть **сумка** — неограниченное хранилище для неэкипированных предметов: запасная броня, зелья, расходники, артефакты на замену и т.д.
+
+Обычные предметы (ItemType) стакаются — при добавлении того же типа увеличивается количество.
+Артефакты уникальны — всегда количество = 1, дубликаты запрещены.
+
+### Эндпоинты
+
+```
+СОДЕРЖИМОЕ СУМКИ:
+
+GET /api/characters/{characterId}/bag
+  Доступ: PLAYER (свой), GAME_MASTER (участник команды), ADMIN (любой).
+  Response: BagSlotResponse[]
+
+POST /api/characters/{characterId}/bag
+  Доступ: только PLAYER (свой персонаж) или ADMIN.
+  Body:
+  {
+    "itemTypeId": "uuid",       // ИЛИ artifactId — одно из двух, не оба
+    "artifactId": "uuid",       // ИЛИ itemTypeId
+    "quantity": 1,              // мин. 1, по умолчанию 1 (для артефактов всегда 1)
+    "notes": "string"           // опционально, до 255 символов
+  }
+  Поведение:
+  - Если itemTypeId уже есть в сумке → количество увеличивается (стакается)
+  - Если artifactId уже есть в сумке → 400
+
+PUT /api/characters/{characterId}/bag/{slotId}
+  Доступ: только PLAYER (свой) или ADMIN.
+  Body:
+  {
+    "quantity": 5,              // мин. 1 (для артефактов обязательно 1)
+    "notes": "string"           // опционально
+  }
+
+DELETE /api/characters/{characterId}/bag/{slotId}
+  Доступ: только PLAYER (свой) или ADMIN.
+  Удаляет предмет из сумки полностью (все единицы).
+
+
+ЭКИПИРОВКА ИЗ СУМКИ:
+
+POST /api/characters/{characterId}/bag/{bagSlotId}/equip
+  Доступ: только PLAYER (свой) или ADMIN.
+  Body:
+  {
+    "equipmentSlot": "MAIN_HAND"   // куда надеть: HEAD, CHEST, LEGS, FEET,
+                                    //   MAIN_HAND, OFF_HAND, RING_LEFT, RING_RIGHT,
+                                    //   NECK, CLOAK
+  }
+  Поведение:
+  - Проверяет, что слот предмета совпадает с целевым слотом экипировки
+  - Если целевой слот уже занят → текущий предмет автоматически снимается в сумку (swap)
+  - Для стакаемых предметов — экипируется 1 шт., остаток остаётся в сумке
+  - Response: оставшийся BagSlotResponse или null если слот сумки опустел
+
+
+СНЯТИЕ В СУМКУ:
+
+POST /api/characters/{characterId}/bag/unequip/{equipmentSlot}
+  Доступ: только PLAYER (свой) или ADMIN.
+  Нет тела запроса.
+  Поведение:
+  - Снимает предмет/артефакт из слота экипировки и кладёт в сумку
+  - Если такой же ItemType уже в сумке → количество увеличивается
+  - Слот экипировки очищается
+  - 400 если слот уже пуст
+  - Response: BagSlotResponse с добавленным предметом
+```
+
+### Response: BagSlotResponse
+
+```json
+{
+  "id": "uuid",
+  "itemTypeId": "uuid",
+  "itemTypeName": "Leather Armor",
+  "itemTypeSlot": "CHEST",
+  "artifactId": null,
+  "artifactName": null,
+  "artifactRarity": null,
+  "quantity": 3,
+  "notes": "Запас зелий на поход",
+  "createdAt": "2026-05-30T10:00:00Z"
+}
+```
+
+### TypeScript типы
+
+```typescript
+interface BagSlotResponse {
+  id: string;
+  itemTypeId?: string;
+  itemTypeName?: string;
+  itemTypeSlot?: string;
+  artifactId?: string;
+  artifactName?: string;
+  artifactRarity?: string;
+  quantity: number;
+  notes?: string;
+  createdAt: string;
+}
+
+interface AddBagItemRequest {
+  itemTypeId?: string;      // одно из двух
+  artifactId?: string;      // одно из двух
+  quantity?: number;         // по умолчанию 1
+  notes?: string;
+}
+
+interface UpdateBagSlotRequest {
+  quantity?: number;
+  notes?: string;
+}
+
+interface EquipFromBagRequest {
+  equipmentSlot: string;    // значение EquipmentSlot enum
+}
+```
+
+### Типичные сценарии
+
+1. **Игрок покупает зелья** → `POST /bag` с `itemTypeId`, quantity=5
+2. **Нашёл артефакт** → `POST /bag` с `artifactId`
+3. **Хочет надеть запасной меч** → `POST /bag/{slotId}/equip` с `equipmentSlot: "MAIN_HAND"` — старый меч автоматически ляжет в сумку
+4. **Снимает шлем перед отдыхом** → `POST /bag/unequip/HEAD` — шлем переходит в сумку
+5. **Выбрасывает сломанный щит** → `DELETE /bag/{slotId}`
