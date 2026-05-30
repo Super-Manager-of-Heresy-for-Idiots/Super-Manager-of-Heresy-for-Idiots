@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Campaigns table -->
+    <changeSet id="017-create-campaigns" author="dnd-app">
+        <createTable tableName="campaigns">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="status" type="varchar(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invite_code" type="varchar(8)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_campaign_invite_code"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="campaigns" indexName="idx_campaigns_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="idx_campaigns_invite_code">
+            <column name="invite_code"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Campaign Members table -->
+    <changeSet id="017-create-campaign-members" author="dnd-app">
+        <createTable tableName="campaign_members">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_cm_user"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_cm_campaign"
+                             references="campaigns(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="role_in_campaign" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_creator" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="joined_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kicked" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="campaign_members"
+                             columnNames="campaign_id, user_id"
+                             constraintName="uq_campaign_member"/>
+
+        <createIndex tableName="campaign_members" indexName="idx_cm_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+
+        <createIndex tableName="campaign_members" indexName="idx_cm_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -55,7 +55,7 @@ class CharacterControllerTest {
     @Test
     @WithMockUser(username = "player1", roles = "PLAYER")
     void listCharacters_returns200() throws Exception {
-        when(characterService.listCharacters("player1")).thenReturn(List.of());
+        when(characterService.listCharacters(eq("player1"), any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/characters"))
                 .andExpect(status().isOk())

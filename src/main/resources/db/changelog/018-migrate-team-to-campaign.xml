@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add campaign_id to characters -->
+    <changeSet id="018-add-campaign-id-to-characters" author="dnd-app">
+        <addColumn tableName="characters">
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="true"
+                             foreignKeyName="fk_characters_campaign"
+                             references="campaigns(id)"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add campaign_id to artifacts -->
+    <changeSet id="018-add-campaign-id-to-artifacts" author="dnd-app">
+        <addColumn tableName="artifacts">
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add campaign_id to conditions -->
+    <changeSet id="018-add-campaign-id-to-conditions" author="dnd-app">
+        <addColumn tableName="conditions">
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Migrate teams data into campaigns -->
+    <changeSet id="018-migrate-teams-to-campaigns" author="dnd-app">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="teams"/>
+        </preConditions>
+        <sql>
+            INSERT INTO campaigns (id, name, description, status, invite_code, created_at, updated_at)
+            SELECT id, name, '', 'ACTIVE', invite_code, created_at, updated_at
+            FROM teams;
+        </sql>
+    </changeSet>
+
+    <!-- Migrate game masters as campaign members with GM role -->
+    <changeSet id="018-migrate-gm-to-campaign-members" author="dnd-app">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="teams"/>
+        </preConditions>
+        <sql>
+            INSERT INTO campaign_members (id, campaign_id, user_id, role_in_campaign, is_creator, joined_at)
+            SELECT gen_random_uuid(), t.id, t.game_master_id, 'GM', true, t.created_at
+            FROM teams t;
+        </sql>
+    </changeSet>
+
+    <!-- Migrate team members as campaign members with PLAYER role -->
+    <changeSet id="018-migrate-players-to-campaign-members" author="dnd-app">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="team_members"/>
+        </preConditions>
+        <sql>
+            INSERT INTO campaign_members (id, campaign_id, user_id, role_in_campaign, is_creator, joined_at)
+            SELECT gen_random_uuid(), tm.team_id, tm.player_id, 'PLAYER', false, tm.joined_at
+            FROM team_members tm;
+        </sql>
+    </changeSet>
+
+    <!-- Update characters to reference campaigns instead of teams -->
+    <changeSet id="018-update-characters-campaign-id" author="dnd-app">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="characters" columnName="team_id"/>
+        </preConditions>
+        <sql>
+            UPDATE characters SET campaign_id = team_id WHERE team_id IS NOT NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

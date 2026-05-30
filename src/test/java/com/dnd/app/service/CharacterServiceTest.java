@@ -36,6 +36,9 @@ class CharacterServiceTest {
     @Mock private ItemTypeRepository itemTypeRepository;
     @Mock private CharacterConditionRepository charCondRepository;
     @Mock private CharacterClassLevelRepository classLevelRepository;
+    @Mock private TeamRepository teamRepository;
+    @Mock private TeamMemberRepository teamMemberRepository;
+    @Mock private TeamContentService teamContentService;
     @Mock private CharacterMapper characterMapper;
 
     @InjectMocks private CharacterService characterService;
@@ -51,19 +54,24 @@ class CharacterServiceTest {
     @Test
     void createCharacter_success() {
         UUID playerId = UUID.randomUUID();
+        UUID teamId = UUID.randomUUID();
         User player = makePlayer(playerId, "player1");
+        User gm = makeGM(UUID.randomUUID(), "gm1");
+        Team team = Team.builder().id(teamId).name("Party").gameMaster(gm).build();
         CharacterClass cc = CharacterClass.builder().id(UUID.randomUUID()).name("Fighter").build();
         CharacterRace race = CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
         CreateCharacterRequest req = CreateCharacterRequest.builder()
-                .name("Hero").classId(cc.getId()).raceId(race.getId()).build();
+                .name("Hero").classId(cc.getId()).raceId(race.getId()).teamId(teamId).build();
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
+        when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+        when(teamMemberRepository.existsByIdTeamIdAndIdPlayerId(teamId, playerId)).thenReturn(true);
         when(classRepository.findById(cc.getId())).thenReturn(Optional.of(cc));
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(statTypeRepository.findAll()).thenReturn(Collections.emptyList());
         PlayerCharacter saved = PlayerCharacter.builder()
                 .id(UUID.randomUUID()).name("Hero").totalLevel(1)
-                .race(race).owner(player).build();
+                .race(race).owner(player).team(team).build();
         when(characterRepository.saveAndFlush(any(PlayerCharacter.class))).thenReturn(saved);
         when(classLevelRepository.saveAndFlush(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
         CharacterResponse expected = CharacterResponse.builder().name("Hero").build();

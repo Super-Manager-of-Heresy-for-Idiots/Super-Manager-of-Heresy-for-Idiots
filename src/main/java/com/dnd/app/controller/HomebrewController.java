@@ -1,11 +1,12 @@
 package com.dnd.app.controller;
 
-import com.dnd.app.dto.request.AddContentRequest;
-import com.dnd.app.dto.request.CreateHomebrewRequest;
-import com.dnd.app.dto.request.UpdateHomebrewRequest;
+import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.service.HomebrewLibraryService;
 import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import com.dnd.app.service.homebrew.HomebrewMarketplaceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,10 +23,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/homebrew")
 @RequiredArgsConstructor
+@Tag(name = "Homebrew", description = "Homebrew package management")
 public class HomebrewController {
 
     private final HomebrewAuthoringService authoringService;
     private final HomebrewMarketplaceService marketplaceService;
+    private final HomebrewLibraryService libraryService;
 
     // === Authoring (own packages) ===
 
@@ -139,5 +142,50 @@ public class HomebrewController {
             @PathVariable UUID installationId, Authentication auth) {
         marketplaceService.uninstall(installationId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(null, "Пакет удален из установленных"));
+    }
+
+    // === Ratings ===
+
+    @PostMapping("/marketplace/{id}/rate")
+    @Operation(summary = "Rate a homebrew package (like/dislike)")
+    public ResponseEntity<ApiResponse<HomebrewRatingResponse>> ratePackage(
+            @PathVariable UUID id,
+            @Valid @RequestBody RateHomebrewRequest request, Authentication auth) {
+        HomebrewRatingResponse response = marketplaceService.ratePackage(id, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(response, "Rating submitted"));
+    }
+
+    @GetMapping("/marketplace/{id}/rating")
+    @Operation(summary = "Get package rating")
+    public ResponseEntity<ApiResponse<HomebrewRatingResponse>> getPackageRating(
+            @PathVariable UUID id, Authentication auth) {
+        HomebrewRatingResponse response = marketplaceService.getPackageRating(id, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    // === GM Library ===
+
+    @GetMapping("/library")
+    @Operation(summary = "List GM homebrew library")
+    public ResponseEntity<ApiResponse<List<HomebrewPackageResponse>>> listLibrary(Authentication auth) {
+        List<HomebrewPackageResponse> library = libraryService.listLibrary(auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(library));
+    }
+
+    @PostMapping("/library/{packageId}")
+    @Operation(summary = "Add package to GM library")
+    public ResponseEntity<ApiResponse<Void>> addToLibrary(
+            @PathVariable UUID packageId, Authentication auth) {
+        libraryService.addToLibrary(packageId, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(null, "Package added to library"));
+    }
+
+    @DeleteMapping("/library/{packageId}")
+    @Operation(summary = "Remove package from GM library")
+    public ResponseEntity<ApiResponse<Void>> removeFromLibrary(
+            @PathVariable UUID packageId, Authentication auth) {
+        libraryService.removeFromLibrary(packageId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Package removed from library"));
     }
 }

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Shared Storage (must come before item_instances) -->
+    <changeSet id="019-create-shared-storage" author="dnd-app">
+        <createTable tableName="shared_storage">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_shared_storage_campaign"
+                             references="campaigns(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_shared_storage_creator"
+                             references="users(id)"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Item Templates -->
+    <changeSet id="019-create-item-templates" author="dnd-app">
+        <createTable tableName="item_templates">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="item_type_id" type="uuid">
+                <constraints foreignKeyName="fk_itemtpl_item_type"
+                             references="item_types(id)"/>
+            </column>
+            <column name="rarity" type="varchar(20)" defaultValue="COMMON"/>
+            <column name="damage_dice" type="varchar(10)"/>
+            <column name="damage_bonus" type="int" defaultValueNumeric="0"/>
+            <column name="damage_type" type="varchar(20)"/>
+            <column name="is_stackable" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="skill_id" type="uuid">
+                <constraints foreignKeyName="fk_itemtpl_skill"
+                             references="skills(id)"/>
+            </column>
+            <column name="skill_activation" type="varchar(10)"/>
+            <column name="homebrew_id" type="uuid">
+                <constraints foreignKeyName="fk_itemtpl_homebrew"
+                             references="homebrew_packages(id)"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- SET NULL on delete for item_type_id -->
+        <sql>
+            ALTER TABLE item_templates DROP CONSTRAINT IF EXISTS fk_itemtpl_item_type;
+            ALTER TABLE item_templates ADD CONSTRAINT fk_itemtpl_item_type
+                FOREIGN KEY (item_type_id) REFERENCES item_types(id) ON DELETE SET NULL;
+        </sql>
+
+        <!-- SET NULL on delete for skill_id -->
+        <sql>
+            ALTER TABLE item_templates DROP CONSTRAINT IF EXISTS fk_itemtpl_skill;
+            ALTER TABLE item_templates ADD CONSTRAINT fk_itemtpl_skill
+                FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE SET NULL;
+        </sql>
+
+        <!-- SET NULL on delete for homebrew_id -->
+        <sql>
+            ALTER TABLE item_templates DROP CONSTRAINT IF EXISTS fk_itemtpl_homebrew;
+            ALTER TABLE item_templates ADD CONSTRAINT fk_itemtpl_homebrew
+                FOREIGN KEY (homebrew_id) REFERENCES homebrew_packages(id) ON DELETE SET NULL;
+        </sql>
+    </changeSet>
+
+    <!-- Item Instances -->
+    <changeSet id="019-create-item-instances" author="dnd-app">
+        <createTable tableName="item_instances">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="template_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_character_id" type="uuid"/>
+            <column name="shared_storage_id" type="uuid"/>
+            <column name="custom_name" type="varchar(100)"/>
+            <column name="quantity" type="int" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_unique" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="slot" type="varchar(20)"/>
+            <column name="notes" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="item_instances"
+                baseColumnNames="template_id"
+                referencedTableName="item_templates"
+                referencedColumnNames="id"
+                constraintName="fk_iteminst_template"
+                onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+                baseTableName="item_instances"
+                baseColumnNames="owner_character_id"
+                referencedTableName="characters"
+                referencedColumnNames="id"
+                constraintName="fk_iteminst_owner"
+                onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+                baseTableName="item_instances"
+                baseColumnNames="shared_storage_id"
+                referencedTableName="shared_storage"
+                referencedColumnNames="id"
+                constraintName="fk_iteminst_shared_storage"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="item_instances" indexName="idx_iteminst_template_id">
+            <column name="template_id"/>
+        </createIndex>
+
+        <createIndex tableName="item_instances" indexName="idx_iteminst_owner_character_id">
+            <column name="owner_character_id"/>
+        </createIndex>
+
+        <createIndex tableName="item_instances" indexName="idx_iteminst_shared_storage_id">
+            <column name="shared_storage_id"/>
+        </createIndex>
+
+        <createIndex tableName="item_instances" indexName="idx_iteminst_slot">
+            <column name="slot"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Item Template Buffs -->
+    <changeSet id="019-create-item-template-buffs" author="dnd-app">
+        <createTable tableName="item_template_buffs">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="template_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_itemtplbuff_template"
+                             references="item_templates(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="buff_debuff_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_itemtplbuff_buffdebuff"
+                             references="buffs_debuffs(id)"
+                             deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="item_template_buffs"
+                             columnNames="template_id, buff_debuff_id"
+                             constraintName="uq_itemtpl_buff"/>
+    </changeSet>
+
+</databaseChangeLog>

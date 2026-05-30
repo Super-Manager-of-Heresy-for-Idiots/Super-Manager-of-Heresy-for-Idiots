@@ -43,6 +43,10 @@ public class BuffDebuff {
     @Column(name = "is_buff", nullable = false)
     private Boolean isBuff;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

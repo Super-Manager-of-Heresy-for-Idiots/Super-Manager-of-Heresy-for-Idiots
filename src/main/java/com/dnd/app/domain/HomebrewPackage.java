@@ -26,6 +26,14 @@ public class HomebrewPackage {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private HomebrewPackage parent;
+
+    @Column(name = "is_removable", nullable = false)
+    @Builder.Default
+    private Boolean isRemovable = true;
+
     @Column(nullable = false, length = 120)
     private String title;
 

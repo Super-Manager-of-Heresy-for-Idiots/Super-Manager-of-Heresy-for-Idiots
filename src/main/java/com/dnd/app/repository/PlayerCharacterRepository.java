@@ -25,4 +25,8 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
     @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMember tm " +
            "WHERE tm.id.playerId = :playerId AND tm.team.gameMaster.id = :gmId")
     boolean isPlayerInGameMasterTeam(@Param("playerId") UUID playerId, @Param("gmId") UUID gmId);
+
+    List<PlayerCharacter> findByCampaignId(UUID campaignId);
+
+    List<PlayerCharacter> findByCampaignIdAndOwnerId(UUID campaignId, UUID ownerId);
 }

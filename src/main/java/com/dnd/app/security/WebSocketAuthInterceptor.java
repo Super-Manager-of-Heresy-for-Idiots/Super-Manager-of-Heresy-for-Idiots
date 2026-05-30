@@ -1,0 +1,99 @@
+package com.dnd.app.security;
+
+import com.dnd.app.domain.enums.CampaignRole;
+import com.dnd.app.repository.CampaignMemberRepository;
+import com.dnd.app.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class WebSocketAuthInterceptor implements ChannelInterceptor {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
+
+    @Override
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor == null) return message;
+
+        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+            handleConnect(accessor);
+        } else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+            handleSubscribe(accessor);
+        }
+
+        return message;
+    }
+
+    private void handleConnect(StompHeaderAccessor accessor) {
+        String token = accessor.getFirstNativeHeader("Authorization");
+        if (token == null) {
+            // Try query parameter
+            String query = accessor.getFirstNativeHeader("token");
+            if (query != null) {
+                token = query;
+            }
+        }
+
+        if (token != null) {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (jwtTokenProvider.validateToken(token)) {
+                String username = jwtTokenProvider.getUsernameFromToken(token);
+                userRepository.findByUsername(username).ifPresent(user -> {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            username, null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    accessor.setUser(auth);
+                    log.debug("WebSocket CONNECT authenticated: {}", username);
+                });
+            }
+        }
+    }
+
+    private void handleSubscribe(StompHeaderAccessor accessor) {
+        String destination = accessor.getDestination();
+        if (destination == null || accessor.getUser() == null) return;
+
+        String username = accessor.getUser().getName();
+        var user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) return;
+
+        // Validate campaign subscription membership
+        if (destination.startsWith("/topic/campaign/")) {
+            try {
+                String campaignIdStr = destination.split("/")[3];
+                UUID campaignId = UUID.fromString(campaignIdStr);
+                boolean isMember = campaignMemberRepository
+                        .existsByCampaignIdAndUserIdAndKickedFalse(campaignId, user.getId());
+                if (!isMember && user.getRole() != com.dnd.app.domain.enums.Role.ADMIN) {
+                    log.warn("WebSocket SUBSCRIBE denied: user={} not member of campaign={}", username, campaignId);
+                    throw new org.springframework.messaging.MessageDeliveryException(
+                            "Not authorized to subscribe to this campaign");
+                }
+            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
+                log.warn("Invalid campaign subscription destination: {}", destination);
+            }
+        }
+    }
+}

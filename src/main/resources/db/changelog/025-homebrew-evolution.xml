@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add parent_id self-reference to homebrew_packages -->
+    <changeSet id="025-add-parent-to-homebrew-packages" author="dnd-app">
+        <addColumn tableName="homebrew_packages">
+            <column name="parent_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="homebrew_packages"
+                baseColumnNames="parent_id"
+                referencedTableName="homebrew_packages"
+                referencedColumnNames="id"
+                constraintName="fk_homebrew_parent"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+    <!-- Add is_removable to homebrew_packages -->
+    <changeSet id="025-add-is-removable-to-homebrew-packages" author="dnd-app">
+        <addColumn tableName="homebrew_packages">
+            <column name="is_removable" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Homebrew Content Versions -->
+    <changeSet id="025-create-homebrew-content-versions" author="dnd-app">
+        <createTable tableName="homebrew_content_versions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="package_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_hcv_package"
+                             references="homebrew_packages(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="varchar(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="change_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Campaign Homebrew (composite PK) -->
+    <changeSet id="025-create-campaign-homebrew" author="dnd-app">
+        <createTable tableName="campaign_homebrew">
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_camphb_campaign"
+                             references="campaigns(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="package_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_camphb_package"
+                             references="homebrew_packages(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="pinned_version" type="int"/>
+        </createTable>
+
+        <addPrimaryKey tableName="campaign_homebrew"
+                       columnNames="campaign_id, package_id"
+                       constraintName="pk_campaign_homebrew"/>
+    </changeSet>
+
+    <!-- Homebrew Ratings (composite PK) -->
+    <changeSet id="025-create-homebrew-ratings" author="dnd-app">
+        <createTable tableName="homebrew_ratings">
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_hbrating_user"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="package_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_hbrating_package"
+                             references="homebrew_packages(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="rating" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="homebrew_ratings"
+                       columnNames="user_id, package_id"
+                       constraintName="pk_homebrew_ratings"/>
+
+        <sql>
+            ALTER TABLE homebrew_ratings ADD CONSTRAINT chk_rating_value
+                CHECK (rating IN (-1, 1));
+        </sql>
+    </changeSet>
+
+    <!-- GM Homebrew Library (composite PK) -->
+    <changeSet id="025-create-gm-homebrew-library" author="dnd-app">
+        <createTable tableName="gm_homebrew_library">
+            <column name="gm_user_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_gmhblib_user"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="package_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_gmhblib_package"
+                             references="homebrew_packages(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="added_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="gm_homebrew_library"
+                       columnNames="gm_user_id, package_id"
+                       constraintName="pk_gm_homebrew_library"/>
+    </changeSet>
+
+    <!-- Add homebrew_id to character_races -->
+    <changeSet id="025-add-homebrew-to-character-races" author="dnd-app">
+        <addColumn tableName="character_races">
+            <column name="homebrew_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="character_races"
+                baseColumnNames="homebrew_id"
+                referencedTableName="homebrew_packages"
+                referencedColumnNames="id"
+                constraintName="fk_race_homebrew"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+    <!-- Add homebrew_id to stat_types -->
+    <changeSet id="025-add-homebrew-to-stat-types" author="dnd-app">
+        <addColumn tableName="stat_types">
+            <column name="homebrew_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="stat_types"
+                baseColumnNames="homebrew_id"
+                referencedTableName="homebrew_packages"
+                referencedColumnNames="id"
+                constraintName="fk_stattype_homebrew"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+    <!-- Migrate team_homebrew_activations data to campaign_homebrew -->
+    <changeSet id="025-migrate-team-homebrew-to-campaign-homebrew" author="dnd-app">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="team_homebrew_activations"/>
+        </preConditions>
+        <sql>
+            INSERT INTO campaign_homebrew (campaign_id, package_id)
+            SELECT t.id, tha.homebrew_package_id
+            FROM team_homebrew_activations tha
+            JOIN teams t ON tha.team_id = t.id
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

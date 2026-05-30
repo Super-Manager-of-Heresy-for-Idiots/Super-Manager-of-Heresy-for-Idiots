@@ -27,4 +27,8 @@ public class StatType {
     @Column(name = "is_default", nullable = false)
     @Builder.Default
     private Boolean isDefault = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
 }

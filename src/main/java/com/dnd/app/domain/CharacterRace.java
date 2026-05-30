@@ -23,4 +23,8 @@ public class CharacterRace {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
 }

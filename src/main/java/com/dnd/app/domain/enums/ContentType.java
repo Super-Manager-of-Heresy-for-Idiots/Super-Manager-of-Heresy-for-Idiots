@@ -4,5 +4,13 @@ public enum ContentType {
     ITEM_TYPE,
     CHARACTER_CLASS,
     SKILL,
-    FEAT
+    FEAT,
+    SUBCLASS,
+    RACE,
+    STAT_TYPE,
+    BUFF_DEBUFF,
+    ENCHANTMENT_TYPE,
+    CURRENCY,
+    CUSTOM_RESOURCE,
+    ITEM_TEMPLATE
 }

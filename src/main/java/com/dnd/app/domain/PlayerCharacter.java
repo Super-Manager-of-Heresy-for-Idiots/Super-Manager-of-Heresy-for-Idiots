@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.enums.CharacterStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,6 +35,17 @@ public class PlayerCharacter {
     @Builder.Default
     private Long experience = 0L;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private CharacterStatus status = CharacterStatus.ACTIVE;
+
+    @Column(name = "current_hp")
+    private Integer currentHp;
+
+    @Column(name = "max_hp")
+    private Integer maxHp;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "race_id", nullable = false)
     private CharacterRace race;
@@ -45,6 +57,10 @@ public class PlayerCharacter {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "campaign_id")
+    private Campaign campaign;
 
     @OneToMany(mappedBy = "character", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     @Builder.Default
@@ -65,6 +81,14 @@ public class PlayerCharacter {
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BagSlot> bagSlots = new ArrayList<>();
+
+    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CharacterActiveEffect> activeEffects = new ArrayList<>();
+
+    @OneToMany(mappedBy = "ownerCharacter")
+    @Builder.Default
+    private List<ItemInstance> itemInstances = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -2,15 +2,18 @@ package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.HomebrewInstallation;
 import com.dnd.app.domain.HomebrewPackage;
+import com.dnd.app.domain.HomebrewRating;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.dto.request.RateHomebrewRequest;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.HomebrewInstallationRepository;
 import com.dnd.app.repository.HomebrewPackageRepository;
+import com.dnd.app.repository.HomebrewRatingRepository;
 import com.dnd.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +33,7 @@ public class HomebrewMarketplaceService {
 
     private final HomebrewPackageRepository packageRepository;
     private final HomebrewInstallationRepository installationRepository;
+    private final HomebrewRatingRepository ratingRepository;
     private final UserRepository userRepository;
     private final HomebrewAuthoringService authoringService;
 
@@ -135,6 +139,60 @@ public class HomebrewMarketplaceService {
         installationRepository.delete(installation);
         log.info("Package uninstalled: installationId={}, packageId={}, by={}",
                 installationId, installation.getHomebrewPackage().getId(), username);
+    }
+
+    @Transactional
+    public HomebrewRatingResponse ratePackage(UUID packageId, RateHomebrewRequest request, String username) {
+        User user = getGameMaster(username);
+        HomebrewPackage pkg = packageRepository.findById(packageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+
+        if (pkg.getStatus() != HomebrewStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Package not found");
+        }
+
+        // Upsert rating
+        HomebrewRating rating = ratingRepository.findByUserIdAndPackageId(user.getId(), packageId)
+                .orElse(null);
+
+        if (rating != null) {
+            rating.setRating(request.getRating());
+            ratingRepository.save(rating);
+        } else {
+            rating = HomebrewRating.builder()
+                    .userId(user.getId())
+                    .packageId(packageId)
+                    .rating(request.getRating())
+                    .build();
+            ratingRepository.save(rating);
+        }
+
+        log.info("Package rated: packageId={}, rating={}, by={}", packageId, request.getRating(), username);
+        return buildRatingResponse(packageId, user.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public HomebrewRatingResponse getPackageRating(UUID packageId, String username) {
+        User user = getGameMaster(username);
+        packageRepository.findById(packageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
+
+        return buildRatingResponse(packageId, user.getId());
+    }
+
+    private HomebrewRatingResponse buildRatingResponse(UUID packageId, UUID userId) {
+        long likes = ratingRepository.countByPackageIdAndRating(packageId, 1);
+        long dislikes = ratingRepository.countByPackageIdAndRating(packageId, -1);
+        Integer userRating = ratingRepository.findByUserIdAndPackageId(userId, packageId)
+                .map(HomebrewRating::getRating)
+                .orElse(null);
+
+        return HomebrewRatingResponse.builder()
+                .likes(likes)
+                .dislikes(dislikes)
+                .netRating(likes - dislikes)
+                .userRating(userRating)
+                .build();
     }
 
     private User getGameMaster(String username) {
