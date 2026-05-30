@@ -5,6 +5,7 @@ import com.dnd.app.domain.enums.ContentType;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.ActivateHomebrewRequest;
+import com.dnd.app.dto.request.UpdatePinnedVersionRequest;
 import com.dnd.app.dto.response.CampaignHomebrewResponse;
 import com.dnd.app.dto.response.TeamAvailableContentResponse;
 import com.dnd.app.dto.response.TeamAvailableContentResponse.AvailableContentItem;
@@ -74,6 +75,33 @@ public class CampaignContentService {
 
         campaignHomebrewRepository.deleteByCampaignIdAndPackageId(campaignId, packageId);
         log.info("Homebrew deactivated: packageId={}, campaignId={}, by user={}", packageId, campaignId, username);
+    }
+
+    @Transactional
+    public CampaignHomebrewResponse updatePinnedVersion(UUID campaignId, UUID packageId,
+                                                         UpdatePinnedVersionRequest request, String username) {
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        User user = getUser(username);
+        campaignService.enforceGmOrAdmin(campaign, user);
+
+        CampaignHomebrewId id = new CampaignHomebrewId(campaignId, packageId);
+        CampaignHomebrew activation = campaignHomebrewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Homebrew package is not attached to this campaign"));
+
+        HomebrewPackage pkg = homebrewPackageRepository.findById(packageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Homebrew package not found"));
+
+        if (request.getPinnedVersion() != null && request.getPinnedVersion() > pkg.getVersion()) {
+            throw new com.dnd.app.exception.BadRequestException(
+                    "Pinned version cannot exceed the latest published version (" + pkg.getVersion() + ")");
+        }
+
+        activation.setPinnedVersion(request.getPinnedVersion());
+        campaignHomebrewRepository.save(activation);
+
+        log.info("Pinned version updated: packageId={}, campaignId={}, pinnedVersion={}, by={}",
+                packageId, campaignId, request.getPinnedVersion(), username);
+        return buildResponse(pkg, request.getPinnedVersion());
     }
 
     @Transactional(readOnly = true)

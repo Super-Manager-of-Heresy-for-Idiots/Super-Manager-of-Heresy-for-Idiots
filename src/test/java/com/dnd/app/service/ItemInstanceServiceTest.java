@@ -130,6 +130,7 @@ class ItemInstanceServiceTest {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
         doNothing().when(campaignService).enforceMembershipOrAdmin(any(), any());
+        when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(equippedInstance));
 
         // Act & Assert
@@ -170,6 +171,7 @@ class ItemInstanceServiceTest {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
         doNothing().when(campaignService).enforceMembershipOrAdmin(any(), any());
+        when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(unequippedInstance));
         when(playerCharacterRepository.findById(toCharId)).thenReturn(Optional.of(toCharacter));
 
@@ -206,6 +208,7 @@ class ItemInstanceServiceTest {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
         doNothing().when(campaignService).enforceMembershipOrAdmin(any(), any());
+        when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(unequippedInstance));
         when(playerCharacterRepository.findById(toCharId)).thenReturn(Optional.of(toCharacter));
         when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));

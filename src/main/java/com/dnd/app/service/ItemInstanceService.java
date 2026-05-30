@@ -195,6 +195,18 @@ public class ItemInstanceService {
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
 
+        PlayerCharacter fromCharacter = findCharacter(fromCharId);
+        if (fromCharacter.getCampaign() == null
+                || !fromCharacter.getCampaign().getId().equals(campaignId)) {
+            throw new BadRequestException("Source character is not in this campaign");
+        }
+
+        if (user.getRole() != Role.ADMIN
+                && !campaignService.isGmInCampaign(campaignId, user.getId())
+                && !fromCharacter.getOwner().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not own the source character");
+        }
+
         ItemInstance instance = findInstance(instanceId);
         if (instance.getOwnerCharacter() == null || !instance.getOwnerCharacter().getId().equals(fromCharId)) {
             throw new BadRequestException("Item does not belong to this character");
@@ -206,7 +218,6 @@ public class ItemInstanceService {
 
         PlayerCharacter toCharacter = findCharacter(request.getToCharacterId());
 
-        // Both characters must be in the same campaign
         if (toCharacter.getCampaign() == null
                 || !toCharacter.getCampaign().getId().equals(campaignId)) {
             throw new BadRequestException("Target character is not in the same campaign");

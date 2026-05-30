@@ -68,6 +68,39 @@ public class QuestController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Quest deleted"));
     }
 
+    // --- Quest rewards ---
+
+    @GetMapping("/{questId}/rewards")
+    @Operation(summary = "List quest rewards")
+    public ResponseEntity<ApiResponse<List<QuestRewardResponse>>> listRewards(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId, Authentication auth) {
+        List<QuestRewardResponse> rewards = questService.listRewards(questId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(rewards));
+    }
+
+    @PostMapping("/{questId}/rewards")
+    @Operation(summary = "Add reward to quest (GM only)")
+    public ResponseEntity<ApiResponse<QuestRewardResponse>> addReward(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId,
+            @Valid @RequestBody com.dnd.app.dto.request.CreateQuestRewardRequest request, Authentication auth) {
+        QuestRewardResponse response = questService.addReward(questId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Reward added"));
+    }
+
+    @DeleteMapping("/{questId}/rewards/{rewardId}")
+    @Operation(summary = "Delete quest reward (GM only)")
+    public ResponseEntity<ApiResponse<Void>> deleteReward(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId,
+            @PathVariable UUID rewardId, Authentication auth) {
+        questService.deleteReward(rewardId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(null, "Reward deleted"));
+    }
+
+    // --- Notes ---
+
     @PostMapping("/{questId}/notes")
     @Operation(summary = "Add note to quest")
     public ResponseEntity<ApiResponse<NoteResponse>> addNote(

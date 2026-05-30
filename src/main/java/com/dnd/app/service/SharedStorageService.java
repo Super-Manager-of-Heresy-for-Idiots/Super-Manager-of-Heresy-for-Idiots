@@ -88,9 +88,12 @@ public class SharedStorageService {
         ItemInstance instance = itemInstanceRepository.findById(instanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item instance not found"));
 
-        // Check the user owns the character that owns the item
         if (instance.getOwnerCharacter() == null) {
             throw new BadRequestException("Item has no owner");
+        }
+        if (instance.getOwnerCharacter().getCampaign() == null
+                || !instance.getOwnerCharacter().getCampaign().getId().equals(storage.getCampaign().getId())) {
+            throw new BadRequestException("Item's owner character is not in the same campaign as this storage");
         }
         if (user.getRole() != Role.ADMIN
                 && !instance.getOwnerCharacter().getOwner().getId().equals(user.getId())) {
@@ -123,7 +126,11 @@ public class SharedStorageService {
 
         PlayerCharacter character = findCharacter(characterId);
 
-        // Must own the character
+        if (character.getCampaign() == null
+                || !character.getCampaign().getId().equals(storage.getCampaign().getId())) {
+            throw new BadRequestException("Target character is not in the same campaign as this storage");
+        }
+
         if (user.getRole() != Role.ADMIN
                 && !character.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not own this character");

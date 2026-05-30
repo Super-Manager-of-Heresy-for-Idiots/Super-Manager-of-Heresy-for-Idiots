@@ -129,12 +129,7 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Кампания не найдена"));
         campaignService.enforceMembershipOrAdmin(campaign, user);
 
-        List<PlayerCharacter> characters;
-        switch (user.getRole()) {
-            case PLAYER -> characters = characterRepository.findByCampaignIdAndOwnerId(campaignId, user.getId());
-            case GAME_MASTER, ADMIN -> characters = characterRepository.findByCampaignId(campaignId);
-            default -> throw new AccessDeniedException("Неизвестная роль");
-        }
+        List<PlayerCharacter> characters = characterRepository.findByCampaignId(campaignId);
         return characters.stream().map(characterMapper::toResponse).toList();
     }
 
@@ -249,8 +244,12 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         switch (user.getRole()) {
             case PLAYER -> {
+                if (character.getCampaign() != null
+                        && campaignService.isMemberOfCampaign(character.getCampaign().getId(), user.getId())) {
+                    return;
+                }
                 if (!character.getOwner().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("Этот персонаж вам не принадлежит");
+                    throw new AccessDeniedException("Вы не являетесь участником кампании этого персонажа");
                 }
             }
             case GAME_MASTER -> {

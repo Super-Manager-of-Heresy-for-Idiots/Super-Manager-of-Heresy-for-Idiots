@@ -4,12 +4,15 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.QuestStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateNoteRequest;
+import com.dnd.app.dto.request.CreateQuestRewardRequest;
 import com.dnd.app.dto.request.CreateQuestRequest;
 import com.dnd.app.dto.request.UpdateNoteRequest;
 import com.dnd.app.dto.request.UpdateQuestRequest;
 import com.dnd.app.dto.response.NoteResponse;
 import com.dnd.app.dto.response.QuestResponse;
+import com.dnd.app.dto.response.QuestRewardResponse;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +32,11 @@ public class QuestService {
     private final QuestNoteRepository noteRepository;
     private final QuestNpcRepository questNpcRepository;
     private final QuestLocationRepository questLocationRepository;
+    private final QuestRewardRepository questRewardRepository;
     private final CampaignNpcRepository npcRepository;
     private final CampaignLocationRepository locationRepository;
+    private final ItemTemplateRepository itemTemplateRepository;
+    private final CurrencyTypeRepository currencyTypeRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
 
@@ -182,6 +188,58 @@ public class QuestService {
         log.info("Quest note deleted: noteId={}, by={}", noteId, username);
     }
 
+    // --- Rewards ---
+
+    @Transactional
+    public QuestRewardResponse addReward(UUID questId, CreateQuestRewardRequest request, String username) {
+        User user = getUser(username);
+        CampaignQuest quest = findQuest(questId);
+        campaignService.enforceGmOrAdmin(quest.getCampaign(), user);
+
+        QuestReward reward = QuestReward.builder()
+                .quest(quest)
+                .quantity(request.getQuantity() != null ? request.getQuantity() : 1)
+                .build();
+
+        if (request.getItemTemplateId() != null) {
+            ItemTemplate template = itemTemplateRepository.findById(request.getItemTemplateId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Item template not found"));
+            reward.setItemTemplate(template);
+        }
+        if (request.getCurrencyTypeId() != null) {
+            CurrencyType currencyType = currencyTypeRepository.findById(request.getCurrencyTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Currency type not found"));
+            reward.setCurrencyType(currencyType);
+            reward.setCurrencyAmount(request.getCurrencyAmount());
+        }
+
+        reward = questRewardRepository.save(reward);
+        log.info("Quest reward added: rewardId={}, questId={}, by={}", reward.getId(), questId, username);
+        return toRewardResponse(reward);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestRewardResponse> listRewards(UUID questId, String username) {
+        User user = getUser(username);
+        CampaignQuest quest = findQuest(questId);
+        campaignService.enforceMembershipOrAdmin(quest.getCampaign(), user);
+
+        return questRewardRepository.findByQuestId(questId).stream()
+                .map(this::toRewardResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteReward(UUID rewardId, String username) {
+        User user = getUser(username);
+        QuestReward reward = questRewardRepository.findById(rewardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quest reward not found"));
+        campaignService.enforceGmOrAdmin(reward.getQuest().getCampaign(), user);
+
+        questRewardRepository.delete(reward);
+        log.info("Quest reward deleted: rewardId={}, by={}", rewardId, username);
+    }
+
     // --- Link/Unlink NPC ---
 
     @Transactional
@@ -192,6 +250,10 @@ public class QuestService {
 
         CampaignNpc npc = npcRepository.findById(npcId)
                 .orElseThrow(() -> new ResourceNotFoundException("NPC not found"));
+
+        if (!npc.getCampaign().getId().equals(quest.getCampaign().getId())) {
+            throw new BadRequestException("NPC does not belong to the same campaign as the quest");
+        }
 
         QuestNpc link = QuestNpc.builder()
                 .quest(quest)
@@ -228,6 +290,10 @@ public class QuestService {
 
         CampaignLocation location = locationRepository.findById(locationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+
+        if (!location.getCampaign().getId().equals(quest.getCampaign().getId())) {
+            throw new BadRequestException("Location does not belong to the same campaign as the quest");
+        }
 
         QuestLocation link = QuestLocation.builder()
                 .quest(quest)
@@ -284,6 +350,18 @@ public class QuestService {
                 .notes(notes)
                 .createdAt(quest.getCreatedAt())
                 .updatedAt(quest.getUpdatedAt())
+                .build();
+    }
+
+    private QuestRewardResponse toRewardResponse(QuestReward reward) {
+        return QuestRewardResponse.builder()
+                .id(reward.getId())
+                .itemTemplateId(reward.getItemTemplate() != null ? reward.getItemTemplate().getId() : null)
+                .itemTemplateName(reward.getItemTemplate() != null ? reward.getItemTemplate().getName() : null)
+                .quantity(reward.getQuantity())
+                .currencyTypeId(reward.getCurrencyType() != null ? reward.getCurrencyType().getId() : null)
+                .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getName() : null)
+                .currencyAmount(reward.getCurrencyAmount())
                 .build();
     }
 

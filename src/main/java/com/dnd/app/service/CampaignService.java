@@ -27,6 +27,12 @@ public class CampaignService {
     private final CampaignMemberRepository campaignMemberRepository;
     private final UserRepository userRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
+    private final CharacterStatRepository characterStatRepository;
+    private final CharacterClassLevelRepository classLevelRepository;
+    private final ItemInstanceRepository itemInstanceRepository;
+    private final CharacterWalletRepository characterWalletRepository;
+    private final CharacterResourceRepository characterResourceRepository;
+    private final com.dnd.app.mapper.CharacterMapper characterMapper;
 
     @Transactional
     public CampaignResponse createCampaign(CreateCampaignRequest request, String username) {
@@ -263,6 +269,99 @@ public class CampaignService {
             throw new AccessDeniedException("You cannot view the invite code");
         }
         return InviteCodeResponse.builder().inviteCode(campaign.getInviteCode()).build();
+    }
+
+    @Transactional
+    public CharacterResponse reassignCharacter(UUID campaignId, UUID characterId,
+                                                ReassignCharacterRequest request, String username) {
+        Campaign campaign = findCampaign(campaignId);
+        User gmUser = getUser(username);
+        enforceGmOrAdmin(campaign, gmUser);
+
+        PlayerCharacter original = playerCharacterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+
+        if (original.getCampaign() == null || !original.getCampaign().getId().equals(campaignId)) {
+            throw new BadRequestException("Character does not belong to this campaign");
+        }
+        if (original.getStatus() != CharacterStatus.RESERVE) {
+            throw new BadRequestException("Only RESERVE characters can be reassigned");
+        }
+
+        User newOwner = userRepository.findById(request.getNewOwnerUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("New owner user not found"));
+        if (!isMemberOfCampaign(campaignId, newOwner.getId())) {
+            throw new BadRequestException("New owner is not a member of this campaign");
+        }
+
+        PlayerCharacter copy = PlayerCharacter.builder()
+                .name(original.getName())
+                .totalLevel(original.getTotalLevel())
+                .experience(original.getExperience())
+                .status(CharacterStatus.ACTIVE)
+                .currentHp(original.getCurrentHp())
+                .maxHp(original.getMaxHp())
+                .race(original.getRace())
+                .owner(newOwner)
+                .team(original.getTeam())
+                .campaign(campaign)
+                .build();
+        copy = playerCharacterRepository.saveAndFlush(copy);
+
+        for (CharacterClassLevel ccl : original.getClassLevels()) {
+            CharacterClassLevel newCcl = CharacterClassLevel.builder()
+                    .characterId(copy.getId())
+                    .classId(ccl.getClassId())
+                    .classLevel(ccl.getClassLevel())
+                    .build();
+            classLevelRepository.saveAndFlush(newCcl);
+            copy.getClassLevels().add(newCcl);
+        }
+
+        for (CharacterStat stat : original.getStats()) {
+            CharacterStat newStat = CharacterStat.builder()
+                    .character(copy)
+                    .statType(stat.getStatType())
+                    .value(stat.getValue())
+                    .build();
+            characterStatRepository.save(newStat);
+            copy.getStats().add(newStat);
+        }
+
+        for (ItemInstance item : itemInstanceRepository.findByOwnerCharacterId(original.getId())) {
+            ItemInstance newItem = ItemInstance.builder()
+                    .template(item.getTemplate())
+                    .ownerCharacter(copy)
+                    .customName(item.getCustomName())
+                    .quantity(item.getQuantity())
+                    .isUnique(item.getIsUnique())
+                    .slot(item.getSlot())
+                    .notes(item.getNotes())
+                    .build();
+            itemInstanceRepository.save(newItem);
+        }
+
+        for (CharacterWallet wallet : characterWalletRepository.findByCharacterId(original.getId())) {
+            CharacterWallet newWallet = CharacterWallet.builder()
+                    .character(copy)
+                    .currencyType(wallet.getCurrencyType())
+                    .amount(wallet.getAmount())
+                    .build();
+            characterWalletRepository.save(newWallet);
+        }
+
+        for (CharacterResource resource : characterResourceRepository.findByCharacterId(original.getId())) {
+            CharacterResource newResource = CharacterResource.builder()
+                    .character(copy)
+                    .resourceType(resource.getResourceType())
+                    .currentValue(resource.getCurrentValue())
+                    .build();
+            characterResourceRepository.save(newResource);
+        }
+
+        log.info("Character reassigned: originalId={}, copyId={}, newOwner={}, by={}",
+                original.getId(), copy.getId(), newOwner.getUsername(), username);
+        return characterMapper.toResponse(copy);
     }
 
     // --- Helper: check if user is GM in campaign ---

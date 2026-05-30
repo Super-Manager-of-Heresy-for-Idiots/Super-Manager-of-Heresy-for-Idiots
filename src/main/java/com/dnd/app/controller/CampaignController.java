@@ -119,6 +119,19 @@ public class CampaignController {
         return ResponseEntity.ok(ApiResponse.ok(response, "Invite code regenerated"));
     }
 
+    // --- Character reassignment ---
+
+    @PostMapping("/{id}/characters/{characterId}/reassign")
+    @Operation(summary = "Reassign RESERVE character to new owner with deep copy (GM only)")
+    public ResponseEntity<ApiResponse<CharacterResponse>> reassignCharacter(
+            @PathVariable UUID id,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody ReassignCharacterRequest request, Authentication auth) {
+        CharacterResponse response = campaignService.reassignCharacter(id, characterId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(response, "Character reassigned to new owner"));
+    }
+
     // --- Homebrew ---
 
     @PostMapping("/{id}/homebrew")
@@ -137,6 +150,15 @@ public class CampaignController {
             @PathVariable UUID id, @PathVariable UUID packageId, Authentication auth) {
         campaignContentService.deactivateHomebrew(id, packageId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(null, "Хомбрю-пакет деактивирован для кампании"));
+    }
+
+    @PutMapping("/{id}/homebrew/{packageId}/version")
+    @Operation(summary = "Update pinned homebrew version for campaign (GM only)")
+    public ResponseEntity<ApiResponse<CampaignHomebrewResponse>> updatePinnedVersion(
+            @PathVariable UUID id, @PathVariable UUID packageId,
+            @Valid @RequestBody com.dnd.app.dto.request.UpdatePinnedVersionRequest request, Authentication auth) {
+        CampaignHomebrewResponse resp = campaignContentService.updatePinnedVersion(id, packageId, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(resp, "Pinned version updated"));
     }
 
     @GetMapping("/{id}/homebrew")
