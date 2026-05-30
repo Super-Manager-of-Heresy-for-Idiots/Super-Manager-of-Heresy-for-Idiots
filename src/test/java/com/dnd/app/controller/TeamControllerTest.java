@@ -5,6 +5,7 @@ import com.dnd.app.dto.request.CreateTeamRequest;
 import com.dnd.app.dto.request.JoinTeamRequest;
 import com.dnd.app.dto.response.TeamResponse;
 import com.dnd.app.security.JwtTokenProvider;
+import com.dnd.app.service.TeamContentService;
 import com.dnd.app.service.TeamService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ class TeamControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private TeamService teamService;
+    @MockitoBean private TeamContentService teamContentService;
     @MockitoBean private JwtTokenProvider jwtTokenProvider;
     @MockitoBean private UserDetailsService userDetailsService;
 

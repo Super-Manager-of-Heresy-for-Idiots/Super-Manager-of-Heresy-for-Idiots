@@ -41,7 +41,7 @@ class CharacterControllerTest {
     @WithMockUser(username = "player1", roles = "PLAYER")
     void createCharacter_returns201() throws Exception {
         CreateCharacterRequest req = CreateCharacterRequest.builder()
-                .name("Hero").classId(UUID.randomUUID()).raceId(UUID.randomUUID()).build();
+                .name("Hero").classId(UUID.randomUUID()).raceId(UUID.randomUUID()).teamId(UUID.randomUUID()).build();
         CharacterResponse resp = CharacterResponse.builder().name("Hero").totalLevel(1).build();
         when(characterService.createCharacter(any(), eq("player1"))).thenReturn(resp);
 

@@ -65,7 +65,8 @@ class AuthControllerTest {
     @Test
     void login_validRequest_returns200() throws Exception {
         LoginRequest req = LoginRequest.builder().username("user1").password("pass1234").build();
-        AuthResponse resp = AuthResponse.builder().token("jwt-token").expiresIn(86400000L).build();
+        UserResponse userResp = UserResponse.builder().username("user1").role("PLAYER").build();
+        AuthResponse resp = AuthResponse.builder().token("jwt-token").expiresIn(86400000L).user(userResp).build();
         when(authService.login(any())).thenReturn(resp);
 
         mockMvc.perform(post("/api/auth/login")

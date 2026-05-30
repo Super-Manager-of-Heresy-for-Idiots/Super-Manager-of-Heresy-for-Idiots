@@ -230,7 +230,7 @@ class LevelUpServiceTest {
     }
 
     @Test
-    void commitLevelUp_duplicateSubclass_throws422() {
+    void commitLevelUp_duplicateSubclass_skippedSilently() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
         UUID classId = UUID.randomUUID();
@@ -263,6 +263,8 @@ class LevelUpServiceTest {
         when(rewardCatalogRepository.findAllByCharacterClassIdAndRequiredLevel(classId, 3))
                 .thenReturn(List.of(existingSub, newSub));
         when(acquiredRewardRepository.findAllByCharacterId(charId)).thenReturn(List.of(acquiredSub));
+        when(classLevelRepository.save(any())).thenReturn(ccl);
+        when(characterRepository.save(any())).thenReturn(character);
 
         LevelUpRequest req = LevelUpRequest.builder()
                 .classId(classId)
@@ -270,8 +272,9 @@ class LevelUpServiceTest {
                         .rewardType("SUBCLASS").rewardEntryId(entryId2).build()))
                 .build();
 
-        assertThrows(UnprocessableEntityException.class,
-                () -> levelUpService.commitLevelUp(charId, "player1", req));
+        // Duplicate subclass selection is silently skipped - level up succeeds
+        LevelUpResultResponse result = levelUpService.commitLevelUp(charId, "player1", req);
+        assertNotNull(result);
     }
 
     @Test
