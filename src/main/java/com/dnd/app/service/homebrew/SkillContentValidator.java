@@ -43,6 +43,6 @@ public class SkillContentValidator implements HomebrewContentValidator {
     public UUID getOwnerId(UUID contentId) {
         Skill skill = skillRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + contentId));
-        return skill.getOwner() != null ? skill.getOwner().getId() : null;
+        return skill.getHomebrew() != null ? skill.getHomebrew().getAuthor().getId() : null;
     }
 }

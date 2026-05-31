@@ -1,7 +1,6 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateCharacterRequest;
 import com.dnd.app.dto.request.ModifyHpRequest;
@@ -35,7 +34,7 @@ public class CharacterService {
     private final CharacterRaceRepository raceRepository;
     private final StatTypeRepository statTypeRepository;
     private final CharacterStatRepository characterStatRepository;
-    private final CharacterConditionRepository charCondRepository;
+    private final CharacterActiveEffectRepository activeEffectRepository;
     private final CharacterClassLevelRepository classLevelRepository;
     private final CampaignRepository campaignRepository;
     private final CampaignMemberRepository campaignMemberRepository;
@@ -176,22 +175,22 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
 
-        List<CharacterCondition> activeConditions =
-                charCondRepository.findAllByCharacterIdAndActiveTrue(characterId);
+        List<CharacterActiveEffect> activeEffects =
+                activeEffectRepository.findByCharacterId(characterId);
 
         return character.getStats().stream().map(stat -> {
             CharacterStatResponse resp = characterMapper.toStatResponse(stat);
             List<StatModifierDetail> modifiers = new java.util.ArrayList<>();
             int totalMod = 0;
-            for (CharacterCondition cc : activeConditions) {
-                for (ConditionModifier cm : cc.getCondition().getModifiers()) {
-                    if (cm.getStatType().getId().equals(stat.getStatType().getId())) {
-                        modifiers.add(StatModifierDetail.builder()
-                                .source(cc.getCondition().getName())
-                                .modifierValue(cm.getModifierValue())
-                                .build());
-                        totalMod += cm.getModifierValue();
-                    }
+            for (CharacterActiveEffect effect : activeEffects) {
+                BuffDebuff bd = effect.getBuffDebuff();
+                if (bd.getTargetStat() != null && bd.getModifierValue() != null
+                        && bd.getTargetStat().getId().equals(stat.getStatType().getId())) {
+                    modifiers.add(StatModifierDetail.builder()
+                            .source(bd.getName())
+                            .modifierValue(bd.getModifierValue())
+                            .build());
+                    totalMod += bd.getModifierValue();
                 }
             }
             resp.setEffectiveValue(stat.getValue() + totalMod);

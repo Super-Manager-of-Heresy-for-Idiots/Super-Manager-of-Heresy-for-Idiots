@@ -12,7 +12,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TeamAvailableContentResponse {
+public class CampaignAvailableContentResponse {
 
     private List<AvailableContentItem> classes;
     private List<AvailableContentItem> races;

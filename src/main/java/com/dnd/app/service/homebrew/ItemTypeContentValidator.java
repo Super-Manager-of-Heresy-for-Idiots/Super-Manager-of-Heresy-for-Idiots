@@ -43,6 +43,6 @@ public class ItemTypeContentValidator implements HomebrewContentValidator {
     public UUID getOwnerId(UUID contentId) {
         ItemType item = itemTypeRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден: " + contentId));
-        return item.getOwner() != null ? item.getOwner().getId() : null;
+        return item.getHomebrew() != null ? item.getHomebrew().getAuthor().getId() : null;
     }
 }

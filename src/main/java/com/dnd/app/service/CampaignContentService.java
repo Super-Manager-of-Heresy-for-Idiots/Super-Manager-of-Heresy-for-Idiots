@@ -7,8 +7,8 @@ import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.ActivateHomebrewRequest;
 import com.dnd.app.dto.request.UpdatePinnedVersionRequest;
 import com.dnd.app.dto.response.CampaignHomebrewResponse;
-import com.dnd.app.dto.response.TeamAvailableContentResponse;
-import com.dnd.app.dto.response.TeamAvailableContentResponse.AvailableContentItem;
+import com.dnd.app.dto.response.CampaignAvailableContentResponse;
+import com.dnd.app.dto.response.CampaignAvailableContentResponse.AvailableContentItem;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
@@ -118,7 +118,7 @@ public class CampaignContentService {
     }
 
     @Transactional(readOnly = true)
-    public TeamAvailableContentResponse getAvailableContent(UUID campaignId, String username) {
+    public CampaignAvailableContentResponse getAvailableContent(UUID campaignId, String username) {
         Campaign campaign = campaignService.findCampaign(campaignId);
         User user = getUser(username);
         campaignService.enforceMembershipOrAdmin(campaign, user);
@@ -178,7 +178,7 @@ public class CampaignContentService {
                             .build()));
         }
 
-        return TeamAvailableContentResponse.builder()
+        return CampaignAvailableContentResponse.builder()
                 .classes(classes).races(races).itemTypes(itemTypes).skills(skills).feats(feats)
                 .build();
     }

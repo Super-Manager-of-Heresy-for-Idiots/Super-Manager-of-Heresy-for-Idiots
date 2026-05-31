@@ -42,6 +42,6 @@ public class CharacterClassContentValidator implements HomebrewContentValidator 
     public UUID getOwnerId(UUID contentId) {
         CharacterClass cc = characterClassRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден: " + contentId));
-        return cc.getOwner() != null ? cc.getOwner().getId() : null;
+        return cc.getHomebrew() != null ? cc.getHomebrew().getAuthor().getId() : null;
     }
 }

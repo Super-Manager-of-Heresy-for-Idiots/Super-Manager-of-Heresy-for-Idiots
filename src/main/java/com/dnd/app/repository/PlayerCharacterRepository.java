@@ -1,5 +1,6 @@
 package com.dnd.app.repository;
 
+import com.dnd.app.domain.CampaignMember;
 import com.dnd.app.domain.PlayerCharacter;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,19 +13,11 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
 
     List<PlayerCharacter> findAllByOwnerId(UUID ownerId);
 
-    List<PlayerCharacter> findAllByOwnerIdAndTeamId(UUID ownerId, UUID teamId);
-
-    List<PlayerCharacter> findAllByTeamId(UUID teamId);
-
-    @Query("SELECT pc FROM PlayerCharacter pc WHERE pc.team.gameMaster.id = :gmId")
-    List<PlayerCharacter> findAllByGameMasterId(@Param("gmId") UUID gmId);
-
-    @Query("SELECT pc FROM PlayerCharacter pc WHERE pc.team.gameMaster.id = :gmId AND pc.team.id = :teamId")
-    List<PlayerCharacter> findAllByGameMasterIdAndTeamId(@Param("gmId") UUID gmId, @Param("teamId") UUID teamId);
-
-    @Query("SELECT CASE WHEN COUNT(tm) > 0 THEN true ELSE false END FROM TeamMember tm " +
-           "WHERE tm.id.playerId = :playerId AND tm.team.gameMaster.id = :gmId")
-    boolean isPlayerInGameMasterTeam(@Param("playerId") UUID playerId, @Param("gmId") UUID gmId);
+    @Query("SELECT CASE WHEN COUNT(cm) > 0 THEN true ELSE false END " +
+           "FROM PlayerCharacter pc JOIN CampaignMember cm ON cm.campaign = pc.campaign " +
+           "WHERE pc.owner.id = :playerId AND cm.user.id = :gmId " +
+           "AND cm.roleInCampaign = com.dnd.app.domain.enums.CampaignRole.GM AND cm.kicked = false")
+    boolean isPlayerInGameMasterCampaign(@Param("playerId") UUID playerId, @Param("gmId") UUID gmId);
 
     List<PlayerCharacter> findByCampaignId(UUID campaignId);
 

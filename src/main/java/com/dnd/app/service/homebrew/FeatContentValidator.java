@@ -43,6 +43,6 @@ public class FeatContentValidator implements HomebrewContentValidator {
     public UUID getOwnerId(UUID contentId) {
         Feat feat = featRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + contentId));
-        return feat.getOwner() != null ? feat.getOwner().getId() : null;
+        return feat.getHomebrew() != null ? feat.getHomebrew().getAuthor().getId() : null;
     }
 }

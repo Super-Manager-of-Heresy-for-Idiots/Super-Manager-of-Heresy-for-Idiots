@@ -285,8 +285,8 @@ public class LevelUpService {
                 }
             }
             case GAME_MASTER -> {
-                if (!characterRepository.isPlayerInGameMasterTeam(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших команд");
+                if (!characterRepository.isPlayerInGameMasterCampaign(character.getOwner().getId(), user.getId())) {
+                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших кампаний");
                 }
             }
             case ADMIN -> { }

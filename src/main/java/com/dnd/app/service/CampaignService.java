@@ -303,7 +303,6 @@ public class CampaignService {
                 .maxHp(original.getMaxHp())
                 .race(original.getRace())
                 .owner(newOwner)
-                .team(original.getTeam())
                 .campaign(campaign)
                 .build();
         copy = playerCharacterRepository.saveAndFlush(copy);

@@ -171,9 +171,9 @@ public class CampaignController {
 
     @GetMapping("/{id}/available-content")
     @Operation(summary = "Get available content for campaign (global + homebrew)")
-    public ResponseEntity<ApiResponse<TeamAvailableContentResponse>> getAvailableContent(
+    public ResponseEntity<ApiResponse<CampaignAvailableContentResponse>> getAvailableContent(
             @PathVariable UUID id, Authentication auth) {
-        TeamAvailableContentResponse content = campaignContentService.getAvailableContent(id, auth.getName());
+        CampaignAvailableContentResponse content = campaignContentService.getAvailableContent(id, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(content));
     }
 }
