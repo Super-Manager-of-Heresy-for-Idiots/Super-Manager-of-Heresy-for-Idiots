@@ -10,7 +10,7 @@ import java.util.UUID;
 public interface SkillRepository extends JpaRepository<Skill, UUID> {
     boolean existsByName(String name);
 
-    List<Skill> findAllBySourceHomebrewIsNull();
+    List<Skill> findAllByHomebrewIsNull();
 
-    List<Skill> findAllBySourceHomebrewIdIn(Set<UUID> packageIds);
+    List<Skill> findAllByHomebrewIdIn(Set<UUID> packageIds);
 }

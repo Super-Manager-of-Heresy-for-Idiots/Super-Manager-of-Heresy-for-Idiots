@@ -10,7 +10,7 @@ import java.util.UUID;
 public interface FeatRepository extends JpaRepository<Feat, UUID> {
     boolean existsByName(String name);
 
-    List<Feat> findAllBySourceHomebrewIsNull();
+    List<Feat> findAllByHomebrewIsNull();
 
-    List<Feat> findAllBySourceHomebrewIdIn(Set<UUID> packageIds);
+    List<Feat> findAllByHomebrewIdIn(Set<UUID> packageIds);
 }

@@ -1,6 +1,6 @@
 package com.dnd.app.service.homebrew;
 
-import com.dnd.app.domain.HomebrewInstallation;
+import com.dnd.app.domain.GmHomebrewLibrary;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.HomebrewRating;
 import com.dnd.app.domain.User;
@@ -11,7 +11,7 @@ import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.HomebrewInstallationRepository;
+import com.dnd.app.repository.GmHomebrewLibraryRepository;
 import com.dnd.app.repository.HomebrewPackageRepository;
 import com.dnd.app.repository.HomebrewRatingRepository;
 import com.dnd.app.repository.UserRepository;
@@ -32,7 +32,7 @@ import java.util.*;
 public class HomebrewMarketplaceService {
 
     private final HomebrewPackageRepository packageRepository;
-    private final HomebrewInstallationRepository installationRepository;
+    private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final HomebrewRatingRepository ratingRepository;
     private final UserRepository userRepository;
     private final HomebrewAuthoringService authoringService;
@@ -79,66 +79,66 @@ public class HomebrewMarketplaceService {
             throw new ResourceNotFoundException("Пакет не найден");
         }
 
-        if (installationRepository.existsByHomebrewPackageIdAndInstallerId(packageId, gm.getId())) {
-            throw new DuplicateResourceException("Пакет уже установлен");
+        if (gmLibraryRepository.existsByGmUserIdAndPackageId(gm.getId(), packageId)) {
+            throw new DuplicateResourceException("Пакет уже добавлен в библиотеку");
         }
 
-        HomebrewInstallation installation = HomebrewInstallation.builder()
-                .homebrewPackage(pkg)
-                .installer(gm)
-                .sourceVersion(pkg.getVersion())
+        GmHomebrewLibrary entry = GmHomebrewLibrary.builder()
+                .gmUserId(gm.getId())
+                .packageId(packageId)
                 .build();
-        installationRepository.save(installation);
+        gmLibraryRepository.save(entry);
 
         pkg.setDownloadCount(pkg.getDownloadCount() + 1);
         packageRepository.save(pkg);
 
-        long contentCount = authoringService.buildContentSummary(packageId).getItemTypeCount()
-                + authoringService.buildContentSummary(packageId).getClassCount()
-                + authoringService.buildContentSummary(packageId).getSkillCount()
-                + authoringService.buildContentSummary(packageId).getFeatCount();
-
-        log.info("Package installed: packageId={}, version={}, by={}", packageId, pkg.getVersion(), username);
+        log.info("Package added to library: packageId={}, version={}, by={}", packageId, pkg.getVersion(), username);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("installedAt", installation.getInstalledAt());
-        result.put("sourceVersion", installation.getSourceVersion());
-        result.put("contentCount", contentCount);
+        result.put("addedAt", entry.getAddedAt());
+        result.put("packageVersion", pkg.getVersion());
         return result;
     }
 
     @Transactional(readOnly = true)
     public Page<InstalledHomebrewResponse> listInstalled(String username, Pageable pageable) {
         User gm = getGameMaster(username);
-        Page<HomebrewInstallation> installations = installationRepository.findAllByInstallerId(gm.getId(), pageable);
+        List<GmHomebrewLibrary> entries = gmLibraryRepository.findByGmUserId(gm.getId());
 
-        return installations.map(inst -> {
-            HomebrewPackage pkg = inst.getHomebrewPackage();
+        List<InstalledHomebrewResponse> responses = entries.stream().map(entry -> {
+            HomebrewPackage pkg = entry.getHomebrewPackage();
             String title = pkg.getTitle();
             if (pkg.isDeleted()) {
                 title = "[УДАЛЕНО] " + title;
             }
             return InstalledHomebrewResponse.builder()
-                    .installationId(inst.getId())
                     .packageId(pkg.getId())
                     .title(title)
                     .authorUsername(pkg.getAuthor().getUsername())
                     .isDeleted(pkg.isDeleted())
-                    .installedAt(inst.getInstalledAt())
-                    .sourceVersion(inst.getSourceVersion())
+                    .installedAt(entry.getAddedAt())
+                    .sourceVersion(pkg.getVersion())
                     .contentSummary(authoringService.buildContentSummary(pkg.getId()))
                     .build();
-        });
+        }).toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), responses.size());
+        if (start > responses.size()) {
+            start = responses.size();
+        }
+        return new org.springframework.data.domain.PageImpl<>(
+                responses.subList(start, end), pageable, responses.size());
     }
 
     @Transactional
-    public void uninstall(UUID installationId, String username) {
+    public void uninstall(UUID packageId, String username) {
         User gm = getGameMaster(username);
-        HomebrewInstallation installation = installationRepository.findByIdAndInstallerId(installationId, gm.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Установка не найдена"));
-        installationRepository.delete(installation);
-        log.info("Package uninstalled: installationId={}, packageId={}, by={}",
-                installationId, installation.getHomebrewPackage().getId(), username);
+        if (!gmLibraryRepository.existsByGmUserIdAndPackageId(gm.getId(), packageId)) {
+            throw new ResourceNotFoundException("Пакет не найден в библиотеке");
+        }
+        gmLibraryRepository.deleteByGmUserIdAndPackageId(gm.getId(), packageId);
+        log.info("Package removed from library: packageId={}, by={}", packageId, username);
     }
 
     @Transactional
@@ -151,7 +151,6 @@ public class HomebrewMarketplaceService {
             throw new ResourceNotFoundException("Package not found");
         }
 
-        // Upsert rating
         HomebrewRating rating = ratingRepository.findByUserIdAndPackageId(user.getId(), packageId)
                 .orElse(null);
 

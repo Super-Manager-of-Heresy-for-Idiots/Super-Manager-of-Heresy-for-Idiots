@@ -11,7 +11,7 @@ public interface ItemTypeRepository extends JpaRepository<ItemType, UUID> {
 
     boolean existsByName(String name);
 
-    List<ItemType> findAllBySourceHomebrewIsNull();
+    List<ItemType> findAllByHomebrewIsNull();
 
-    List<ItemType> findAllBySourceHomebrewIdIn(Set<UUID> packageIds);
+    List<ItemType> findAllByHomebrewIdIn(Set<UUID> packageIds);
 }

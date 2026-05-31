@@ -31,7 +31,7 @@ public class HomebrewAuthoringService {
 
     private final HomebrewPackageRepository packageRepository;
     private final HomebrewContentItemRepository contentItemRepository;
-    private final HomebrewInstallationRepository installationRepository;
+    private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final UserRepository userRepository;
     private final TagService tagService;
     private final HomebrewContentValidatorRegistry validatorRegistry;
@@ -168,8 +168,8 @@ public class HomebrewAuthoringService {
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        if (pkg.getStatus() != HomebrewStatus.DRAFT && pkg.getStatus() != HomebrewStatus.UNPUBLISHED) {
-            throw new DuplicateResourceException("Пакет можно опубликовать только из статуса черновика (DRAFT) или снятого с публикации (UNPUBLISHED)");
+        if (pkg.getStatus() != HomebrewStatus.DRAFT) {
+            throw new DuplicateResourceException("Пакет можно опубликовать только из статуса черновика (DRAFT)");
         }
 
         long contentCount = contentItemRepository.countByHomebrewPackageId(id);
@@ -201,7 +201,7 @@ public class HomebrewAuthoringService {
             throw new DuplicateResourceException("Снять с публикации можно только опубликованные пакеты");
         }
 
-        pkg.setStatus(HomebrewStatus.UNPUBLISHED);
+        pkg.setStatus(HomebrewStatus.DRAFT);
         pkg = packageRepository.save(pkg);
         log.info("Homebrew package unpublished: id={}, by={}", id, username);
         return toDetailResponse(pkg);
@@ -213,7 +213,7 @@ public class HomebrewAuthoringService {
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        long installCount = installationRepository.countByHomebrewPackageId(id);
+        long installCount = gmLibraryRepository.countByPackageId(id);
 
         pkg.setDeletedAt(Instant.now());
         pkg.setDeletedBy(gm);

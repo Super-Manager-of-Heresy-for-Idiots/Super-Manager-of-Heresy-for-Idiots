@@ -31,6 +31,10 @@ public class Subclass {
     @Column(columnDefinition = "text")
     private String description;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -55,10 +55,6 @@ public class PlayerCharacter {
     private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "team_id")
-    private Team team;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
     private Campaign campaign;
 
@@ -69,18 +65,6 @@ public class PlayerCharacter {
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CharacterStat> stats = new ArrayList<>();
-
-    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<InventorySlot> inventorySlots = new ArrayList<>();
-
-    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<CharacterCondition> conditions = new ArrayList<>();
-
-    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<BagSlot> bagSlots = new ArrayList<>();
 
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

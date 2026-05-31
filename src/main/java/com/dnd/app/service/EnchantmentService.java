@@ -29,8 +29,6 @@ import java.util.stream.Collectors;
 public class EnchantmentService {
 
     private final EnchantmentTypeRepository enchantmentTypeRepository;
-    private final InventoryEnchantmentRepository inventoryEnchantmentRepository;
-    private final InventorySlotRepository inventorySlotRepository;
     private final ItemEnchantmentRepository itemEnchantmentRepository;
     private final ItemInstanceRepository itemInstanceRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
@@ -86,96 +84,14 @@ public class EnchantmentService {
             throw new ResourceNotFoundException("Тип зачарования не найден с id: " + id);
         }
 
-        long count = inventoryEnchantmentRepository.countByEnchantmentTypeId(id);
+        long count = itemEnchantmentRepository.countByEnchantmentTypeId(id);
         if (count > 0) {
             throw new DuplicateResourceException(
-                    "Невозможно удалить: тип зачарования используется в " + count + " зачарованиях инвентаря");
+                    "Невозможно удалить: тип зачарования используется в " + count + " зачарованиях");
         }
 
         enchantmentTypeRepository.deleteById(id);
         log.info("Удалён тип зачарования с id: {}", id);
-    }
-
-    // ==================== Player enchantment operations ====================
-
-    @Transactional
-    public EnchantmentResponse addEnchantment(UUID characterId, UUID slotId, AddEnchantmentRequest request, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
-
-        PlayerCharacter character = playerCharacterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден с id: " + characterId));
-
-        checkOwnerOrAdmin(user, character);
-
-        InventorySlot slot = inventorySlotRepository.findById(slotId)
-                .orElseThrow(() -> new ResourceNotFoundException("Слот инвентаря не найден с id: " + slotId));
-
-        if (!slot.getCharacter().getId().equals(characterId)) {
-            throw new BadRequestException("Слот не принадлежит указанному персонажу");
-        }
-
-        if (slot.getItemType() == null) {
-            throw new DuplicateResourceException("Невозможно зачаровать пустой слот");
-        }
-
-        EnchantmentType enchantmentType = enchantmentTypeRepository.findById(request.getEnchantmentTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Тип зачарования не найден с id: " + request.getEnchantmentTypeId()));
-
-        if (inventoryEnchantmentRepository.existsByInventorySlotIdAndEnchantmentTypeId(slotId, request.getEnchantmentTypeId())) {
-            throw new DuplicateResourceException("Данное зачарование уже применено к этому слоту");
-        }
-
-        InventoryEnchantment enchantment = new InventoryEnchantment();
-        enchantment.setInventorySlot(slot);
-        enchantment.setEnchantmentType(enchantmentType);
-        enchantment.setAppliedAt(Instant.now());
-        enchantment.setNotes(request.getNotes());
-
-        InventoryEnchantment saved = inventoryEnchantmentRepository.save(enchantment);
-        log.info("Добавлено зачарование {} к слоту {} персонажа {}", enchantmentType.getName(), slotId, characterId);
-        return toEnchantmentResponse(saved);
-    }
-
-    @Transactional
-    public void removeEnchantment(UUID characterId, UUID enchantmentId, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
-
-        InventoryEnchantment enchantment = inventoryEnchantmentRepository.findById(enchantmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Зачарование не найдено с id: " + enchantmentId));
-
-        if (!enchantment.getInventorySlot().getCharacter().getId().equals(characterId)) {
-            throw new BadRequestException("Зачарование не принадлежит указанному персонажу");
-        }
-
-        PlayerCharacter character = enchantment.getInventorySlot().getCharacter();
-        checkOwnerOrAdmin(user, character);
-
-        inventoryEnchantmentRepository.deleteById(enchantmentId);
-        log.info("Удалено зачарование {} с персонажа {}", enchantmentId, characterId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<EnchantmentResponse> getSlotEnchantments(UUID characterId, UUID slotId, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + username));
-
-        PlayerCharacter character = playerCharacterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден с id: " + characterId));
-
-        checkReadAccess(user, character);
-
-        InventorySlot slot = inventorySlotRepository.findById(slotId)
-                .orElseThrow(() -> new ResourceNotFoundException("Слот инвентаря не найден с id: " + slotId));
-
-        if (!slot.getCharacter().getId().equals(characterId)) {
-            throw new BadRequestException("Слот не принадлежит указанному персонажу");
-        }
-
-        return inventoryEnchantmentRepository.findAllByInventorySlotId(slotId).stream()
-                .map(this::toEnchantmentResponse)
-                .collect(Collectors.toList());
     }
 
     // ==================== Item instance enchantment operations ====================
@@ -257,16 +173,6 @@ public class EnchantmentService {
     }
 
     // ==================== Access checks ====================
-
-    private void checkOwnerOrAdmin(User user, PlayerCharacter character) {
-        if (user.getRole() == Role.ADMIN) {
-            return;
-        }
-        if (user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId())) {
-            return;
-        }
-        throw new AccessDeniedException("У вас нет доступа к этому персонажу");
-    }
 
     private void checkOwnerOrGmOrAdmin(User user, PlayerCharacter character) {
         if (user.getRole() == Role.ADMIN) {
@@ -369,15 +275,6 @@ public class EnchantmentService {
                 .durationRounds(bd.getDurationRounds())
                 .isBuff(bd.getIsBuff())
                 .createdAt(bd.getCreatedAt())
-                .build();
-    }
-
-    private EnchantmentResponse toEnchantmentResponse(InventoryEnchantment ie) {
-        return EnchantmentResponse.builder()
-                .id(ie.getId())
-                .enchantmentType(toEnchantmentTypeResponse(ie.getEnchantmentType()))
-                .appliedAt(ie.getAppliedAt())
-                .notes(ie.getNotes())
                 .build();
     }
 

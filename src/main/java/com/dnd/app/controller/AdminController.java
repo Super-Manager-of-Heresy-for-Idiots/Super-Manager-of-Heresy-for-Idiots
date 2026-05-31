@@ -283,11 +283,6 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.listAllUsers()));
     }
 
-    @GetMapping("/teams")
-    public ResponseEntity<ApiResponse<List<TeamResponse>>> listTeams() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listAllTeams()));
-    }
-
     // --- Homebrew Admin ---
 
     @GetMapping("/homebrew")

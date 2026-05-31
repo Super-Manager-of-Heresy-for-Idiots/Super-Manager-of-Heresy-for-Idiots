@@ -126,14 +126,14 @@ public class CampaignContentService {
         Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
         List<AvailableContentItem> classes = new ArrayList<>();
-        classRepository.findAllBySourceHomebrewIsNull().forEach(c ->
+        classRepository.findAllByHomebrewIsNull().forEach(c ->
                 classes.add(AvailableContentItem.builder()
                         .id(c.getId()).name(c.getName()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
-            classRepository.findAllBySourceHomebrewIdIn(activePackageIds).forEach(c ->
+            classRepository.findAllByHomebrewIdIn(activePackageIds).forEach(c ->
                     classes.add(AvailableContentItem.builder()
                             .id(c.getId()).name(c.getName()).source("HOMEBREW")
-                            .homebrewTitle(c.getSourceHomebrew() != null ? c.getSourceHomebrew().getTitle() : null)
+                            .homebrewTitle(c.getHomebrew() != null ? c.getHomebrew().getTitle() : null)
                             .build()));
         }
 
@@ -143,38 +143,38 @@ public class CampaignContentService {
                 .toList();
 
         List<AvailableContentItem> itemTypes = new ArrayList<>();
-        itemTypeRepository.findAllBySourceHomebrewIsNull().forEach(it ->
+        itemTypeRepository.findAllByHomebrewIsNull().forEach(it ->
                 itemTypes.add(AvailableContentItem.builder()
                         .id(it.getId()).name(it.getName()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
-            itemTypeRepository.findAllBySourceHomebrewIdIn(activePackageIds).forEach(it ->
+            itemTypeRepository.findAllByHomebrewIdIn(activePackageIds).forEach(it ->
                     itemTypes.add(AvailableContentItem.builder()
                             .id(it.getId()).name(it.getName()).source("HOMEBREW")
-                            .homebrewTitle(it.getSourceHomebrew() != null ? it.getSourceHomebrew().getTitle() : null)
+                            .homebrewTitle(it.getHomebrew() != null ? it.getHomebrew().getTitle() : null)
                             .build()));
         }
 
         List<AvailableContentItem> skills = new ArrayList<>();
-        skillRepository.findAllBySourceHomebrewIsNull().forEach(s ->
+        skillRepository.findAllByHomebrewIsNull().forEach(s ->
                 skills.add(AvailableContentItem.builder()
                         .id(s.getId()).name(s.getName()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
-            skillRepository.findAllBySourceHomebrewIdIn(activePackageIds).forEach(s ->
+            skillRepository.findAllByHomebrewIdIn(activePackageIds).forEach(s ->
                     skills.add(AvailableContentItem.builder()
                             .id(s.getId()).name(s.getName()).source("HOMEBREW")
-                            .homebrewTitle(s.getSourceHomebrew() != null ? s.getSourceHomebrew().getTitle() : null)
+                            .homebrewTitle(s.getHomebrew() != null ? s.getHomebrew().getTitle() : null)
                             .build()));
         }
 
         List<AvailableContentItem> feats = new ArrayList<>();
-        featRepository.findAllBySourceHomebrewIsNull().forEach(f ->
+        featRepository.findAllByHomebrewIsNull().forEach(f ->
                 feats.add(AvailableContentItem.builder()
                         .id(f.getId()).name(f.getName()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
-            featRepository.findAllBySourceHomebrewIdIn(activePackageIds).forEach(f ->
+            featRepository.findAllByHomebrewIdIn(activePackageIds).forEach(f ->
                     feats.add(AvailableContentItem.builder()
                             .id(f.getId()).name(f.getName()).source("HOMEBREW")
-                            .homebrewTitle(f.getSourceHomebrew() != null ? f.getSourceHomebrew().getTitle() : null)
+                            .homebrewTitle(f.getHomebrew() != null ? f.getHomebrew().getTitle() : null)
                             .build()));
         }
 
@@ -186,9 +186,9 @@ public class CampaignContentService {
     public boolean isClassAvailableInCampaign(UUID campaignId, UUID classId) {
         CharacterClass cc = classRepository.findById(classId).orElse(null);
         if (cc == null) return false;
-        if (cc.getSourceHomebrew() == null) return true;
+        if (cc.getHomebrew() == null) return true;
         Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
-        return activePackageIds.contains(cc.getSourceHomebrew().getId());
+        return activePackageIds.contains(cc.getHomebrew().getId());
     }
 
     public boolean isRaceAvailableInCampaign(UUID campaignId, UUID raceId) {

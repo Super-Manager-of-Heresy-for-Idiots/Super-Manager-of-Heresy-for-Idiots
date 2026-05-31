@@ -34,12 +34,8 @@ public class Skill {
     private String skillType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id")
-    private User owner;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_homebrew_id")
-    private HomebrewPackage sourceHomebrew;
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
 
     @Column(name = "damage_dice", length = 10)
     private String damageDice;

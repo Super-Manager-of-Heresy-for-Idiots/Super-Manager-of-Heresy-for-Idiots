@@ -12,7 +12,6 @@ import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.mapper.ReferenceDataMapper;
-import com.dnd.app.mapper.TeamMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
@@ -35,7 +34,6 @@ public class AdminService {
     private final CharacterClassRepository classRepository;
     private final CharacterRaceRepository raceRepository;
     private final UserRepository userRepository;
-    private final TeamRepository teamRepository;
     private final SkillRepository skillRepository;
     private final SubclassRepository subclassRepository;
     private final FeatRepository featRepository;
@@ -44,7 +42,6 @@ public class AdminService {
     private final BuffDebuffRepository buffDebuffRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
-    private final TeamMapper teamMapper;
     private final RewardResolverRegistry rewardResolverRegistry;
 
     // --- Stat Types ---
@@ -478,11 +475,6 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<UserResponse> listAllUsers() {
         return userRepository.findAll().stream().map(userMapper::toResponse).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<TeamResponse> listAllTeams() {
-        return teamRepository.findAll().stream().map(teamMapper::toResponse).toList();
     }
 
     private EquipmentSlot parseSlot(String slot) {

@@ -32,5 +32,6 @@
     <include file="db/changelog/024-npcs-quests-locations.xml"/>
     <include file="db/changelog/025-homebrew-evolution.xml"/>
     <include file="db/changelog/026-seed-target-data.xml"/>
+    <include file="db/changelog/027-align-schema-with-spec.xml"/>
 
 </databaseChangeLog>

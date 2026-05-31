@@ -11,4 +11,6 @@ public interface ItemEnchantmentRepository extends JpaRepository<ItemEnchantment
     List<ItemEnchantment> findByItemInstanceId(UUID instanceId);
 
     boolean existsByItemInstanceIdAndEnchantmentTypeId(UUID instanceId, UUID enchantmentTypeId);
+
+    long countByEnchantmentTypeId(UUID enchantmentTypeId);
 }

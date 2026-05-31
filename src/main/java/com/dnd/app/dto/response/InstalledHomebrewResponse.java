@@ -14,7 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class InstalledHomebrewResponse {
 
-    private UUID installationId;
     private UUID packageId;
     private String title;
     private String authorUsername;

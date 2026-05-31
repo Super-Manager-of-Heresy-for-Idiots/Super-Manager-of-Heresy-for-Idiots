@@ -7,7 +7,7 @@ import com.dnd.app.dto.response.HomebrewPackageResponse;
 import com.dnd.app.dto.response.HomebrewTagResponse;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.HomebrewInstallationRepository;
+import com.dnd.app.repository.GmHomebrewLibraryRepository;
 import com.dnd.app.repository.HomebrewPackageRepository;
 import com.dnd.app.repository.HomebrewTagRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import java.util.*;
 public class HomebrewAdminService {
 
     private final HomebrewPackageRepository packageRepository;
-    private final HomebrewInstallationRepository installationRepository;
+    private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final HomebrewTagRepository tagRepository;
     private final HomebrewAuthoringService authoringService;
 
@@ -51,19 +51,16 @@ public class HomebrewAdminService {
         HomebrewPackage pkg = packageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        long affectedInstallations = installationRepository.countByHomebrewPackageId(id);
-        log.info("Admin hard-deleting package: id={}, title='{}', author={}, installCount={}",
-                pkg.getId(), pkg.getTitle(), pkg.getAuthor().getUsername(), affectedInstallations);
+        long affectedLibraryEntries = gmLibraryRepository.countByPackageId(id);
+        log.info("Admin hard-deleting package: id={}, title='{}', author={}, libraryEntries={}",
+                pkg.getId(), pkg.getTitle(), pkg.getAuthor().getUsername(), affectedLibraryEntries);
 
-        installationRepository.findAll().stream()
-                .filter(i -> i.getHomebrewPackage().getId().equals(id))
-                .forEach(installationRepository::delete);
-
+        gmLibraryRepository.deleteByPackageId(id);
         packageRepository.delete(pkg);
 
         Map<String, Object> result = new HashMap<>();
         result.put("deletedPackageId", id);
-        result.put("affectedInstallations", affectedInstallations);
+        result.put("affectedLibraryEntries", affectedLibraryEntries);
         return result;
     }
 

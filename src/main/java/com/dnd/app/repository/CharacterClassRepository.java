@@ -11,7 +11,7 @@ public interface CharacterClassRepository extends JpaRepository<CharacterClass, 
 
     boolean existsByName(String name);
 
-    List<CharacterClass> findAllBySourceHomebrewIsNull();
+    List<CharacterClass> findAllByHomebrewIsNull();
 
-    List<CharacterClass> findAllBySourceHomebrewIdIn(Set<UUID> packageIds);
+    List<CharacterClass> findAllByHomebrewIdIn(Set<UUID> packageIds);
 }

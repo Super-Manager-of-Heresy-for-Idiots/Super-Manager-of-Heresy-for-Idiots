@@ -1,8 +1,8 @@
 package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.enums.ContentType;
+import com.dnd.app.repository.GmHomebrewLibraryRepository;
 import com.dnd.app.repository.HomebrewContentItemRepository;
-import com.dnd.app.repository.HomebrewInstallationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,11 +16,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HomebrewScopeResolver {
 
-    private final HomebrewInstallationRepository installationRepository;
+    private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final HomebrewContentItemRepository contentItemRepository;
 
     public Set<UUID> resolveAccessibleContentIds(UUID gmUserId) {
-        Set<UUID> installedPackageIds = installationRepository.findPackageIdsByInstallerId(gmUserId);
+        Set<UUID> installedPackageIds = gmLibraryRepository.findPackageIdsByGmUserId(gmUserId);
         if (installedPackageIds.isEmpty()) {
             return Collections.emptySet();
         }
@@ -28,7 +28,7 @@ public class HomebrewScopeResolver {
     }
 
     public Set<UUID> resolveAccessibleContentIds(UUID gmUserId, ContentType contentType) {
-        Set<UUID> installedPackageIds = installationRepository.findPackageIdsByInstallerId(gmUserId);
+        Set<UUID> installedPackageIds = gmLibraryRepository.findPackageIdsByGmUserId(gmUserId);
         if (installedPackageIds.isEmpty()) {
             return Collections.emptySet();
         }

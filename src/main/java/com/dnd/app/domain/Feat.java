@@ -31,12 +31,8 @@ public class Feat {
     private String prerequisites;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id")
-    private User owner;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_homebrew_id")
-    private HomebrewPackage sourceHomebrew;
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
