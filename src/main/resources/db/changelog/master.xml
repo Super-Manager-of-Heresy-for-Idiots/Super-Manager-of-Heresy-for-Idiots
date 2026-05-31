@@ -21,7 +21,6 @@
     <include file="db/changelog/014-seed-enchantment-types.xml"/>
     <include file="db/changelog/015-create-inventory-enchantments.xml"/>
     <include file="db/changelog/016-role-model-rework.xml"/>
-    <include file="db/changelog/016-create-bag-slots.xml"/>
     <include file="db/changelog/017-create-campaign-model.xml"/>
     <include file="db/changelog/018-migrate-team-to-campaign.xml"/>
     <include file="db/changelog/019-create-item-template-instance.xml"/>
