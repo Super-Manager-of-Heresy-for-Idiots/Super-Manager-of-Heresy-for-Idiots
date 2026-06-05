@@ -137,10 +137,17 @@ public class CampaignContentService {
                             .build()));
         }
 
-        List<AvailableContentItem> races = raceRepository.findAll().stream()
-                .map(r -> AvailableContentItem.builder()
-                        .id(r.getId()).name(r.getName()).source("GLOBAL").build())
-                .toList();
+        List<AvailableContentItem> races = new ArrayList<>();
+        raceRepository.findAllByHomebrewIsNullAndActiveTrue().forEach(r ->
+                races.add(AvailableContentItem.builder()
+                        .id(r.getId()).name(r.getName()).source("GLOBAL").build()));
+        if (!activePackageIds.isEmpty()) {
+            raceRepository.findAllByHomebrewIdInAndActiveTrue(activePackageIds).forEach(r ->
+                    races.add(AvailableContentItem.builder()
+                            .id(r.getId()).name(r.getName()).source("HOMEBREW")
+                            .homebrewTitle(r.getHomebrew() != null ? r.getHomebrew().getTitle() : null)
+                            .build()));
+        }
 
         List<AvailableContentItem> itemTypes = new ArrayList<>();
         itemTypeRepository.findAllByHomebrewIsNull().forEach(it ->
@@ -192,7 +199,11 @@ public class CampaignContentService {
     }
 
     public boolean isRaceAvailableInCampaign(UUID campaignId, UUID raceId) {
-        return raceRepository.existsById(raceId);
+        CharacterRace race = raceRepository.findById(raceId).orElse(null);
+        if (race == null || !Boolean.TRUE.equals(race.getActive())) return false;
+        if (race.getHomebrew() == null) return true;
+        Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        return activePackageIds.contains(race.getHomebrew().getId());
     }
 
     private CampaignHomebrewResponse buildResponse(HomebrewPackage pkg, Integer pinnedVersion) {

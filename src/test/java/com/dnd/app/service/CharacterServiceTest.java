@@ -32,13 +32,13 @@ class CharacterServiceTest {
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private CharacterStatRepository characterStatRepository;
-    @Mock private CharacterConditionRepository charCondRepository;
     @Mock private CharacterClassLevelRepository classLevelRepository;
     @Mock private CampaignRepository campaignRepository;
     @Mock private CampaignMemberRepository campaignMemberRepository;
     @Mock private CampaignContentService campaignContentService;
     @Mock private CampaignService campaignService;
     @Mock private CharacterMapper characterMapper;
+    @Mock private RaceService raceService;
 
     @InjectMocks private CharacterService characterService;
 
@@ -65,9 +65,9 @@ class CharacterServiceTest {
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         when(campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaignId, playerId)).thenReturn(true);
         when(campaignContentService.isClassAvailableInCampaign(campaignId, cc.getId())).thenReturn(true);
-        when(campaignContentService.isRaceAvailableInCampaign(campaignId, race.getId())).thenReturn(true);
         when(classRepository.findById(cc.getId())).thenReturn(Optional.of(cc));
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceService.getSelectableRace(campaignId, race.getId())).thenReturn(race);
+        when(raceService.buildRaceSnapshotJson(race, null)).thenReturn("{}");
         when(statTypeRepository.findAll()).thenReturn(Collections.emptyList());
         PlayerCharacter saved = PlayerCharacter.builder()
                 .id(UUID.randomUUID()).name("Hero").totalLevel(1)

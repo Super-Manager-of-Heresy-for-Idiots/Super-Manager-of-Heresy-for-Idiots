@@ -22,4 +22,6 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
     List<PlayerCharacter> findByCampaignId(UUID campaignId);
 
     List<PlayerCharacter> findByCampaignIdAndOwnerId(UUID campaignId, UUID ownerId);
+
+    long countByRaceId(UUID raceId);
 }

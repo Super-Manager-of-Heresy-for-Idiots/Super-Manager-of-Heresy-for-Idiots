@@ -18,4 +18,6 @@ public class UpdateCharacterRequest {
     private String name;
 
     private UUID raceId;
+
+    private UUID selectedLineageId;
 }

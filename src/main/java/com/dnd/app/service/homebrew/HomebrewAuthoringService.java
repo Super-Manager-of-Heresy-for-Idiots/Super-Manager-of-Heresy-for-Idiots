@@ -1020,6 +1020,7 @@ public class HomebrewAuthoringService {
             switch (type) {
                 case ITEM_TYPE -> summary.setItemTypeCount(count);
                 case CHARACTER_CLASS -> summary.setClassCount(count);
+                case RACE -> summary.setRaceCount(count);
                 case SKILL -> summary.setSkillCount(count);
                 case FEAT -> summary.setFeatCount(count);
                 case SUBCLASS -> summary.setSubclassCount(count);

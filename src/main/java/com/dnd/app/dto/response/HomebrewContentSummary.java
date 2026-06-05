@@ -16,6 +16,8 @@ public class HomebrewContentSummary {
     @Builder.Default
     private int classCount = 0;
     @Builder.Default
+    private int raceCount = 0;
+    @Builder.Default
     private int skillCount = 0;
     @Builder.Default
     private int featCount = 0;

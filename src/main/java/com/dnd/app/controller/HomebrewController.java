@@ -3,6 +3,7 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.HomebrewLibraryService;
+import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import com.dnd.app.service.homebrew.HomebrewMarketplaceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ public class HomebrewController {
     private final HomebrewAuthoringService authoringService;
     private final HomebrewMarketplaceService marketplaceService;
     private final HomebrewLibraryService libraryService;
+    private final RaceService raceService;
 
     // === Authoring (own packages) ===
 
@@ -133,6 +135,49 @@ public class HomebrewController {
         HomebrewDetailResponse data = authoringService.createPackageBuffDebuff(packageId, request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(data, "Бафф/дебафф добавлен в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/races")
+    public ResponseEntity<ApiResponse<RaceResponse>> createPackageRace(
+            @PathVariable UUID packageId, @Valid @RequestBody RaceCreateRequest request, Authentication auth) {
+        RaceResponse data = raceService.createHomebrewRace(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Homebrew race created"));
+    }
+
+    @PutMapping("/my/{packageId}/content/races/{raceId}")
+    public ResponseEntity<ApiResponse<RaceResponse>> updatePackageRace(
+            @PathVariable UUID packageId,
+            @PathVariable UUID raceId,
+            @Valid @RequestBody RaceUpdateRequest request,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.updateHomebrewRace(packageId, raceId, request, auth.getName()), "Homebrew race updated"));
+    }
+
+    @PostMapping("/my/{packageId}/content/races/{raceId}/enable")
+    public ResponseEntity<ApiResponse<RaceResponse>> enablePackageRace(
+            @PathVariable UUID packageId,
+            @PathVariable UUID raceId,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, true, auth.getName()), "Homebrew race enabled"));
+    }
+
+    @PostMapping("/my/{packageId}/content/races/{raceId}/disable")
+    public ResponseEntity<ApiResponse<RaceResponse>> disablePackageRace(
+            @PathVariable UUID packageId,
+            @PathVariable UUID raceId,
+            Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, false, auth.getName()), "Homebrew race disabled"));
+    }
+
+    @PostMapping("/my/{packageId}/content/races/{raceId}/duplicate")
+    public ResponseEntity<ApiResponse<RaceResponse>> duplicateSystemRaceIntoPackage(
+            @PathVariable UUID packageId,
+            @PathVariable UUID raceId,
+            Authentication auth) {
+        RaceResponse data = raceService.duplicateSystemRaceIntoHomebrew(packageId, raceId, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "System race duplicated into homebrew"));
     }
 
     @DeleteMapping("/my/{id}/content/{contentItemId}")

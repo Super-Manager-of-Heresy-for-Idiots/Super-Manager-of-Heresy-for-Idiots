@@ -50,6 +50,12 @@ public class PlayerCharacter {
     @JoinColumn(name = "race_id", nullable = false)
     private CharacterRace race;
 
+    @Column(name = "selected_lineage_id")
+    private UUID selectedLineageId;
+
+    @Column(name = "race_snapshot_json", columnDefinition = "text")
+    private String raceSnapshotJson;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;

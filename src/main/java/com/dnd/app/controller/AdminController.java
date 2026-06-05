@@ -3,6 +3,7 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.AdminService;
+import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
 import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class AdminController {
     private final AdminService adminService;
     private final HomebrewAdminService homebrewAdminService;
     private final HomebrewAuthoringService authoringService;
+    private final RaceService raceService;
 
     // --- Stat Types ---
 
@@ -165,9 +167,56 @@ public class AdminController {
     }
 
     @DeleteMapping("/character-races/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteRace(@PathVariable UUID id) {
-        adminService.deleteCharacterRace(id);
+    public ResponseEntity<ApiResponse<RaceResponse>> deleteRace(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication auth) {
+        RaceResponse disabledRace = raceService.softDeleteSystemRace(id, auth.getName());
+        if (disabledRace != null) {
+            return ResponseEntity.ok(ApiResponse.ok(disabledRace, "Race disabled"));
+        }
         return ResponseEntity.ok(ApiResponse.ok(null, "Раса персонажа удалена"));
+    }
+
+    @GetMapping("/races")
+    public ResponseEntity<ApiResponse<List<RaceListItemResponse>>> listRichRaces() {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.listAdminRaces()));
+    }
+
+    @PostMapping("/races")
+    public ResponseEntity<ApiResponse<RaceResponse>> createRichRace(
+            @Valid @RequestBody RaceCreateRequest request,
+            org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(raceService.createSystemRace(request, auth.getName()), "System race created"));
+    }
+
+    @GetMapping("/races/{id}")
+    public ResponseEntity<ApiResponse<RaceResponse>> getRichRace(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.getRace(id, auth.getName())));
+    }
+
+    @PutMapping("/races/{id}")
+    public ResponseEntity<ApiResponse<RaceResponse>> updateRichRace(
+            @PathVariable UUID id,
+            @Valid @RequestBody RaceUpdateRequest request,
+            org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.updateSystemRace(id, request, auth.getName()), "System race updated"));
+    }
+
+    @PostMapping("/races/{id}/enable")
+    public ResponseEntity<ApiResponse<RaceResponse>> enableRichRace(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, true, auth.getName()), "System race enabled"));
+    }
+
+    @PostMapping("/races/{id}/disable")
+    public ResponseEntity<ApiResponse<RaceResponse>> disableRichRace(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, false, auth.getName()), "System race disabled"));
     }
 
     // --- Skills ---

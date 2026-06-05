@@ -31,7 +31,6 @@ public class CharacterService {
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
     private final CharacterClassRepository classRepository;
-    private final CharacterRaceRepository raceRepository;
     private final StatTypeRepository statTypeRepository;
     private final CharacterStatRepository characterStatRepository;
     private final CharacterActiveEffectRepository activeEffectRepository;
@@ -41,48 +40,49 @@ public class CharacterService {
     private final CampaignContentService campaignContentService;
     private final CampaignService campaignService;
     private final CharacterMapper characterMapper;
+    private final RaceService raceService;
 
     @Transactional
     public CharacterResponse createCharacter(UUID campaignId, CreateCharacterRequest request, String username) {
         User owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (owner.getRole() != Role.PLAYER && owner.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Только игроки могут создавать персонажей");
+            throw new AccessDeniedException("Only players can create characters");
         }
 
         Campaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new ResourceNotFoundException("Кампания не найдена"));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found"));
 
         if (owner.getRole() == Role.PLAYER) {
             boolean isMember = campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaign.getId(), owner.getId());
             if (!isMember) {
-                throw new AccessDeniedException("Вы не являетесь участником этой кампании");
+                throw new AccessDeniedException("You are not a member of this campaign");
             }
         }
 
         if (!campaignContentService.isClassAvailableInCampaign(campaign.getId(), request.getClassId())) {
-            throw new BadRequestException("Выбранный класс недоступен в контексте этой кампании");
-        }
-        if (!campaignContentService.isRaceAvailableInCampaign(campaign.getId(), request.getRaceId())) {
-            throw new BadRequestException("Выбранная раса недоступна в контексте этой кампании");
+            throw new BadRequestException("Selected class is not available in this campaign");
         }
 
         CharacterClass charClass = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        CharacterRace race = raceRepository.findById(request.getRaceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+        CharacterRace race = raceService.getSelectableRace(campaign.getId(), request.getRaceId());
+        raceService.validateLineageSelection(race, request.getSelectedLineageId());
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(request.getName())
                 .totalLevel(1)
                 .experience(0L)
                 .race(race)
+                .selectedLineageId(request.getSelectedLineageId())
+                .raceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()))
                 .owner(owner)
                 .campaign(campaign)
                 .build();
         character = characterRepository.saveAndFlush(character);
-        log.info("Character created: id={}, name='{}', class='{}', race='{}', owner={}, campaignId={}",
-                character.getId(), character.getName(), charClass.getName(), race.getName(), username, campaign.getId());
+        log.info("Character created: id={}, name='{}', class='{}', race='{}', lineageId={}, owner={}, campaignId={}",
+                character.getId(), character.getName(), charClass.getName(), race.getName(),
+                request.getSelectedLineageId(), username, campaign.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
 
@@ -97,7 +97,7 @@ public class CharacterService {
             character.getStats().add(stat);
         }
 
-        return characterMapper.toResponse(character);
+        return toResponse(character);
     }
 
     public void addOrUpdateClassLevel(PlayerCharacter character, UUID classId, int level) {
@@ -122,48 +122,60 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public List<CharacterResponse> listCharacters(UUID campaignId, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Campaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new ResourceNotFoundException("Кампания не найдена"));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found"));
         campaignService.enforceMembershipOrAdmin(campaign, user);
 
         List<PlayerCharacter> characters = characterRepository.findByCampaignId(campaignId);
-        return characters.stream().map(characterMapper::toResponse).toList();
+        return characters.stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public CharacterResponse getCharacterById(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         enforceReadAccess(character, username);
-        return characterMapper.toResponse(character);
+        return toResponse(character);
     }
 
     @Transactional
     public CharacterResponse updateCharacter(UUID id, UpdateCharacterRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         enforceWriteAccess(character, user);
 
-        if (request.getName() != null) character.setName(request.getName());
-        if (request.getRaceId() != null) {
-            CharacterRace race = raceRepository.findById(request.getRaceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
-            character.setRace(race);
+        if (request.getName() != null) {
+            character.setName(request.getName());
         }
+        if (request.getRaceId() != null) {
+            if (character.getCampaign() == null) {
+                throw new BadRequestException("Cannot change race for character without campaign");
+            }
+            CharacterRace race = raceService.getSelectableRace(character.getCampaign().getId(), request.getRaceId());
+            raceService.validateLineageSelection(race, request.getSelectedLineageId());
+            character.setRace(race);
+            character.setSelectedLineageId(request.getSelectedLineageId());
+            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()));
+        } else if (request.getSelectedLineageId() != null) {
+            raceService.validateLineageSelection(character.getRace(), request.getSelectedLineageId());
+            character.setSelectedLineageId(request.getSelectedLineageId());
+            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(character.getRace(), request.getSelectedLineageId()));
+        }
+
         character = characterRepository.save(character);
-        return characterMapper.toResponse(character);
+        return toResponse(character);
     }
 
     @Transactional
     public void deleteCharacter(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         enforceWriteAccess(character, user);
         log.info("Character deleted: id={}, name='{}', by user={}", id, character.getName(), username);
         characterRepository.delete(character);
@@ -172,11 +184,10 @@ public class CharacterService {
     @Transactional(readOnly = true)
     public List<CharacterStatResponse> getStats(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         enforceReadAccess(character, username);
 
-        List<CharacterActiveEffect> activeEffects =
-                activeEffectRepository.findByCharacterId(characterId);
+        List<CharacterActiveEffect> activeEffects = activeEffectRepository.findByCharacterId(characterId);
 
         return character.getStats().stream().map(stat -> {
             CharacterStatResponse resp = characterMapper.toStatResponse(stat);
@@ -202,15 +213,15 @@ public class CharacterService {
     @Transactional
     public CharacterStatResponse updateStatValue(UUID characterId, UUID statId, UpdateStatRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         enforceWriteAccess(character, user);
 
         CharacterStat stat = characterStatRepository.findById(statId)
-                .orElseThrow(() -> new ResourceNotFoundException("Характеристика персонажа не найдена"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character stat not found"));
         if (!stat.getCharacter().getId().equals(characterId)) {
-            throw new BadRequestException("Характеристика не относится к этому персонажу");
+            throw new BadRequestException("Character stat does not belong to this character");
         }
         stat.setValue(request.getValue());
         stat = characterStatRepository.save(stat);
@@ -220,13 +231,13 @@ public class CharacterService {
     @Transactional
     public CharacterResponse modifyHp(UUID campaignId, UUID characterId, ModifyHpRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         enforceWriteAccess(character, user);
 
         if (character.getMaxHp() == null) {
-            throw new BadRequestException("Максимальные HP персонажа не установлены");
+            throw new BadRequestException("Character max HP is not set");
         }
 
         int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
@@ -235,12 +246,12 @@ public class CharacterService {
         character = characterRepository.save(character);
 
         log.info("HP modified: characterId={}, amount={}, newHp={}, by user={}", characterId, request.getAmount(), newHp, username);
-        return characterMapper.toResponse(character);
+        return toResponse(character);
     }
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         switch (user.getRole()) {
             case PLAYER -> {
                 if (character.getCampaign() != null
@@ -248,17 +259,23 @@ public class CharacterService {
                     return;
                 }
                 if (!character.getOwner().getId().equals(user.getId())) {
-                    throw new AccessDeniedException("Вы не являетесь участником кампании этого персонажа");
+                    throw new AccessDeniedException("You cannot read this character");
                 }
             }
             case GAME_MASTER -> {
                 if (character.getCampaign() == null
                         || !campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId())) {
-                    throw new AccessDeniedException("Этот персонаж не принадлежит вашей кампании");
+                    throw new AccessDeniedException("This character is not in your campaign");
                 }
             }
             case ADMIN -> { /* admins can view all */ }
         }
+    }
+
+    private CharacterResponse toResponse(PlayerCharacter character) {
+        CharacterResponse response = characterMapper.toResponse(character);
+        response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
+        return response;
     }
 
     private void enforceWriteAccess(PlayerCharacter character, User user) {
@@ -266,7 +283,7 @@ public class CharacterService {
         boolean isCampaignGM = user.getRole() == Role.GAME_MASTER && character.getCampaign() != null
                 && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId());
         if (!isOwner && !isCampaignGM && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Нет прав на изменение этого персонажа");
+            throw new AccessDeniedException("No permission to modify this character");
         }
     }
 }

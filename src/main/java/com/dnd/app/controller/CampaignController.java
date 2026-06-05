@@ -4,6 +4,7 @@ import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.CampaignContentService;
 import com.dnd.app.service.CampaignService;
+import com.dnd.app.service.RaceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ public class CampaignController {
 
     private final CampaignService campaignService;
     private final CampaignContentService campaignContentService;
+    private final RaceService raceService;
 
     @PostMapping
     @Operation(summary = "Create a new campaign")
@@ -175,5 +177,19 @@ public class CampaignController {
             @PathVariable UUID id, Authentication auth) {
         CampaignAvailableContentResponse content = campaignContentService.getAvailableContent(id, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(content));
+    }
+
+    @GetMapping("/{id}/races")
+    @Operation(summary = "List races available for character creation in campaign")
+    public ResponseEntity<ApiResponse<List<RaceListItemResponse>>> listAvailableRaces(
+            @PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.listAvailableForCampaign(id, auth.getName())));
+    }
+
+    @GetMapping("/{id}/races/{raceId}")
+    @Operation(summary = "Get race details available in campaign")
+    public ResponseEntity<ApiResponse<RaceResponse>> getAvailableRace(
+            @PathVariable UUID id, @PathVariable UUID raceId, Authentication auth) {
+        return ResponseEntity.ok(ApiResponse.ok(raceService.getAvailableRace(id, raceId, auth.getName())));
     }
 }

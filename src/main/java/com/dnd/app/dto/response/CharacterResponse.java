@@ -20,6 +20,8 @@ public class CharacterResponse {
     private Long experience;
     private List<ClassLevelResponse> classLevels;
     private CharacterRaceResponse race;
+    private UUID selectedLineageId;
+    private CharacterRaceSnapshotResponse raceSnapshot;
     private UUID ownerId;
     private String ownerUsername;
     private List<CharacterStatResponse> stats;
