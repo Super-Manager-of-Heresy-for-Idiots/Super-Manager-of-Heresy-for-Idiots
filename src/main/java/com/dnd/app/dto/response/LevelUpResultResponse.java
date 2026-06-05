@@ -15,6 +15,8 @@ public class LevelUpResultResponse {
     private Integer newTotalLevel;
     private String classLeveled;
     private Integer newClassLevel;
+    private Integer hpIncrease;
+    private Integer newMaxHp;
     private List<AcquiredRewardSummary> rewardsAcquired;
 
     @Data

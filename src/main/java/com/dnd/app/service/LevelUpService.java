@@ -7,6 +7,7 @@ import com.dnd.app.dto.response.LevelUpOptionsResponse;
 import com.dnd.app.dto.response.LevelUpResultResponse;
 import com.dnd.app.dto.response.RewardDetailDto;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
@@ -31,8 +32,13 @@ public class LevelUpService {
     private final CharacterClassLevelRepository classLevelRepository;
     private final ClassLevelRewardRepository rewardCatalogRepository;
     private final CharacterAcquiredRewardRepository acquiredRewardRepository;
+    private final CharacterStatRepository characterStatRepository;
+    private final StatTypeRepository statTypeRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
+    private final CampaignContentService campaignContentService;
     private final RewardResolverRegistry rewardResolverRegistry;
     private final LevelThresholdService thresholdService;
+    private final CampaignService campaignService;
 
     @Transactional(readOnly = true)
     public LevelUpOptionsResponse getLevelUpOptions(UUID characterId, String username) {
@@ -40,21 +46,30 @@ public class LevelUpService {
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
         enforceReadAccess(character, username);
 
+        if (character.getTotalLevel() >= 20) {
+            throw new BadRequestException("Персонаж уже достиг максимального уровня");
+        }
+
         if (!thresholdService.isReadyToLevelUp(character.getExperience(), character.getTotalLevel())) {
             throw new DuplicateResourceException("Персонаж еще не готов к повышению уровня");
         }
 
         List<CharacterClassLevel> existingLevels = classLevelRepository.findAllByCharacterId(characterId);
+        Set<UUID> existingClassIds = existingLevels.stream()
+                .map(CharacterClassLevel::getClassId)
+                .collect(Collectors.toSet());
+
         Set<UUID> acquiredRewardIds = acquiredRewardRepository.findAllByCharacterId(characterId).stream()
                 .map(ar -> ar.getClassLevelReward().getId())
                 .collect(Collectors.toSet());
 
-        Set<UUID> classesWithSubclass = findClassesWithAcquiredSubclass(characterId, acquiredRewardIds);
+        Set<UUID> classesWithSubclass = findClassesWithAcquiredSubclass(characterId);
 
-        List<CharacterClass> allClasses = classRepository.findAll();
+        List<CharacterClass> availableClasses = getAvailableClasses(character, existingClassIds);
+
         List<LevelUpOptionsResponse.AvailableClassOption> options = new ArrayList<>();
 
-        for (CharacterClass cc : allClasses) {
+        for (CharacterClass cc : availableClasses) {
             int currentClassLevel = existingLevels.stream()
                     .filter(cl -> cl.getClassId().equals(cc.getId()))
                     .findFirst()
@@ -66,8 +81,6 @@ public class LevelUpService {
             int newLevel = currentClassLevel + 1;
             List<ClassLevelReward> rewards = rewardCatalogRepository
                     .findAllByCharacterClassIdAndRequiredLevel(cc.getId(), newLevel);
-
-            if (rewards.isEmpty() && currentClassLevel == 0) continue;
 
             List<LevelUpOptionsResponse.RewardGroup> groups = buildRewardGroups(
                     rewards, acquiredRewardIds, classesWithSubclass.contains(cc.getId()));
@@ -81,9 +94,11 @@ public class LevelUpService {
                     .build());
         }
 
+        long xpToNext = thresholdService.xpToNextLevel(character.getExperience(), character.getTotalLevel());
+
         return LevelUpOptionsResponse.builder()
                 .currentTotalLevel(character.getTotalLevel())
-                .xpToNextLevel(0L)
+                .xpToNextLevel(xpToNext)
                 .availableClasses(options)
                 .build();
     }
@@ -95,9 +110,10 @@ public class LevelUpService {
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
-        boolean isOwner = user.getRole() == Role.PLAYER && character.getOwner().getId().equals(user.getId());
-        if (!isOwner && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Только владелец может повышать уровень персонажа");
+        enforceWriteAccess(character, user);
+
+        if (character.getTotalLevel() >= 20) {
+            throw new BadRequestException("Персонаж уже достиг максимального уровня");
         }
 
         if (!thresholdService.isReadyToLevelUp(character.getExperience(), character.getTotalLevel())) {
@@ -114,6 +130,12 @@ public class LevelUpService {
 
         if (newClassLevel > 20) {
             throw new UnprocessableEntityException("Уровень класса не может быть выше 20");
+        }
+
+        if (currentClassLevel == 0 && character.getCampaign() != null) {
+            if (!campaignContentService.isClassAvailableInCampaign(character.getCampaign().getId(), targetClass.getId())) {
+                throw new BadRequestException("Этот класс недоступен в текущей кампании");
+            }
         }
 
         List<ClassLevelReward> availableRewards = rewardCatalogRepository
@@ -141,7 +163,7 @@ public class LevelUpService {
             boolean isChoice = rewards.stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsChoice()));
 
             if ("SUBCLASS".equals(type)) {
-                boolean hasSubclass = hasAcquiredSubclassForClass(characterId, targetClass.getId(), acquiredRewardIds);
+                boolean hasSubclass = hasAcquiredSubclassForClass(characterId, targetClass.getId());
                 if (hasSubclass) continue;
             }
 
@@ -165,7 +187,7 @@ public class LevelUpService {
                         throw new UnprocessableEntityException("Награда уже получена: " + c.getId());
                     }
                     if ("SUBCLASS".equals(c.getRewardType())) {
-                        boolean hasSubclass = hasAcquiredSubclassForClass(characterId, targetClass.getId(), acquiredRewardIds);
+                        boolean hasSubclass = hasAcquiredSubclassForClass(characterId, targetClass.getId());
                         if (hasSubclass) {
                             throw new UnprocessableEntityException("У персонажа уже есть подкласс для этого класса");
                         }
@@ -180,9 +202,7 @@ public class LevelUpService {
                     .forEach(toAcquire::add);
         }
 
-        character.setTotalLevel(character.getTotalLevel() + 1);
-        characterRepository.save(character);
-
+        // --- Update class level ---
         if (existingLevel.isPresent()) {
             CharacterClassLevel ccl = existingLevel.get();
             ccl.setClassLevel(newClassLevel);
@@ -196,6 +216,26 @@ public class LevelUpService {
             classLevelRepository.save(ccl);
         }
 
+        character.setTotalLevel(character.getTotalLevel() + 1);
+
+        // --- Update HP ---
+        int hitDie = targetClass.getHitDie() != null ? targetClass.getHitDie() : 8;
+        int conModifier = getConModifier(character);
+        int hpIncrease = (hitDie / 2) + 1 + conModifier;
+        if (hpIncrease < 1) hpIncrease = 1;
+
+        if (character.getMaxHp() != null) {
+            character.setMaxHp(character.getMaxHp() + hpIncrease);
+            int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
+            character.setCurrentHp(currentHp + hpIncrease);
+        }
+
+        // --- Update hit dice ---
+        character.setHitDiceTotal(buildHitDiceTotal(characterId, targetClass, newClassLevel, existingLevel.isPresent()));
+
+        characterRepository.save(character);
+
+        // --- Acquire rewards ---
         List<LevelUpResultResponse.AcquiredRewardSummary> summaries = new ArrayList<>();
         for (ClassLevelReward reward : toAcquire) {
             CharacterAcquiredReward acquired = CharacterAcquiredReward.builder()
@@ -211,15 +251,84 @@ public class LevelUpService {
                     .build());
         }
 
-        log.info("Level up committed: characterId={}, class='{}', newClassLevel={}, newTotalLevel={}, rewardsAcquired={}, user={}",
-                characterId, targetClass.getName(), newClassLevel, character.getTotalLevel(), summaries.size(), username);
+        log.info("Level up committed: characterId={}, class='{}', newClassLevel={}, newTotalLevel={}, hpIncrease={}, rewardsAcquired={}, user={}",
+                characterId, targetClass.getName(), newClassLevel, character.getTotalLevel(), hpIncrease, summaries.size(), username);
 
         return LevelUpResultResponse.builder()
                 .newTotalLevel(character.getTotalLevel())
                 .classLeveled(targetClass.getName())
                 .newClassLevel(newClassLevel)
+                .hpIncrease(hpIncrease)
+                .newMaxHp(character.getMaxHp())
                 .rewardsAcquired(summaries)
                 .build();
+    }
+
+    private List<CharacterClass> getAvailableClasses(PlayerCharacter character, Set<UUID> existingClassIds) {
+        if (character.getCampaign() == null) {
+            List<CharacterClass> vanilla = classRepository.findAllByHomebrewIsNull();
+            if (!existingClassIds.isEmpty()) {
+                Set<UUID> vanillaIds = vanilla.stream().map(CharacterClass::getId).collect(Collectors.toSet());
+                List<CharacterClass> homebrewOwned = existingClassIds.stream()
+                        .filter(id -> !vanillaIds.contains(id))
+                        .map(id -> classRepository.findById(id).orElse(null))
+                        .filter(Objects::nonNull)
+                        .toList();
+                List<CharacterClass> result = new ArrayList<>(vanilla);
+                result.addAll(homebrewOwned);
+                return result;
+            }
+            return vanilla;
+        }
+
+        List<CharacterClass> allClasses = classRepository.findAll();
+        return allClasses.stream()
+                .filter(cc -> {
+                    if (existingClassIds.contains(cc.getId())) return true;
+                    if (cc.getHomebrew() == null) return true;
+                    return campaignContentService.isClassAvailableInCampaign(
+                            character.getCampaign().getId(), cc.getId());
+                })
+                .toList();
+    }
+
+    private int getConModifier(PlayerCharacter character) {
+        Optional<StatType> conStat = statTypeRepository.findAll().stream()
+                .filter(st -> "Constitution".equals(st.getName()))
+                .findFirst();
+        if (conStat.isEmpty()) return 0;
+
+        Optional<CharacterStat> stat = character.getStats().stream()
+                .filter(s -> s.getStatType().getId().equals(conStat.get().getId()))
+                .findFirst();
+        if (stat.isEmpty()) return 0;
+
+        return (stat.get().getValue() - 10) / 2;
+    }
+
+    private String buildHitDiceTotal(UUID characterId, CharacterClass leveledClass, int newClassLevel, boolean existedBefore) {
+        List<CharacterClassLevel> allLevels = classLevelRepository.findAllByCharacterId(characterId);
+
+        Map<UUID, Integer> levelsByClassId = new LinkedHashMap<>();
+        for (CharacterClassLevel ccl : allLevels) {
+            if (ccl.getClassId().equals(leveledClass.getId())) {
+                levelsByClassId.put(ccl.getClassId(), newClassLevel);
+            } else {
+                levelsByClassId.put(ccl.getClassId(), ccl.getClassLevel());
+            }
+        }
+        if (!existedBefore) {
+            levelsByClassId.put(leveledClass.getId(), 1);
+        }
+
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<UUID, Integer> entry : levelsByClassId.entrySet()) {
+            CharacterClass cc = classRepository.findById(entry.getKey()).orElse(null);
+            int hitDie = (cc != null && cc.getHitDie() != null) ? cc.getHitDie() : 8;
+            parts.add(entry.getValue() + "d" + hitDie);
+        }
+
+        return String.join(" + ", parts);
     }
 
     private List<LevelUpOptionsResponse.RewardGroup> buildRewardGroups(
@@ -260,7 +369,7 @@ public class LevelUpService {
         return groups;
     }
 
-    private Set<UUID> findClassesWithAcquiredSubclass(UUID characterId, Set<UUID> acquiredRewardIds) {
+    private Set<UUID> findClassesWithAcquiredSubclass(UUID characterId) {
         List<CharacterAcquiredReward> allAcquired = acquiredRewardRepository.findAllByCharacterId(characterId);
         return allAcquired.stream()
                 .filter(ar -> "SUBCLASS".equals(ar.getClassLevelReward().getRewardType()))
@@ -268,11 +377,20 @@ public class LevelUpService {
                 .collect(Collectors.toSet());
     }
 
-    private boolean hasAcquiredSubclassForClass(UUID characterId, UUID classId, Set<UUID> acquiredRewardIds) {
+    private boolean hasAcquiredSubclassForClass(UUID characterId, UUID classId) {
         List<CharacterAcquiredReward> allAcquired = acquiredRewardRepository.findAllByCharacterId(characterId);
         return allAcquired.stream()
                 .anyMatch(ar -> "SUBCLASS".equals(ar.getClassLevelReward().getRewardType())
                         && ar.getClassLevelReward().getCharacterClass().getId().equals(classId));
+    }
+
+    private void enforceWriteAccess(PlayerCharacter character, User user) {
+        boolean isOwner = character.getOwner().getId().equals(user.getId());
+        boolean isCampaignGM = character.getCampaign() != null
+                && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId());
+        if (!isOwner && !isCampaignGM && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Нет прав на повышение уровня этого персонажа");
+        }
     }
 
     private void enforceReadAccess(PlayerCharacter character, String username) {
@@ -285,8 +403,10 @@ public class LevelUpService {
                 }
             }
             case GAME_MASTER -> {
-                if (!characterRepository.isPlayerInGameMasterCampaign(character.getOwner().getId(), user.getId())) {
-                    throw new AccessDeniedException("Владелец этого персонажа не состоит ни в одной из ваших кампаний");
+                boolean isCampaignGM = character.getCampaign() != null
+                        && campaignService.isGmInCampaign(character.getCampaign().getId(), user.getId());
+                if (!isCampaignGM) {
+                    throw new AccessDeniedException("Этот персонаж не в вашей кампании");
                 }
             }
             case ADMIN -> { }
