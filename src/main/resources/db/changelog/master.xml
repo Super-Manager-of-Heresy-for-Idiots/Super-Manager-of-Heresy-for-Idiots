@@ -33,5 +33,9 @@
     <include file="db/changelog/026-seed-target-data.xml"/>
     <include file="db/changelog/027-align-schema-with-spec.xml"/>
     <include file="db/changelog/028-race-species-evolution.xml"/>
+    <include file="db/changelog/029-character-wizard.xml"/>
+    <include file="db/changelog/030-seed-wizard-data.xml"/>
+    <include file="db/changelog/031-fix-seed-language.xml"/>
+    <include file="db/changelog/032-schema-integrity.xml"/>
 
 </databaseChangeLog>

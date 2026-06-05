@@ -25,6 +25,26 @@ public class CharacterResponse {
     private UUID ownerId;
     private String ownerUsername;
     private List<CharacterStatResponse> stats;
+    private Integer currentHp;
+    private Integer maxHp;
+
+    private String alignment;
+    private BackgroundResponse background;
+    private String avatarUrl;
+    private Integer armorClass;
+    private Integer speed;
+    private Boolean inspiration;
+    private String hitDiceType;
+    private String hitDiceTotal;
+    private Integer deathSaveSuccesses;
+    private Integer deathSaveFailures;
+    private List<String> savingThrowProficiencyStatNames;
+    private List<CharacterSkillProficiencyResponse> skillProficiencies;
+    private List<CharacterKnownSpellResponse> knownSpells;
+    private BiographyResponse biography;
+    private String features;
+    private List<CharacterAttackResponse> attacks;
+
     private Instant createdAt;
     private Instant updatedAt;
 }

@@ -22,10 +22,23 @@ import java.util.UUID;
 public class CampaignCharacterController {
 
     private final CharacterService characterService;
+    private final CharacterWizardService characterWizardService;
     private final ItemInstanceService itemInstanceService;
     private final CharacterEffectService characterEffectService;
     private final WalletService walletService;
     private final CharacterResourceService characterResourceService;
+
+    // --- Full character creation (wizard) ---
+
+    @PostMapping("/full")
+    @Operation(summary = "Create a full 5e character via wizard")
+    public ResponseEntity<ApiResponse<CharacterResponse>> createFullCharacter(
+            @PathVariable UUID campaignId,
+            @Valid @RequestBody CreateFullCharacterRequest request, Authentication auth) {
+        CharacterResponse character = characterWizardService.createFullCharacter(campaignId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(character, "Персонаж создан"));
+    }
 
     // --- Character CRUD ---
 

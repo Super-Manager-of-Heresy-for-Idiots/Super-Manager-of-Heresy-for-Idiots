@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========== 1. Rename stat_types to English ========== -->
+
+    <changeSet id="031-01-rename-stat-types" author="fix">
+        <comment>Stat types were in Russian (СИЛ, ЛОВ...) but all service code uses English names.
+                 Migration 030 seed JOINs on English names and found 0 matches.</comment>
+        <sql>
+            UPDATE stat_types SET name = 'Strength',     description = 'Physical power'          WHERE id = 'a0000000-0000-0000-0000-000000000001';
+            UPDATE stat_types SET name = 'Dexterity',    description = 'Agility and reflexes'     WHERE id = 'a0000000-0000-0000-0000-000000000002';
+            UPDATE stat_types SET name = 'Constitution', description = 'Endurance and health'     WHERE id = 'a0000000-0000-0000-0000-000000000003';
+            UPDATE stat_types SET name = 'Intelligence', description = 'Logic and memory'         WHERE id = 'a0000000-0000-0000-0000-000000000004';
+            UPDATE stat_types SET name = 'Wisdom',       description = 'Perception and insight'   WHERE id = 'a0000000-0000-0000-0000-000000000005';
+            UPDATE stat_types SET name = 'Charisma',     description = 'Force of personality'     WHERE id = 'a0000000-0000-0000-0000-000000000006';
+        </sql>
+    </changeSet>
+
+    <!-- ========== 2. Rename character_classes to English + add missing ========== -->
+
+    <changeSet id="031-02-rename-classes" author="fix">
+        <comment>Classes were in Russian but CharacterWizardService switch statements use English.
+                 Migration 030 UPDATEs matched 0 rows. Also adds 4 missing SRD classes.</comment>
+        <sql>
+            UPDATE character_classes SET name = 'Fighter',  description = 'A master of martial combat, skilled with a variety of weapons and armor' WHERE id = 'b0000000-0000-0000-0000-000000000001';
+            UPDATE character_classes SET name = 'Wizard',   description = 'A scholarly magic-user capable of manipulating the structures of reality' WHERE id = 'b0000000-0000-0000-0000-000000000002';
+            UPDATE character_classes SET name = 'Rogue',    description = 'A scoundrel who uses stealth and trickery to overcome obstacles' WHERE id = 'b0000000-0000-0000-0000-000000000003';
+            UPDATE character_classes SET name = 'Cleric',   description = 'A priestly champion who wields divine magic in service of a higher power' WHERE id = 'b0000000-0000-0000-0000-000000000004';
+            UPDATE character_classes SET name = 'Ranger',   description = 'A warrior who combats threats on the edges of civilization' WHERE id = 'b0000000-0000-0000-0000-000000000005';
+            UPDATE character_classes SET name = 'Paladin',  description = 'A holy warrior bound to a sacred oath' WHERE id = 'b0000000-0000-0000-0000-000000000006';
+            UPDATE character_classes SET name = 'Bard',     description = 'An inspiring magician whose power echoes the music of creation' WHERE id = 'b0000000-0000-0000-0000-000000000007';
+            UPDATE character_classes SET name = 'Druid',    description = 'A priest of the Old Faith, wielding the powers of nature' WHERE id = 'b0000000-0000-0000-0000-000000000008';
+
+            INSERT INTO character_classes (id, name, description)
+            VALUES
+                ('b0000000-0000-0000-0000-000000000009', 'Barbarian', 'A fierce warrior of primitive background who can enter a battle rage'),
+                ('b0000000-0000-0000-0000-000000000010', 'Monk',      'A master of martial arts, harnessing the power of the body in pursuit of perfection'),
+                ('b0000000-0000-0000-0000-000000000011', 'Sorcerer',  'A spellcaster who draws on inherent magic from a gift or bloodline'),
+                ('b0000000-0000-0000-0000-000000000012', 'Warlock',   'A wielder of magic derived from a bargain with an extraplanar entity')
+            ON CONFLICT (name) DO NOTHING;
+        </sql>
+    </changeSet>
+
+    <!-- ========== 3. Fix buffs_debuffs target_stat_id ========== -->
+
+    <changeSet id="031-03-fix-buffdebuff-stats" author="fix">
+        <comment>Seed 009 referenced stat_types WHERE name='STR' but names were Russian.
+                 Blessed and Weakened got NULL target_stat_id.</comment>
+        <sql>
+            UPDATE buffs_debuffs SET target_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength')
+            WHERE name = 'Blessed' AND target_stat_id IS NULL;
+
+            UPDATE buffs_debuffs SET target_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength')
+            WHERE name = 'Weakened' AND target_stat_id IS NULL;
+        </sql>
+    </changeSet>
+
+    <!-- ========== 4. Seed proficiency_skills (table is empty — 030 JOIN failed) ========== -->
+
+    <changeSet id="031-04-seed-proficiency-skills" author="fix">
+        <comment>Migration 030-01 tried to seed 18 skills but JOIN on English stat names
+                 found 0 rows because stat_types were Russian. Table is empty.</comment>
+        <sql>
+            INSERT INTO proficiency_skills (id, name, governing_stat_id)
+            SELECT gen_random_uuid(), v.name, st.id
+            FROM (VALUES
+                ('Athletics',       'Strength'),
+                ('Acrobatics',      'Dexterity'),
+                ('Sleight of Hand', 'Dexterity'),
+                ('Stealth',         'Dexterity'),
+                ('Arcana',          'Intelligence'),
+                ('History',         'Intelligence'),
+                ('Investigation',   'Intelligence'),
+                ('Nature',          'Intelligence'),
+                ('Religion',        'Intelligence'),
+                ('Animal Handling', 'Wisdom'),
+                ('Insight',         'Wisdom'),
+                ('Medicine',        'Wisdom'),
+                ('Perception',      'Wisdom'),
+                ('Survival',        'Wisdom'),
+                ('Deception',       'Charisma'),
+                ('Intimidation',    'Charisma'),
+                ('Performance',     'Charisma'),
+                ('Persuasion',      'Charisma')
+            ) AS v(name, stat_name)
+            JOIN stat_types st ON st.name = v.stat_name
+            WHERE NOT EXISTS (SELECT 1 FROM proficiency_skills ps WHERE ps.name = v.name);
+        </sql>
+    </changeSet>
+
+    <!-- ========== 5. Apply class metadata (030-03 matched 0 rows) ========== -->
+
+    <changeSet id="031-05-apply-class-metadata" author="fix">
+        <comment>Migration 030-03 tried to UPDATE classes by English name but names were Russian.
+                 Now classes are English, re-apply all metadata including 4 new classes.</comment>
+        <sql>
+            -- Barbarian (new)
+            UPDATE character_classes SET
+                hit_die = 12,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Strength","Constitution"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Animal Handling","Athletics","Intimidation","Nature","Perception","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons, martial weapons',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Barbarian';
+
+            -- Bard
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Dexterity","Charisma"]',
+                skill_choice_count = 3,
+                skill_choice_option_ids_json = '["Acrobatics","Animal Handling","Arcana","Athletics","Deception","History","Insight","Intimidation","Investigation","Medicine","Nature","Perception","Performance","Persuasion","Religion","Sleight of Hand","Stealth","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons, hand crossbows, longswords, rapiers, shortswords',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Bard';
+
+            -- Cleric
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["History","Insight","Medicine","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Cleric';
+
+            -- Druid
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                saving_throw_stat_ids_json = '["Intelligence","Wisdom"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Animal Handling","Insight","Medicine","Nature","Perception","Religion","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields (nonmetal), clubs, daggers, darts, javelins, maces, quarterstaffs, scimitars, sickles, slings, spears',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Druid';
+
+            -- Fighter
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Strength","Constitution"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Acrobatics","Animal Handling","Athletics","History","Insight","Intimidation","Perception","Survival"]',
+                armor_weapon_proficiencies = 'All armor, shields, simple weapons, martial weapons',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Fighter';
+
+            -- Monk (new)
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Strength","Dexterity"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Acrobatics","Athletics","History","Insight","Religion","Stealth"]',
+                armor_weapon_proficiencies = 'Simple weapons, shortswords',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Monk';
+
+            -- Paladin
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Athletics","Insight","Intimidation","Medicine","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'All armor, shields, simple weapons, martial weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = false, is_half_caster = true
+            WHERE name = 'Paladin';
+
+            -- Ranger
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Strength","Dexterity"]',
+                skill_choice_count = 3,
+                skill_choice_option_ids_json = '["Animal Handling","Athletics","Insight","Investigation","Nature","Perception","Stealth","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons, martial weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = false, is_half_caster = true
+            WHERE name = 'Ranger';
+
+            -- Rogue
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Dexterity","Intelligence"]',
+                skill_choice_count = 4,
+                skill_choice_option_ids_json = '["Acrobatics","Athletics","Deception","Insight","Intimidation","Investigation","Perception","Performance","Persuasion","Sleight of Hand","Stealth"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons, hand crossbows, longswords, rapiers, shortswords',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Rogue';
+
+            -- Sorcerer (new)
+            UPDATE character_classes SET
+                hit_die = 6,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Constitution","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Deception","Insight","Intimidation","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'Daggers, darts, slings, quarterstaffs, light crossbows',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Sorcerer';
+
+            -- Warlock (new)
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Deception","History","Intimidation","Investigation","Nature","Religion"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Warlock';
+
+            -- Wizard
+            UPDATE character_classes SET
+                hit_die = 6,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Intelligence'),
+                saving_throw_stat_ids_json = '["Intelligence","Wisdom"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","History","Insight","Investigation","Medicine","Religion"]',
+                armor_weapon_proficiencies = 'Daggers, darts, slings, quarterstaffs, light crossbows',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Intelligence'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Wizard';
+        </sql>
+    </changeSet>
+
+    <!-- ========== 6. Fix spell available_to_class_ids_json ========== -->
+
+    <changeSet id="031-06-fix-spell-class-ids" author="fix">
+        <comment>Migration 030-04 built class ID JSON using English class names but classes were Russian.
+                 All spells got NULL available_to_class_ids_json. Now rebuild from correct names.</comment>
+        <sql><![CDATA[
+            WITH spell_class_map(spell_name, classes) AS (VALUES
+                ('Fire Bolt',       ARRAY['Sorcerer','Wizard']),
+                ('Sacred Flame',    ARRAY['Cleric']),
+                ('Eldritch Blast',  ARRAY['Warlock']),
+                ('Mage Hand',       ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Light',           ARRAY['Bard','Cleric','Sorcerer','Wizard']),
+                ('Minor Illusion',  ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Prestidigitation',ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Ray of Frost',    ARRAY['Sorcerer','Wizard']),
+                ('Thaumaturgy',     ARRAY['Cleric']),
+                ('Druidcraft',      ARRAY['Druid']),
+                ('Vicious Mockery', ARRAY['Bard']),
+                ('Guidance',        ARRAY['Cleric','Druid']),
+                ('Resistance',      ARRAY['Cleric','Druid']),
+                ('Spare the Dying', ARRAY['Cleric']),
+                ('Chill Touch',     ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Poison Spray',    ARRAY['Druid','Sorcerer','Warlock','Wizard']),
+                ('Produce Flame',   ARRAY['Druid']),
+                ('Shillelagh',      ARRAY['Druid']),
+                ('Blade Ward',      ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('True Strike',     ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Magic Missile',   ARRAY['Sorcerer','Wizard']),
+                ('Shield',          ARRAY['Sorcerer','Wizard']),
+                ('Cure Wounds',     ARRAY['Bard','Cleric','Druid','Paladin','Ranger']),
+                ('Healing Word',    ARRAY['Bard','Cleric','Druid']),
+                ('Bless',           ARRAY['Cleric','Paladin']),
+                ('Thunderwave',     ARRAY['Bard','Druid','Sorcerer','Wizard']),
+                ('Detect Magic',    ARRAY['Bard','Cleric','Druid','Paladin','Ranger','Sorcerer','Wizard']),
+                ('Mage Armor',      ARRAY['Sorcerer','Wizard']),
+                ('Sleep',           ARRAY['Bard','Sorcerer','Wizard']),
+                ('Faerie Fire',     ARRAY['Bard','Druid']),
+                ('Guiding Bolt',    ARRAY['Cleric']),
+                ('Hex',             ARRAY['Warlock']),
+                ('Hunter''s Mark',  ARRAY['Ranger']),
+                ('Burning Hands',   ARRAY['Sorcerer','Wizard']),
+                ('Charm Person',    ARRAY['Bard','Druid','Sorcerer','Warlock','Wizard']),
+                ('Entangle',        ARRAY['Druid']),
+                ('Inflict Wounds',  ARRAY['Cleric']),
+                ('Witch Bolt',      ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Command',         ARRAY['Cleric','Paladin']),
+                ('Sanctuary',       ARRAY['Cleric']),
+                ('Spiritual Weapon',ARRAY['Cleric']),
+                ('Hold Person',     ARRAY['Bard','Cleric','Druid','Sorcerer','Warlock','Wizard']),
+                ('Misty Step',      ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Scorching Ray',   ARRAY['Sorcerer','Wizard']),
+                ('Lesser Restoration', ARRAY['Bard','Cleric','Druid','Paladin','Ranger']),
+                ('Shatter',         ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Web',             ARRAY['Sorcerer','Wizard']),
+                ('Invisibility',    ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Darkness',        ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Mirror Image',    ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Fireball',        ARRAY['Sorcerer','Wizard']),
+                ('Counterspell',    ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Revivify',        ARRAY['Cleric','Paladin']),
+                ('Spirit Guardians',ARRAY['Cleric']),
+                ('Dispel Magic',    ARRAY['Bard','Cleric','Druid','Paladin','Sorcerer','Warlock','Wizard']),
+                ('Lightning Bolt',  ARRAY['Sorcerer','Wizard']),
+                ('Fly',             ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Haste',           ARRAY['Sorcerer','Wizard']),
+                ('Greater Invisibility', ARRAY['Bard','Sorcerer','Wizard']),
+                ('Banishment',      ARRAY['Cleric','Paladin','Sorcerer','Warlock','Wizard']),
+                ('Dimension Door',  ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Polymorph',       ARRAY['Bard','Druid','Sorcerer','Wizard']),
+                ('Wall of Fire',    ARRAY['Druid','Sorcerer','Wizard']),
+                ('Mass Cure Wounds',ARRAY['Bard','Cleric','Druid']),
+                ('Raise Dead',      ARRAY['Bard','Cleric','Paladin']),
+                ('Cone of Cold',    ARRAY['Sorcerer','Wizard']),
+                ('Hold Monster',    ARRAY['Bard','Sorcerer','Warlock','Wizard'])
+            )
+            UPDATE spells s
+            SET available_to_class_ids_json = (
+                SELECT '["' || string_agg(cc.id::text, '","') || '"]'
+                FROM character_classes cc
+                WHERE cc.name = ANY(m.classes)
+            )
+            FROM spell_class_map m
+            WHERE s.name = m.spell_name;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========== 1. New tables ========== -->
+
+    <changeSet id="029-01-create-proficiency-skills" author="wizard">
+        <createTable tableName="proficiency_skills">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(60)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="governing_stat_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="proficiency_skills" baseColumnNames="governing_stat_id"
+                                 referencedTableName="stat_types" referencedColumnNames="id"
+                                 constraintName="fk_profskill_stat"/>
+    </changeSet>
+
+    <changeSet id="029-02-create-backgrounds" author="wizard">
+        <createTable tableName="backgrounds">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="skill_proficiency_ids_json" type="text"/>
+            <column name="granted_extras" type="text"/>
+            <column name="homebrew_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="backgrounds" baseColumnNames="homebrew_id"
+                                 referencedTableName="homebrew_packages" referencedColumnNames="id"
+                                 constraintName="fk_bg_homebrew" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="029-03-create-spells" author="wizard">
+        <createTable tableName="spells">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="level" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="school" type="varchar(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="available_to_class_ids_json" type="text"/>
+            <column name="homebrew_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="spells" baseColumnNames="homebrew_id"
+                                 referencedTableName="homebrew_packages" referencedColumnNames="id"
+                                 constraintName="fk_spell_homebrew" onDelete="SET NULL"/>
+        <createIndex tableName="spells" indexName="idx_spell_level">
+            <column name="level"/>
+        </createIndex>
+        <createIndex tableName="spells" indexName="idx_spell_school">
+            <column name="school"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ========== 2. Extend character_classes ========== -->
+
+    <changeSet id="029-04-extend-character-classes" author="wizard">
+        <addColumn tableName="character_classes">
+            <column name="hit_die" type="int" defaultValueNumeric="8"/>
+            <column name="primary_ability_stat_id" type="uuid"/>
+            <column name="saving_throw_stat_ids_json" type="text"/>
+            <column name="skill_choice_count" type="int" defaultValueNumeric="2"/>
+            <column name="skill_choice_option_ids_json" type="text"/>
+            <column name="armor_weapon_proficiencies" type="text"/>
+            <column name="is_spellcaster" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spellcasting_stat_id" type="uuid"/>
+            <column name="has_cantrips" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_half_caster" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="character_classes" baseColumnNames="primary_ability_stat_id"
+                                 referencedTableName="stat_types" referencedColumnNames="id"
+                                 constraintName="fk_class_primary_stat"/>
+        <addForeignKeyConstraint baseTableName="character_classes" baseColumnNames="spellcasting_stat_id"
+                                 referencedTableName="stat_types" referencedColumnNames="id"
+                                 constraintName="fk_class_spellcasting_stat"/>
+    </changeSet>
+
+    <!-- ========== 3. Extend characters ========== -->
+
+    <changeSet id="029-05-extend-characters" author="wizard">
+        <addColumn tableName="characters">
+            <column name="alignment" type="varchar(40)"/>
+            <column name="subrace_id" type="uuid"/>
+            <column name="background_id" type="uuid"/>
+            <column name="avatar_url" type="text"/>
+            <column name="armor_class" type="int"/>
+            <column name="speed" type="int"/>
+            <column name="inspiration" type="boolean" defaultValueBoolean="false"/>
+            <column name="hit_dice_type" type="varchar(10)"/>
+            <column name="hit_dice_total" type="varchar(20)"/>
+            <column name="death_save_successes" type="int" defaultValueNumeric="0"/>
+            <column name="death_save_failures" type="int" defaultValueNumeric="0"/>
+            <column name="saving_throw_proficiency_stat_ids_json" type="text"/>
+            <column name="biography_json" type="text"/>
+            <column name="features" type="text"/>
+            <column name="attacks_json" type="text"/>
+            <column name="score_method" type="varchar(20)"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="characters" baseColumnNames="background_id"
+                                 referencedTableName="backgrounds" referencedColumnNames="id"
+                                 constraintName="fk_char_background"/>
+    </changeSet>
+
+    <!-- ========== 4. Character skill proficiencies (join table) ========== -->
+
+    <changeSet id="029-06-create-character-skill-proficiencies" author="wizard">
+        <createTable tableName="character_skill_proficiencies">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="skill_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_skill_proficiencies" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_csp_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_skill_proficiencies" baseColumnNames="skill_id"
+                                 referencedTableName="proficiency_skills" referencedColumnNames="id"
+                                 constraintName="fk_csp_skill"/>
+        <addUniqueConstraint tableName="character_skill_proficiencies"
+                             columnNames="character_id, skill_id"
+                             constraintName="uq_char_profskill"/>
+    </changeSet>
+
+    <!-- ========== 5. Character known spells (join table) ========== -->
+
+    <changeSet id="029-07-create-character-known-spells" author="wizard">
+        <createTable tableName="character_known_spells">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_known_spells" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_cks_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_known_spells" baseColumnNames="spell_id"
+                                 referencedTableName="spells" referencedColumnNames="id"
+                                 constraintName="fk_cks_spell"/>
+        <addUniqueConstraint tableName="character_known_spells"
+                             columnNames="character_id, spell_id"
+                             constraintName="uq_char_spell"/>
+    </changeSet>
+
+</databaseChangeLog>

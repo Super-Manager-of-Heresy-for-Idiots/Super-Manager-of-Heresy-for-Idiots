@@ -27,4 +27,41 @@ public class CharacterClass {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
+
+    @Column(name = "hit_die")
+    @Builder.Default
+    private Integer hitDie = 8;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "primary_ability_stat_id")
+    private StatType primaryAbilityStat;
+
+    @Column(name = "saving_throw_stat_ids_json", columnDefinition = "text")
+    private String savingThrowStatIdsJson;
+
+    @Column(name = "skill_choice_count")
+    @Builder.Default
+    private Integer skillChoiceCount = 2;
+
+    @Column(name = "skill_choice_option_ids_json", columnDefinition = "text")
+    private String skillChoiceOptionIdsJson;
+
+    @Column(name = "armor_weapon_proficiencies", columnDefinition = "text")
+    private String armorWeaponProficiencies;
+
+    @Column(name = "is_spellcaster", nullable = false)
+    @Builder.Default
+    private Boolean isSpellcaster = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "spellcasting_stat_id")
+    private StatType spellcastingStat;
+
+    @Column(name = "has_cantrips", nullable = false)
+    @Builder.Default
+    private Boolean hasCantrips = false;
+
+    @Column(name = "is_half_caster", nullable = false)
+    @Builder.Default
+    private Boolean isHalfCaster = false;
 }

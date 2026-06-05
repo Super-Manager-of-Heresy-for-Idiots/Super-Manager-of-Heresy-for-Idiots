@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========== 1. Seed 18 proficiency skills ========== -->
+
+    <changeSet id="030-01-seed-proficiency-skills" author="wizard">
+        <comment>Seed 18 D&amp;D 5e proficiency skills. Governing stat IDs reference stat_types by name.</comment>
+        <sql>
+            INSERT INTO proficiency_skills (id, name, governing_stat_id)
+            SELECT gen_random_uuid(), v.name, st.id
+            FROM (VALUES
+                ('Athletics',       'Strength'),
+                ('Acrobatics',      'Dexterity'),
+                ('Sleight of Hand', 'Dexterity'),
+                ('Stealth',         'Dexterity'),
+                ('Arcana',          'Intelligence'),
+                ('History',         'Intelligence'),
+                ('Investigation',   'Intelligence'),
+                ('Nature',          'Intelligence'),
+                ('Religion',        'Intelligence'),
+                ('Animal Handling', 'Wisdom'),
+                ('Insight',         'Wisdom'),
+                ('Medicine',        'Wisdom'),
+                ('Perception',      'Wisdom'),
+                ('Survival',        'Wisdom'),
+                ('Deception',       'Charisma'),
+                ('Intimidation',    'Charisma'),
+                ('Performance',     'Charisma'),
+                ('Persuasion',      'Charisma')
+            ) AS v(name, stat_name)
+            JOIN stat_types st ON st.name = v.stat_name
+            WHERE NOT EXISTS (SELECT 1 FROM proficiency_skills ps WHERE ps.name = v.name);
+        </sql>
+    </changeSet>
+
+    <!-- ========== 2. Seed backgrounds ========== -->
+
+    <changeSet id="030-02-seed-backgrounds" author="wizard">
+        <sql>
+            INSERT INTO backgrounds (id, name, description, skill_proficiency_ids_json, granted_extras)
+            SELECT gen_random_uuid(), v.name, v.description, v.skills_json, v.extras
+            FROM (VALUES
+                ('Acolyte',         'You have spent your life in the service of a temple.',
+                 '["Insight","Religion"]', 'Two languages of your choice'),
+                ('Criminal',        'You have a history of breaking the law.',
+                 '["Deception","Stealth"]', 'Thieves'' tools, one type of gaming set'),
+                ('Folk Hero',       'You come from a humble social rank.',
+                 '["Animal Handling","Survival"]', 'One type of artisan''s tools, vehicles (land)'),
+                ('Noble',           'You come from a family of wealth, power, and privilege.',
+                 '["History","Persuasion"]', 'One type of gaming set, one language'),
+                ('Sage',            'You spent years learning the lore of the multiverse.',
+                 '["Arcana","History"]', 'Two languages of your choice'),
+                ('Soldier',         'You have been a soldier in an army.',
+                 '["Athletics","Intimidation"]', 'One type of gaming set, vehicles (land)'),
+                ('Charlatan',       'You have always had a way with people.',
+                 '["Deception","Sleight of Hand"]', 'Disguise kit, forgery kit'),
+                ('Entertainer',     'You thrive in front of an audience.',
+                 '["Acrobatics","Performance"]', 'Disguise kit, one musical instrument'),
+                ('Guild Artisan',   'You are a member of an artisan''s guild.',
+                 '["Insight","Persuasion"]', 'One type of artisan''s tools, one language'),
+                ('Hermit',          'You lived in seclusion for a formative part of your life.',
+                 '["Medicine","Religion"]', 'Herbalism kit, one language'),
+                ('Outlander',       'You grew up in the wilds, far from civilization.',
+                 '["Athletics","Survival"]', 'One musical instrument, one language'),
+                ('Sailor',          'You sailed on a seagoing vessel for years.',
+                 '["Athletics","Perception"]', 'Navigator''s tools, vehicles (water)'),
+                ('Urchin',          'You grew up on the streets alone, poor, and orphaned.',
+                 '["Sleight of Hand","Stealth"]', 'Disguise kit, thieves'' tools')
+            ) AS v(name, description, skills_json, extras)
+            WHERE NOT EXISTS (SELECT 1 FROM backgrounds b WHERE b.name = v.name);
+        </sql>
+    </changeSet>
+
+    <!-- ========== 3. Update class metadata ========== -->
+
+    <changeSet id="030-03-seed-class-metadata" author="wizard">
+        <comment>Update existing SRD classes with 5e metadata. Uses stat_types by name.</comment>
+        <sql>
+            -- Barbarian
+            UPDATE character_classes SET
+                hit_die = 12,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Strength","Constitution"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Animal Handling","Athletics","Intimidation","Nature","Perception","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons, martial weapons',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Barbarian';
+
+            -- Bard
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Dexterity","Charisma"]',
+                skill_choice_count = 3,
+                skill_choice_option_ids_json = '["Acrobatics","Animal Handling","Arcana","Athletics","Deception","History","Insight","Intimidation","Investigation","Medicine","Nature","Perception","Performance","Persuasion","Religion","Sleight of Hand","Stealth","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons, hand crossbows, longswords, rapiers, shortswords',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Bard';
+
+            -- Cleric
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["History","Insight","Medicine","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Cleric';
+
+            -- Druid
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                saving_throw_stat_ids_json = '["Intelligence","Wisdom"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Animal Handling","Insight","Medicine","Nature","Perception","Religion","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields (nonmetal), clubs, daggers, darts, javelins, maces, quarterstaffs, scimitars, sickles, slings, spears',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Druid';
+
+            -- Fighter
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Strength","Constitution"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Acrobatics","Animal Handling","Athletics","History","Insight","Intimidation","Perception","Survival"]',
+                armor_weapon_proficiencies = 'All armor, shields, simple weapons, martial weapons',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Fighter';
+
+            -- Monk
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Strength","Dexterity"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Acrobatics","Athletics","History","Insight","Religion","Stealth"]',
+                armor_weapon_proficiencies = 'Simple weapons, shortswords',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Monk';
+
+            -- Paladin
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Strength'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Athletics","Insight","Intimidation","Medicine","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'All armor, shields, simple weapons, martial weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = false, is_half_caster = true
+            WHERE name = 'Paladin';
+
+            -- Ranger
+            UPDATE character_classes SET
+                hit_die = 10,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Strength","Dexterity"]',
+                skill_choice_count = 3,
+                skill_choice_option_ids_json = '["Animal Handling","Athletics","Insight","Investigation","Nature","Perception","Stealth","Survival"]',
+                armor_weapon_proficiencies = 'Light armor, medium armor, shields, simple weapons, martial weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Wisdom'),
+                has_cantrips = false, is_half_caster = true
+            WHERE name = 'Ranger';
+
+            -- Rogue
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Dexterity'),
+                saving_throw_stat_ids_json = '["Dexterity","Intelligence"]',
+                skill_choice_count = 4,
+                skill_choice_option_ids_json = '["Acrobatics","Athletics","Deception","Insight","Intimidation","Investigation","Perception","Performance","Persuasion","Sleight of Hand","Stealth"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons, hand crossbows, longswords, rapiers, shortswords',
+                is_spellcaster = false, has_cantrips = false, is_half_caster = false
+            WHERE name = 'Rogue';
+
+            -- Sorcerer
+            UPDATE character_classes SET
+                hit_die = 6,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Constitution","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Deception","Insight","Intimidation","Persuasion","Religion"]',
+                armor_weapon_proficiencies = 'Daggers, darts, slings, quarterstaffs, light crossbows',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Sorcerer';
+
+            -- Warlock
+            UPDATE character_classes SET
+                hit_die = 8,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                saving_throw_stat_ids_json = '["Wisdom","Charisma"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","Deception","History","Intimidation","Investigation","Nature","Religion"]',
+                armor_weapon_proficiencies = 'Light armor, simple weapons',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Charisma'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Warlock';
+
+            -- Wizard
+            UPDATE character_classes SET
+                hit_die = 6,
+                primary_ability_stat_id = (SELECT id FROM stat_types WHERE name = 'Intelligence'),
+                saving_throw_stat_ids_json = '["Intelligence","Wisdom"]',
+                skill_choice_count = 2,
+                skill_choice_option_ids_json = '["Arcana","History","Insight","Investigation","Medicine","Religion"]',
+                armor_weapon_proficiencies = 'Daggers, darts, slings, quarterstaffs, light crossbows',
+                is_spellcaster = true, spellcasting_stat_id = (SELECT id FROM stat_types WHERE name = 'Intelligence'),
+                has_cantrips = true, is_half_caster = false
+            WHERE name = 'Wizard';
+        </sql>
+    </changeSet>
+
+    <!-- ========== 4. Seed cantrips and spells (SRD subset) ========== -->
+
+    <changeSet id="030-04-seed-spells" author="wizard">
+        <sql>
+            -- Helper: build class-ids JSON from class names
+            -- Cantrips (level 0)
+            INSERT INTO spells (id, name, level, school, description, available_to_class_ids_json)
+            SELECT gen_random_uuid(), v.name, v.lvl, v.school, v.description,
+                   (SELECT '["' || string_agg(cc.id::text, '","') || '"]'
+                    FROM character_classes cc WHERE cc.name = ANY(v.classes))
+            FROM (VALUES
+                ('Fire Bolt',       0, 'Evocation',     'A beam of fire streaks toward a creature. Ranged spell attack, 1d10 fire damage.', ARRAY['Sorcerer','Wizard']),
+                ('Sacred Flame',    0, 'Evocation',     'Flame-like radiance descends. DEX save or 1d8 radiant damage.', ARRAY['Cleric']),
+                ('Eldritch Blast',  0, 'Evocation',     'A beam of crackling energy. Ranged spell attack, 1d10 force damage.', ARRAY['Warlock']),
+                ('Mage Hand',       0, 'Conjuration',   'A spectral floating hand appears and can manipulate objects.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Light',           0, 'Evocation',     'An object you touch sheds bright light in a 20-foot radius.', ARRAY['Bard','Cleric','Sorcerer','Wizard']),
+                ('Minor Illusion',  0, 'Illusion',      'You create a sound or an image of an object.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Prestidigitation',0, 'Transmutation', 'A minor magical trick. Sensory effects, cleaning, lighting, etc.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Ray of Frost',    0, 'Evocation',     'A frigid beam streaks toward a creature. 1d8 cold damage, speed -10 ft.', ARRAY['Sorcerer','Wizard']),
+                ('Thaumaturgy',     0, 'Transmutation', 'You manifest a minor wonder within range.', ARRAY['Cleric']),
+                ('Druidcraft',      0, 'Transmutation', 'You create a tiny harmless sensory effect or other nature trick.', ARRAY['Druid']),
+                ('Vicious Mockery', 0, 'Enchantment',   'Verbal barbs. WIS save or 1d4 psychic damage and disadvantage.', ARRAY['Bard']),
+                ('Guidance',        0, 'Divination',    'The target can add 1d4 to one ability check.', ARRAY['Cleric','Druid']),
+                ('Resistance',      0, 'Abjuration',    'The target can add 1d4 to one saving throw.', ARRAY['Cleric','Druid']),
+                ('Spare the Dying', 0, 'Necromancy',    'A creature with 0 HP becomes stable.', ARRAY['Cleric']),
+                ('Chill Touch',     0, 'Necromancy',    'A ghostly hand deals 1d8 necrotic damage and prevents healing.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Poison Spray',    0, 'Conjuration',   'CON save or 1d12 poison damage.', ARRAY['Druid','Sorcerer','Warlock','Wizard']),
+                ('Produce Flame',   0, 'Conjuration',   'A flickering flame appears in your hand, 1d8 fire damage.', ARRAY['Druid']),
+                ('Shillelagh',      0, 'Transmutation', 'Club or quarterstaff uses spellcasting ability, 1d8 damage.', ARRAY['Druid']),
+                ('Blade Ward',      0, 'Abjuration',    'Resistance to bludgeoning, piercing, slashing until next turn.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('True Strike',     0, 'Divination',    'Advantage on next attack roll against target.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+
+                -- Level 1 spells
+                ('Magic Missile',   1, 'Evocation',     'Three darts of force, each dealing 1d4+1 force damage.', ARRAY['Sorcerer','Wizard']),
+                ('Shield',          1, 'Abjuration',    '+5 to AC until the start of your next turn. Reaction.', ARRAY['Sorcerer','Wizard']),
+                ('Cure Wounds',     1, 'Evocation',     'A creature you touch regains 1d8 + spellcasting mod HP.', ARRAY['Bard','Cleric','Druid','Paladin','Ranger']),
+                ('Healing Word',    1, 'Evocation',     'Bonus action. Creature within 60 ft regains 1d4 + mod HP.', ARRAY['Bard','Cleric','Druid']),
+                ('Bless',           1, 'Enchantment',   'Up to 3 creatures add 1d4 to attack rolls and saving throws.', ARRAY['Cleric','Paladin']),
+                ('Thunderwave',     1, 'Evocation',     'Wave of force. 2d8 thunder damage, pushed 10 ft.', ARRAY['Bard','Druid','Sorcerer','Wizard']),
+                ('Detect Magic',    1, 'Divination',    'Sense magic within 30 ft for 10 minutes.', ARRAY['Bard','Cleric','Druid','Paladin','Ranger','Sorcerer','Wizard']),
+                ('Mage Armor',      1, 'Abjuration',    'Base AC becomes 13 + DEX mod for 8 hours.', ARRAY['Sorcerer','Wizard']),
+                ('Sleep',           1, 'Enchantment',   '5d8 HP of creatures fall unconscious.', ARRAY['Bard','Sorcerer','Wizard']),
+                ('Faerie Fire',     1, 'Evocation',     'Objects and creatures outlined in light. Advantage on attacks.', ARRAY['Bard','Druid']),
+                ('Guiding Bolt',    1, 'Evocation',     'Ranged spell attack 4d6 radiant, next attack has advantage.', ARRAY['Cleric']),
+                ('Hex',             1, 'Enchantment',   'Bonus 1d6 necrotic on hits, disadvantage on one ability.', ARRAY['Warlock']),
+                ('Hunter''s Mark',  1, 'Divination',    'Bonus 1d6 damage, advantage on tracking.', ARRAY['Ranger']),
+                ('Burning Hands',   1, 'Evocation',     '15-ft cone. 3d6 fire damage, DEX save for half.', ARRAY['Sorcerer','Wizard']),
+                ('Charm Person',    1, 'Enchantment',   'Humanoid charmed on failed WIS save.', ARRAY['Bard','Druid','Sorcerer','Warlock','Wizard']),
+                ('Entangle',        1, 'Conjuration',   'Grasping weeds restrain creatures in 20-ft square.', ARRAY['Druid']),
+                ('Inflict Wounds',  1, 'Necromancy',    'Melee spell attack. 3d10 necrotic damage.', ARRAY['Cleric']),
+                ('Witch Bolt',      1, 'Evocation',     'Ranged spell attack 1d12 lightning, sustained.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Command',         1, 'Enchantment',   'Speak one-word command. WIS save or obey.', ARRAY['Cleric','Paladin']),
+                ('Sanctuary',       1, 'Abjuration',    'Creature protected; attackers must pass WIS save.', ARRAY['Cleric']),
+
+                -- Level 2 spells
+                ('Spiritual Weapon',2, 'Evocation',     'Spectral weapon attacks as bonus action, 1d8 + mod.', ARRAY['Cleric']),
+                ('Hold Person',     2, 'Enchantment',   'Humanoid paralyzed on failed WIS save.', ARRAY['Bard','Cleric','Druid','Sorcerer','Warlock','Wizard']),
+                ('Misty Step',      2, 'Conjuration',   'Bonus action. Teleport up to 30 ft.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Scorching Ray',   2, 'Evocation',     'Three rays. Ranged spell attack each, 2d6 fire.', ARRAY['Sorcerer','Wizard']),
+                ('Lesser Restoration', 2, 'Abjuration', 'End one disease or condition on a creature you touch.', ARRAY['Bard','Cleric','Druid','Paladin','Ranger']),
+                ('Shatter',         2, 'Evocation',     '3d8 thunder damage in 10-ft radius, CON save.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Web',             2, 'Conjuration',   'Restrain creatures in 20-ft cube of webs.', ARRAY['Sorcerer','Wizard']),
+                ('Invisibility',    2, 'Illusion',      'Creature becomes invisible for 1 hour.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Darkness',        2, 'Evocation',     'Magical darkness in 15-ft radius.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Mirror Image',    2, 'Illusion',      'Three illusory duplicates increase AC.', ARRAY['Sorcerer','Warlock','Wizard']),
+
+                -- Level 3 spells
+                ('Fireball',        3, 'Evocation',     '20-ft radius. 8d6 fire damage, DEX save half.', ARRAY['Sorcerer','Wizard']),
+                ('Counterspell',    3, 'Abjuration',    'Reaction. Automatically counter spell level 3 or lower.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Revivify',        3, 'Necromancy',    'Creature that died within 1 minute returns with 1 HP.', ARRAY['Cleric','Paladin']),
+                ('Spirit Guardians',3, 'Conjuration',   'Spirits deal 3d8 damage to enemies within 15 ft.', ARRAY['Cleric']),
+                ('Dispel Magic',    3, 'Abjuration',    'End spells of 3rd level or lower on target.', ARRAY['Bard','Cleric','Druid','Paladin','Sorcerer','Warlock','Wizard']),
+                ('Lightning Bolt',  3, 'Evocation',     '100-ft line. 8d6 lightning damage, DEX save half.', ARRAY['Sorcerer','Wizard']),
+                ('Fly',             3, 'Transmutation', 'Target gains flying speed of 60 ft for 10 min.', ARRAY['Sorcerer','Warlock','Wizard']),
+                ('Haste',           3, 'Transmutation', 'Doubled speed, +2 AC, extra action. Concentration.', ARRAY['Sorcerer','Wizard']),
+
+                -- Level 4 spells
+                ('Greater Invisibility', 4, 'Illusion', 'Target invisible even while attacking/casting.', ARRAY['Bard','Sorcerer','Wizard']),
+                ('Banishment',      4, 'Abjuration',    'CHA save or banished to another plane.', ARRAY['Cleric','Paladin','Sorcerer','Warlock','Wizard']),
+                ('Dimension Door',  4, 'Conjuration',   'Teleport up to 500 ft to a location you can see.', ARRAY['Bard','Sorcerer','Warlock','Wizard']),
+                ('Polymorph',       4, 'Transmutation', 'Transform creature into a beast.', ARRAY['Bard','Druid','Sorcerer','Wizard']),
+                ('Wall of Fire',    4, 'Evocation',     'Wall deals 5d8 fire damage to creatures within 10 ft.', ARRAY['Druid','Sorcerer','Wizard']),
+
+                -- Level 5 spells
+                ('Mass Cure Wounds',5, 'Evocation',     'Up to 6 creatures regain 3d8 + mod HP.', ARRAY['Bard','Cleric','Druid']),
+                ('Raise Dead',      5, 'Necromancy',    'Return a dead creature to life.', ARRAY['Bard','Cleric','Paladin']),
+                ('Cone of Cold',    5, 'Evocation',     '60-ft cone. 8d8 cold damage, CON save half.', ARRAY['Sorcerer','Wizard']),
+                ('Hold Monster',    5, 'Enchantment',   'Creature paralyzed on failed WIS save.', ARRAY['Bard','Sorcerer','Warlock','Wizard'])
+            ) AS v(name, lvl, school, description, classes)
+            WHERE NOT EXISTS (SELECT 1 FROM spells s WHERE s.name = v.name);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

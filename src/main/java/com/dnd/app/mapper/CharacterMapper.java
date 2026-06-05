@@ -17,6 +17,12 @@ public abstract class CharacterMapper {
     @Mapping(target = "ownerId", source = "owner.id")
     @Mapping(target = "ownerUsername", source = "owner.username")
     @Mapping(target = "raceSnapshot", ignore = true)
+    @Mapping(target = "background", ignore = true)
+    @Mapping(target = "savingThrowProficiencyStatNames", ignore = true)
+    @Mapping(target = "skillProficiencies", ignore = true)
+    @Mapping(target = "knownSpells", ignore = true)
+    @Mapping(target = "biography", ignore = true)
+    @Mapping(target = "attacks", ignore = true)
     public abstract CharacterResponse toResponse(PlayerCharacter character);
 
     @Mapping(target = "classId", source = "classId")

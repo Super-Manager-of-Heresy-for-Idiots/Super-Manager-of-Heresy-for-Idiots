@@ -657,6 +657,8 @@ public class HomebrewAuthoringService {
                 }
                 yield createSubclassInPackage(pkg, characterClass, rewardPlan.getSubclass(), createdContent, username).getId();
             }
+            case ABILITY_SCORE_IMPROVEMENT ->
+                    throw new BadRequestException("ABILITY_SCORE_IMPROVEMENT не создаётся как inline-контент");
         };
     }
 

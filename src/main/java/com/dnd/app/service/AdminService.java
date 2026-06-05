@@ -40,9 +40,13 @@ public class AdminService {
     private final ClassLevelRewardRepository classLevelRewardRepository;
     private final SkillEffectRepository skillEffectRepository;
     private final BuffDebuffRepository buffDebuffRepository;
+    private final BackgroundRepository backgroundRepository;
+    private final SpellRepository spellRepository;
+    private final ProficiencySkillRepository proficiencySkillRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final RewardResolverRegistry rewardResolverRegistry;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // --- Stat Types ---
 
@@ -639,6 +643,205 @@ public class AdminService {
                 .id(f.getId()).name(f.getName()).description(f.getDescription())
                 .prerequisites(f.getPrerequisites()).createdAt(f.getCreatedAt()).updatedAt(f.getUpdatedAt())
                 .build();
+    }
+
+    // --- Backgrounds ---
+
+    @Transactional(readOnly = true)
+    public List<BackgroundResponse> listBackgrounds() {
+        return backgroundRepository.findAll().stream().map(this::toBackgroundResponse).toList();
+    }
+
+    @Transactional
+    public BackgroundResponse createBackground(CreateBackgroundRequest request) {
+        if (backgroundRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Background with this name already exists");
+        }
+        Background bg = Background.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .skillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()))
+                .grantedExtras(request.getGrantedExtras())
+                .build();
+        bg = backgroundRepository.save(bg);
+        log.info("Admin: background created — name='{}', id={}", bg.getName(), bg.getId());
+        return toBackgroundResponse(bg);
+    }
+
+    @Transactional(readOnly = true)
+    public BackgroundResponse getBackground(UUID id) {
+        Background bg = backgroundRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
+        return toBackgroundResponse(bg);
+    }
+
+    @Transactional
+    public BackgroundResponse updateBackground(UUID id, CreateBackgroundRequest request) {
+        Background bg = backgroundRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
+        bg.setName(request.getName());
+        bg.setDescription(request.getDescription());
+        bg.setSkillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()));
+        bg.setGrantedExtras(request.getGrantedExtras());
+        bg = backgroundRepository.save(bg);
+        return toBackgroundResponse(bg);
+    }
+
+    @Transactional
+    public void deleteBackground(UUID id) {
+        if (!backgroundRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Background not found");
+        }
+        backgroundRepository.deleteById(id);
+        log.info("Admin: background deleted — id={}", id);
+    }
+
+    // --- Spells ---
+
+    @Transactional(readOnly = true)
+    public List<SpellResponse> listSpells() {
+        return spellRepository.findAll().stream().map(this::toSpellResponse).toList();
+    }
+
+    @Transactional
+    public SpellResponse createSpell(CreateSpellRequest request) {
+        Spell spell = Spell.builder()
+                .name(request.getName())
+                .level(request.getLevel())
+                .school(request.getSchool())
+                .description(request.getDescription())
+                .availableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()))
+                .build();
+        spell = spellRepository.save(spell);
+        log.info("Admin: spell created — name='{}', id={}", spell.getName(), spell.getId());
+        return toSpellResponse(spell);
+    }
+
+    @Transactional(readOnly = true)
+    public SpellResponse getSpell(UUID id) {
+        Spell spell = spellRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Spell not found"));
+        return toSpellResponse(spell);
+    }
+
+    @Transactional
+    public SpellResponse updateSpell(UUID id, CreateSpellRequest request) {
+        Spell spell = spellRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Spell not found"));
+        spell.setName(request.getName());
+        spell.setLevel(request.getLevel());
+        spell.setSchool(request.getSchool());
+        spell.setDescription(request.getDescription());
+        spell.setAvailableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()));
+        spell = spellRepository.save(spell);
+        return toSpellResponse(spell);
+    }
+
+    @Transactional
+    public void deleteSpell(UUID id) {
+        if (!spellRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Spell not found");
+        }
+        spellRepository.deleteById(id);
+        log.info("Admin: spell deleted — id={}", id);
+    }
+
+    // --- Proficiency Skills ---
+
+    @Transactional(readOnly = true)
+    public List<ProficiencySkillResponse> listProficiencySkills() {
+        return proficiencySkillRepository.findAll().stream()
+                .map(ps -> ProficiencySkillResponse.builder()
+                        .id(ps.getId())
+                        .name(ps.getName())
+                        .governingStatId(ps.getGoverningStat().getId())
+                        .governingStatName(ps.getGoverningStat().getName())
+                        .build())
+                .toList();
+    }
+
+    @Transactional
+    public ProficiencySkillResponse createProficiencySkill(CreateProficiencySkillRequest request) {
+        StatType stat = statTypeRepository.findById(request.getGoverningStatId())
+                .orElseThrow(() -> new ResourceNotFoundException("Stat type not found"));
+        ProficiencySkill ps = ProficiencySkill.builder()
+                .name(request.getName())
+                .governingStat(stat)
+                .build();
+        ps = proficiencySkillRepository.save(ps);
+        log.info("Admin: proficiency skill created — name='{}', id={}", ps.getName(), ps.getId());
+        return ProficiencySkillResponse.builder()
+                .id(ps.getId())
+                .name(ps.getName())
+                .governingStatId(stat.getId())
+                .governingStatName(stat.getName())
+                .build();
+    }
+
+    @Transactional
+    public void deleteProficiencySkill(UUID id) {
+        if (!proficiencySkillRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Proficiency skill not found");
+        }
+        proficiencySkillRepository.deleteById(id);
+        log.info("Admin: proficiency skill deleted — id={}", id);
+    }
+
+    // --- Response helpers ---
+
+    private BackgroundResponse toBackgroundResponse(Background bg) {
+        List<String> skillNames = new ArrayList<>();
+        if (bg.getSkillProficiencyIdsJson() != null) {
+            try {
+                skillNames = objectMapper.readValue(bg.getSkillProficiencyIdsJson(),
+                        new com.fasterxml.jackson.core.type.TypeReference<>() {});
+            } catch (Exception ignored) {}
+        }
+        return BackgroundResponse.builder()
+                .id(bg.getId())
+                .name(bg.getName())
+                .description(bg.getDescription())
+                .skillProficiencyNames(skillNames)
+                .grantedExtras(bg.getGrantedExtras())
+                .build();
+    }
+
+    private SpellResponse toSpellResponse(Spell s) {
+        List<java.util.UUID> classIds = new ArrayList<>();
+        if (s.getAvailableToClassIdsJson() != null) {
+            try {
+                var ids = objectMapper.readValue(s.getAvailableToClassIdsJson(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+                classIds = ids.stream().map(java.util.UUID::fromString).toList();
+            } catch (Exception ignored) {}
+        }
+        return SpellResponse.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .level(s.getLevel())
+                .school(s.getSchool())
+                .description(s.getDescription())
+                .availableToClassIds(classIds)
+                .build();
+    }
+
+    private String serializeStringList(List<String> list) {
+        if (list == null || list.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String serializeUuidList(List<UUID> list) {
+        if (list == null || list.isEmpty()) return null;
+        try {
+            List<String> strList = list.stream().map(UUID::toString).toList();
+            return objectMapper.writeValueAsString(strList);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private ClassLevelRewardResponse toClassLevelRewardResponse(ClassLevelReward clr) {

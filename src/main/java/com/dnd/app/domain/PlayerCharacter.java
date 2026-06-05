@@ -1,6 +1,7 @@
 package com.dnd.app.domain;
 
 import com.dnd.app.domain.enums.CharacterStatus;
+import com.dnd.app.domain.enums.ScoreMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -79,6 +80,64 @@ public class PlayerCharacter {
     @OneToMany(mappedBy = "ownerCharacter")
     @Builder.Default
     private List<ItemInstance> itemInstances = new ArrayList<>();
+
+    @Column(length = 40)
+    private String alignment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "background_id")
+    private Background background;
+
+    @Column(name = "avatar_url", columnDefinition = "text")
+    private String avatarUrl;
+
+    @Column(name = "armor_class")
+    private Integer armorClass;
+
+    @Column(name = "speed")
+    private Integer speed;
+
+    @Column(name = "inspiration")
+    @Builder.Default
+    private Boolean inspiration = false;
+
+    @Column(name = "hit_dice_type", length = 10)
+    private String hitDiceType;
+
+    @Column(name = "hit_dice_total", length = 20)
+    private String hitDiceTotal;
+
+    @Column(name = "death_save_successes")
+    @Builder.Default
+    private Integer deathSaveSuccesses = 0;
+
+    @Column(name = "death_save_failures")
+    @Builder.Default
+    private Integer deathSaveFailures = 0;
+
+    @Column(name = "saving_throw_proficiency_stat_ids_json", columnDefinition = "text")
+    private String savingThrowProficiencyStatIdsJson;
+
+    @Column(name = "biography_json", columnDefinition = "text")
+    private String biographyJson;
+
+    @Column(name = "features", columnDefinition = "text")
+    private String features;
+
+    @Column(name = "attacks_json", columnDefinition = "text")
+    private String attacksJson;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "score_method", length = 20)
+    private ScoreMethod scoreMethod;
+
+    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CharacterSkillProficiency> skillProficiencies = new ArrayList<>();
+
+    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CharacterKnownSpell> knownSpells = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

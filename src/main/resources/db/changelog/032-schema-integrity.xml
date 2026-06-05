@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ==================== 032-01: Drop unused subrace_id column ==================== -->
+    <changeSet id="032-01-drop-subrace-id" author="system">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="characters" columnName="subrace_id"/>
+        </preConditions>
+        <dropColumn tableName="characters" columnName="subrace_id"/>
+    </changeSet>
+
+    <!-- ==================== 032-02: UNIQUE constraint on spells.name ==================== -->
+    <changeSet id="032-02-unique-spell-name" author="system">
+        <addUniqueConstraint tableName="spells" columnNames="name"
+                             constraintName="uq_spells_name"/>
+    </changeSet>
+
+    <!-- ==================== 032-03: CHECK constraints ==================== -->
+    <changeSet id="032-03-check-constraints" author="system">
+        <sql>
+            ALTER TABLE spells
+                ADD CONSTRAINT chk_spells_level CHECK (level BETWEEN 0 AND 9);
+
+            ALTER TABLE character_class_levels
+                ADD CONSTRAINT chk_ccl_class_level CHECK (class_level BETWEEN 1 AND 20);
+
+            ALTER TABLE characters
+                ADD CONSTRAINT chk_characters_total_level CHECK (total_level BETWEEN 1 AND 20);
+
+            ALTER TABLE characters
+                ADD CONSTRAINT chk_characters_death_save_successes CHECK (death_save_successes BETWEEN 0 AND 3);
+
+            ALTER TABLE characters
+                ADD CONSTRAINT chk_characters_death_save_failures CHECK (death_save_failures BETWEEN 0 AND 3);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE spells DROP CONSTRAINT IF EXISTS chk_spells_level;
+                ALTER TABLE character_class_levels DROP CONSTRAINT IF EXISTS chk_ccl_class_level;
+                ALTER TABLE characters DROP CONSTRAINT IF EXISTS chk_characters_total_level;
+                ALTER TABLE characters DROP CONSTRAINT IF EXISTS chk_characters_death_save_successes;
+                ALTER TABLE characters DROP CONSTRAINT IF EXISTS chk_characters_death_save_failures;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -347,6 +347,88 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Награда за уровень удалена"));
     }
 
+    // --- Backgrounds ---
+
+    @GetMapping("/backgrounds")
+    public ResponseEntity<ApiResponse<List<BackgroundResponse>>> listBackgrounds() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listBackgrounds()));
+    }
+
+    @PostMapping("/backgrounds")
+    public ResponseEntity<ApiResponse<BackgroundResponse>> createBackground(
+            @Valid @RequestBody CreateBackgroundRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(adminService.createBackground(request), "Предыстория создана"));
+    }
+
+    @GetMapping("/backgrounds/{id}")
+    public ResponseEntity<ApiResponse<BackgroundResponse>> getBackground(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getBackground(id)));
+    }
+
+    @PutMapping("/backgrounds/{id}")
+    public ResponseEntity<ApiResponse<BackgroundResponse>> updateBackground(
+            @PathVariable UUID id, @Valid @RequestBody CreateBackgroundRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateBackground(id, request), "Предыстория обновлена"));
+    }
+
+    @DeleteMapping("/backgrounds/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteBackground(@PathVariable UUID id) {
+        adminService.deleteBackground(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Предыстория удалена"));
+    }
+
+    // --- Spells ---
+
+    @GetMapping("/spells")
+    public ResponseEntity<ApiResponse<List<SpellResponse>>> listSpells() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listSpells()));
+    }
+
+    @PostMapping("/spells")
+    public ResponseEntity<ApiResponse<SpellResponse>> createSpell(
+            @Valid @RequestBody CreateSpellRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(adminService.createSpell(request), "Заклинание создано"));
+    }
+
+    @GetMapping("/spells/{id}")
+    public ResponseEntity<ApiResponse<SpellResponse>> getSpell(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getSpell(id)));
+    }
+
+    @PutMapping("/spells/{id}")
+    public ResponseEntity<ApiResponse<SpellResponse>> updateSpell(
+            @PathVariable UUID id, @Valid @RequestBody CreateSpellRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.updateSpell(id, request), "Заклинание обновлено"));
+    }
+
+    @DeleteMapping("/spells/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteSpell(@PathVariable UUID id) {
+        adminService.deleteSpell(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Заклинание удалено"));
+    }
+
+    // --- Proficiency Skills ---
+
+    @GetMapping("/proficiency-skills")
+    public ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>> listProficiencySkills() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listProficiencySkills()));
+    }
+
+    @PostMapping("/proficiency-skills")
+    public ResponseEntity<ApiResponse<ProficiencySkillResponse>> createProficiencySkill(
+            @Valid @RequestBody CreateProficiencySkillRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(adminService.createProficiencySkill(request), "Навык-владение создан"));
+    }
+
+    @DeleteMapping("/proficiency-skills/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteProficiencySkill(@PathVariable UUID id) {
+        adminService.deleteProficiencySkill(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Навык-владение удален"));
+    }
+
     // --- Users & Teams (read-only) ---
 
     @GetMapping("/users")

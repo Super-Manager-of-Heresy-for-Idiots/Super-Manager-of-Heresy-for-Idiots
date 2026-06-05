@@ -41,6 +41,8 @@ public class CharacterService {
     private final CampaignService campaignService;
     private final CharacterMapper characterMapper;
     private final RaceService raceService;
+    private final ReferenceDataService referenceDataService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
     public CharacterResponse createCharacter(UUID campaignId, CreateCharacterRequest request, String username) {
@@ -275,6 +277,65 @@ public class CharacterService {
     private CharacterResponse toResponse(PlayerCharacter character) {
         CharacterResponse response = characterMapper.toResponse(character);
         response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
+        response.setCurrentHp(character.getCurrentHp());
+        response.setMaxHp(character.getMaxHp());
+        response.setAlignment(character.getAlignment());
+        response.setAvatarUrl(character.getAvatarUrl());
+        response.setArmorClass(character.getArmorClass());
+        response.setSpeed(character.getSpeed());
+        response.setInspiration(character.getInspiration());
+        response.setHitDiceType(character.getHitDiceType());
+        response.setHitDiceTotal(character.getHitDiceTotal());
+        response.setDeathSaveSuccesses(character.getDeathSaveSuccesses());
+        response.setDeathSaveFailures(character.getDeathSaveFailures());
+        response.setFeatures(character.getFeatures());
+
+        if (character.getBackground() != null) {
+            response.setBackground(referenceDataService.mapBackground(character.getBackground()));
+        }
+
+        List<String> saveNames = referenceDataService.parseJsonStringList(character.getSavingThrowProficiencyStatIdsJson());
+        response.setSavingThrowProficiencyStatNames(saveNames);
+
+        if (character.getSkillProficiencies() != null) {
+            response.setSkillProficiencies(
+                    character.getSkillProficiencies().stream()
+                            .map(sp -> com.dnd.app.dto.response.CharacterSkillProficiencyResponse.builder()
+                                    .skillId(sp.getSkill().getId())
+                                    .skillName(sp.getSkill().getName())
+                                    .source(sp.getSource().name())
+                                    .build())
+                            .toList()
+            );
+        }
+
+        if (character.getKnownSpells() != null) {
+            response.setKnownSpells(
+                    character.getKnownSpells().stream()
+                            .map(ks -> com.dnd.app.dto.response.CharacterKnownSpellResponse.builder()
+                                    .spellId(ks.getSpell().getId())
+                                    .name(ks.getSpell().getName())
+                                    .level(ks.getSpell().getLevel())
+                                    .school(ks.getSpell().getSchool())
+                                    .build())
+                            .toList()
+            );
+        }
+
+        if (character.getBiographyJson() != null) {
+            try {
+                response.setBiography(objectMapper.readValue(character.getBiographyJson(),
+                        com.dnd.app.dto.response.BiographyResponse.class));
+            } catch (Exception ignored) {}
+        }
+
+        if (character.getAttacksJson() != null) {
+            try {
+                response.setAttacks(objectMapper.readValue(character.getAttacksJson(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<com.dnd.app.dto.response.CharacterAttackResponse>>() {}));
+            } catch (Exception ignored) {}
+        }
+
         return response;
     }
 
