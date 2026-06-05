@@ -54,7 +54,6 @@ public class HomebrewController {
         HomebrewDetailResponse data = authoringService.getMyPackage(id, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
-    @PostMapping
     @PutMapping("/my/{id}")
     public ResponseEntity<ApiResponse<HomebrewDetailResponse>> updatePackage(
             @PathVariable UUID id, @Valid @RequestBody UpdateHomebrewRequest request, Authentication auth) {

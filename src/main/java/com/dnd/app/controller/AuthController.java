@@ -26,80 +26,37 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        // Логируем входные данные (без sensitive info)
-        log.info("Registration attempt - username: {}, email: {}, role: {}",
+        log.info("Registration attempt: username={}, email={}, role={}",
                 request.getUsername(),
                 request.getEmail(),
                 request.getRole());
         long startTime = System.currentTimeMillis();
 
-        try {
-            UserResponse user = authService.register(request);
+        UserResponse user = authService.register(request);
 
-            long duration = System.currentTimeMillis() - startTime;
+        log.info("Registration successful: username={}, userId={}, role={}, durationMs={}",
+                user.getUsername(),
+                user.getId(),
+                user.getRole(),
+                System.currentTimeMillis() - startTime);
 
-            // Логируем успешную регистрацию
-            log.info("Registration successful - username: {}, userId: {}, role: {}, duration: {}ms",
-                    user.getUsername(),
-                    user.getId(),
-                    user.getRole(),
-                    duration);
-
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(user, "Регистрация успешна"));
-
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-
-            // Логируем ошибку регистрации
-            log.error("Registration failed - username: {}, email: {}, role: {}, duration: {}ms, error: {}",
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getRole(),
-                    duration,
-                    e.getMessage());
-
-            throw e; // или обработать по-другому
-        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(user, "Регистрация успешна"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        // Логируем попытку входа (без пароля)
-        log.info("Login attempt - username: {}", request.getUsername());
-
+        log.info("Login attempt: username={}", request.getUsername());
         long startTime = System.currentTimeMillis();
 
-        try {
-            AuthResponse auth = authService.login(request);
+        AuthResponse auth = authService.login(request);
 
-            long duration = System.currentTimeMillis() - startTime;
+        log.info("Login successful: username={}, userId={}, role={}, tokenIssued=true, durationMs={}",
+                auth.getUser().getUsername(),
+                auth.getUser().getId(),
+                auth.getUser().getRole(),
+                System.currentTimeMillis() - startTime);
 
-            // Логируем успешный вход
-            log.info("Login successful - username: {}, userId: {}, role: {}, token issued, duration: {}ms",
-                    auth.getUser().getUsername(),
-                    auth.getUser().getId(),
-                    auth.getUser().getRole(),
-                    duration);
-
-            // Для отладки - неполный токен (первые и последние символы)
-            String tokenPreview = auth.getToken() != null && auth.getToken().length() > 20
-                    ? auth.getToken().substring(0, 10) + "..." + auth.getToken().substring(auth.getToken().length() - 10)
-                    : "N/A";
-            log.debug("Token generated for user: {}, token preview: {}", request.getUsername(), tokenPreview);
-
-            return ResponseEntity.ok(ApiResponse.ok(auth, "Вход выполнен"));
-
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-
-            // Логируем неудачную попытку входа с причиной
-            log.warn("Login failed - username: {}, duration: {}ms, error: {}",
-                    request.getUsername(),
-                    duration,
-                    e.getMessage());
-
-            throw e; // или обработать по-другому
-        }
+        return ResponseEntity.ok(ApiResponse.ok(auth, "Вход выполнен"));
     }
 }

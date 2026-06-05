@@ -21,10 +21,13 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
+    public static final String REQUEST_ID_ATTRIBUTE = "requestId";
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
+        request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
         String path = buildPath(request);
         String routeType = request.getRequestURI().startsWith("/api/") ? "api" : "non-api";
         String remoteAddress = forwardedFor(request);
