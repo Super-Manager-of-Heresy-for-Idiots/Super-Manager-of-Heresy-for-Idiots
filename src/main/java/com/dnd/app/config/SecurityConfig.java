@@ -1,7 +1,9 @@
 package com.dnd.app.config;
 
 import com.dnd.app.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,6 +14,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,6 +25,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -32,6 +37,25 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)  // 👈 ЭТО КЛЮЧЕВОЕ
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
+                    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                    String username = authentication != null ? authentication.getName() : "anonymous";
+                    Object authorities = authentication != null ? authentication.getAuthorities() : "[]";
+
+                    log.warn(
+                            "Access denied: method={}, path={}, user={}, authorities={}, remote={}, referer='{}', userAgent='{}', reason='{}'",
+                            request.getMethod(),
+                            request.getRequestURI(),
+                            username,
+                            authorities,
+                            request.getRemoteAddr(),
+                            request.getHeader("Referer"),
+                            request.getHeader("User-Agent"),
+                            accessDeniedException.getMessage()
+                    );
+
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()

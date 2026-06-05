@@ -2,13 +2,15 @@ package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.ContentType;
+import com.dnd.app.domain.enums.DamageType;
+import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
-import com.dnd.app.dto.request.AddContentRequest;
-import com.dnd.app.dto.request.CreateHomebrewRequest;
-import com.dnd.app.dto.request.UpdateHomebrewRequest;
+import com.dnd.app.domain.enums.SkillActivation;
+import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
@@ -35,6 +37,10 @@ public class HomebrewAuthoringService {
     private final UserRepository userRepository;
     private final TagService tagService;
     private final HomebrewContentValidatorRegistry validatorRegistry;
+    private final ItemTypeRepository itemTypeRepository;
+    private final CharacterClassRepository classRepository;
+    private final SkillRepository skillRepository;
+    private final FeatRepository featRepository;
 
     @Transactional
     public HomebrewDetailResponse createPackage(CreateHomebrewRequest request, String username) {
@@ -142,6 +148,100 @@ public class HomebrewAuthoringService {
     }
 
     @Transactional
+    public HomebrewDetailResponse createPackageItemType(UUID packageId, CreateItemTypeRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (itemTypeRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
+        }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateItemTypeSkillFields(request.getSkillId(), request.getSkillActivation());
+
+        ItemType itemType = ItemType.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .slot(parseSlot(request.getSlot()))
+                .homebrew(pkg)
+                .damageDice(request.getDamageDice())
+                .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
+                .damageType(parseDamageType(request.getDamageType()))
+                .build();
+        if (request.getSkillId() != null) {
+            Skill skill = getAllowedPackageSkill(request.getSkillId(), pkg);
+            itemType.setSkill(skill);
+            itemType.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
+        }
+
+        ItemType saved = itemTypeRepository.save(itemType);
+        attachContentItem(pkg, ContentType.ITEM_TYPE, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    @Transactional
+    public HomebrewDetailResponse createPackageCharacterClass(UUID packageId, CreateCharacterClassRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (classRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
+        }
+
+        CharacterClass characterClass = CharacterClass.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .homebrew(pkg)
+                .build();
+        CharacterClass saved = classRepository.save(characterClass);
+        attachContentItem(pkg, ContentType.CHARACTER_CLASS, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    @Transactional
+    public HomebrewDetailResponse createPackageSkill(UUID packageId, CreateSkillRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (skillRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Умение с таким названием уже существует");
+        }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
+
+        Skill skill = Skill.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .skillType(request.getSkillType())
+                .homebrew(pkg)
+                .damageDice(request.getDamageDice())
+                .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
+                .damageType(parseDamageType(request.getDamageType()))
+                .build();
+        Skill saved = skillRepository.save(skill);
+        attachContentItem(pkg, ContentType.SKILL, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    @Transactional
+    public HomebrewDetailResponse createPackageFeat(UUID packageId, CreateFeatRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (featRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Черта с таким названием уже существует");
+        }
+
+        Feat feat = Feat.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .prerequisites(request.getPrerequisites())
+                .homebrew(pkg)
+                .build();
+        Feat saved = featRepository.save(feat);
+        attachContentItem(pkg, ContentType.FEAT, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    @Transactional
     public void removeContent(UUID packageId, UUID contentItemId, String username) {
         User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(packageId, gm.getId())
@@ -224,6 +324,95 @@ public class HomebrewAuthoringService {
         result.put("message", "Пакет удален");
         result.put("installationCount", installCount);
         return result;
+    }
+
+    private HomebrewPackage getEditablePackage(UUID packageId, User gm) {
+        HomebrewPackage pkg = packageRepository.findById(packageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
+        if (!pkg.getAuthor().getId().equals(gm.getId())) {
+            throw new AccessDeniedException("Нельзя создавать контент в чужом homebrew-пакете");
+        }
+        if (pkg.isDeleted() || pkg.getStatus() != HomebrewStatus.DRAFT) {
+            throw new DuplicateResourceException("Контент можно создавать только в DRAFT-пакете");
+        }
+        return pkg;
+    }
+
+    private void attachContentItem(HomebrewPackage pkg, ContentType contentType, UUID contentId, String username) {
+        UUID packageId = pkg.getId();
+        if (contentItemRepository.existsByHomebrewPackageIdAndContentTypeAndContentId(packageId, contentType, contentId)) {
+            throw new DuplicateResourceException("Этот контент уже есть в пакете");
+        }
+
+        HomebrewContentItem item = HomebrewContentItem.builder()
+                .homebrewPackage(pkg)
+                .contentType(contentType)
+                .contentId(contentId)
+                .build();
+        contentItemRepository.save(item);
+        log.info("Homebrew authoring content created: packageId={}, contentType={}, contentId={}, author={}",
+                packageId, contentType, contentId, username);
+    }
+
+    private EquipmentSlot parseSlot(String slot) {
+        try {
+            return EquipmentSlot.valueOf(slot);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный слот экипировки: " + slot);
+        }
+    }
+
+    private DamageType parseDamageType(String damageType) {
+        if (damageType == null) {
+            return null;
+        }
+        try {
+            return DamageType.valueOf(damageType);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный тип урона: " + damageType);
+        }
+    }
+
+    private SkillActivation parseSkillActivation(String activation) {
+        if (activation == null) {
+            return null;
+        }
+        try {
+            return SkillActivation.valueOf(activation);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный тип активации: " + activation + ". Допустимо: PASSIVE, ACTIVE");
+        }
+    }
+
+    private void validateDamageFields(String damageDice, String damageType) {
+        if (damageDice != null && damageType == null) {
+            throw new BadRequestException("Если указан damageDice, damageType обязателен");
+        }
+        if (damageType != null) {
+            parseDamageType(damageType);
+        }
+    }
+
+    private void validateItemTypeSkillFields(UUID skillId, String skillActivation) {
+        if (skillId != null && skillActivation == null) {
+            throw new BadRequestException("Если указан skillId, skillActivation обязателен");
+        }
+        if (skillActivation != null && skillId == null) {
+            throw new BadRequestException("Если указан skillActivation, skillId обязателен");
+        }
+        if (skillActivation != null) {
+            parseSkillActivation(skillActivation);
+        }
+    }
+
+    private Skill getAllowedPackageSkill(UUID skillId, HomebrewPackage pkg) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+        HomebrewPackage skillPackage = skill.getHomebrew();
+        if (skillPackage != null && !skillPackage.getId().equals(pkg.getId())) {
+            throw new AccessDeniedException("Можно привязать только vanilla-умение или умение из этого же пакета");
+        }
+        return skill;
     }
 
     // --- Mapping helpers ---
@@ -310,6 +499,15 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Только мастера игры могут управлять homebrew-пакетами");
+        }
+        return user;
+    }
+
+    private User getRequiredGameMaster(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+        if (user.getRole() != Role.GAME_MASTER) {
+            throw new AccessDeniedException("Только мастера игры могут создавать контент homebrew-пакетов");
         }
         return user;
     }

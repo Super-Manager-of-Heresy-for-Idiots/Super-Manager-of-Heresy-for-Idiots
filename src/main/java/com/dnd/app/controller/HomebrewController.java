@@ -70,6 +70,38 @@ public class HomebrewController {
                 .body(ApiResponse.ok(data, "Контент добавлен"));
     }
 
+    @PostMapping("/my/{packageId}/content/item-types")
+    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageItemType(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateItemTypeRequest request, Authentication auth) {
+        HomebrewDetailResponse data = authoringService.createPackageItemType(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Тип предмета добавлен в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/classes")
+    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageCharacterClass(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateCharacterClassRequest request, Authentication auth) {
+        HomebrewDetailResponse data = authoringService.createPackageCharacterClass(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Класс добавлен в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/skills")
+    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageSkill(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateSkillRequest request, Authentication auth) {
+        HomebrewDetailResponse data = authoringService.createPackageSkill(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Умение добавлено в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/feats")
+    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageFeat(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateFeatRequest request, Authentication auth) {
+        HomebrewDetailResponse data = authoringService.createPackageFeat(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Черта добавлена в пакет"));
+    }
+
     @DeleteMapping("/my/{id}/content/{contentItemId}")
     public ResponseEntity<ApiResponse<Void>> removeContent(
             @PathVariable UUID id, @PathVariable UUID contentItemId, Authentication auth) {
