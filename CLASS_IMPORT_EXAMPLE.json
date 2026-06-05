@@ -1,0 +1,93 @@
+{
+  "name": "Chronomancer",
+  "description": "A class focused on time magic, battlefield control, and delayed effects.",
+  "levels": [
+    {
+      "level": 1,
+      "rewards": [
+        {
+          "rewardType": "SKILL",
+          "isChoice": false,
+          "skill": {
+            "name": "Temporal Bolt",
+            "description": "Deal force damage and slow the target for a short time.",
+            "skillType": "SPELL",
+            "damageDice": "1d8",
+            "damageBonus": 0,
+            "damageType": "FORCE",
+            "effects": [
+              {
+                "effectRole": "DEBUFF",
+                "chancePercent": 100,
+                "buffDebuff": {
+                  "name": "Slowed by Time",
+                  "description": "The target is caught in a delayed moment.",
+                  "effectType": "SLOW",
+                  "modifierValue": -2,
+                  "durationRounds": 2,
+                  "isBuff": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "rewardType": "FEAT",
+          "isChoice": true,
+          "feat": {
+            "name": "Time Sense",
+            "description": "You can sense temporal distortions and react before they fully unfold.",
+            "prerequisites": "Chronomancer level 1"
+          }
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "rewards": [
+        {
+          "rewardType": "BUFF_DEBUFF",
+          "isChoice": false,
+          "buffDebuff": {
+            "name": "Temporal Focus",
+            "description": "You briefly sharpen your focus by synchronizing with the next moment.",
+            "effectType": "FOCUS",
+            "modifierValue": 1,
+            "durationRounds": 3,
+            "isBuff": true
+          }
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "rewards": [
+        {
+          "rewardType": "SUBCLASS",
+          "isChoice": true,
+          "subclass": {
+            "name": "Keeper of Seconds",
+            "description": "A subclass focused on precise timing, interrupts, and initiative control."
+          }
+        }
+      ]
+    },
+    {
+      "level": 5,
+      "rewards": [
+        {
+          "rewardType": "SKILL",
+          "isChoice": false,
+          "skill": {
+            "name": "Borrowed Future",
+            "description": "Pull power from your next turn and release it now.",
+            "skillType": "SPELL",
+            "damageDice": "2d8",
+            "damageBonus": 1,
+            "damageType": "PSYCHIC"
+          }
+        }
+      ]
+    }
+  ]
+}
