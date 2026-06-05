@@ -42,7 +42,165 @@ public class CharacterService {
     private final CharacterMapper characterMapper;
     private final RaceService raceService;
     private final ReferenceDataService referenceDataService;
+    private final CharacterSkillProficiencyRepository skillProficiencyRepository;
+    private final CharacterKnownSpellRepository knownSpellRepository;
+    private final CharacterWalletRepository walletRepository;
+    private final CharacterResourceRepository resourceRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Transactional(readOnly = true)
+    public List<CharacterResponse> listTemplates(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        List<PlayerCharacter> templates = characterRepository.findByOwnerIdAndCampaignIsNull(user.getId());
+        return templates.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CharacterResponse getTemplateById(UUID characterId, String username) {
+        PlayerCharacter character = characterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (character.getCampaign() != null) {
+            throw new BadRequestException("This character is bound to a campaign, not a template");
+        }
+        if (!character.getOwner().getId().equals(user.getId()) && user.getRole() != com.dnd.app.domain.enums.Role.ADMIN) {
+            throw new AccessDeniedException("You can only view your own templates");
+        }
+        return toResponse(character);
+    }
+
+    @Transactional
+    public CharacterResponse cloneCharacterToCampaign(UUID campaignId, UUID templateId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Campaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found"));
+
+        boolean isMember = campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaignId, user.getId());
+        if (!isMember && user.getRole() != com.dnd.app.domain.enums.Role.ADMIN) {
+            throw new AccessDeniedException("You are not a member of this campaign");
+        }
+
+        PlayerCharacter template = characterRepository.findById(templateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Template character not found"));
+
+        if (template.getCampaign() != null) {
+            throw new BadRequestException("Source character is already bound to a campaign");
+        }
+        if (!template.getOwner().getId().equals(user.getId()) && user.getRole() != com.dnd.app.domain.enums.Role.ADMIN) {
+            throw new AccessDeniedException("You can only clone your own templates");
+        }
+
+        PlayerCharacter copy = PlayerCharacter.builder()
+                .name(template.getName())
+                .totalLevel(template.getTotalLevel())
+                .experience(template.getExperience())
+                .race(template.getRace())
+                .selectedLineageId(template.getSelectedLineageId())
+                .raceSnapshotJson(template.getRaceSnapshotJson())
+                .owner(user)
+                .campaign(campaign)
+                .alignment(template.getAlignment())
+                .background(template.getBackground())
+                .avatarUrl(template.getAvatarUrl())
+                .armorClass(template.getArmorClass())
+                .speed(template.getSpeed())
+                .maxHp(template.getMaxHp())
+                .currentHp(template.getMaxHp())
+                .inspiration(false)
+                .hitDiceType(template.getHitDiceType())
+                .hitDiceTotal(template.getHitDiceTotal())
+                .deathSaveSuccesses(0)
+                .deathSaveFailures(0)
+                .savingThrowProficiencyStatIdsJson(template.getSavingThrowProficiencyStatIdsJson())
+                .biographyJson(template.getBiographyJson())
+                .features(template.getFeatures())
+                .attacksJson(template.getAttacksJson())
+                .scoreMethod(template.getScoreMethod())
+                .build();
+        copy = characterRepository.saveAndFlush(copy);
+
+        for (CharacterClassLevel ccl : template.getClassLevels()) {
+            CharacterClassLevel newCcl = CharacterClassLevel.builder()
+                    .characterId(copy.getId())
+                    .classId(ccl.getClassId())
+                    .classLevel(ccl.getClassLevel())
+                    .build();
+            classLevelRepository.saveAndFlush(newCcl);
+            copy.getClassLevels().add(newCcl);
+        }
+
+        for (CharacterStat stat : template.getStats()) {
+            CharacterStat newStat = CharacterStat.builder()
+                    .character(copy)
+                    .statType(stat.getStatType())
+                    .value(stat.getValue())
+                    .build();
+            characterStatRepository.save(newStat);
+            copy.getStats().add(newStat);
+        }
+
+        for (CharacterSkillProficiency sp : template.getSkillProficiencies()) {
+            CharacterSkillProficiency newSp = CharacterSkillProficiency.builder()
+                    .character(copy)
+                    .skill(sp.getSkill())
+                    .source(sp.getSource())
+                    .build();
+            skillProficiencyRepository.save(newSp);
+            copy.getSkillProficiencies().add(newSp);
+        }
+
+        for (CharacterKnownSpell ks : template.getKnownSpells()) {
+            CharacterKnownSpell newKs = CharacterKnownSpell.builder()
+                    .character(copy)
+                    .spell(ks.getSpell())
+                    .build();
+            knownSpellRepository.save(newKs);
+            copy.getKnownSpells().add(newKs);
+        }
+
+        for (CharacterWallet wallet : walletRepository.findByCharacterId(template.getId())) {
+            CharacterWallet newWallet = CharacterWallet.builder()
+                    .character(copy)
+                    .currencyType(wallet.getCurrencyType())
+                    .amount(wallet.getAmount())
+                    .build();
+            walletRepository.save(newWallet);
+        }
+
+        for (CharacterResource resource : resourceRepository.findByCharacterId(template.getId())) {
+            CharacterResource newResource = CharacterResource.builder()
+                    .character(copy)
+                    .resourceType(resource.getResourceType())
+                    .currentValue(resource.getCurrentValue())
+                    .build();
+            resourceRepository.save(newResource);
+        }
+
+        log.info("Character cloned from template: templateId={}, copyId={}, campaign={}, by={}",
+                template.getId(), copy.getId(), campaignId, username);
+
+        return toResponse(copy);
+    }
+
+    @Transactional
+    public void deleteTemplate(UUID characterId, String username) {
+        PlayerCharacter character = characterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (character.getCampaign() != null) {
+            throw new BadRequestException("This character is bound to a campaign, use campaign endpoint to delete");
+        }
+        if (!character.getOwner().getId().equals(user.getId()) && user.getRole() != com.dnd.app.domain.enums.Role.ADMIN) {
+            throw new AccessDeniedException("You can only delete your own templates");
+        }
+        log.info("Template character deleted: id={}, name='{}', by user={}", characterId, character.getName(), username);
+        characterRepository.delete(character);
+    }
 
     @Transactional
     public CharacterResponse createCharacter(UUID campaignId, CreateCharacterRequest request, String username) {

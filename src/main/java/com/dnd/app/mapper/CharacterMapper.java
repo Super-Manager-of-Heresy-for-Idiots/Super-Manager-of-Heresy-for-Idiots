@@ -16,6 +16,8 @@ public abstract class CharacterMapper {
 
     @Mapping(target = "ownerId", source = "owner.id")
     @Mapping(target = "ownerUsername", source = "owner.username")
+    @Mapping(target = "campaignId", source = "campaign.id")
+    @Mapping(target = "status", expression = "java(character.getStatus() != null ? character.getStatus().name() : null)")
     @Mapping(target = "raceSnapshot", ignore = true)
     @Mapping(target = "background", ignore = true)
     @Mapping(target = "savingThrowProficiencyStatNames", ignore = true)

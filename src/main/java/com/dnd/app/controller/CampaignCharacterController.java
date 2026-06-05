@@ -40,6 +40,18 @@ public class CampaignCharacterController {
                 .body(ApiResponse.ok(character, "Персонаж создан"));
     }
 
+    // --- Clone from template ---
+
+    @PostMapping("/from-template/{templateId}")
+    @Operation(summary = "Clone a vanilla template character into this campaign")
+    public ResponseEntity<ApiResponse<CharacterResponse>> cloneFromTemplate(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID templateId, Authentication auth) {
+        CharacterResponse character = characterService.cloneCharacterToCampaign(campaignId, templateId, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(character, "Персонаж создан из шаблона"));
+    }
+
     // --- Character CRUD ---
 
     @PostMapping

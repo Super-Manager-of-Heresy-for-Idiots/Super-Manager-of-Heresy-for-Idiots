@@ -222,6 +222,18 @@ public class RaceService {
         return race;
     }
 
+    @Transactional(readOnly = true)
+    public CharacterRace getSelectableVanillaRace(UUID raceId) {
+        CharacterRace race = getRaceOrThrow(raceId);
+        if (!Boolean.TRUE.equals(race.getActive())) {
+            throw new BadRequestException("Selected race is disabled");
+        }
+        if (race.getHomebrew() != null) {
+            throw new BadRequestException("Homebrew races cannot be used in vanilla characters");
+        }
+        return race;
+    }
+
     public void validateLineageSelection(CharacterRace race, UUID selectedLineageId) {
         List<RaceLineageRequest> lineages = read(race.getLineagesJson(), LINEAGE_LIST, List.of());
         if (Boolean.TRUE.equals(race.getLineageRequired()) && !lineages.isEmpty() && selectedLineageId == null) {

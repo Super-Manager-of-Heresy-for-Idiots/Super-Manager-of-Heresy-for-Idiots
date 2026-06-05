@@ -24,6 +24,8 @@ public class CharacterResponse {
     private CharacterRaceSnapshotResponse raceSnapshot;
     private UUID ownerId;
     private String ownerUsername;
+    private UUID campaignId;
+    private String status;
     private List<CharacterStatResponse> stats;
     private Integer currentHp;
     private Integer maxHp;

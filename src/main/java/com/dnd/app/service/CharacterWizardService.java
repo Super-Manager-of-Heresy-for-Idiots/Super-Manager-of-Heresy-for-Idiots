@@ -190,6 +190,146 @@ public class CharacterWizardService {
         return buildFullResponse(character);
     }
 
+    @Transactional
+    public CharacterResponse createVanillaCharacter(CreateFullCharacterRequest req, String username) {
+        User owner = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        CharacterClass charClass = classRepository.findById(req.getClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
+        if (charClass.getHomebrew() != null) {
+            throw new BadRequestException("Homebrew classes cannot be used in vanilla characters");
+        }
+
+        CharacterRace race = raceService.getSelectableVanillaRace(req.getRaceId());
+
+        if (req.getSubraceId() != null) {
+            raceService.validateLineageSelection(race, req.getSubraceId());
+        } else if (Boolean.TRUE.equals(race.getLineageRequired())) {
+            throw new BadRequestException("This race requires a subrace/lineage selection");
+        }
+
+        Background background = backgroundRepository.findById(req.getBackgroundId())
+                .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
+        if (background.getHomebrew() != null) {
+            throw new BadRequestException("Homebrew backgrounds cannot be used in vanilla characters");
+        }
+
+        if (req.getLevel() < 1 || req.getLevel() > 20) {
+            throw new BadRequestException("Level must be between 1 and 20");
+        }
+
+        ScoreMethod scoreMethod = parseScoreMethod(req.getScoreMethod());
+        validateAbilityScores(req.getAbilityScores(), scoreMethod);
+        validateSkillChoices(req.getChosenSkillProficiencyIds(), charClass, background);
+        validateSpells(req.getCantripIds(), req.getSpellIds(), charClass, req.getLevel());
+
+        if (req.getSpellIds() != null) {
+            for (UUID spellId : req.getSpellIds()) {
+                Spell spell = spellRepository.findById(spellId)
+                        .orElseThrow(() -> new BadRequestException("Spell not found: " + spellId));
+                if (spell.getHomebrew() != null) {
+                    throw new BadRequestException("Homebrew spells cannot be used in vanilla characters");
+                }
+            }
+        }
+
+        Map<UUID, Integer> baseScores = req.getAbilityScores().stream()
+                .collect(Collectors.toMap(
+                        CreateFullCharacterRequest.AbilityScoreEntry::getStatId,
+                        CreateFullCharacterRequest.AbilityScoreEntry::getBaseValue));
+
+        Map<String, Integer> racialBonuses = getRacialBonuses(race, req.getSubraceId());
+
+        List<StatType> allStatTypes = statTypeRepository.findAll();
+        Map<String, StatType> statByName = allStatTypes.stream()
+                .collect(Collectors.toMap(StatType::getName, s -> s));
+
+        int walkSpeed = getWalkSpeed(race);
+        int hitDie = charClass.getHitDie() != null ? charClass.getHitDie() : 8;
+        int conModifier = getAbilityModifier(getFinalStatValue(baseScores, racialBonuses, statByName, "Constitution"));
+        int maxHp = calculateMaxHp(hitDie, req.getLevel(), conModifier);
+        int dexModifier = getAbilityModifier(getFinalStatValue(baseScores, racialBonuses, statByName, "Dexterity"));
+        int armorClass = 10 + dexModifier;
+
+        List<String> savingThrows = referenceDataService.parseJsonStringList(charClass.getSavingThrowStatIdsJson());
+        String biographyJson = serializeBiography(req.getBiography());
+
+        PlayerCharacter character = PlayerCharacter.builder()
+                .name(req.getName())
+                .totalLevel(req.getLevel())
+                .experience(0L)
+                .race(race)
+                .selectedLineageId(req.getSubraceId())
+                .raceSnapshotJson(raceService.buildRaceSnapshotJson(race, req.getSubraceId()))
+                .owner(owner)
+                .alignment(req.getAlignment())
+                .background(background)
+                .avatarUrl(req.getAvatar())
+                .armorClass(armorClass)
+                .speed(walkSpeed)
+                .maxHp(maxHp)
+                .currentHp(maxHp)
+                .hitDiceType("d" + hitDie)
+                .hitDiceTotal(req.getLevel() + "d" + hitDie)
+                .deathSaveSuccesses(0)
+                .deathSaveFailures(0)
+                .savingThrowProficiencyStatIdsJson(serializeStringList(savingThrows))
+                .biographyJson(biographyJson)
+                .scoreMethod(scoreMethod)
+                .build();
+
+        character = characterRepository.saveAndFlush(character);
+
+        CharacterClassLevel ccl = CharacterClassLevel.builder()
+                .characterId(character.getId())
+                .classId(charClass.getId())
+                .classLevel(req.getLevel())
+                .build();
+        classLevelRepository.saveAndFlush(ccl);
+        character.getClassLevels().add(ccl);
+
+        for (StatType st : allStatTypes) {
+            int base = baseScores.getOrDefault(st.getId(), 10);
+            int racial = racialBonuses.getOrDefault(st.getName(), 0);
+            CharacterStat stat = CharacterStat.builder()
+                    .character(character)
+                    .statType(st)
+                    .value(base + racial)
+                    .build();
+            characterStatRepository.save(stat);
+            character.getStats().add(stat);
+        }
+
+        saveSkillProficiencies(character, req.getChosenSkillProficiencyIds(), background);
+
+        if (req.getCantripIds() != null) {
+            saveKnownSpells(character, req.getCantripIds());
+        }
+        if (req.getSpellIds() != null) {
+            saveKnownSpells(character, req.getSpellIds());
+        }
+
+        if (req.getStartingCoins() != null) {
+            for (var coin : req.getStartingCoins()) {
+                CurrencyType ct = currencyTypeRepository.findById(coin.getCurrencyTypeId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Currency type not found"));
+                CharacterWallet wallet = CharacterWallet.builder()
+                        .character(character)
+                        .currencyType(ct)
+                        .amount(java.math.BigDecimal.valueOf(coin.getAmount()))
+                        .build();
+                walletRepository.save(wallet);
+            }
+        }
+
+        log.info("Vanilla character created: id={}, name='{}', class='{}', race='{}', level={}, owner={}",
+                character.getId(), character.getName(), charClass.getName(), race.getName(),
+                req.getLevel(), username);
+
+        return buildFullResponse(character);
+    }
+
     private CharacterResponse buildFullResponse(PlayerCharacter character) {
         CharacterResponse response = characterMapper.toResponse(character);
         response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
