@@ -37,5 +37,6 @@
     <include file="db/changelog/030-seed-wizard-data.xml"/>
     <include file="db/changelog/031-fix-seed-language.xml"/>
     <include file="db/changelog/032-schema-integrity.xml"/>
+    <include file="db/changelog/033-cascade-deletes.xml"/>
 
 </databaseChangeLog>
