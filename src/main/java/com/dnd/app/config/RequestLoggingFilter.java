@@ -64,6 +64,11 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     private String currentUsername(HttpServletRequest request) {
+        Object authenticatedUsername = request.getAttribute("authenticatedUsername");
+        if (authenticatedUsername instanceof String username && !username.isBlank()) {
+            return username;
+        }
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null
                 && authentication.isAuthenticated()
