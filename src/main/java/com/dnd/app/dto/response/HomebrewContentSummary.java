@@ -19,4 +19,8 @@ public class HomebrewContentSummary {
     private int skillCount = 0;
     @Builder.Default
     private int featCount = 0;
+    @Builder.Default
+    private int subclassCount = 0;
+    @Builder.Default
+    private int buffDebuffCount = 0;
 }

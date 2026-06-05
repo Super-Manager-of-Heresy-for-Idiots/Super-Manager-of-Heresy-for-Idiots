@@ -4,6 +4,7 @@ import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.AdminService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
+import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final HomebrewAdminService homebrewAdminService;
+    private final HomebrewAuthoringService authoringService;
 
     // --- Stat Types ---
 
@@ -100,6 +102,20 @@ public class AdminController {
                 .body(ApiResponse.ok(adminService.createCharacterClass(request), "Класс персонажа создан"));
     }
 
+    @PostMapping("/character-classes/rich")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> createClassRich(
+            @Valid @RequestBody CreateHomebrewClassRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(authoringService.createStandardCharacterClassRich(request), "Класс и награды уровней созданы"));
+    }
+
+    @PostMapping("/character-classes/import-json")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> importClassJson(
+            @Valid @RequestBody CreateHomebrewClassRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(authoringService.createStandardCharacterClassRich(request), "Класс импортирован из JSON"));
+    }
+
     @GetMapping("/character-classes/{id}")
     public ResponseEntity<ApiResponse<CharacterClassResponse>> getClass(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getCharacterClass(id)));
@@ -109,6 +125,12 @@ public class AdminController {
     public ResponseEntity<ApiResponse<CharacterClassResponse>> updateClass(
             @PathVariable UUID id, @Valid @RequestBody CreateCharacterClassRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterClass(id, request), "Класс персонажа обновлен"));
+    }
+
+    @PutMapping("/character-classes/{id}/rich")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> updateClassRich(
+            @PathVariable UUID id, @Valid @RequestBody CreateHomebrewClassRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authoringService.updateStandardCharacterClassRich(id, request), "Класс и награды уровней обновлены"));
     }
 
     @DeleteMapping("/character-classes/{id}")

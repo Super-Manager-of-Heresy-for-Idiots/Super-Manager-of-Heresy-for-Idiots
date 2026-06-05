@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface ClassLevelRewardRepository extends JpaRepository<ClassLevelReward, UUID> {
     List<ClassLevelReward> findAllByCharacterClassId(UUID classId);
     List<ClassLevelReward> findAllByCharacterClassIdAndRequiredLevel(UUID classId, Integer requiredLevel);
+    void deleteAllByCharacterClassId(UUID classId);
 }

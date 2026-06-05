@@ -21,4 +21,8 @@ public class ContentSummaryDto {
     private String slot;
     private String skillType;
     private String prerequisites;
+    private String effectType;
+    private Boolean isBuff;
+    private UUID classId;
+    private String className;
 }

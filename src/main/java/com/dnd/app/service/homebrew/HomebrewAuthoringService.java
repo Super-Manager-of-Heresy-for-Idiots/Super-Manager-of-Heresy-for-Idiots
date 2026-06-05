@@ -3,8 +3,10 @@ package com.dnd.app.service.homebrew;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.ContentType;
 import com.dnd.app.domain.enums.DamageType;
+import com.dnd.app.domain.enums.EffectRole;
 import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.HomebrewStatus;
+import com.dnd.app.domain.enums.RewardType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.SkillActivation;
 import com.dnd.app.dto.request.*;
@@ -15,6 +17,7 @@ import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,6 +44,12 @@ public class HomebrewAuthoringService {
     private final CharacterClassRepository classRepository;
     private final SkillRepository skillRepository;
     private final FeatRepository featRepository;
+    private final SubclassRepository subclassRepository;
+    private final BuffDebuffRepository buffDebuffRepository;
+    private final SkillEffectRepository skillEffectRepository;
+    private final StatTypeRepository statTypeRepository;
+    private final ClassLevelRewardRepository classLevelRewardRepository;
+    private final RewardResolverRegistry rewardResolverRegistry;
 
     @Transactional
     public HomebrewDetailResponse createPackage(CreateHomebrewRequest request, String username) {
@@ -198,6 +207,124 @@ public class HomebrewAuthoringService {
     }
 
     @Transactional
+    public HomebrewClassCreationResponse createPackageCharacterClassRich(
+            UUID packageId,
+            CreateHomebrewClassRequest request,
+            String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (classRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
+        }
+
+        CharacterClass characterClass = CharacterClass.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .homebrew(pkg)
+                .build();
+        CharacterClass savedClass = classRepository.save(characterClass);
+        attachContentItem(pkg, ContentType.CHARACTER_CLASS, savedClass.getId(), username);
+
+        Map<String, List<ContentSummaryDto>> createdContent = new LinkedHashMap<>();
+        addCreatedContent(createdContent, ContentType.CHARACTER_CLASS, summarizeClass(savedClass));
+
+        List<ClassLevelRewardResponse> rewardResponses = new ArrayList<>();
+        Set<String> duplicateGuard = new HashSet<>();
+        if (request.getLevels() != null) {
+            for (CreateHomebrewClassRequest.LevelPlan level : request.getLevels()) {
+                if (level.getRewards() == null) {
+                    continue;
+                }
+                for (CreateHomebrewClassRequest.RewardPlan rewardPlan : level.getRewards()) {
+                    RewardType rewardType = parseRewardType(rewardPlan.getRewardType());
+                    UUID rewardId = resolveClassRewardId(pkg, savedClass, rewardType, rewardPlan, createdContent, username);
+                    String duplicateKey = level.getLevel() + "|" + rewardType.name() + "|" + rewardId;
+                    if (!duplicateGuard.add(duplicateKey)) {
+                        throw new DuplicateResourceException("Дублирующаяся награда класса: " + duplicateKey);
+                    }
+
+                    ClassLevelReward reward = ClassLevelReward.builder()
+                            .characterClass(savedClass)
+                            .requiredLevel(level.getLevel())
+                            .rewardType(rewardType.name())
+                            .rewardId(rewardId)
+                            .isChoice(rewardPlan.getIsChoice() != null ? rewardPlan.getIsChoice() : true)
+                            .build();
+                    ClassLevelReward savedReward = classLevelRewardRepository.save(reward);
+                    rewardResponses.add(toClassLevelRewardResponse(savedReward));
+                }
+            }
+        }
+
+        HomebrewPackage refreshed = packageRepository.findById(packageId).orElseThrow();
+        log.info("Homebrew class created: packageId={}, classId={}, rewards={}, author={}",
+                packageId, savedClass.getId(), rewardResponses.size(), username);
+        return HomebrewClassCreationResponse.builder()
+                .characterClass(toCharacterClassResponse(savedClass))
+                .rewards(rewardResponses)
+                .createdContent(createdContent)
+                .packageDetail(toDetailResponse(refreshed))
+                .build();
+    }
+
+    @Transactional
+    public HomebrewClassCreationResponse updatePackageCharacterClassRich(
+            UUID packageId,
+            UUID classId,
+            CreateHomebrewClassRequest request,
+            String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+        CharacterClass characterClass = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
+        requireSamePackage(pkg, characterClass.getHomebrew(), "Класс персонажа");
+        if (!characterClass.getName().equals(request.getName()) && classRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
+        }
+        characterClass.setName(request.getName());
+        characterClass.setDescription(request.getDescription());
+        CharacterClass savedClass = classRepository.save(characterClass);
+        HomebrewClassCreationResponse response = writeClassPlan(pkg, savedClass, request, username, true);
+        HomebrewPackage refreshed = packageRepository.findById(packageId).orElseThrow();
+        return HomebrewClassCreationResponse.builder()
+                .characterClass(toCharacterClassResponse(savedClass))
+                .rewards(response.getRewards())
+                .createdContent(response.getCreatedContent())
+                .packageDetail(toDetailResponse(refreshed))
+                .build();
+    }
+
+    @Transactional
+    public HomebrewClassCreationResponse createStandardCharacterClassRich(CreateHomebrewClassRequest request) {
+        if (classRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
+        }
+        CharacterClass characterClass = CharacterClass.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .build();
+        CharacterClass savedClass = classRepository.save(characterClass);
+        return writeClassPlan(null, savedClass, request, "admin", false);
+    }
+
+    @Transactional
+    public HomebrewClassCreationResponse updateStandardCharacterClassRich(UUID classId, CreateHomebrewClassRequest request) {
+        CharacterClass characterClass = classRepository.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
+        if (characterClass.getHomebrew() != null) {
+            throw new AccessDeniedException("Homebrew-класс нельзя редактировать через admin vanilla endpoint");
+        }
+        if (!characterClass.getName().equals(request.getName()) && classRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
+        }
+        characterClass.setName(request.getName());
+        characterClass.setDescription(request.getDescription());
+        CharacterClass savedClass = classRepository.save(characterClass);
+        return writeClassPlan(null, savedClass, request, "admin", true);
+    }
+
+    @Transactional
     public HomebrewDetailResponse createPackageSkill(UUID packageId, CreateSkillRequest request, String username) {
         User gm = getRequiredGameMaster(username);
         HomebrewPackage pkg = getEditablePackage(packageId, gm);
@@ -239,6 +366,17 @@ public class HomebrewAuthoringService {
         Feat saved = featRepository.save(feat);
         attachContentItem(pkg, ContentType.FEAT, saved.getId(), username);
         return toDetailResponse(pkg);
+    }
+
+    @Transactional
+    public HomebrewDetailResponse createPackageBuffDebuff(UUID packageId, CreateBuffDebuffRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        BuffDebuff saved = createBuffDebuffInPackage(pkg, request, username);
+        log.info("Homebrew buff/debuff created: packageId={}, buffDebuffId={}, author={}",
+                packageId, saved.getId(), username);
+        return toDetailResponse(packageRepository.findById(packageId).orElseThrow());
     }
 
     @Transactional
@@ -415,6 +553,417 @@ public class HomebrewAuthoringService {
         return skill;
     }
 
+    private HomebrewClassCreationResponse writeClassPlan(
+            HomebrewPackage pkg,
+            CharacterClass characterClass,
+            CreateHomebrewClassRequest request,
+            String username,
+            boolean replaceRewards) {
+        if (replaceRewards) {
+            classLevelRewardRepository.deleteAllByCharacterClassId(characterClass.getId());
+            classLevelRewardRepository.flush();
+        }
+
+        Map<String, List<ContentSummaryDto>> createdContent = new LinkedHashMap<>();
+        addCreatedContent(createdContent, ContentType.CHARACTER_CLASS, summarizeClass(characterClass));
+
+        List<ClassLevelRewardResponse> rewardResponses = new ArrayList<>();
+        Set<String> duplicateGuard = new HashSet<>();
+        if (request.getLevels() != null) {
+            for (CreateHomebrewClassRequest.LevelPlan level : request.getLevels()) {
+                if (level.getRewards() == null) {
+                    continue;
+                }
+                for (CreateHomebrewClassRequest.RewardPlan rewardPlan : level.getRewards()) {
+                    RewardType rewardType = parseRewardType(rewardPlan.getRewardType());
+                    UUID rewardId = resolveClassRewardId(pkg, characterClass, rewardType, rewardPlan, createdContent, username);
+                    String duplicateKey = level.getLevel() + "|" + rewardType.name() + "|" + rewardId;
+                    if (!duplicateGuard.add(duplicateKey)) {
+                        throw new DuplicateResourceException("Дублирующаяся награда класса: " + duplicateKey);
+                    }
+                    ClassLevelReward reward = ClassLevelReward.builder()
+                            .characterClass(characterClass)
+                            .requiredLevel(level.getLevel())
+                            .rewardType(rewardType.name())
+                            .rewardId(rewardId)
+                            .isChoice(rewardPlan.getIsChoice() != null ? rewardPlan.getIsChoice() : true)
+                            .build();
+                    rewardResponses.add(toClassLevelRewardResponse(classLevelRewardRepository.save(reward)));
+                }
+            }
+        }
+
+        return HomebrewClassCreationResponse.builder()
+                .characterClass(toCharacterClassResponse(characterClass))
+                .rewards(rewardResponses)
+                .createdContent(createdContent)
+                .packageDetail(pkg != null ? toDetailResponse(packageRepository.findById(pkg.getId()).orElseThrow()) : null)
+                .build();
+    }
+
+    private RewardType parseRewardType(String rewardType) {
+        try {
+            return RewardType.valueOf(rewardType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный тип награды: " + rewardType);
+        }
+    }
+
+    private UUID resolveClassRewardId(
+            HomebrewPackage pkg,
+            CharacterClass characterClass,
+            RewardType rewardType,
+            CreateHomebrewClassRequest.RewardPlan rewardPlan,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        int sourceCount = 0;
+        sourceCount += rewardPlan.getRewardId() != null ? 1 : 0;
+        sourceCount += rewardPlan.getSkill() != null ? 1 : 0;
+        sourceCount += rewardPlan.getFeat() != null ? 1 : 0;
+        sourceCount += rewardPlan.getBuffDebuff() != null ? 1 : 0;
+        sourceCount += rewardPlan.getSubclass() != null ? 1 : 0;
+        if (sourceCount != 1) {
+            throw new BadRequestException("Для награды должен быть указан ровно один источник: rewardId или inline-контент");
+        }
+
+        if (rewardPlan.getRewardId() != null) {
+            return requireExistingRewardInPackage(pkg, characterClass, rewardType, rewardPlan.getRewardId());
+        }
+
+        return switch (rewardType) {
+            case SKILL -> {
+                if (rewardPlan.getSkill() == null) {
+                    throw new BadRequestException("Для rewardType=SKILL ожидается поле skill");
+                }
+                yield createSkillInPackage(pkg, rewardPlan.getSkill(), createdContent, username).getId();
+            }
+            case FEAT -> {
+                if (rewardPlan.getFeat() == null) {
+                    throw new BadRequestException("Для rewardType=FEAT ожидается поле feat");
+                }
+                yield createFeatInPackage(pkg, rewardPlan.getFeat(), createdContent, username).getId();
+            }
+            case BUFF_DEBUFF -> {
+                if (rewardPlan.getBuffDebuff() == null) {
+                    throw new BadRequestException("Для rewardType=BUFF_DEBUFF ожидается поле buffDebuff");
+                }
+                BuffDebuff saved = createBuffDebuffInPackage(pkg, rewardPlan.getBuffDebuff(), username);
+                addCreatedContent(createdContent, ContentType.BUFF_DEBUFF, summarizeBuffDebuff(saved));
+                yield saved.getId();
+            }
+            case SUBCLASS -> {
+                if (rewardPlan.getSubclass() == null) {
+                    throw new BadRequestException("Для rewardType=SUBCLASS ожидается поле subclass");
+                }
+                yield createSubclassInPackage(pkg, characterClass, rewardPlan.getSubclass(), createdContent, username).getId();
+            }
+        };
+    }
+
+    private UUID requireExistingRewardInPackage(
+            HomebrewPackage pkg,
+            CharacterClass characterClass,
+            RewardType rewardType,
+            UUID rewardId) {
+        switch (rewardType) {
+            case SKILL -> {
+                Skill skill = skillRepository.findById(rewardId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + rewardId));
+                requireSamePackage(pkg, skill.getHomebrew(), "Умение");
+                return skill.getId();
+            }
+            case FEAT -> {
+                Feat feat = featRepository.findById(rewardId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + rewardId));
+                requireSamePackage(pkg, feat.getHomebrew(), "Черта");
+                return feat.getId();
+            }
+            case BUFF_DEBUFF -> {
+                BuffDebuff buffDebuff = buffDebuffRepository.findById(rewardId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден: " + rewardId));
+                requireSamePackage(pkg, buffDebuff.getHomebrew(), "Бафф/дебафф");
+                return buffDebuff.getId();
+            }
+            case SUBCLASS -> {
+                Subclass subclass = subclassRepository.findById(rewardId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден: " + rewardId));
+                requireSamePackage(pkg, subclass.getHomebrew(), "Подкласс");
+                if (subclass.getParentClass() == null || !subclass.getParentClass().getId().equals(characterClass.getId())) {
+                    throw new UnprocessableEntityException("Подкласс должен относиться к создаваемому классу");
+                }
+                return subclass.getId();
+            }
+        }
+        throw new BadRequestException("Некорректный тип награды: " + rewardType);
+    }
+
+    private Skill createSkillInPackage(
+            HomebrewPackage pkg,
+            CreateHomebrewClassRequest.InlineSkillRequest request,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        if (skillRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Умение с таким названием уже существует");
+        }
+        validateDamageFields(request.getDamageDice(), request.getDamageType());
+
+        Skill skill = Skill.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .skillType(request.getSkillType())
+                .homebrew(pkg)
+                .damageDice(request.getDamageDice())
+                .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
+                .damageType(parseDamageType(request.getDamageType()))
+                .build();
+        Skill saved = skillRepository.save(skill);
+        if (pkg != null) {
+            attachContentItem(pkg, ContentType.SKILL, saved.getId(), username);
+        }
+        addCreatedContent(createdContent, ContentType.SKILL, summarizeSkill(saved));
+        createSkillEffectsInPackage(pkg, saved, request.getEffects(), createdContent, username);
+        return saved;
+    }
+
+    private Feat createFeatInPackage(
+            HomebrewPackage pkg,
+            CreateFeatRequest request,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        if (featRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Черта с таким названием уже существует");
+        }
+        Feat feat = Feat.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .prerequisites(request.getPrerequisites())
+                .homebrew(pkg)
+                .build();
+        Feat saved = featRepository.save(feat);
+        if (pkg != null) {
+            attachContentItem(pkg, ContentType.FEAT, saved.getId(), username);
+        }
+        addCreatedContent(createdContent, ContentType.FEAT, summarizeFeat(saved));
+        return saved;
+    }
+
+    private Subclass createSubclassInPackage(
+            HomebrewPackage pkg,
+            CharacterClass characterClass,
+            CreateHomebrewClassRequest.InlineSubclassRequest request,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        if (subclassRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
+        }
+        Subclass subclass = Subclass.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .parentClass(characterClass)
+                .homebrew(pkg)
+                .build();
+        Subclass saved = subclassRepository.save(subclass);
+        if (pkg != null) {
+            attachContentItem(pkg, ContentType.SUBCLASS, saved.getId(), username);
+        }
+        addCreatedContent(createdContent, ContentType.SUBCLASS, summarizeSubclass(saved));
+        return saved;
+    }
+
+    private BuffDebuff createBuffDebuffInPackage(HomebrewPackage pkg, CreateBuffDebuffRequest request, String username) {
+        if (buffDebuffRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Бафф/дебафф с таким названием уже существует");
+        }
+        if ("STAT_MODIFIER".equals(request.getEffectType()) && request.getTargetStatId() == null) {
+            throw new BadRequestException("Для эффекта STAT_MODIFIER нужно указать targetStatId");
+        }
+        BuffDebuff buffDebuff = BuffDebuff.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .effectType(request.getEffectType())
+                .modifierValue(request.getModifierValue())
+                .durationRounds(request.getDurationRounds())
+                .isBuff(request.getIsBuff())
+                .homebrew(pkg)
+                .build();
+        if (request.getTargetStatId() != null) {
+            StatType statType = statTypeRepository.findById(request.getTargetStatId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Тип характеристики не найден: " + request.getTargetStatId()));
+            requireVanillaOrSamePackage(pkg, statType.getHomebrew(), "Характеристика");
+            buffDebuff.setTargetStat(statType);
+        }
+        BuffDebuff saved = buffDebuffRepository.save(buffDebuff);
+        if (pkg != null) {
+            attachContentItem(pkg, ContentType.BUFF_DEBUFF, saved.getId(), username);
+        }
+        return saved;
+    }
+
+    private void createSkillEffectsInPackage(
+            HomebrewPackage pkg,
+            Skill skill,
+            List<CreateHomebrewClassRequest.InlineSkillEffectRequest> effects,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        if (effects == null || effects.isEmpty()) {
+            return;
+        }
+
+        Set<UUID> attachedBuffs = new HashSet<>();
+        for (CreateHomebrewClassRequest.InlineSkillEffectRequest effect : effects) {
+            BuffDebuff buffDebuff = resolveSkillEffectBuffDebuff(pkg, effect, createdContent, username);
+            if (!attachedBuffs.add(buffDebuff.getId())) {
+                throw new DuplicateResourceException("Один бафф/дебафф нельзя привязать к умению дважды: " + buffDebuff.getId());
+            }
+            EffectRole role = parseEffectRole(effect.getEffectRole());
+            validateEffectRole(role, buffDebuff);
+            SkillEffect skillEffect = SkillEffect.builder()
+                    .skill(skill)
+                    .buffDebuff(buffDebuff)
+                    .effectRole(role)
+                    .chancePercent(effect.getChancePercent())
+                    .build();
+            skillEffectRepository.save(skillEffect);
+        }
+    }
+
+    private BuffDebuff resolveSkillEffectBuffDebuff(
+            HomebrewPackage pkg,
+            CreateHomebrewClassRequest.InlineSkillEffectRequest effect,
+            Map<String, List<ContentSummaryDto>> createdContent,
+            String username) {
+        int sourceCount = 0;
+        sourceCount += effect.getBuffDebuffId() != null ? 1 : 0;
+        sourceCount += effect.getBuffDebuff() != null ? 1 : 0;
+        if (sourceCount != 1) {
+            throw new BadRequestException("Для эффекта умения нужен ровно один источник: buffDebuffId или buffDebuff");
+        }
+        if (effect.getBuffDebuffId() != null) {
+            BuffDebuff buffDebuff = buffDebuffRepository.findById(effect.getBuffDebuffId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден: " + effect.getBuffDebuffId()));
+            requireSamePackage(pkg, buffDebuff.getHomebrew(), "Бафф/дебафф");
+            return buffDebuff;
+        }
+        BuffDebuff saved = createBuffDebuffInPackage(pkg, effect.getBuffDebuff(), username);
+        addCreatedContent(createdContent, ContentType.BUFF_DEBUFF, summarizeBuffDebuff(saved));
+        return saved;
+    }
+
+    private EffectRole parseEffectRole(String role) {
+        try {
+            return EffectRole.valueOf(role);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректная роль эффекта: " + role + ". Допустимо: BUFF, DEBUFF");
+        }
+    }
+
+    private void validateEffectRole(EffectRole role, BuffDebuff buffDebuff) {
+        if (role == EffectRole.BUFF && !buffDebuff.getIsBuff()) {
+            throw new UnprocessableEntityException("Роль BUFF несовместима с дебаффом '" + buffDebuff.getName() + "'");
+        }
+        if (role == EffectRole.DEBUFF && buffDebuff.getIsBuff()) {
+            throw new UnprocessableEntityException("Роль DEBUFF несовместима с баффом '" + buffDebuff.getName() + "'");
+        }
+    }
+
+    private void requireSamePackage(HomebrewPackage expected, HomebrewPackage actual, String contentLabel) {
+        if (expected == null) {
+            if (actual != null) {
+                throw new AccessDeniedException(contentLabel + " должен быть стандартным, без homebrew-пакета");
+            }
+            return;
+        }
+        if (actual == null || !actual.getId().equals(expected.getId())) {
+            throw new AccessDeniedException(contentLabel + " должен быть создан в этом же homebrew-пакете");
+        }
+    }
+
+    private void requireVanillaOrSamePackage(HomebrewPackage expected, HomebrewPackage actual, String contentLabel) {
+        if (expected == null) {
+            if (actual != null) {
+                throw new AccessDeniedException(contentLabel + " должен быть стандартным, без homebrew-пакета");
+            }
+            return;
+        }
+        if (actual != null && !actual.getId().equals(expected.getId())) {
+            throw new AccessDeniedException(contentLabel + " должен быть vanilla или из этого же homebrew-пакета");
+        }
+    }
+
+    private void addCreatedContent(
+            Map<String, List<ContentSummaryDto>> createdContent,
+            ContentType contentType,
+            ContentSummaryDto summary) {
+        createdContent.computeIfAbsent(contentType.name(), ignored -> new ArrayList<>()).add(summary);
+    }
+
+    private CharacterClassResponse toCharacterClassResponse(CharacterClass characterClass) {
+        return CharacterClassResponse.builder()
+                .id(characterClass.getId())
+                .name(characterClass.getName())
+                .description(characterClass.getDescription())
+                .build();
+    }
+
+    private ClassLevelRewardResponse toClassLevelRewardResponse(ClassLevelReward reward) {
+        RewardDetailDto detail = rewardResolverRegistry.resolve(reward.getRewardType(), reward.getRewardId());
+        return ClassLevelRewardResponse.builder()
+                .id(reward.getId())
+                .classId(reward.getCharacterClass().getId())
+                .requiredLevel(reward.getRequiredLevel())
+                .rewardType(reward.getRewardType())
+                .rewardId(reward.getRewardId())
+                .rewardName(detail.getName())
+                .isChoice(reward.getIsChoice())
+                .build();
+    }
+
+    private ContentSummaryDto summarizeClass(CharacterClass characterClass) {
+        return ContentSummaryDto.builder()
+                .id(characterClass.getId())
+                .name(characterClass.getName())
+                .description(characterClass.getDescription())
+                .build();
+    }
+
+    private ContentSummaryDto summarizeSkill(Skill skill) {
+        return ContentSummaryDto.builder()
+                .id(skill.getId())
+                .name(skill.getName())
+                .description(skill.getDescription())
+                .skillType(skill.getSkillType())
+                .build();
+    }
+
+    private ContentSummaryDto summarizeFeat(Feat feat) {
+        return ContentSummaryDto.builder()
+                .id(feat.getId())
+                .name(feat.getName())
+                .description(feat.getDescription())
+                .prerequisites(feat.getPrerequisites())
+                .build();
+    }
+
+    private ContentSummaryDto summarizeBuffDebuff(BuffDebuff buffDebuff) {
+        return ContentSummaryDto.builder()
+                .id(buffDebuff.getId())
+                .name(buffDebuff.getName())
+                .description(buffDebuff.getDescription())
+                .effectType(buffDebuff.getEffectType())
+                .isBuff(buffDebuff.getIsBuff())
+                .build();
+    }
+
+    private ContentSummaryDto summarizeSubclass(Subclass subclass) {
+        return ContentSummaryDto.builder()
+                .id(subclass.getId())
+                .name(subclass.getName())
+                .description(subclass.getDescription())
+                .classId(subclass.getParentClass() != null ? subclass.getParentClass().getId() : null)
+                .className(subclass.getParentClass() != null ? subclass.getParentClass().getName() : null)
+                .build();
+    }
+
     // --- Mapping helpers ---
 
     HomebrewPackageResponse toPackageResponse(HomebrewPackage pkg) {
@@ -473,6 +1022,8 @@ public class HomebrewAuthoringService {
                 case CHARACTER_CLASS -> summary.setClassCount(count);
                 case SKILL -> summary.setSkillCount(count);
                 case FEAT -> summary.setFeatCount(count);
+                case SUBCLASS -> summary.setSubclassCount(count);
+                case BUFF_DEBUFF -> summary.setBuffDebuffCount(count);
             }
         }
         return summary;

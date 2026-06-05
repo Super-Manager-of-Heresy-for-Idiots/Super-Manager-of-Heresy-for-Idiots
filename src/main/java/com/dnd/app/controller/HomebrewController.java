@@ -85,6 +85,32 @@ public class HomebrewController {
                 .body(ApiResponse.ok(data, "Класс добавлен в пакет"));
     }
 
+    @PostMapping("/my/{packageId}/content/classes/rich")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> createPackageCharacterClassRich(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
+        HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Класс и награды уровней добавлены в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/classes/import-json")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> importPackageCharacterClassJson(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
+        HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Класс импортирован из JSON"));
+    }
+
+    @PutMapping("/my/{packageId}/content/classes/{classId}/rich")
+    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> updatePackageCharacterClassRich(
+            @PathVariable UUID packageId,
+            @PathVariable UUID classId,
+            @Valid @RequestBody CreateHomebrewClassRequest request,
+            Authentication auth) {
+        HomebrewClassCreationResponse data = authoringService.updatePackageCharacterClassRich(packageId, classId, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(data, "Класс и награды уровней обновлены"));
+    }
+
     @PostMapping("/my/{packageId}/content/skills")
     public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageSkill(
             @PathVariable UUID packageId, @Valid @RequestBody CreateSkillRequest request, Authentication auth) {
@@ -99,6 +125,14 @@ public class HomebrewController {
         HomebrewDetailResponse data = authoringService.createPackageFeat(packageId, request, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(data, "Черта добавлена в пакет"));
+    }
+
+    @PostMapping("/my/{packageId}/content/buffs-debuffs")
+    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageBuffDebuff(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateBuffDebuffRequest request, Authentication auth) {
+        HomebrewDetailResponse data = authoringService.createPackageBuffDebuff(packageId, request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(data, "Бафф/дебафф добавлен в пакет"));
     }
 
     @DeleteMapping("/my/{id}/content/{contentItemId}")
