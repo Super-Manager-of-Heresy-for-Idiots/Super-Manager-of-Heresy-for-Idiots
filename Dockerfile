@@ -1,12 +1,7 @@
-FROM eclipse-temurin:21-jdk AS builder
-WORKDIR /workspace
-
-COPY gradlew gradlew
-COPY gradle gradle
-COPY build.gradle.kts settings.gradle.kts settings.gradle ./
-COPY src src
-
-RUN chmod +x gradlew && ./gradlew bootJar -x test --no-daemon
+# Runtime-only image. Build the jar locally first:
+#   ./gradlew bootJar -x test
+# The build produces build/libs/SuperManagerofHeresyforIdiots.jar.
+# Then: docker compose build app
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
@@ -20,7 +15,7 @@ ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 \
                -Dhttps.protocols=TLSv1.2,TLSv1.3 \
                -Djava.security.egd=file:/dev/./urandom"
 
-COPY --from=builder --chown=app:app /workspace/build/libs/SuperManagerofHeresyforIdiots.jar app.jar
+COPY --chown=app:app build/libs/SuperManagerofHeresyforIdiots.jar app.jar
 
 EXPOSE 8080
 
