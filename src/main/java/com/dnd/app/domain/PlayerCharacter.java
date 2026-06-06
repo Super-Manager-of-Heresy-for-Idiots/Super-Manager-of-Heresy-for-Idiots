@@ -47,6 +47,10 @@ public class PlayerCharacter {
     @Column(name = "max_hp")
     private Integer maxHp;
 
+    @Column(name = "temp_hp", nullable = false)
+    @Builder.Default
+    private Integer tempHp = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "race_id", nullable = false)
     private CharacterRace race;

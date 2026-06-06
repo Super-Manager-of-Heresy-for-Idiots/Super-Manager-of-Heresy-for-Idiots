@@ -29,6 +29,7 @@ public class CharacterResponse {
     private List<CharacterStatResponse> stats;
     private Integer currentHp;
     private Integer maxHp;
+    private Integer tempHp;
 
     private String alignment;
     private BackgroundResponse background;

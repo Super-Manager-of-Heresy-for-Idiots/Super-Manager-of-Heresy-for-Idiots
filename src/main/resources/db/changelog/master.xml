@@ -39,5 +39,6 @@
     <include file="db/changelog/032-schema-integrity.xml"/>
     <include file="db/changelog/033-cascade-deletes.xml"/>
     <include file="db/changelog/034-add-user-role-index.xml"/>
+    <include file="db/changelog/035-add-temp-hp.xml"/>
 
 </databaseChangeLog>

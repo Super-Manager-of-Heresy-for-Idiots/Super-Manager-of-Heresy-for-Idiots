@@ -328,7 +328,7 @@ There is no `GET /api/admin/teams` controller in the current codebase.
 | `LevelUpRequest` | `classId`, `selections?` where each selection has `rewardType`, `rewardEntryId` |
 | `LoginRequest` | `username`, `password` |
 | `ModifyCurrencyRequest` | `currencyTypeId`, `amount` |
-| `ModifyHpRequest` | `amount` |
+| `ModifyHpRequest` | `amount` (delta to currentHp; negative = damage absorbed by tempHp first), `setTempHp?` (optional: set new tempHp pool, applied BEFORE amount) |
 | `ModifyResourceRequest` | `resourceTypeId`, `currentValue` |
 | `RateHomebrewRequest` | `rating` (`-1` to `1`) |
 | `ReassignCharacterRequest` | `newOwnerUserId` |
@@ -362,7 +362,7 @@ There is no `GET /api/admin/teams` controller in the current codebase.
 | `CharacterActiveEffectResponse` | `id`, `buffDebuffId`, `buffDebuffName`, `isBuff`, `effectType`, `modifierValue`, `targetStatName`, `remainingRounds`, `appliedAt`, `appliedByUsername` |
 | `CharacterClassResponse` | `id`, `name`, `description` |
 | `CharacterRaceResponse` | `id`, `name`, `description` |
-| `CharacterResponse` | `id`, `name`, `totalLevel`, `experience`, `classLevels`, `race`, `ownerId`, `ownerUsername`, `stats`, `createdAt`, `updatedAt` |
+| `CharacterResponse` | `id`, `name`, `totalLevel`, `experience`, `classLevels`, `race`, `selectedLineageId`, `raceSnapshot`, `ownerId`, `ownerUsername`, `campaignId`, `status`, `stats`, `currentHp`, `maxHp`, `tempHp`, `alignment`, `background`, `avatarUrl`, `armorClass`, `speed`, `inspiration`, `hitDiceType`, `hitDiceTotal`, `deathSaveSuccesses`, `deathSaveFailures`, `savingThrowProficiencyStatNames`, `skillProficiencies`, `knownSpells`, `biography`, `features`, `attacks`, `createdAt`, `updatedAt` |
 | `CharacterRewardsResponse` | `characterId`, `totalLevel`, `classBreakdown` |
 | `CharacterStatResponse` | `id`, `statTypeId`, `statTypeName`, `value`, `effectiveValue`, `activeModifiers` |
 | `ClassLevelResponse` | `classId`, `className`, `classLevel` |

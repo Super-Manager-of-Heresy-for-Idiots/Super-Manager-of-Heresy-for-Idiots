@@ -110,6 +110,7 @@ public class CharacterService {
                 .speed(template.getSpeed())
                 .maxHp(template.getMaxHp())
                 .currentHp(template.getMaxHp())
+                .tempHp(0)
                 .inspiration(false)
                 .hitDiceType(template.getHitDiceType())
                 .hitDiceTotal(template.getHitDiceTotal())
@@ -414,12 +415,30 @@ public class CharacterService {
             throw new BadRequestException("Character max HP is not set");
         }
 
+        if (request.getSetTempHp() != null) {
+            character.setTempHp(request.getSetTempHp());
+        }
+
         int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
-        int newHp = Math.max(0, Math.min(currentHp + request.getAmount(), character.getMaxHp()));
-        character.setCurrentHp(newHp);
+        int tempHp = character.getTempHp() != null ? character.getTempHp() : 0;
+        int delta = request.getAmount();
+
+        if (delta < 0) {
+            int damage = -delta;
+            int absorbed = Math.min(tempHp, damage);
+            tempHp -= absorbed;
+            int remaining = damage - absorbed;
+            currentHp = Math.max(0, currentHp - remaining);
+        } else if (delta > 0) {
+            currentHp = Math.min(currentHp + delta, character.getMaxHp());
+        }
+
+        character.setCurrentHp(currentHp);
+        character.setTempHp(tempHp);
         character = characterRepository.save(character);
 
-        log.info("HP modified: characterId={}, amount={}, newHp={}, by user={}", characterId, request.getAmount(), newHp, username);
+        log.info("HP modified: characterId={}, amount={}, setTempHp={}, newHp={}, newTempHp={}, by user={}",
+                characterId, request.getAmount(), request.getSetTempHp(), currentHp, tempHp, username);
         return toResponse(character);
     }
 
@@ -451,6 +470,7 @@ public class CharacterService {
         response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
         response.setCurrentHp(character.getCurrentHp());
         response.setMaxHp(character.getMaxHp());
+        response.setTempHp(character.getTempHp());
         response.setAlignment(character.getAlignment());
         response.setAvatarUrl(character.getAvatarUrl());
         response.setArmorClass(character.getArmorClass());
