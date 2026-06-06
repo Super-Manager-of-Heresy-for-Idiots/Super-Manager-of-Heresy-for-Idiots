@@ -49,14 +49,15 @@ public class ItemInstanceService {
 
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
 
-        // Handle stacking
+        // Handle stacking: atomic increment to avoid lost updates under concurrent grants
         if (Boolean.TRUE.equals(template.getIsStackable())) {
             Optional<ItemInstance> existing = itemInstanceRepository
                     .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, template.getId());
             if (existing.isPresent()) {
-                ItemInstance instance = existing.get();
-                instance.setQuantity(instance.getQuantity() + quantity);
-                instance = itemInstanceRepository.save(instance);
+                UUID instanceId = existing.get().getId();
+                itemInstanceRepository.incrementQuantity(instanceId, quantity);
+                ItemInstance instance = itemInstanceRepository.findById(instanceId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Item instance not found"));
                 log.info("Item stacked: instanceId={}, characterId={}, quantity={}",
                         instance.getId(), characterId, instance.getQuantity());
                 return toResponse(instance);
@@ -128,6 +129,13 @@ public class ItemInstanceService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid equipment slot: " + request.getSlot());
         }
+
+        itemInstanceRepository.findByOwnerCharacterIdAndSlot(characterId, slot)
+                .filter(occupant -> !occupant.getId().equals(instanceId))
+                .ifPresent(occupant -> {
+                    throw new BadRequestException("Slot " + slot + " is already occupied by item "
+                            + occupant.getDisplayName() + ". Unequip it first.");
+                });
 
         instance.setSlot(slot);
         instance = itemInstanceRepository.save(instance);

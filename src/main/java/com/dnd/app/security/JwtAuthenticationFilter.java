@@ -16,11 +16,21 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    /**
+     * Explicit allowlist of public auth endpoints. We never bypass JWT based on
+     * a prefix because that would silently expose any future /api/auth/* endpoint.
+     */
+    private static final Set<String> PUBLIC_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/register"
+    );
 
     private final JwtTokenProvider tokenProvider;
     private final UserDetailsService userDetailsService;
@@ -31,11 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Пропускаем все эндпоинты аутентификации и регистрации
-        if (path.equals("/api/auth/login") ||
-                path.equals("/api/auth/register") ||
-                path.startsWith("/api/auth/")) {
-            log.debug("Skipping JWT filter for auth endpoint: {}", path);
+        if (PUBLIC_PATHS.contains(path)) {
+            log.debug("Skipping JWT filter for public auth endpoint: {}", path);
             filterChain.doFilter(request, response);
             return;
         }

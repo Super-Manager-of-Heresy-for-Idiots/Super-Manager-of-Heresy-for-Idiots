@@ -25,6 +25,7 @@ import java.util.UUID;
 @RequestMapping("/api/homebrew")
 @RequiredArgsConstructor
 @Tag(name = "Homebrew", description = "Homebrew package management")
+@org.springframework.validation.annotation.Validated
 public class HomebrewController {
 
     private final HomebrewAuthoringService authoringService;
@@ -215,8 +216,8 @@ public class HomebrewController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false, defaultValue = "newest") String sort,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) int page,
+            @RequestParam(defaultValue = "20") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(100) int size,
             Authentication auth) {
         Page<HomebrewPackageResponse> data = marketplaceService.browseMarketplace(
                 search, tags, sort, page, size, auth.getName());

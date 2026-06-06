@@ -45,20 +45,24 @@ public class WalletService {
         PlayerCharacter character = findCharacter(characterId);
         enforceOwnerOrGmOrAdmin(character, user);
 
+        // Pre-check existence (so we can distinguish 404 from "insufficient funds")
+        characterWalletRepository
+                .findByCharacterIdAndCurrencyTypeId(characterId, request.getCurrencyTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet entry not found for this currency type"));
+
+        int updated = characterWalletRepository.applyDelta(
+                characterId, request.getCurrencyTypeId(), request.getAmount());
+        if (updated == 0) {
+            throw new BadRequestException("Insufficient funds for this operation");
+        }
+
+        // Refresh canonical state after atomic update
         CharacterWallet wallet = characterWalletRepository
                 .findByCharacterIdAndCurrencyTypeId(characterId, request.getCurrencyTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet entry not found for this currency type"));
 
-        BigDecimal newAmount = wallet.getAmount().add(request.getAmount());
-        if (newAmount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Insufficient funds. Current balance: " + wallet.getAmount());
-        }
-
-        wallet.setAmount(newAmount);
-        wallet = characterWalletRepository.save(wallet);
-
         log.info("Currency modified: characterId={}, currencyTypeId={}, delta={}, newAmount={}, by={}",
-                characterId, request.getCurrencyTypeId(), request.getAmount(), newAmount, username);
+                characterId, request.getCurrencyTypeId(), request.getAmount(), wallet.getAmount(), username);
         return toResponse(wallet);
     }
 

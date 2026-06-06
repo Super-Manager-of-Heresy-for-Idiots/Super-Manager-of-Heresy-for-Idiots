@@ -6,6 +6,7 @@ import com.dnd.app.dto.request.LoginRequest;
 import com.dnd.app.dto.request.RegisterRequest;
 import com.dnd.app.dto.response.AuthResponse;
 import com.dnd.app.dto.response.UserResponse;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.UserRepository;
@@ -32,19 +33,33 @@ public class AuthService {
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            log.warn("Registration rejected — username already taken: {}", request.getUsername());
-            throw new DuplicateResourceException("Имя пользователя уже занято");
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BadRequestException("Некорректная роль");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            log.warn("Registration rejected — email already taken: {}", request.getEmail());
-            throw new DuplicateResourceException("Эта электронная почта уже занята");
+        // Explicit block: ADMIN role cannot be created via public self-registration,
+        // regardless of DTO validation rules. Admins are provisioned out-of-band.
+        if (role == Role.ADMIN) {
+            log.warn("Registration rejected — ADMIN role requested from public endpoint: username={}",
+                    request.getUsername());
+            throw new BadRequestException("Эта роль недоступна для самостоятельной регистрации");
+        }
+
+        // Unified message to prevent username/email enumeration via differing errors.
+        boolean usernameTaken = userRepository.existsByUsername(request.getUsername());
+        boolean emailTaken = userRepository.existsByEmail(request.getEmail());
+        if (usernameTaken || emailTaken) {
+            log.warn("Registration rejected — taken: usernameTaken={}, emailTaken={}",
+                    usernameTaken, emailTaken);
+            throw new DuplicateResourceException("Имя пользователя или email уже используются");
         }
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(Role.valueOf(request.getRole()))
+                .role(role)
                 .build();
         user = userRepository.save(user);
         log.info("User registered: username={}, role={}, id={}", user.getUsername(), user.getRole(), user.getId());

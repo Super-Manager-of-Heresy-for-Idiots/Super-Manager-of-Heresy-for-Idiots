@@ -51,7 +51,7 @@ public class QuestService {
             try {
                 status = QuestStatus.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
-                // default to ACTIVE
+                throw new BadRequestException("Invalid quest status: " + request.getStatus());
             }
         }
 
@@ -111,7 +111,7 @@ public class QuestService {
             try {
                 quest.setStatus(QuestStatus.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                // ignore invalid status
+                throw new BadRequestException("Invalid quest status: " + request.getStatus());
             }
         }
         quest = questRepository.save(quest);

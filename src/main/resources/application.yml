@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/dndapp
-    username: dnd
-    password: dnd
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/dndapp}
+    username: ${SPRING_DATASOURCE_USERNAME:?DB username must be set}
+    password: ${SPRING_DATASOURCE_PASSWORD:?DB password must be set}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -11,6 +11,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
   liquibase:
     change-log: classpath:db/changelog/master.xml
   threads:
@@ -28,8 +32,23 @@ springdoc:
 
 app:
   jwt:
-    secret: CHANGE_ME_IN_PRODUCTION_USE_256_BIT_KEY_THAT_IS_LONG_ENOUGH
-    expiration-ms: 86400000
+    secret: ${JWT_SECRET:?JWT_SECRET must be provided (>= 32 bytes)}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  ratelimit:
+    login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
+    register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 
 logging:
   level:

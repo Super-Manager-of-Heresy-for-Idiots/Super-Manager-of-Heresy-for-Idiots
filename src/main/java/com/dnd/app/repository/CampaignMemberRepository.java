@@ -3,6 +3,8 @@ package com.dnd.app.repository;
 import com.dnd.app.domain.CampaignMember;
 import com.dnd.app.domain.enums.CampaignRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,14 @@ public interface CampaignMemberRepository extends JpaRepository<CampaignMember, 
     List<CampaignMember> findByUserId(UUID userId);
 
     List<CampaignMember> findByUserIdAndKickedFalse(UUID userId);
+
+    /**
+     * Pre-fetches the Campaign association to avoid N+1 lazy loads when callers
+     * iterate memberships to access campaign data.
+     */
+    @Query("select cm from CampaignMember cm join fetch cm.campaign " +
+            "where cm.user.id = :userId and cm.kicked = false")
+    List<CampaignMember> findByUserIdAndKickedFalseFetchCampaign(@Param("userId") UUID userId);
 
     long countByCampaignIdAndRoleInCampaignAndKickedFalse(UUID campaignId, CampaignRole role);
 

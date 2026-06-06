@@ -105,7 +105,9 @@ public class LevelUpService {
 
     @Transactional
     public LevelUpResultResponse commitLevelUp(UUID characterId, String username, LevelUpRequest request) {
-        PlayerCharacter character = characterRepository.findById(characterId)
+        // Pessimistic write lock prevents two concurrent level-up requests from both
+        // succeeding for the same XP threshold and producing a double level-up.
+        PlayerCharacter character = characterRepository.findByIdForUpdate(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Персонаж не найден"));
 
         User user = userRepository.findByUsername(username)

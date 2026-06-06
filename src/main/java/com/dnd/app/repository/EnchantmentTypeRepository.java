@@ -9,5 +9,7 @@ public interface EnchantmentTypeRepository extends JpaRepository<EnchantmentType
 
     boolean existsByName(String name);
 
+    boolean existsByNameAndIdNot(String name, UUID id);
+
     long countByBuffDebuffId(UUID buffDebuffId);
 }

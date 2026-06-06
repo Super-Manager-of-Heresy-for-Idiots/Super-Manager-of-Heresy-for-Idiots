@@ -481,6 +481,11 @@ public class AdminService {
         return userRepository.findAll().stream().map(userMapper::toResponse).toList();
     }
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<UserResponse> listAllUsers(org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findAll(pageable).map(userMapper::toResponse);
+    }
+
     private EquipmentSlot parseSlot(String slot) {
         try {
             return EquipmentSlot.valueOf(slot);

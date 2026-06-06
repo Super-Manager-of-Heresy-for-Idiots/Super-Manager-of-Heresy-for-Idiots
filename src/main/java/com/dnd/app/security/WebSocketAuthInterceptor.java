@@ -45,30 +45,29 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private void handleConnect(StompHeaderAccessor accessor) {
         String token = accessor.getFirstNativeHeader("Authorization");
         if (token == null) {
-            // Try query parameter
             String query = accessor.getFirstNativeHeader("token");
-            if (query != null) {
-                token = query;
-            }
+            if (query != null) token = query;
+        }
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
         }
 
-        if (token != null) {
-            if (token.startsWith("Bearer ")) {
-                token = token.substring(7);
-            }
-            if (jwtTokenProvider.validateToken(token)) {
-                String username = jwtTokenProvider.getUsernameFromToken(token);
-                userRepository.findByUsername(username).ifPresent(user -> {
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            username, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                    accessor.setUser(auth);
-                    log.debug("WebSocket CONNECT authenticated: {}", username);
-                });
-            }
+        if (token == null || !jwtTokenProvider.validateToken(token)) {
+            log.warn("WebSocket CONNECT denied: missing or invalid token");
+            throw new org.springframework.messaging.MessageDeliveryException("Authentication required");
         }
+
+        String username = jwtTokenProvider.getUsernameFromToken(token);
+        var user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new org.springframework.messaging.MessageDeliveryException("Unknown user"));
+
+        var auth = new UsernamePasswordAuthenticationToken(
+                username, null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+        );
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        accessor.setUser(auth);
+        log.debug("WebSocket CONNECT authenticated: {}", username);
     }
 
     private void handleSubscribe(StompHeaderAccessor accessor) {
@@ -92,7 +91,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                             "Not authorized to subscribe to this campaign");
                 }
             } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
-                log.warn("Invalid campaign subscription destination: {}", destination);
+                log.warn("WebSocket SUBSCRIBE denied: malformed campaign destination: {}", destination);
+                throw new org.springframework.messaging.MessageDeliveryException(
+                        "Malformed subscription destination");
             }
         }
     }

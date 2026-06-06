@@ -222,16 +222,13 @@ public class EnchantmentService {
                 throw new DuplicateResourceException("Тип зачарования с именем '" + request.getName() + "' уже существует");
             }
         } else {
-            enchantmentTypeRepository.findAll().stream()
-                    .filter(et -> et.getName().equals(request.getName()) && !et.getId().equals(excludeId))
-                    .findFirst()
-                    .ifPresent(et -> {
-                        throw new DuplicateResourceException("Тип зачарования с именем '" + request.getName() + "' уже существует");
-                    });
+            if (enchantmentTypeRepository.existsByNameAndIdNot(request.getName(), excludeId)) {
+                throw new DuplicateResourceException("Тип зачарования с именем '" + request.getName() + "' уже существует");
+            }
         }
 
         if (request.getBuffDebuffId() != null) {
-            if (!buffDebuffRepository.findById(request.getBuffDebuffId()).isPresent()) {
+            if (!buffDebuffRepository.existsById(request.getBuffDebuffId())) {
                 throw new ResourceNotFoundException("Бафф/дебафф не найден с id: " + request.getBuffDebuffId());
             }
         }

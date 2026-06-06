@@ -98,7 +98,7 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Пакет можно редактировать только в статусе черновика (DRAFT)");
+            throw new com.dnd.app.exception.BadRequestException("Пакет можно редактировать только в статусе черновика (DRAFT)");
         }
 
         if (request.getTitle() != null) {
@@ -124,12 +124,12 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Контент можно добавлять только в статусе черновика (DRAFT)");
+            throw new com.dnd.app.exception.BadRequestException("Контент можно добавлять только в статусе черновика (DRAFT)");
         }
 
         String contentTypeStr = request.getContentType();
         if (!validatorRegistry.isKnownType(contentTypeStr)) {
-            throw new DuplicateResourceException("Неизвестный тип контента: " + contentTypeStr);
+            throw new com.dnd.app.exception.BadRequestException("Неизвестный тип контента: " + contentTypeStr);
         }
 
         validatorRegistry.validate(contentTypeStr, request.getContentId());
@@ -386,7 +386,7 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Контент можно удалять только в статусе черновика (DRAFT)");
+            throw new com.dnd.app.exception.BadRequestException("Контент можно удалять только в статусе черновика (DRAFT)");
         }
 
         HomebrewContentItem item = contentItemRepository.findById(contentItemId)
@@ -407,7 +407,7 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Пакет можно опубликовать только из статуса черновика (DRAFT)");
+            throw new com.dnd.app.exception.BadRequestException("Пакет можно опубликовать только из статуса черновика (DRAFT)");
         }
 
         long contentCount = contentItemRepository.countByHomebrewPackageId(id);
@@ -436,7 +436,7 @@ public class HomebrewAuthoringService {
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
         if (pkg.getStatus() != HomebrewStatus.PUBLISHED) {
-            throw new DuplicateResourceException("Снять с публикации можно только опубликованные пакеты");
+            throw new com.dnd.app.exception.BadRequestException("Снять с публикации можно только опубликованные пакеты");
         }
 
         pkg.setStatus(HomebrewStatus.DRAFT);
@@ -471,7 +471,7 @@ public class HomebrewAuthoringService {
             throw new AccessDeniedException("Нельзя создавать контент в чужом homebrew-пакете");
         }
         if (pkg.isDeleted() || pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new DuplicateResourceException("Контент можно создавать только в DRAFT-пакете");
+            throw new com.dnd.app.exception.BadRequestException("Контент можно создавать только в DRAFT-пакете");
         }
         return pkg;
     }

@@ -432,8 +432,8 @@ public class AdminController {
     // --- Users & Teams (read-only) ---
 
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> listUsers() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listAllUsers()));
+    public ResponseEntity<ApiResponse<Page<UserResponse>>> listUsers(Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listAllUsers(pageable)));
     }
 
     // --- Homebrew Admin ---
@@ -447,8 +447,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/homebrew/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> hardDeleteHomebrew(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(homebrewAdminService.hardDelete(id)));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> hardDeleteHomebrew(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication auth) {
+        Map<String, Object> result = homebrewAdminService.hardDelete(id);
+        org.slf4j.LoggerFactory.getLogger("AUDIT").info(
+                "admin_action action=hardDeleteHomebrew actor={} target={} result={}",
+                auth.getName(), id, result);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     @GetMapping("/homebrew/tags")

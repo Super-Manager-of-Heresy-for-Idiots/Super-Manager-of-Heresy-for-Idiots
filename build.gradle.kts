@@ -17,6 +17,14 @@ springBoot {
     mainClass.set("com.dnd.app.SuperManagerofHeresyforIdiotsApplication")
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveFileName.set("SuperManagerofHeresyforIdiots.jar")
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
+}
+
 configurations {
     compileOnly {
         extendsFrom(configurations.annotationProcessor.get())

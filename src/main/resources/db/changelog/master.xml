@@ -38,5 +38,6 @@
     <include file="db/changelog/031-fix-seed-language.xml"/>
     <include file="db/changelog/032-schema-integrity.xml"/>
     <include file="db/changelog/033-cascade-deletes.xml"/>
+    <include file="db/changelog/034-add-user-role-index.xml"/>
 
 </databaseChangeLog>

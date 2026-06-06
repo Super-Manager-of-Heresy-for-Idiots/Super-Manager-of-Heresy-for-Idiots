@@ -300,6 +300,20 @@ public class CharacterService {
         return toResponse(character);
     }
 
+    /**
+     * Verifies that the character with {@code characterId} belongs to the campaign
+     * identified by {@code campaignId}. Used by /api/campaigns/{campaignId}/characters/*
+     * endpoints to prevent IDOR where the campaignId in the URL is ignored.
+     */
+    @Transactional(readOnly = true)
+    public void enforceCharacterInCampaign(UUID characterId, UUID campaignId) {
+        PlayerCharacter character = characterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character not found in this campaign");
+        }
+    }
+
     @Transactional
     public CharacterResponse updateCharacter(UUID id, UpdateCharacterRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(id)

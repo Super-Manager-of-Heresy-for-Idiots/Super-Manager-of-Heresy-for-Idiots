@@ -40,6 +40,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("ACCESS_DENIED", ex.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSpringAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.FORBIDDEN, "ACCESS_DENIED", ex, request, null);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("ACCESS_DENIED", "Access denied"));
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.CONFLICT, "DUPLICATE", ex, request, null);

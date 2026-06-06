@@ -102,7 +102,7 @@ public class CampaignService {
             Page<Campaign> page = campaignRepository.findAll(pageable);
             return page.map(c -> toCampaignResponse(c, user));
         }
-        List<CampaignMember> memberships = campaignMemberRepository.findByUserIdAndKickedFalse(user.getId());
+        List<CampaignMember> memberships = campaignMemberRepository.findByUserIdAndKickedFalseFetchCampaign(user.getId());
         List<UUID> campaignIds = memberships.stream().map(m -> m.getCampaign().getId()).toList();
         if (campaignIds.isEmpty()) return new PageImpl<>(List.of(), pageable, 0);
         Page<Campaign> page = campaignRepository.findByIdIn(campaignIds, pageable);

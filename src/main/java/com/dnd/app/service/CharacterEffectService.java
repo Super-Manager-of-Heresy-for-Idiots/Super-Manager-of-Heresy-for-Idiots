@@ -37,6 +37,9 @@ public class CharacterEffectService {
         campaignService.enforceGmOrAdmin(campaign, user);
 
         PlayerCharacter character = findCharacter(characterId);
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character does not belong to this campaign");
+        }
         BuffDebuff buffDebuff = buffDebuffRepository.findById(request.getBuffDebuffId())
                 .orElseThrow(() -> new ResourceNotFoundException("BuffDebuff not found"));
 
@@ -64,6 +67,10 @@ public class CharacterEffectService {
 
         if (!effect.getCharacter().getId().equals(characterId)) {
             throw new ResourceNotFoundException("Effect does not belong to this character");
+        }
+        Campaign characterCampaign = effect.getCharacter().getCampaign();
+        if (characterCampaign == null || !characterCampaign.getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character does not belong to this campaign");
         }
 
         characterActiveEffectRepository.delete(effect);

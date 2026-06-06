@@ -77,6 +77,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<CharacterResponse>> getCharacter(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         CharacterResponse character = characterService.getCharacterById(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(character));
     }
@@ -87,6 +88,7 @@ public class CampaignCharacterController {
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @Valid @RequestBody UpdateCharacterRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         CharacterResponse character = characterService.updateCharacter(characterId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(character, "Персонаж обновлен"));
     }
@@ -96,6 +98,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<Void>> deleteCharacter(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         characterService.deleteCharacter(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(null, "Персонаж удален"));
     }
@@ -107,6 +110,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<CharacterStatResponse>>> getStats(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<CharacterStatResponse> stats = characterService.getStats(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(stats));
     }
@@ -118,6 +122,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @PathVariable UUID statId,
             @Valid @RequestBody UpdateStatRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         CharacterStatResponse stat = characterService.updateStatValue(characterId, statId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(stat, "Характеристика обновлена"));
     }
@@ -129,6 +134,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<ItemInstanceResponse>>> getInventory(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<ItemInstanceResponse> items = itemInstanceService.getInventory(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(items));
     }
@@ -138,6 +144,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<ItemInstanceResponse>>> getEquippedItems(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<ItemInstanceResponse> items = itemInstanceService.getEquippedItems(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(items));
     }
@@ -147,6 +154,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<ItemInstanceResponse>>> getBackpackItems(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<ItemInstanceResponse> items = itemInstanceService.getBackpackItems(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(items));
     }
@@ -168,6 +176,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId,
             @Valid @RequestBody EquipItemRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         ItemInstanceResponse response = itemInstanceService.equipItem(characterId, instanceId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Item equipped"));
     }
@@ -178,6 +187,7 @@ public class CampaignCharacterController {
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         ItemInstanceResponse response = itemInstanceService.unequipItem(characterId, instanceId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Item unequipped"));
     }
@@ -210,6 +220,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId,
             @Valid @RequestBody RenameItemRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         ItemInstanceResponse response = itemInstanceService.renameItem(characterId, instanceId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Item renamed"));
     }
@@ -221,6 +232,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<CharacterActiveEffectResponse>>> getEffects(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<CharacterActiveEffectResponse> effects = characterEffectService.getActiveEffects(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(effects));
     }
@@ -251,6 +263,7 @@ public class CampaignCharacterController {
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @PathVariable UUID statTypeId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         AbilityCheckResponse response = characterEffectService.calculateAbilityCheckModifier(characterId, statTypeId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
@@ -262,6 +275,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<WalletEntryResponse>>> getWallet(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<WalletEntryResponse> wallet = walletService.getWallet(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(wallet));
     }
@@ -272,6 +286,7 @@ public class CampaignCharacterController {
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @Valid @RequestBody ModifyCurrencyRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         WalletEntryResponse response = walletService.modifyCurrency(characterId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Currency updated"));
     }
@@ -283,6 +298,7 @@ public class CampaignCharacterController {
     public ResponseEntity<ApiResponse<List<ResourceResponse>>> getResources(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         List<ResourceResponse> resources = characterResourceService.getResources(characterId, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(resources));
     }
@@ -293,6 +309,7 @@ public class CampaignCharacterController {
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @Valid @RequestBody ModifyResourceRequest request, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
         ResourceResponse response = characterResourceService.modifyResource(characterId, request, auth.getName());
         return ResponseEntity.ok(ApiResponse.ok(response, "Resource updated"));
     }

@@ -2,11 +2,15 @@ package com.dnd.app.repository;
 
 import com.dnd.app.domain.CampaignMember;
 import com.dnd.app.domain.PlayerCharacter;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter, UUID> {
@@ -19,6 +23,7 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
            "AND cm.roleInCampaign = com.dnd.app.domain.enums.CampaignRole.GM AND cm.kicked = false")
     boolean isPlayerInGameMasterCampaign(@Param("playerId") UUID playerId, @Param("gmId") UUID gmId);
 
+    @EntityGraph(attributePaths = {"owner", "race", "classLevels"})
     List<PlayerCharacter> findByCampaignId(UUID campaignId);
 
     List<PlayerCharacter> findByCampaignIdAndOwnerId(UUID campaignId, UUID ownerId);
@@ -26,4 +31,13 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
     long countByRaceId(UUID raceId);
 
     List<PlayerCharacter> findByOwnerIdAndCampaignIsNull(UUID ownerId);
+
+    /**
+     * Pessimistic write lock on a character row. Use within @Transactional for
+     * mutations that must serialize (XP, level-up, HP changes) to prevent
+     * concurrent double-application of irreversible effects.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select pc from PlayerCharacter pc where pc.id = :id")
+    Optional<PlayerCharacter> findByIdForUpdate(@Param("id") UUID id);
 }
