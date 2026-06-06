@@ -146,6 +146,77 @@ public class ReferenceDataService {
         return spells.stream().map(this::mapSpell).toList();
     }
 
+    // --- Vanilla (no-campaign) variants for character templates ---
+
+    @Transactional(readOnly = true)
+    public List<CharacterClassDetailResponse> getVanillaClasses() {
+        List<CharacterClass> classes = classRepository.findAllByHomebrewIsNull();
+        Map<String, ProficiencySkill> skillByName = proficiencySkillRepository.findAll().stream()
+                .collect(Collectors.toMap(ProficiencySkill::getName, s -> s));
+        return classes.stream().map(c -> mapClassDetail(c, skillByName)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CharacterRaceDetailResponse> getVanillaRaces() {
+        return raceRepository.findAvailableActiveSystemOnly().stream()
+                .map(this::mapRaceDetail).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BackgroundResponse> getVanillaBackgrounds() {
+        return backgroundRepository.findAllByHomebrewIsNull().stream()
+                .map(this::mapBackground).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProficiencySkillResponse> getVanillaSkills() {
+        return proficiencySkillRepository.findAll().stream()
+                .map(s -> ProficiencySkillResponse.builder()
+                        .id(s.getId())
+                        .name(s.getName())
+                        .governingStatId(s.getGoverningStat().getId())
+                        .governingStatName(s.getGoverningStat().getName())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StatTypeResponse> getVanillaStatTypes() {
+        return statTypeRepository.findAll().stream()
+                .map(st -> StatTypeResponse.builder()
+                        .id(st.getId())
+                        .name(st.getName())
+                        .description(st.getDescription())
+                        .isDefault(st.getIsDefault())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CurrencyTypeResponse> getVanillaCurrencies() {
+        return currencyTypeRepository.findByHomebrewIsNull().stream()
+                .map(ct -> CurrencyTypeResponse.builder()
+                        .id(ct.getId())
+                        .name(ct.getName())
+                        .exchangeRateToGold(ct.getExchangeRateToGold())
+                        .isDefault(ct.getIsDefault())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SpellResponse> getVanillaSpells(UUID classId, Integer level, String school) {
+        List<Spell> spells = spellRepository.findFilteredSystemOnly(level, school);
+        if (classId != null) {
+            String classIdStr = classId.toString();
+            spells = spells.stream()
+                    .filter(s -> s.getAvailableToClassIdsJson() != null
+                            && s.getAvailableToClassIdsJson().contains(classIdStr))
+                    .toList();
+        }
+        return spells.stream().map(this::mapSpell).toList();
+    }
+
     // --- Mapping helpers ---
 
     private CharacterClassDetailResponse mapClassDetail(CharacterClass c, Map<String, ProficiencySkill> skillByName) {

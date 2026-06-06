@@ -107,17 +107,21 @@ Response: `ApiResponse<CharacterResponse>` — новый персонаж с `c
 
 ## Данные для справочников (vanilla контент)
 
-Для формы создания шаблона нужны reference data. Используй существующие эндпоинты:
+Для формы создания шаблона (вне кампании) используй **vanilla reference endpoints** — это отдельный набор эндпоинтов без `campaignId` в пути. Они возвращают только системный (vanilla) 5e-контент, без homebrew. Фильтровать на стороне FE не нужно.
 
-- `GET /api/reference/stat-types` — характеристики (Strength, Dexterity, ...)
-- `GET /api/reference/classes` — все классы (фильтруй `source === "GLOBAL"` для vanilla)
-- `GET /api/reference/races` — расы
-- `GET /api/reference/backgrounds` — предыстории
-- `GET /api/reference/proficiency-skills` — навыки (Athletics, Stealth, ...)
-- `GET /api/reference/spells` — заклинания
-- `GET /api/reference/currency-types` — типы валют
+- `GET /api/reference/stat-types` — характеристики (Strength, Dexterity, ...) → `List<StatTypeResponse>`
+- `GET /api/reference/classes` — классы → `List<CharacterClassDetailResponse>`
+- `GET /api/reference/races` — расы с сабрейсами → `List<CharacterRaceDetailResponse>`
+- `GET /api/reference/backgrounds` — предыстории → `List<BackgroundResponse>`
+- `GET /api/reference/skills` — 18 навыков (Athletics, Stealth, ...) → `List<ProficiencySkillResponse>`
+- `GET /api/reference/currencies` — типы валют → `List<CurrencyTypeResponse>`
+- `GET /api/reference/spells` — заклинания. Поддерживает query-параметры `classId` (UUID), `level` (int), `school` (string) → `List<SpellResponse>`
 
-Если reference-эндпоинт возвращает поле `homebrewId` / `source`, фильтруй: в шаблонах показывай только vanilla контент.
+Все ответы обёрнуты в `ApiResponse<T>` (как и остальной API). Требуется аутентификация (JWT), как для любого `/api/**` кроме `/api/auth/*`.
+
+> **Важно:** не используй `/api/campaigns/{campaignId}/reference/...` для формы шаблона — эти эндпоинты требуют членства в кампании и вернут 403/404, а шаблоны по дизайну создаются вне кампаний. Для wizard'а персонажа **внутри** кампании по-прежнему дёргай campaign-scoped версию.
+
+> **Не используй** пути `/api/reference/proficiency-skills`, `/api/reference/currency-types`, `/api/reference/available/*` — таких эндпоинтов нет, бэкенд вернёт 500 (Spring трактует их как несуществующий статический ресурс).
 
 ## UI/UX Flow
 
