@@ -1,11 +1,11 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.AddEnchantmentRequest;
 import com.dnd.app.dto.response.EnchantmentResponse;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.repository.*;
 import org.junit.jupiter.api.Test;
@@ -19,15 +19,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EnchantmentServiceTest {
 
     @Mock private EnchantmentTypeRepository enchantmentTypeRepository;
-    @Mock private InventoryEnchantmentRepository inventoryEnchantmentRepository;
-    @Mock private InventorySlotRepository inventorySlotRepository;
     @Mock private ItemEnchantmentRepository itemEnchantmentRepository;
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private PlayerCharacterRepository playerCharacterRepository;
@@ -52,55 +49,51 @@ class EnchantmentServiceTest {
                 .campaign(Campaign.builder().id(UUID.randomUUID()).name("Campaign").build()).build();
     }
 
-    private InventorySlot buildSlot(UUID id, PlayerCharacter pc, ItemType itemType) {
-        return InventorySlot.builder().id(id).character(pc).slot(EquipmentSlot.MAIN_HAND).itemType(itemType).build();
-    }
-
-    private ItemType buildItemType() {
-        return ItemType.builder().id(UUID.randomUUID()).name("Longsword").slot(EquipmentSlot.MAIN_HAND).damageBonus(0).build();
+    private ItemInstance buildItem(UUID id, PlayerCharacter owner) {
+        return ItemInstance.builder().id(id).ownerCharacter(owner).build();
     }
 
     private EnchantmentType buildEnchantmentType(UUID id) {
         return EnchantmentType.builder().id(id).name("Flame").damageBonus(0).build();
     }
 
-    // ---- Test 1: add enchantment to empty slot -> 409 ----
+    // ---- Test 1: add enchantment to item not owned by character -> 400 ----
 
     @Test
-    void addEnchantment_toEmptySlot_throws409() {
+    void addEnchantment_toItemNotOwnedByCharacter_throws400() {
         UUID charId = UUID.randomUUID();
-        UUID slotId = UUID.randomUUID();
+        UUID instanceId = UUID.randomUUID();
         User player = buildPlayer(UUID.randomUUID(), "player1");
         PlayerCharacter pc = buildCharacter(charId, player);
-        InventorySlot slot = buildSlot(slotId, pc, null);
+        ItemInstance item = buildItem(instanceId, null);
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
-        when(inventorySlotRepository.findById(slotId)).thenReturn(Optional.of(slot));
+        when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(item));
 
         AddEnchantmentRequest req = AddEnchantmentRequest.builder().enchantmentTypeId(UUID.randomUUID()).build();
-        assertThrows(DuplicateResourceException.class, () -> enchantmentService.addEnchantment(charId, slotId, req, "player1"));
+        assertThrows(BadRequestException.class, () -> enchantmentService.addItemEnchantment(charId, instanceId, req, "player1"));
     }
 
-    // ---- Test 2: duplicate enchantment on same slot -> 409 ----
+    // ---- Test 2: duplicate enchantment on same item -> 409 ----
 
     @Test
-    void addEnchantment_duplicateOnSameSlot_throws409() {
+    void addEnchantment_duplicateOnSameItem_throws409() {
         UUID charId = UUID.randomUUID();
-        UUID slotId = UUID.randomUUID();
+        UUID instanceId = UUID.randomUUID();
         UUID enchTypeId = UUID.randomUUID();
         User player = buildPlayer(UUID.randomUUID(), "player1");
         PlayerCharacter pc = buildCharacter(charId, player);
-        InventorySlot slot = buildSlot(slotId, pc, buildItemType());
+        ItemInstance item = buildItem(instanceId, pc);
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
-        when(inventorySlotRepository.findById(slotId)).thenReturn(Optional.of(slot));
+        when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(item));
         when(enchantmentTypeRepository.findById(enchTypeId)).thenReturn(Optional.of(buildEnchantmentType(enchTypeId)));
-        when(inventoryEnchantmentRepository.existsByInventorySlotIdAndEnchantmentTypeId(slotId, enchTypeId)).thenReturn(true);
+        when(itemEnchantmentRepository.existsByItemInstanceIdAndEnchantmentTypeId(instanceId, enchTypeId)).thenReturn(true);
 
         AddEnchantmentRequest req = AddEnchantmentRequest.builder().enchantmentTypeId(enchTypeId).build();
-        assertThrows(DuplicateResourceException.class, () -> enchantmentService.addEnchantment(charId, slotId, req, "player1"));
+        assertThrows(DuplicateResourceException.class, () -> enchantmentService.addItemEnchantment(charId, instanceId, req, "player1"));
     }
 
     // ---- Test 3: add enchantment on other player's character -> 403 ----
@@ -116,7 +109,7 @@ class EnchantmentServiceTest {
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
 
         AddEnchantmentRequest req = AddEnchantmentRequest.builder().enchantmentTypeId(UUID.randomUUID()).build();
-        assertThrows(AccessDeniedException.class, () -> enchantmentService.addEnchantment(charId, UUID.randomUUID(), req, "other"));
+        assertThrows(AccessDeniedException.class, () -> enchantmentService.addItemEnchantment(charId, UUID.randomUUID(), req, "other"));
     }
 
     // ---- Test 4: remove enchantment on other player's character -> 403 ----
@@ -128,45 +121,45 @@ class EnchantmentServiceTest {
         User owner = buildPlayer(UUID.randomUUID(), "owner");
         User other = buildPlayer(UUID.randomUUID(), "other");
         PlayerCharacter pc = buildCharacter(charId, owner);
-        InventorySlot slot = buildSlot(UUID.randomUUID(), pc, buildItemType());
-        InventoryEnchantment enchantment = InventoryEnchantment.builder()
-                .id(enchId).inventorySlot(slot).enchantmentType(buildEnchantmentType(UUID.randomUUID())).build();
+        ItemInstance item = buildItem(UUID.randomUUID(), pc);
+        ItemEnchantment enchantment = ItemEnchantment.builder()
+                .id(enchId).itemInstance(item).enchantmentType(buildEnchantmentType(UUID.randomUUID())).build();
 
         when(userRepository.findByUsername("other")).thenReturn(Optional.of(other));
-        when(inventoryEnchantmentRepository.findById(enchId)).thenReturn(Optional.of(enchantment));
+        when(itemEnchantmentRepository.findById(enchId)).thenReturn(Optional.of(enchantment));
 
-        assertThrows(AccessDeniedException.class, () -> enchantmentService.removeEnchantment(charId, enchId, "other"));
+        assertThrows(AccessDeniedException.class, () -> enchantmentService.removeItemEnchantment(charId, enchId, "other"));
     }
 
-    // ---- Test 5: getSlotEnchantments by GM of team -> succeeds ----
+    // ---- Test 5: getItemEnchantments by GM of campaign -> succeeds ----
 
     @Test
-    void getSlotEnchantments_byGmOfTeam_succeeds() {
+    void getItemEnchantments_byGmOfCampaign_succeeds() {
         UUID charId = UUID.randomUUID();
-        UUID slotId = UUID.randomUUID();
+        UUID instanceId = UUID.randomUUID();
         User owner = buildPlayer(UUID.randomUUID(), "owner");
         User gm = buildGm(UUID.randomUUID(), "gm1");
         PlayerCharacter pc = buildCharacter(charId, owner);
-        InventorySlot slot = buildSlot(slotId, pc, buildItemType());
+        ItemInstance item = buildItem(instanceId, pc);
 
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gm));
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
         when(campaignService.isGmInCampaign(pc.getCampaign().getId(), gm.getId())).thenReturn(true);
-        when(inventorySlotRepository.findById(slotId)).thenReturn(Optional.of(slot));
-        when(inventoryEnchantmentRepository.findAllByInventorySlotId(slotId)).thenReturn(List.of());
+        when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(item));
+        when(itemEnchantmentRepository.findByItemInstanceId(instanceId)).thenReturn(List.of());
 
-        List<EnchantmentResponse> result = enchantmentService.getSlotEnchantments(charId, slotId, "gm1");
+        List<EnchantmentResponse> result = enchantmentService.getItemEnchantments(charId, instanceId, "gm1");
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
 
-    // ---- Test 6: getSlotEnchantments by GM of other team -> 403 ----
+    // ---- Test 6: getItemEnchantments by GM of other campaign -> 403 ----
 
     @Test
-    void getSlotEnchantments_byGmOfOtherTeam_throws403() {
+    void getItemEnchantments_byGmOfOtherCampaign_throws403() {
         UUID charId = UUID.randomUUID();
-        UUID slotId = UUID.randomUUID();
+        UUID instanceId = UUID.randomUUID();
         User owner = buildPlayer(UUID.randomUUID(), "owner");
         User gm = buildGm(UUID.randomUUID(), "gm2");
         PlayerCharacter pc = buildCharacter(charId, owner);
@@ -175,6 +168,6 @@ class EnchantmentServiceTest {
         when(playerCharacterRepository.findById(charId)).thenReturn(Optional.of(pc));
         when(campaignService.isGmInCampaign(pc.getCampaign().getId(), gm.getId())).thenReturn(false);
 
-        assertThrows(AccessDeniedException.class, () -> enchantmentService.getSlotEnchantments(charId, slotId, "gm2"));
+        assertThrows(AccessDeniedException.class, () -> enchantmentService.getItemEnchantments(charId, instanceId, "gm2"));
     }
 }

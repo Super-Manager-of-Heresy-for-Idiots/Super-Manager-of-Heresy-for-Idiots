@@ -8,7 +8,6 @@ import com.dnd.app.dto.request.SkillEffectRequest;
 import com.dnd.app.dto.response.SkillEffectResponse;
 import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.mapper.ReferenceDataMapper;
-import com.dnd.app.mapper.TeamMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
@@ -34,7 +33,6 @@ class SkillServiceTest {
     @Mock private CharacterClassRepository classRepository;
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private UserRepository userRepository;
-    @Mock private TeamRepository teamRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private SubclassRepository subclassRepository;
     @Mock private FeatRepository featRepository;
@@ -43,7 +41,6 @@ class SkillServiceTest {
     @Mock private BuffDebuffRepository buffDebuffRepository;
     @Mock private ReferenceDataMapper refMapper;
     @Mock private UserMapper userMapper;
-    @Mock private TeamMapper teamMapper;
     @Mock private RewardResolverRegistry rewardResolverRegistry;
 
     @InjectMocks private AdminService adminService;
