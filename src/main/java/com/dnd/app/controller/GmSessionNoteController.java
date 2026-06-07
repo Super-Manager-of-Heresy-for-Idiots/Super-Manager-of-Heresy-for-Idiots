@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/gm-notes")
@@ -22,49 +24,60 @@ import java.util.UUID;
 public class GmSessionNoteController {
 
     private final GmSessionNoteService gmSessionNoteService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping
     @Operation(summary = "Create GM session note")
-    public ResponseEntity<ApiResponse<GmSessionNoteResponse>> createNote(
+    public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> createNote(
             @PathVariable UUID campaignId,
             @Valid @RequestBody CreateGmNoteRequest request, Authentication auth) {
-        GmSessionNoteResponse response = gmSessionNoteService.createNote(campaignId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Note created"));
+        return CompletableFuture.supplyAsync(() -> {
+            GmSessionNoteResponse response = gmSessionNoteService.createNote(campaignId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Note created"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping
     @Operation(summary = "List GM session notes")
-    public ResponseEntity<ApiResponse<List<GmSessionNoteResponse>>> listNotes(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<GmSessionNoteResponse>>>> listNotes(
             @PathVariable UUID campaignId, Authentication auth) {
-        List<GmSessionNoteResponse> notes = gmSessionNoteService.listNotes(campaignId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(notes));
+        return CompletableFuture.supplyAsync(() -> {
+            List<GmSessionNoteResponse> notes = gmSessionNoteService.listNotes(campaignId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(notes));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/{noteId}")
     @Operation(summary = "Get GM session note")
-    public ResponseEntity<ApiResponse<GmSessionNoteResponse>> getNote(
+    public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> getNote(
             @PathVariable UUID campaignId,
             @PathVariable UUID noteId, Authentication auth) {
-        GmSessionNoteResponse response = gmSessionNoteService.getNote(noteId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return CompletableFuture.supplyAsync(() -> {
+            GmSessionNoteResponse response = gmSessionNoteService.getNote(noteId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
     }
 
     @PutMapping("/{noteId}")
     @Operation(summary = "Update GM session note")
-    public ResponseEntity<ApiResponse<GmSessionNoteResponse>> updateNote(
+    public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> updateNote(
             @PathVariable UUID campaignId,
             @PathVariable UUID noteId,
             @Valid @RequestBody UpdateGmNoteRequest request, Authentication auth) {
-        GmSessionNoteResponse response = gmSessionNoteService.updateNote(noteId, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Note updated"));
+        return CompletableFuture.supplyAsync(() -> {
+            GmSessionNoteResponse response = gmSessionNoteService.updateNote(noteId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Note updated"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/{noteId}")
     @Operation(summary = "Delete GM session note")
-    public ResponseEntity<ApiResponse<Void>> deleteNote(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNote(
             @PathVariable UUID campaignId,
             @PathVariable UUID noteId, Authentication auth) {
-        gmSessionNoteService.deleteNote(noteId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Note deleted"));
+        return CompletableFuture.supplyAsync(() -> {
+            gmSessionNoteService.deleteNote(noteId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Note deleted"));
+        }, controllerTaskExecutor);
     }
 }

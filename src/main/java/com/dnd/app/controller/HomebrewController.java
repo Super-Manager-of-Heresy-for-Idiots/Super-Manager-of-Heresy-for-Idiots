@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/homebrew")
@@ -32,271 +34,337 @@ public class HomebrewController {
     private final HomebrewMarketplaceService marketplaceService;
     private final HomebrewLibraryService libraryService;
     private final RaceService raceService;
+    private final Executor controllerTaskExecutor;
 
     // === Authoring (own packages) ===
 
     @PostMapping
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackage(
             @Valid @RequestBody CreateHomebrewRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackage(request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Пакет создан"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackage(request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Пакет создан"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>> listMyPackages(
+    public CompletableFuture<ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>>> listMyPackages(
             @RequestParam(required = false) String status,
             Pageable pageable, Authentication auth) {
-        Page<HomebrewPackageResponse> data = authoringService.listMyPackages(auth.getName(), status, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            Page<HomebrewPackageResponse> data = authoringService.listMyPackages(auth.getName(), status, pageable);
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/my/{id}")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> getMyPackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> getMyPackage(
             @PathVariable UUID id, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.getMyPackage(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.getMyPackage(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
+
     @PutMapping("/my/{id}")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> updatePackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> updatePackage(
             @PathVariable UUID id, @Valid @RequestBody UpdateHomebrewRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.updatePackage(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет обновлен"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.updatePackage(id, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Пакет обновлен"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{id}/content")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> addContent(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> addContent(
             @PathVariable UUID id, @Valid @RequestBody AddContentRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.addContent(id, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Контент добавлен"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.addContent(id, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Контент добавлен"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/item-types")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageItemType(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageItemType(
             @PathVariable UUID packageId, @Valid @RequestBody CreateItemTypeRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackageItemType(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Тип предмета добавлен в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageItemType(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Тип предмета добавлен в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/classes")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageCharacterClass(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageCharacterClass(
             @PathVariable UUID packageId, @Valid @RequestBody CreateCharacterClassRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackageCharacterClass(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Класс добавлен в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageCharacterClass(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Класс добавлен в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/classes/rich")
-    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> createPackageCharacterClassRich(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> createPackageCharacterClassRich(
             @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
-        HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Класс и награды уровней добавлены в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Класс и награды уровней добавлены в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/classes/import-json")
-    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> importPackageCharacterClassJson(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> importPackageCharacterClassJson(
             @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
-        HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Класс импортирован из JSON"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Класс импортирован из JSON"));
+        }, controllerTaskExecutor);
     }
 
     @PutMapping("/my/{packageId}/content/classes/{classId}/rich")
-    public ResponseEntity<ApiResponse<HomebrewClassCreationResponse>> updatePackageCharacterClassRich(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> updatePackageCharacterClassRich(
             @PathVariable UUID packageId,
             @PathVariable UUID classId,
             @Valid @RequestBody CreateHomebrewClassRequest request,
             Authentication auth) {
-        HomebrewClassCreationResponse data = authoringService.updatePackageCharacterClassRich(packageId, classId, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Класс и награды уровней обновлены"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewClassCreationResponse data = authoringService.updatePackageCharacterClassRich(packageId, classId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Класс и награды уровней обновлены"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/skills")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageSkill(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageSkill(
             @PathVariable UUID packageId, @Valid @RequestBody CreateSkillRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackageSkill(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Умение добавлено в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageSkill(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Умение добавлено в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/feats")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageFeat(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageFeat(
             @PathVariable UUID packageId, @Valid @RequestBody CreateFeatRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackageFeat(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Черта добавлена в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageFeat(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Черта добавлена в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/buffs-debuffs")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> createPackageBuffDebuff(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageBuffDebuff(
             @PathVariable UUID packageId, @Valid @RequestBody CreateBuffDebuffRequest request, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.createPackageBuffDebuff(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Бафф/дебафф добавлен в пакет"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageBuffDebuff(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Бафф/дебафф добавлен в пакет"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/races")
-    public ResponseEntity<ApiResponse<RaceResponse>> createPackageRace(
+    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> createPackageRace(
             @PathVariable UUID packageId, @Valid @RequestBody RaceCreateRequest request, Authentication auth) {
-        RaceResponse data = raceService.createHomebrewRace(packageId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Homebrew race created"));
+        return CompletableFuture.supplyAsync(() -> {
+            RaceResponse data = raceService.createHomebrewRace(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Homebrew race created"));
+        }, controllerTaskExecutor);
     }
 
     @PutMapping("/my/{packageId}/content/races/{raceId}")
-    public ResponseEntity<ApiResponse<RaceResponse>> updatePackageRace(
+    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> updatePackageRace(
             @PathVariable UUID packageId,
             @PathVariable UUID raceId,
             @Valid @RequestBody RaceUpdateRequest request,
             Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(raceService.updateHomebrewRace(packageId, raceId, request, auth.getName()), "Homebrew race updated"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(raceService.updateHomebrewRace(packageId, raceId, request, auth.getName()), "Homebrew race updated")),
+                controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/races/{raceId}/enable")
-    public ResponseEntity<ApiResponse<RaceResponse>> enablePackageRace(
+    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> enablePackageRace(
             @PathVariable UUID packageId,
             @PathVariable UUID raceId,
             Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, true, auth.getName()), "Homebrew race enabled"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, true, auth.getName()), "Homebrew race enabled")),
+                controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/races/{raceId}/disable")
-    public ResponseEntity<ApiResponse<RaceResponse>> disablePackageRace(
+    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> disablePackageRace(
             @PathVariable UUID packageId,
             @PathVariable UUID raceId,
             Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, false, auth.getName()), "Homebrew race disabled"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, false, auth.getName()), "Homebrew race disabled")),
+                controllerTaskExecutor);
     }
 
     @PostMapping("/my/{packageId}/content/races/{raceId}/duplicate")
-    public ResponseEntity<ApiResponse<RaceResponse>> duplicateSystemRaceIntoPackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> duplicateSystemRaceIntoPackage(
             @PathVariable UUID packageId,
             @PathVariable UUID raceId,
             Authentication auth) {
-        RaceResponse data = raceService.duplicateSystemRaceIntoHomebrew(packageId, raceId, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "System race duplicated into homebrew"));
+        return CompletableFuture.supplyAsync(() -> {
+            RaceResponse data = raceService.duplicateSystemRaceIntoHomebrew(packageId, raceId, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "System race duplicated into homebrew"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/my/{id}/content/{contentItemId}")
-    public ResponseEntity<ApiResponse<Void>> removeContent(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeContent(
             @PathVariable UUID id, @PathVariable UUID contentItemId, Authentication auth) {
-        authoringService.removeContent(id, contentItemId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Контент удален"));
+        return CompletableFuture.supplyAsync(() -> {
+            authoringService.removeContent(id, contentItemId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Контент удален"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{id}/publish")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> publish(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> publish(
             @PathVariable UUID id, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.publish(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет опубликован"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.publish(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Пакет опубликован"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/my/{id}/unpublish")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> unpublish(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> unpublish(
             @PathVariable UUID id, Authentication auth) {
-        HomebrewDetailResponse data = authoringService.unpublish(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data, "Пакет снят с публикации"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.unpublish(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Пакет снят с публикации"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/my/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> softDelete(
+    public CompletableFuture<ResponseEntity<ApiResponse<Map<String, Object>>>> softDelete(
             @PathVariable UUID id, Authentication auth) {
-        Map<String, Object> data = authoringService.softDelete(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            Map<String, Object> data = authoringService.softDelete(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
 
     // === Marketplace ===
 
     @GetMapping("/marketplace")
-    public ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>> browseMarketplace(
+    public CompletableFuture<ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>>> browseMarketplace(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false, defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) int page,
             @RequestParam(defaultValue = "20") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(100) int size,
             Authentication auth) {
-        Page<HomebrewPackageResponse> data = marketplaceService.browseMarketplace(
-                search, tags, sort, page, size, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            Page<HomebrewPackageResponse> data = marketplaceService.browseMarketplace(
+                    search, tags, sort, page, size, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/marketplace/{id}")
-    public ResponseEntity<ApiResponse<HomebrewDetailResponse>> getMarketplacePackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> getMarketplacePackage(
             @PathVariable UUID id, Authentication auth) {
-        HomebrewDetailResponse data = marketplaceService.getMarketplacePackage(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = marketplaceService.getMarketplacePackage(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/marketplace/{id}/install")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> install(
+    public CompletableFuture<ResponseEntity<ApiResponse<Map<String, Object>>>> install(
             @PathVariable UUID id, Authentication auth) {
-        Map<String, Object> data = marketplaceService.installPackage(id, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(data, "Пакет установлен"));
+        return CompletableFuture.supplyAsync(() -> {
+            Map<String, Object> data = marketplaceService.installPackage(id, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Пакет установлен"));
+        }, controllerTaskExecutor);
     }
 
     // === Installed ===
 
     @GetMapping("/installed")
-    public ResponseEntity<ApiResponse<Page<InstalledHomebrewResponse>>> listInstalled(
+    public CompletableFuture<ResponseEntity<ApiResponse<Page<InstalledHomebrewResponse>>>> listInstalled(
             Pageable pageable, Authentication auth) {
-        Page<InstalledHomebrewResponse> data = marketplaceService.listInstalled(auth.getName(), pageable);
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return CompletableFuture.supplyAsync(() -> {
+            Page<InstalledHomebrewResponse> data = marketplaceService.listInstalled(auth.getName(), pageable);
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/installed/{installationId}")
-    public ResponseEntity<ApiResponse<Void>> uninstall(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> uninstall(
             @PathVariable UUID installationId, Authentication auth) {
-        marketplaceService.uninstall(installationId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Пакет удален из установленных"));
+        return CompletableFuture.supplyAsync(() -> {
+            marketplaceService.uninstall(installationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Пакет удален из установленных"));
+        }, controllerTaskExecutor);
     }
 
     // === Ratings ===
 
     @PostMapping("/marketplace/{id}/rate")
     @Operation(summary = "Rate a homebrew package (like/dislike)")
-    public ResponseEntity<ApiResponse<HomebrewRatingResponse>> ratePackage(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewRatingResponse>>> ratePackage(
             @PathVariable UUID id,
             @Valid @RequestBody RateHomebrewRequest request, Authentication auth) {
-        HomebrewRatingResponse response = marketplaceService.ratePackage(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Rating submitted"));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewRatingResponse response = marketplaceService.ratePackage(id, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Rating submitted"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/marketplace/{id}/rating")
     @Operation(summary = "Get package rating")
-    public ResponseEntity<ApiResponse<HomebrewRatingResponse>> getPackageRating(
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewRatingResponse>>> getPackageRating(
             @PathVariable UUID id, Authentication auth) {
-        HomebrewRatingResponse response = marketplaceService.getPackageRating(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewRatingResponse response = marketplaceService.getPackageRating(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
     }
 
     // === GM Library ===
 
     @GetMapping("/library")
     @Operation(summary = "List GM homebrew library")
-    public ResponseEntity<ApiResponse<List<HomebrewPackageResponse>>> listLibrary(Authentication auth) {
-        List<HomebrewPackageResponse> library = libraryService.listLibrary(auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(library));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<HomebrewPackageResponse>>>> listLibrary(Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<HomebrewPackageResponse> library = libraryService.listLibrary(auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(library));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/library/{packageId}")
     @Operation(summary = "Add package to GM library")
-    public ResponseEntity<ApiResponse<Void>> addToLibrary(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> addToLibrary(
             @PathVariable UUID packageId, Authentication auth) {
-        libraryService.addToLibrary(packageId, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(null, "Package added to library"));
+        return CompletableFuture.supplyAsync(() -> {
+            libraryService.addToLibrary(packageId, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(null, "Package added to library"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/library/{packageId}")
     @Operation(summary = "Remove package from GM library")
-    public ResponseEntity<ApiResponse<Void>> removeFromLibrary(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeFromLibrary(
             @PathVariable UUID packageId, Authentication auth) {
-        libraryService.removeFromLibrary(packageId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Package removed from library"));
+        return CompletableFuture.supplyAsync(() -> {
+            libraryService.removeFromLibrary(packageId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Package removed from library"));
+        }, controllerTaskExecutor);
     }
 }

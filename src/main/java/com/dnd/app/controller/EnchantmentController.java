@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/characters/{characterId}/inventory/{instanceId}/enchantments")
@@ -23,38 +25,45 @@ import java.util.UUID;
 public class EnchantmentController {
 
     private final EnchantmentService enchantmentService;
+    private final Executor controllerTaskExecutor;
 
     @GetMapping
     @Operation(summary = "Get enchantments on item instance")
-    public ResponseEntity<ApiResponse<List<EnchantmentResponse>>> getItemEnchantments(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<EnchantmentResponse>>>> getItemEnchantments(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId, Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                enchantmentService.getItemEnchantments(characterId, instanceId, auth.getName())));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(
+                        enchantmentService.getItemEnchantments(characterId, instanceId, auth.getName()))),
+                controllerTaskExecutor);
     }
 
     @PostMapping
     @Operation(summary = "Add enchantment to item instance")
-    public ResponseEntity<ApiResponse<EnchantmentResponse>> addEnchantment(
+    public CompletableFuture<ResponseEntity<ApiResponse<EnchantmentResponse>>> addEnchantment(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId,
             @Valid @RequestBody AddEnchantmentRequest request, Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(
-                        enchantmentService.addItemEnchantment(characterId, instanceId, request, auth.getName()),
-                        "Зачарование наложено"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.status(HttpStatus.CREATED)
+                        .body(ApiResponse.ok(
+                                enchantmentService.addItemEnchantment(characterId, instanceId, request, auth.getName()),
+                                "Зачарование наложено")),
+                controllerTaskExecutor);
     }
 
     @DeleteMapping("/{enchantmentId}")
     @Operation(summary = "Remove enchantment from item instance")
-    public ResponseEntity<ApiResponse<Void>> removeEnchantment(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeEnchantment(
             @PathVariable UUID campaignId,
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId,
             @PathVariable UUID enchantmentId, Authentication auth) {
-        enchantmentService.removeItemEnchantment(characterId, enchantmentId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Зачарование снято"));
+        return CompletableFuture.supplyAsync(() -> {
+            enchantmentService.removeItemEnchantment(characterId, enchantmentId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Зачарование снято"));
+        }, controllerTaskExecutor);
     }
 }

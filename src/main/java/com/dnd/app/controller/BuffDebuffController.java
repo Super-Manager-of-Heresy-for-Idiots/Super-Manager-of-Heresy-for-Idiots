@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/admin/buffs-debuffs")
@@ -19,35 +21,46 @@ import java.util.UUID;
 public class BuffDebuffController {
 
     private final BuffDebuffService buffDebuffService;
+    private final Executor controllerTaskExecutor;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<BuffDebuffResponse>>> list(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> list(
             @RequestParam(required = false) Boolean isBuff,
             @RequestParam(required = false) String effectType) {
-        return ResponseEntity.ok(ApiResponse.ok(buffDebuffService.findAll(isBuff, effectType)));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(buffDebuffService.findAll(isBuff, effectType))),
+                controllerTaskExecutor);
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<BuffDebuffResponse>> create(
+    public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> create(
             @Valid @RequestBody CreateBuffDebuffRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(buffDebuffService.create(request), "Бафф/дебафф создан"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.status(HttpStatus.CREATED)
+                        .body(ApiResponse.ok(buffDebuffService.create(request), "Бафф/дебафф создан")),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<BuffDebuffResponse>> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(buffDebuffService.findById(id)));
+    public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> get(@PathVariable UUID id) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(buffDebuffService.findById(id))),
+                controllerTaskExecutor);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<BuffDebuffResponse>> update(
+    public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> update(
             @PathVariable UUID id, @Valid @RequestBody CreateBuffDebuffRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(buffDebuffService.update(id, request), "Бафф/дебафф обновлен"));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(buffDebuffService.update(id, request), "Бафф/дебафф обновлен")),
+                controllerTaskExecutor);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        buffDebuffService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Бафф/дебафф удален"));
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable UUID id) {
+        return CompletableFuture.supplyAsync(() -> {
+            buffDebuffService.delete(id);
+            return ResponseEntity.ok(ApiResponse.ok(null, "Бафф/дебафф удален"));
+        }, controllerTaskExecutor);
     }
 }

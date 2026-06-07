@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/shared-storage")
@@ -22,60 +24,73 @@ import java.util.UUID;
 public class SharedStorageController {
 
     private final SharedStorageService sharedStorageService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping
     @Operation(summary = "Create shared storage container (GM only)")
-    public ResponseEntity<ApiResponse<SharedStorageResponse>> createStorage(
+    public CompletableFuture<ResponseEntity<ApiResponse<SharedStorageResponse>>> createStorage(
             @PathVariable UUID campaignId,
             @Valid @RequestBody CreateSharedStorageRequest request, Authentication auth) {
-        SharedStorageResponse response = sharedStorageService.createStorage(campaignId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Storage created"));
+        return CompletableFuture.supplyAsync(() -> {
+            SharedStorageResponse response = sharedStorageService.createStorage(campaignId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Storage created"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping
     @Operation(summary = "List shared storage containers")
-    public ResponseEntity<ApiResponse<List<SharedStorageResponse>>> listStorages(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<SharedStorageResponse>>>> listStorages(
             @PathVariable UUID campaignId, Authentication auth) {
-        List<SharedStorageResponse> storages = sharedStorageService.listStorages(campaignId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(storages));
+        return CompletableFuture.supplyAsync(() -> {
+            List<SharedStorageResponse> storages = sharedStorageService.listStorages(campaignId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(storages));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/{storageId}")
     @Operation(summary = "Get shared storage with items")
-    public ResponseEntity<ApiResponse<SharedStorageResponse>> getStorage(
+    public CompletableFuture<ResponseEntity<ApiResponse<SharedStorageResponse>>> getStorage(
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId, Authentication auth) {
-        SharedStorageResponse response = sharedStorageService.getStorage(storageId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return CompletableFuture.supplyAsync(() -> {
+            SharedStorageResponse response = sharedStorageService.getStorage(storageId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/{storageId}")
     @Operation(summary = "Delete shared storage (GM only)")
-    public ResponseEntity<ApiResponse<Void>> deleteStorage(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteStorage(
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId, Authentication auth) {
-        sharedStorageService.deleteStorage(storageId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Storage deleted"));
+        return CompletableFuture.supplyAsync(() -> {
+            sharedStorageService.deleteStorage(storageId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Storage deleted"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/{storageId}/items/{instanceId}/deposit")
     @Operation(summary = "Deposit item into shared storage")
-    public ResponseEntity<ApiResponse<Void>> depositItem(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> depositItem(
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId,
             @PathVariable UUID instanceId, Authentication auth) {
-        sharedStorageService.addItemToStorage(storageId, instanceId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Item deposited"));
+        return CompletableFuture.supplyAsync(() -> {
+            sharedStorageService.addItemToStorage(storageId, instanceId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Item deposited"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/{storageId}/items/{instanceId}/take/{characterId}")
     @Operation(summary = "Take item from shared storage")
-    public ResponseEntity<ApiResponse<Void>> takeItem(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> takeItem(
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId,
             @PathVariable UUID instanceId,
             @PathVariable UUID characterId, Authentication auth) {
-        sharedStorageService.takeItemFromStorage(storageId, instanceId, characterId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Item taken"));
+        return CompletableFuture.supplyAsync(() -> {
+            sharedStorageService.takeItemFromStorage(storageId, instanceId, characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Item taken"));
+        }, controllerTaskExecutor);
     }
 }

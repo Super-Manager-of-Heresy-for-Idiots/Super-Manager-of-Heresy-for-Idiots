@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
@@ -23,40 +26,45 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Registration attempt: username={}, email={}, role={}",
-                request.getUsername(),
-                request.getEmail(),
-                request.getRole());
-        long startTime = System.currentTimeMillis();
+    public CompletableFuture<ResponseEntity<ApiResponse<UserResponse>>> register(@Valid @RequestBody RegisterRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            log.info("Registration attempt: username={}, email={}, role={}",
+                    request.getUsername(),
+                    request.getEmail(),
+                    request.getRole());
+            long startTime = System.currentTimeMillis();
 
-        UserResponse user = authService.register(request);
+            UserResponse user = authService.register(request);
 
-        log.info("Registration successful: username={}, userId={}, role={}, durationMs={}",
-                user.getUsername(),
-                user.getId(),
-                user.getRole(),
-                System.currentTimeMillis() - startTime);
+            log.info("Registration successful: username={}, userId={}, role={}, durationMs={}",
+                    user.getUsername(),
+                    user.getId(),
+                    user.getRole(),
+                    System.currentTimeMillis() - startTime);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(user, "Регистрация успешна"));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(user, "Регистрация успешна"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        log.info("Login attempt: username={}", request.getUsername());
-        long startTime = System.currentTimeMillis();
+    public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> login(@Valid @RequestBody LoginRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            log.info("Login attempt: username={}", request.getUsername());
+            long startTime = System.currentTimeMillis();
 
-        AuthResponse auth = authService.login(request);
+            AuthResponse auth = authService.login(request);
 
-        log.info("Login successful: username={}, userId={}, role={}, tokenIssued=true, durationMs={}",
-                auth.getUser().getUsername(),
-                auth.getUser().getId(),
-                auth.getUser().getRole(),
-                System.currentTimeMillis() - startTime);
+            log.info("Login successful: username={}, userId={}, role={}, tokenIssued=true, durationMs={}",
+                    auth.getUser().getUsername(),
+                    auth.getUser().getId(),
+                    auth.getUser().getRole(),
+                    System.currentTimeMillis() - startTime);
 
-        return ResponseEntity.ok(ApiResponse.ok(auth, "Вход выполнен"));
+            return ResponseEntity.ok(ApiResponse.ok(auth, "Вход выполнен"));
+        }, controllerTaskExecutor);
     }
 }
