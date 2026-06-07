@@ -2,7 +2,6 @@ package com.dnd.app.config;
 
 import com.dnd.app.security.AuthRateLimitFilter;
 import com.dnd.app.security.JwtAuthenticationFilter;
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import lombok.RequiredArgsConstructor;
@@ -68,14 +67,6 @@ public class SecurityConfig {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        // Controllers return CompletableFuture, so the servlet container performs an ASYNC
-                        // re-dispatch when the future completes. The OncePerRequestFilter-based security
-                        // filters (JWT auth, ExceptionTranslation) skip async dispatches, leaving an empty
-                        // SecurityContext on that dispatch — but AuthorizationFilter runs on every dispatch
-                        // type by default, so it rejected the already-authorized request with a bare 403
-                        // (no body, no accessDeniedHandler). Authorize only the initial REQUEST dispatch;
-                        // ASYNC/ERROR/FORWARD are internal continuations of a request already authorized once.
-                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()

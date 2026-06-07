@@ -92,19 +92,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        String[] origins = allowedOrigins.split("\\s*,\\s*");
-        var endpoint = registry.addEndpoint("/ws").setAllowedOrigins(origins);
-        if (endpointEnabled) {
-            endpoint.withSockJS();
-        } else {
-            // REST / publish-only role: nginx does not route /ws here, so this node never
-            // terminates client connections. We still MUST register at least one endpoint:
-            // @EnableWebSocketMessageBroker creates SubProtocolWebSocketHandler as a lifecycle
-            // bean that throws IllegalStateException("No handlers") on start when no endpoint
-            // is registered. Register a plain (non-SockJS) endpoint to satisfy that contract
-            // without advertising a client transport.
-            log.info("WebSocket: /ws not routed to this node (REST/publish-only role); endpoint registered only to satisfy handler lifecycle");
+        if (!endpointEnabled) {
+            log.info("WebSocket: /ws client endpoint disabled on this node (REST/publish-only role)");
+            return;
         }
+        String[] origins = allowedOrigins.split("\\s*,\\s*");
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins(origins)
+                .withSockJS();
     }
 
     @Override
