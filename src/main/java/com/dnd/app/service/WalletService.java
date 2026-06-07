@@ -3,13 +3,17 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.ModifyCurrencyRequest;
+import com.dnd.app.dto.response.PageResponse;
 import com.dnd.app.dto.response.WalletEntryResponse;
+import com.dnd.app.dto.response.WalletHistoryEntryResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +31,7 @@ public class WalletService {
     private final PlayerCharacterRepository playerCharacterRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final WalletTransactionRepository walletTransactionRepository;
 
     @Transactional(readOnly = true)
     public List<WalletEntryResponse> getWallet(UUID characterId, String username) {
@@ -61,9 +66,30 @@ public class WalletService {
                 .findByCharacterIdAndCurrencyTypeId(characterId, request.getCurrencyTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet entry not found for this currency type"));
 
+        WalletTransaction transaction = WalletTransaction.builder()
+                .character(character)
+                .currencyType(wallet.getCurrencyType())
+                .delta(request.getAmount())
+                .balanceAfter(wallet.getAmount())
+                .performedBy(username)
+                .build();
+        walletTransactionRepository.save(transaction);
+
         log.info("Currency modified: characterId={}, currencyTypeId={}, delta={}, newAmount={}, by={}",
                 characterId, request.getCurrencyTypeId(), request.getAmount(), wallet.getAmount(), username);
         return toResponse(wallet);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<WalletHistoryEntryResponse> getWalletHistory(UUID characterId, Pageable pageable, String username) {
+        User user = getUser(username);
+        PlayerCharacter character = findCharacter(characterId);
+        enforceViewAccess(character, user);
+
+        Page<WalletHistoryEntryResponse> page = walletTransactionRepository
+                .findByCharacterIdOrderByCreatedAtDesc(characterId, pageable)
+                .map(this::toHistoryResponse);
+        return PageResponse.of(page);
     }
 
     @Transactional
@@ -130,6 +156,19 @@ public class WalletService {
                 .currencyName(wallet.getCurrencyType().getName())
                 .amount(wallet.getAmount())
                 .goldEquivalent(goldEquivalent)
+                .build();
+    }
+
+    private WalletHistoryEntryResponse toHistoryResponse(WalletTransaction transaction) {
+        return WalletHistoryEntryResponse.builder()
+                .id(transaction.getId())
+                .currencyTypeId(transaction.getCurrencyType().getId())
+                .currencyName(transaction.getCurrencyType().getName())
+                .delta(transaction.getDelta())
+                .balanceAfter(transaction.getBalanceAfter())
+                .reason(transaction.getReason())
+                .performedBy(transaction.getPerformedBy())
+                .createdAt(transaction.getCreatedAt())
                 .build();
     }
 }
