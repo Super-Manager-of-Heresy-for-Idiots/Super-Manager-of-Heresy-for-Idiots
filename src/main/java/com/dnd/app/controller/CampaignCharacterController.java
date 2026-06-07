@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -340,6 +341,18 @@ public class CampaignCharacterController {
             WalletEntryResponse response = walletService.modifyCurrency(characterId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(response, "Currency updated"));
         }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/{characterId}/wallet/history")
+    @Operation(summary = "Get character wallet transaction history")
+    public ResponseEntity<ApiResponse<PageResponse<WalletHistoryEntryResponse>>> getWalletHistory(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            Pageable pageable, Authentication auth) {
+        characterService.enforceCharacterInCampaign(characterId, campaignId);
+        PageResponse<WalletHistoryEntryResponse> history =
+                walletService.getWalletHistory(characterId, pageable, auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok(history));
     }
 
     // --- Resources ---

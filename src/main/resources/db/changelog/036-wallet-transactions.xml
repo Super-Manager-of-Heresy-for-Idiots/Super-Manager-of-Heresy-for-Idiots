@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="036-create-wallet-transactions" author="dnd-app">
+        <createTable tableName="wallet_transactions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_wallet_tx_character"
+                             references="characters(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="currency_type_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delta" type="decimal(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="balance_after" type="decimal(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="text"/>
+            <column name="performed_by" type="varchar(100)"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="wallet_transactions"
+                baseColumnNames="currency_type_id"
+                referencedTableName="currency_types"
+                referencedColumnNames="id"
+                constraintName="fk_wallet_tx_currency"
+                onDelete="RESTRICT"/>
+
+        <createIndex tableName="wallet_transactions" indexName="idx_wallet_tx_character_created">
+            <column name="character_id"/>
+            <column name="created_at" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
