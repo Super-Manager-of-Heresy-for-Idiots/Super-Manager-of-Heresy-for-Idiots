@@ -3,7 +3,6 @@ package com.dnd.app.service;
 import com.dnd.app.dto.request.CreateItemTypeRequest;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.mapper.ReferenceDataMapper;
-import com.dnd.app.mapper.TeamMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
@@ -27,7 +26,6 @@ class ItemTypeServiceTest {
     @Mock private CharacterClassRepository classRepository;
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private UserRepository userRepository;
-    @Mock private TeamRepository teamRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private SubclassRepository subclassRepository;
     @Mock private FeatRepository featRepository;
@@ -36,7 +34,6 @@ class ItemTypeServiceTest {
     @Mock private BuffDebuffRepository buffDebuffRepository;
     @Mock private ReferenceDataMapper refMapper;
     @Mock private UserMapper userMapper;
-    @Mock private TeamMapper teamMapper;
     @Mock private RewardResolverRegistry rewardResolverRegistry;
 
     @InjectMocks private AdminService adminService;
