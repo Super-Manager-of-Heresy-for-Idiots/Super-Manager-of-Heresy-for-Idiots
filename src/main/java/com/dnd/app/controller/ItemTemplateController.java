@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/item-templates")
@@ -23,44 +25,55 @@ import java.util.UUID;
 public class ItemTemplateController {
 
     private final ItemTemplateService itemTemplateService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping
     @Operation(summary = "Create item template (Admin/GM)")
-    public ResponseEntity<ApiResponse<ItemTemplateResponse>> createTemplate(
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> createTemplate(
             @Valid @RequestBody CreateItemTemplateRequest request, Authentication auth) {
-        ItemTemplateResponse response = itemTemplateService.createTemplate(request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Item template created"));
+        return CompletableFuture.supplyAsync(() -> {
+            ItemTemplateResponse response = itemTemplateService.createTemplate(request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Item template created"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get item template")
-    public ResponseEntity<ApiResponse<ItemTemplateResponse>> getTemplate(@PathVariable UUID id) {
-        ItemTemplateResponse response = itemTemplateService.getTemplate(id);
-        return ResponseEntity.ok(ApiResponse.ok(response));
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> getTemplate(@PathVariable UUID id) {
+        return CompletableFuture.supplyAsync(() -> {
+            ItemTemplateResponse response = itemTemplateService.getTemplate(id);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/campaign/{campaignId}")
     @Operation(summary = "List available item templates for campaign")
-    public ResponseEntity<ApiResponse<List<ItemTemplateResponse>>> listTemplates(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ItemTemplateResponse>>>> listTemplates(
             @PathVariable UUID campaignId, Authentication auth) {
-        List<ItemTemplateResponse> templates = itemTemplateService.listTemplates(campaignId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(templates));
+        return CompletableFuture.supplyAsync(() -> {
+            List<ItemTemplateResponse> templates = itemTemplateService.listTemplates(campaignId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(templates));
+        }, controllerTaskExecutor);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update item template")
-    public ResponseEntity<ApiResponse<ItemTemplateResponse>> updateTemplate(
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> updateTemplate(
             @PathVariable UUID id,
             @Valid @RequestBody CreateItemTemplateRequest request, Authentication auth) {
-        ItemTemplateResponse response = itemTemplateService.updateTemplate(id, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Item template updated"));
+        return CompletableFuture.supplyAsync(() -> {
+            ItemTemplateResponse response = itemTemplateService.updateTemplate(id, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Item template updated"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete item template (Admin only)")
-    public ResponseEntity<ApiResponse<Void>> deleteTemplate(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteTemplate(
             @PathVariable UUID id, Authentication auth) {
-        itemTemplateService.deleteTemplate(id, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Item template deleted"));
+        return CompletableFuture.supplyAsync(() -> {
+            itemTemplateService.deleteTemplate(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Item template deleted"));
+        }, controllerTaskExecutor);
     }
 }

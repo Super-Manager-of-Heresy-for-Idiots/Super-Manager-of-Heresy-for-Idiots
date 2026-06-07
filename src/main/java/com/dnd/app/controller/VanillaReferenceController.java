@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/reference")
@@ -18,50 +20,65 @@ import java.util.UUID;
 public class VanillaReferenceController {
 
     private final ReferenceDataService referenceDataService;
+    private final Executor controllerTaskExecutor;
 
     @GetMapping("/classes")
     @Operation(summary = "Get vanilla (system) classes for character templates")
-    public ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>> getClasses() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaClasses()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaClasses())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/races")
     @Operation(summary = "Get vanilla (system) races for character templates")
-    public ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>> getRaces() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaRaces()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaRaces())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/backgrounds")
     @Operation(summary = "Get vanilla (system) backgrounds for character templates")
-    public ResponseEntity<ApiResponse<List<BackgroundResponse>>> getBackgrounds() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaBackgrounds()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> getBackgrounds() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaBackgrounds())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/skills")
     @Operation(summary = "Get 18 proficiency skills")
-    public ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>> getSkills() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaSkills()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> getSkills() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaSkills())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/stat-types")
     @Operation(summary = "Get 6 ability score types")
-    public ResponseEntity<ApiResponse<List<StatTypeResponse>>> getStatTypes() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaStatTypes()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<StatTypeResponse>>>> getStatTypes() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaStatTypes())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/currencies")
     @Operation(summary = "Get vanilla (system) currency types")
-    public ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>> getCurrencies() {
-        return ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaCurrencies()));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>>> getCurrencies() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaCurrencies())),
+                controllerTaskExecutor);
     }
 
     @GetMapping("/spells")
     @Operation(summary = "Get vanilla (system) spells with optional filters")
-    public ResponseEntity<ApiResponse<List<SpellResponse>>> getSpells(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<SpellResponse>>>> getSpells(
             @RequestParam(required = false) UUID classId,
             @RequestParam(required = false) Integer level,
             @RequestParam(required = false) String school) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                referenceDataService.getVanillaSpells(classId, level, school)));
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(
+                        referenceDataService.getVanillaSpells(classId, level, school))),
+                controllerTaskExecutor);
     }
 }

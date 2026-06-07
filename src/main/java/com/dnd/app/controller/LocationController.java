@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/locations")
@@ -22,58 +24,71 @@ import java.util.UUID;
 public class LocationController {
 
     private final LocationService locationService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping
     @Operation(summary = "Create location (GM only)")
-    public ResponseEntity<ApiResponse<LocationResponse>> createLocation(
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> createLocation(
             @PathVariable UUID campaignId,
             @Valid @RequestBody CreateLocationRequest request, Authentication auth) {
-        LocationResponse response = locationService.createLocation(campaignId, request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Location created"));
+        return CompletableFuture.supplyAsync(() -> {
+            LocationResponse response = locationService.createLocation(campaignId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Location created"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping
     @Operation(summary = "List locations")
-    public ResponseEntity<ApiResponse<List<LocationResponse>>> listLocations(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<LocationResponse>>>> listLocations(
             @PathVariable UUID campaignId, Authentication auth) {
-        List<LocationResponse> locations = locationService.listLocations(campaignId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(locations));
+        return CompletableFuture.supplyAsync(() -> {
+            List<LocationResponse> locations = locationService.listLocations(campaignId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(locations));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/{locationId}")
     @Operation(summary = "Get location details")
-    public ResponseEntity<ApiResponse<LocationResponse>> getLocation(
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> getLocation(
             @PathVariable UUID campaignId,
             @PathVariable UUID locationId, Authentication auth) {
-        LocationResponse response = locationService.getLocation(locationId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response));
+        return CompletableFuture.supplyAsync(() -> {
+            LocationResponse response = locationService.getLocation(locationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
     }
 
     @PutMapping("/{locationId}")
     @Operation(summary = "Update location (GM only)")
-    public ResponseEntity<ApiResponse<LocationResponse>> updateLocation(
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> updateLocation(
             @PathVariable UUID campaignId,
             @PathVariable UUID locationId,
             @Valid @RequestBody UpdateLocationRequest request, Authentication auth) {
-        LocationResponse response = locationService.updateLocation(locationId, request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Location updated"));
+        return CompletableFuture.supplyAsync(() -> {
+            LocationResponse response = locationService.updateLocation(locationId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Location updated"));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/{locationId}")
     @Operation(summary = "Delete location (GM only)")
-    public ResponseEntity<ApiResponse<Void>> deleteLocation(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteLocation(
             @PathVariable UUID campaignId,
             @PathVariable UUID locationId, Authentication auth) {
-        locationService.deleteLocation(locationId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Location deleted"));
+        return CompletableFuture.supplyAsync(() -> {
+            locationService.deleteLocation(locationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Location deleted"));
+        }, controllerTaskExecutor);
     }
 
     @PostMapping("/{locationId}/toggle-visibility")
     @Operation(summary = "Toggle location visibility (GM only)")
-    public ResponseEntity<ApiResponse<LocationResponse>> toggleVisibility(
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> toggleVisibility(
             @PathVariable UUID campaignId,
             @PathVariable UUID locationId, Authentication auth) {
-        LocationResponse response = locationService.toggleVisibility(locationId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Visibility toggled"));
+        return CompletableFuture.supplyAsync(() -> {
+            LocationResponse response = locationService.toggleVisibility(locationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Visibility toggled"));
+        }, controllerTaskExecutor);
     }
 }

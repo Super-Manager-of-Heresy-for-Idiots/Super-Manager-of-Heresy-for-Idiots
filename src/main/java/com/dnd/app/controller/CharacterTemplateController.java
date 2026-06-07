@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/characters")
@@ -25,36 +27,45 @@ public class CharacterTemplateController {
 
     private final CharacterService characterService;
     private final CharacterWizardService characterWizardService;
+    private final Executor controllerTaskExecutor;
 
     @PostMapping("/full")
     @Operation(summary = "Create a vanilla character template via wizard (no campaign)")
-    public ResponseEntity<ApiResponse<CharacterResponse>> createVanillaCharacter(
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> createVanillaCharacter(
             @Valid @RequestBody CreateFullCharacterRequest request, Authentication auth) {
-        CharacterResponse character = characterWizardService.createVanillaCharacter(request, auth.getName());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(character, "Шаблон персонажа создан"));
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterResponse character = characterWizardService.createVanillaCharacter(request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(character, "Шаблон персонажа создан"));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/my")
     @Operation(summary = "List current user's template characters (not bound to any campaign)")
-    public ResponseEntity<ApiResponse<List<CharacterResponse>>> listMyTemplates(Authentication auth) {
-        List<CharacterResponse> templates = characterService.listTemplates(auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(templates));
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterResponse>>>> listMyTemplates(Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<CharacterResponse> templates = characterService.listTemplates(auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(templates));
+        }, controllerTaskExecutor);
     }
 
     @GetMapping("/{characterId}")
     @Operation(summary = "Get a template character by ID")
-    public ResponseEntity<ApiResponse<CharacterResponse>> getTemplate(
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> getTemplate(
             @PathVariable UUID characterId, Authentication auth) {
-        CharacterResponse character = characterService.getTemplateById(characterId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(character));
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterResponse character = characterService.getTemplateById(characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(character));
+        }, controllerTaskExecutor);
     }
 
     @DeleteMapping("/{characterId}")
     @Operation(summary = "Delete a template character")
-    public ResponseEntity<ApiResponse<Void>> deleteTemplate(
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteTemplate(
             @PathVariable UUID characterId, Authentication auth) {
-        characterService.deleteTemplate(characterId, auth.getName());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Шаблон персонажа удален"));
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.deleteTemplate(characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Шаблон персонажа удален"));
+        }, controllerTaskExecutor);
     }
 }
