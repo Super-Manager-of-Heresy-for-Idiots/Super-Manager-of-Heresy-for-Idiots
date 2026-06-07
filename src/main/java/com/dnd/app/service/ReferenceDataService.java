@@ -2,12 +2,14 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.config.CacheConfig;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,6 +150,7 @@ public class ReferenceDataService {
 
     // --- Vanilla (no-campaign) variants for character templates ---
 
+    @Cacheable(CacheConfig.VANILLA_CLASSES)
     @Transactional(readOnly = true)
     public List<CharacterClassDetailResponse> getVanillaClasses() {
         List<CharacterClass> classes = classRepository.findAllByHomebrewIsNull();
@@ -156,18 +159,21 @@ public class ReferenceDataService {
         return classes.stream().map(c -> mapClassDetail(c, skillByName)).toList();
     }
 
+    @Cacheable(CacheConfig.VANILLA_RACES)
     @Transactional(readOnly = true)
     public List<CharacterRaceDetailResponse> getVanillaRaces() {
         return raceRepository.findAvailableActiveSystemOnly().stream()
                 .map(this::mapRaceDetail).toList();
     }
 
+    @Cacheable(CacheConfig.VANILLA_BACKGROUNDS)
     @Transactional(readOnly = true)
     public List<BackgroundResponse> getVanillaBackgrounds() {
         return backgroundRepository.findAllByHomebrewIsNull().stream()
                 .map(this::mapBackground).toList();
     }
 
+    @Cacheable(CacheConfig.VANILLA_SKILLS)
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> getVanillaSkills() {
         return proficiencySkillRepository.findAll().stream()
@@ -180,6 +186,7 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    @Cacheable(CacheConfig.VANILLA_STAT_TYPES)
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getVanillaStatTypes() {
         return statTypeRepository.findAll().stream()
@@ -192,6 +199,7 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    @Cacheable(CacheConfig.VANILLA_CURRENCIES)
     @Transactional(readOnly = true)
     public List<CurrencyTypeResponse> getVanillaCurrencies() {
         return currencyTypeRepository.findByHomebrewIsNull().stream()
@@ -204,6 +212,8 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    @Cacheable(value = CacheConfig.VANILLA_SPELLS,
+            key = "T(java.util.Objects).hash(#classId, #level, #school)")
     @Transactional(readOnly = true)
     public List<SpellResponse> getVanillaSpells(UUID classId, Integer level, String school) {
         List<Spell> spells = spellRepository.findFilteredSystemOnly(level, school);
