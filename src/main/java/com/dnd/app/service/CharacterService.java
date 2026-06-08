@@ -2,6 +2,7 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateCharacterRequest;
 import com.dnd.app.dto.request.ModifyHpRequest;
 import com.dnd.app.dto.request.UpdateCharacterRequest;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +49,7 @@ public class CharacterService {
     private final CharacterWalletRepository walletRepository;
     private final CharacterResourceRepository resourceRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional(readOnly = true)
     public List<CharacterResponse> listTemplates(String username) {
@@ -326,6 +329,15 @@ public class CharacterService {
         if (request.getName() != null) {
             character.setName(request.getName());
         }
+        if (request.getPlayerName() != null) {
+            character.setPlayerName(request.getPlayerName());
+        }
+        if (request.getProficiencies() != null) {
+            character.setProficiencies(request.getProficiencies());
+        }
+        if (request.getEquipment() != null) {
+            character.setEquipment(request.getEquipment());
+        }
         if (request.getRaceId() != null) {
             if (character.getCampaign() == null) {
                 throw new BadRequestException("Cannot change race for character without campaign");
@@ -342,7 +354,11 @@ public class CharacterService {
         }
 
         character = characterRepository.save(character);
-        return toResponse(character);
+        CharacterResponse response = toResponse(character);
+        UUID campaignId = character.getCampaign() != null ? character.getCampaign().getId() : null;
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.CHARACTER_UPDATED, campaignId,
+                character.getId(), response, user.getId());
+        return response;
     }
 
     @Transactional
@@ -439,6 +455,10 @@ public class CharacterService {
 
         log.info("HP modified: characterId={}, amount={}, setTempHp={}, newHp={}, newTempHp={}, by user={}",
                 characterId, request.getAmount(), request.getSetTempHp(), currentHp, tempHp, username);
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
+                characterId, Map.of("currentHp", currentHp, "tempHp", tempHp, "maxHp", character.getMaxHp()),
+                user.getId());
         return toResponse(character);
     }
 

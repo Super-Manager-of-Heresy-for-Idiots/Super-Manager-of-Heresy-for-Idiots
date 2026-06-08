@@ -17,6 +17,13 @@ public class UpdateCharacterRequest {
     @Size(max = 100, message = "Имя персонажа не должно превышать 100 символов")
     private String name;
 
+    @Size(max = 100, message = "Имя игрока не должно превышать 100 символов")
+    private String playerName;
+
+    private String proficiencies;
+
+    private String equipment;
+
     private UUID raceId;
 
     private UUID selectedLineageId;

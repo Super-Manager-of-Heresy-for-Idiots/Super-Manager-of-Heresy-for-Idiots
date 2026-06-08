@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.PlayerCharacter;
 import com.dnd.app.domain.User;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.DistributeXpRequest;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
@@ -25,6 +26,7 @@ public class XpService {
     private final CampaignService campaignService;
     private final PlayerCharacterRepository playerCharacterRepository;
     private final UserRepository userRepository;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public Map<String, Object> distributeXp(UUID campaignId, DistributeXpRequest request, String username) {
@@ -70,6 +72,11 @@ public class XpService {
 
         log.info("XP distributed: campaignId={}, target={}, count={}, amount={}, by={}",
                 campaignId, target, targets.size(), request.getAmount(), username);
+
+        List<UUID> affectedCharacterIds = targets.stream().map(PlayerCharacter::getId).toList();
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.XP_GRANTED, campaignId,
+                Map.of("amount", request.getAmount(), "characterIds", affectedCharacterIds),
+                user.getId());
 
         return Map.of(
                 "charactersUpdated", targets.size(),

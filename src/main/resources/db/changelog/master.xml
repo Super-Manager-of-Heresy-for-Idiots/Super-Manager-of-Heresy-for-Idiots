@@ -41,5 +41,6 @@
     <include file="db/changelog/034-add-user-role-index.xml"/>
     <include file="db/changelog/035-add-temp-hp.xml"/>
     <include file="db/changelog/036-wallet-transactions.xml"/>
+    <include file="db/changelog/037-add-character-sheet-text-fields.xml"/>
 
 </databaseChangeLog>

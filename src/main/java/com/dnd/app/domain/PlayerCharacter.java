@@ -85,6 +85,15 @@ public class PlayerCharacter {
     @Builder.Default
     private List<ItemInstance> itemInstances = new ArrayList<>();
 
+    @Column(name = "player_name", length = 100)
+    private String playerName;
+
+    @Column(name = "proficiencies", columnDefinition = "text")
+    private String proficiencies;
+
+    @Column(name = "equipment", columnDefinition = "text")
+    private String equipment;
+
     @Column(length = 40)
     private String alignment;
 

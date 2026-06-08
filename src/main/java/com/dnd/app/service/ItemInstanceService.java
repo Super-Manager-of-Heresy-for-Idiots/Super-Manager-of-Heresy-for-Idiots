@@ -4,6 +4,7 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.EquipItemRequest;
 import com.dnd.app.dto.request.GrantItemRequest;
 import com.dnd.app.dto.request.RenameItemRequest;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +37,7 @@ public class ItemInstanceService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final CampaignMemberRepository campaignMemberRepository;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public ItemInstanceResponse grantItem(UUID campaignId, UUID characterId,
@@ -60,7 +63,10 @@ public class ItemInstanceService {
                         .orElseThrow(() -> new ResourceNotFoundException("Item instance not found"));
                 log.info("Item stacked: instanceId={}, characterId={}, quantity={}",
                         instance.getId(), characterId, instance.getQuantity());
-                return toResponse(instance);
+                ItemInstanceResponse stackedResponse = toResponse(instance);
+                webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
+                        characterId, stackedResponse, user.getId());
+                return stackedResponse;
             }
         }
 
@@ -75,7 +81,10 @@ public class ItemInstanceService {
 
         log.info("Item granted: instanceId={}, templateId={}, characterId={}, by={}",
                 instance.getId(), template.getId(), characterId, username);
-        return toResponse(instance);
+        ItemInstanceResponse response = toResponse(instance);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
+                characterId, response, user.getId());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -194,6 +203,9 @@ public class ItemInstanceService {
             itemInstanceRepository.delete(instance);
             log.info("Item removed: instanceId={}, characterId={}", instanceId, characterId);
         }
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_REMOVED, campaignId,
+                characterId, Map.of("instanceId", instanceId), user.getId());
     }
 
     @Transactional

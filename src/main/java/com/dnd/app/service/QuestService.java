@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.QuestStatus;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateNoteRequest;
 import com.dnd.app.dto.request.CreateQuestRewardRequest;
 import com.dnd.app.dto.request.CreateQuestRequest;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -39,6 +41,7 @@ public class QuestService {
     private final CurrencyTypeRepository currencyTypeRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public QuestResponse createQuest(UUID campaignId, CreateQuestRequest request, String username) {
@@ -117,6 +120,11 @@ public class QuestService {
         quest = questRepository.save(quest);
 
         log.info("Quest updated: id={}, by={}", questId, username);
+
+        if (Boolean.TRUE.equals(quest.getIsVisibleToPlayers())) {
+            webSocketEventService.sendCampaignEvent(WebSocketEventType.QUEST_UPDATED,
+                    quest.getCampaign().getId(), Map.of("questId", questId), user.getId());
+        }
         return toResponse(quest, true);
     }
 

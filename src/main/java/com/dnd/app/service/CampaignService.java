@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -33,6 +34,7 @@ public class CampaignService {
     private final CharacterWalletRepository characterWalletRepository;
     private final CharacterResourceRepository characterResourceRepository;
     private final com.dnd.app.mapper.CharacterMapper characterMapper;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public CampaignResponse createCampaign(CreateCampaignRequest request, String username) {
@@ -228,6 +230,13 @@ public class CampaignService {
         }
 
         log.info("Member kicked from campaign: userId={}, campaignId={}, by={}", request.getUserId(), campaignId, username);
+
+        // Notify the kicked user directly (their campaign-topic subscription is about to be torn down)
+        webSocketEventService.sendUserEvent(target.getUser().getUsername(), WebSocketEventType.MEMBER_KICKED,
+                campaignId, Map.of("campaignId", campaignId), creator.getId());
+        // Notify the rest of the campaign so they refresh the roster
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.MEMBER_KICKED, campaignId,
+                Map.of("userId", request.getUserId()), creator.getId());
     }
 
     @Transactional
@@ -246,6 +255,9 @@ public class CampaignService {
         campaign.setStatus(newStatus);
         campaign = campaignRepository.save(campaign);
         log.info("Campaign status changed: campaignId={}, newStatus={}, by={}", campaignId, newStatus, username);
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.CAMPAIGN_STATUS_CHANGED, campaignId,
+                Map.of("status", newStatus.name()), user.getId());
         return toCampaignResponse(campaign, user);
     }
 

@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateNoteRequest;
 import com.dnd.app.dto.request.CreateNpcRequest;
 import com.dnd.app.dto.request.UpdateNoteRequest;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class NpcService {
     private final NpcNoteRepository noteRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public NpcResponse createNpc(UUID campaignId, CreateNpcRequest request, String username) {
@@ -117,6 +120,11 @@ public class NpcService {
         npc = npcRepository.save(npc);
 
         log.info("NPC visibility toggled: id={}, visible={}, by={}", npcId, npc.getIsVisibleToPlayers(), username);
+
+        boolean nowVisible = Boolean.TRUE.equals(npc.getIsVisibleToPlayers());
+        webSocketEventService.sendCampaignEvent(
+                nowVisible ? WebSocketEventType.NPC_REVEALED : WebSocketEventType.NPC_HIDDEN,
+                npc.getCampaign().getId(), Map.of("npcId", npcId), user.getId());
         return toResponse(npc, true);
     }
 

@@ -20,6 +20,13 @@ public class CreateFullCharacterRequest {
     @Size(max = 100)
     private String name;
 
+    @Size(max = 100)
+    private String playerName;
+
+    private String proficiencies;
+
+    private String equipment;
+
     private String alignment;
 
     private String avatar;

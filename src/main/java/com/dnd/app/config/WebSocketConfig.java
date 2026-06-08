@@ -28,17 +28,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * the relay mode also enables user-destination and user-registry broadcasting, so a message
  * addressed to a user whose session lives on a different pod is routed correctly.
  *
- * <p><b>Role split (running WS as a separate container):</b> {@code app.websocket.endpoint.enabled}
- * controls whether this node terminates client WebSocket connections:
- * <ul>
- *   <li><b>WS role</b> ({@code true}, default): registers the {@code /ws} STOMP endpoint and
- *       accepts client connections. Route {@code /ws} traffic here.</li>
- *   <li><b>REST role</b> ({@code false}): does NOT expose {@code /ws}; it only <em>publishes</em>
- *       events to the broker relay via {@code SimpMessagingTemplate}. The broker (RabbitMQ)
- *       fans them out to whichever WS node holds the subscriber. This lets the REST tier scale
- *       on CPU/DB while the WS tier scales on connection count, independently.</li>
- * </ul>
- * The broker itself is configured on both roles so server-side publishing works everywhere.
+ * <p><b>Role split (running WS as a separate container):</b> every node registers the {@code /ws}
+ * endpoint — Spring requires at least one, otherwise {@code subProtocolWebSocketHandler} fails to
+ * start with "No handlers". The separation is enforced by <em>routing</em>: nginx sends {@code /ws}
+ * only to the WS tier, while the REST tier merely <em>publishes</em> events to the broker relay via
+ * {@code SimpMessagingTemplate}. The broker (RabbitMQ) fans them out to whichever WS node holds the
+ * subscriber, so the REST tier scales on CPU/DB and the WS tier on connection count, independently.
+ * The broker is configured on both roles so server-side publishing works everywhere.
  */
 @Slf4j
 @Configuration
@@ -50,9 +46,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
-
-    @Value("${app.websocket.endpoint.enabled:true}")
-    private boolean endpointEnabled;
 
     @Value("${app.websocket.relay.enabled:false}")
     private boolean relayEnabled;
@@ -92,10 +85,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        if (!endpointEnabled) {
-            log.info("WebSocket: /ws client endpoint disabled on this node (REST/publish-only role)");
-            return;
-        }
+        // The /ws endpoint is registered on EVERY node: @EnableWebSocketMessageBroker requires at
+        // least one STOMP endpoint, otherwise subProtocolWebSocketHandler fails to start ("No handlers").
+        // The REST/WS role split is enforced by routing (nginx sends /ws only to the WS tier), not by
+        // withholding the endpoint here — the REST tier simply never receives /ws traffic.
         String[] origins = allowedOrigins.split("\\s*,\\s*");
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(origins)
