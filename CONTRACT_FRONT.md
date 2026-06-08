@@ -56,7 +56,7 @@ Pagination uses Spring `Page<T>`: `content`, `totalElements`, `totalPages`, `num
 | `Rarity` | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
-| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED` |
+| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED` |
 
 ## REST Endpoints
 
@@ -108,6 +108,13 @@ All response types below are wrapped as `ApiResponse<T>`.
 | GET | `/api/campaigns/{campaignId}/characters/{characterId}/resources` | - | `List<ResourceResponse>` |
 | POST | `/api/campaigns/{campaignId}/characters/{characterId}/resources` | `ModifyResourceRequest` | `ResourceResponse` |
 | POST | `/api/campaigns/{campaignId}/characters/{characterId}/hp` | `ModifyHpRequest` | `CharacterResponse` |
+
+> **Wallet POST (`/wallet`)** is a single endpoint for **both** credit and debit. `ModifyCurrencyRequest.amount > 0`
+> adds; `amount < 0` deducts. The wallet entry for a currency is created on its **first credit** — you do not need to
+> initialize it first (only `Gold` is auto-created with the character). Debiting below zero, or debiting a currency the
+> character has no entry for, returns **400** `Insufficient funds for this operation`. On success the server broadcasts a
+> `WALLET_CHANGED` event (see WebSocket section). Available currency types come from
+> `GET /api/campaigns/{campaignId}/reference/currencies` (`List<CurrencyTypeResponse>`).
 
 ### Character Inventory and Effects
 
@@ -425,6 +432,16 @@ Only `/topic/campaign.{campaignId}` subscriptions are membership-checked in `Web
 > Note the **dot** before `{campaignId}`, not a slash. Under the RabbitMQ STOMP relay a `/topic/` destination
 > must be a single segment with no inner slash; `/topic/campaign/{id}` is rejected with `Invalid destination`.
 > The dot keeps the destination broker-valid while still encoding the campaign id.
+
+Event payloads (the `data` field of `WebSocketEventPayload`):
+
+| `type` | `characterId` | `data` |
+|---|---|---|
+| `WALLET_CHANGED` | the affected character | `WalletEntryResponse` (the **new** balance of the changed currency: `currencyTypeId`, `currencyName`, `amount`, `goldEquivalent`) |
+
+`WALLET_CHANGED` is broadcast on `/topic/campaign.{campaignId}` to the whole campaign (GM + players) after the
+currency change commits. Treat the payload as a notification: the FE should refetch authoritative wallet state
+(`GET …/wallet`) and history (`GET …/wallet/history`) rather than trusting `data` as the only source of truth.
 
 ## Removed or Not Present
 
