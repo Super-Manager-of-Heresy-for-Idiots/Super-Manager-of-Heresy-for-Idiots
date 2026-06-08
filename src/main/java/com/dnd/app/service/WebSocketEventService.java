@@ -25,7 +25,7 @@ import java.util.UUID;
  * <p>Payloads are pure notifications — the client re-fetches authoritative state over REST.
  *
  * <ul>
- *   <li>{@code /topic/campaign/{campaignId}} — fan-out to everyone in the campaign (GM + players).</li>
+ *   <li>{@code /topic/campaign.{campaignId}} — fan-out to everyone in the campaign (GM + players).</li>
  *   <li>{@code /user/queue/notifications} — a single targeted user (e.g. the kicked player).</li>
  * </ul>
  */
@@ -51,7 +51,7 @@ public class WebSocketEventService {
                 .build();
 
         eventPublisher.publishEvent(
-                new WsCampaignBroadcastEvent("/topic/campaign/" + campaignId, payload));
+                new WsCampaignBroadcastEvent("/topic/campaign." + campaignId, payload));
         log.debug("WebSocket event queued: type={}, campaignId={}, characterId={}", type, campaignId, characterId);
     }
 

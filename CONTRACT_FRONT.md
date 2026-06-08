@@ -417,10 +417,14 @@ Server sends:
 
 | Destination | Payload |
 |---|---|
-| `/topic/campaign/{campaignId}` | `WebSocketEventPayload` |
+| `/topic/campaign.{campaignId}` | `WebSocketEventPayload` |
 | `/user/queue/notifications` | `WebSocketEventPayload` |
 
-Only `/topic/campaign/{campaignId}` subscriptions are membership-checked in `WebSocketAuthInterceptor`.
+Only `/topic/campaign.{campaignId}` subscriptions are membership-checked in `WebSocketAuthInterceptor`.
+
+> Note the **dot** before `{campaignId}`, not a slash. Under the RabbitMQ STOMP relay a `/topic/` destination
+> must be a single segment with no inner slash; `/topic/campaign/{id}` is rejected with `Invalid destination`.
+> The dot keeps the destination broker-valid while still encoding the campaign id.
 
 ## Removed or Not Present
 

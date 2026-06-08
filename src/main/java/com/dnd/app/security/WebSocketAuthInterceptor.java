@@ -79,9 +79,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         if (user == null) return;
 
         // Validate campaign subscription membership
-        if (destination.startsWith("/topic/campaign/")) {
+        if (destination.startsWith("/topic/campaign.")) {
             try {
-                String campaignIdStr = destination.split("/")[3];
+                String campaignIdStr = destination.substring("/topic/campaign.".length());
                 UUID campaignId = UUID.fromString(campaignIdStr);
                 boolean isMember = campaignMemberRepository
                         .existsByCampaignIdAndUserIdAndKickedFalse(campaignId, user.getId());
@@ -90,7 +90,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     throw new org.springframework.messaging.MessageDeliveryException(
                             "Not authorized to subscribe to this campaign");
                 }
-            } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
+            } catch (IllegalArgumentException e) {
                 log.warn("WebSocket SUBSCRIBE denied: malformed campaign destination: {}", destination);
                 throw new org.springframework.messaging.MessageDeliveryException(
                         "Malformed subscription destination");

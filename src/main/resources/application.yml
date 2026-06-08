@@ -32,6 +32,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  security:
+    filter:
+      # Exclude ASYNC: CompletableFuture controllers re-dispatch through the servlet ASYNC type where
+      # the JWT filter (OncePerRequestFilter) doesn't re-run, so security would 403 the empty context.
+      dispatcher-types: request,error
 
 server:
   port: 8080
