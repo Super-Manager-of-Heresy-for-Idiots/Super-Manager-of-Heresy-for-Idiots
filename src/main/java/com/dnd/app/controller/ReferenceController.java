@@ -26,40 +26,48 @@ public class ReferenceController {
     @GetMapping("/classes")
     @Operation(summary = "Get available classes with 5e metadata")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getClasses(campaignId, auth.getName()))),
+                        referenceDataService.getClasses(campaignId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/races")
     @Operation(summary = "Get available races with subraces")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getRaces(campaignId, auth.getName()))),
+                        referenceDataService.getRaces(campaignId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/backgrounds")
     @Operation(summary = "Get available backgrounds")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> getBackgrounds(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getBackgrounds(campaignId, auth.getName()))),
+                        referenceDataService.getBackgrounds(campaignId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/skills")
     @Operation(summary = "Get 18 proficiency skills")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> getSkills(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getSkills(campaignId, auth.getName()))),
+                        referenceDataService.getSkills(campaignId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 
@@ -76,10 +84,12 @@ public class ReferenceController {
     @GetMapping("/currencies")
     @Operation(summary = "Get available currency types")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>>> getCurrencies(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getCurrencies(campaignId, auth.getName()))),
+                        referenceDataService.getCurrencies(campaignId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 
@@ -90,10 +100,11 @@ public class ReferenceController {
             @RequestParam(required = false) UUID classId,
             @RequestParam(required = false) Integer level,
             @RequestParam(required = false) String school,
+            @RequestParam(defaultValue = "en") String lang,
             Authentication auth) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getSpells(campaignId, auth.getName(), classId, level, school))),
+                        referenceDataService.getSpells(campaignId, auth.getName(), classId, level, school, lang))),
                 controllerTaskExecutor);
     }
 }

@@ -22,6 +22,12 @@ public class CurrencyType {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(name = "name_engloc", columnDefinition = "text")
+    private String nameEngloc;
+
+    @Column(name = "name_rusloc", columnDefinition = "text")
+    private String nameRusloc;
+
     @Column(name = "exchange_rate_to_gold", precision = 10, scale = 4)
     private BigDecimal exchangeRateToGold;
 

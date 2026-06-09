@@ -25,14 +25,32 @@ public class CharacterRace {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
+    @Column(name = "name_engloc", columnDefinition = "text")
+    private String nameEngloc;
+
+    @Column(name = "name_rusloc", columnDefinition = "text")
+    private String nameRusloc;
+
     @Column(length = 80)
     private String slug;
 
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(name = "description_engloc", columnDefinition = "text")
+    private String descriptionEngloc;
+
+    @Column(name = "description_rusloc", columnDefinition = "text")
+    private String descriptionRusloc;
+
     @Column(name = "lore_description", columnDefinition = "text")
     private String loreDescription;
+
+    @Column(name = "lore_description_engloc", columnDefinition = "text")
+    private String loreDescriptionEngloc;
+
+    @Column(name = "lore_description_rusloc", columnDefinition = "text")
+    private String loreDescriptionRusloc;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false, length = 20)

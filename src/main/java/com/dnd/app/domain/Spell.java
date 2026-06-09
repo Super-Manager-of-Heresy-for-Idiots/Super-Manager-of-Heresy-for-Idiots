@@ -21,6 +21,12 @@ public class Spell {
     @Column(nullable = false, length = 120, unique = true)
     private String name;
 
+    @Column(name = "name_engloc", columnDefinition = "text")
+    private String nameEngloc;
+
+    @Column(name = "name_rusloc", columnDefinition = "text")
+    private String nameRusloc;
+
     @Column(nullable = false)
     private Integer level;
 
@@ -29,6 +35,12 @@ public class Spell {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @Column(name = "description_engloc", columnDefinition = "text")
+    private String descriptionEngloc;
+
+    @Column(name = "description_rusloc", columnDefinition = "text")
+    private String descriptionRusloc;
 
     @Column(name = "available_to_class_ids_json", columnDefinition = "text")
     private String availableToClassIdsJson;

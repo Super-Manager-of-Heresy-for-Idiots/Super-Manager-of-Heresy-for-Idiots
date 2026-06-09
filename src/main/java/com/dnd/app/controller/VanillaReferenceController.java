@@ -24,33 +24,37 @@ public class VanillaReferenceController {
 
     @GetMapping("/classes")
     @Operation(summary = "Get vanilla (system) classes for character templates")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses() {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses(
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaClasses())),
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaClasses(lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/races")
     @Operation(summary = "Get vanilla (system) races for character templates")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces() {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces(
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaRaces())),
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaRaces(lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/backgrounds")
     @Operation(summary = "Get vanilla (system) backgrounds for character templates")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> getBackgrounds() {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> getBackgrounds(
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaBackgrounds())),
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaBackgrounds(lang))),
                 controllerTaskExecutor);
     }
 
     @GetMapping("/skills")
     @Operation(summary = "Get 18 proficiency skills")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> getSkills() {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> getSkills(
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaSkills())),
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaSkills(lang))),
                 controllerTaskExecutor);
     }
 
@@ -64,9 +68,10 @@ public class VanillaReferenceController {
 
     @GetMapping("/currencies")
     @Operation(summary = "Get vanilla (system) currency types")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>>> getCurrencies() {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>>> getCurrencies(
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaCurrencies())),
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaCurrencies(lang))),
                 controllerTaskExecutor);
     }
 
@@ -75,10 +80,11 @@ public class VanillaReferenceController {
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpellResponse>>>> getSpells(
             @RequestParam(required = false) UUID classId,
             @RequestParam(required = false) Integer level,
-            @RequestParam(required = false) String school) {
+            @RequestParam(required = false) String school,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getVanillaSpells(classId, level, school))),
+                        referenceDataService.getVanillaSpells(classId, level, school, lang))),
                 controllerTaskExecutor);
     }
 }

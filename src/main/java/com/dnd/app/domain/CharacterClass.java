@@ -21,8 +21,20 @@ public class CharacterClass {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
+    @Column(name = "name_engloc", columnDefinition = "text")
+    private String nameEngloc;
+
+    @Column(name = "name_rusloc", columnDefinition = "text")
+    private String nameRusloc;
+
     @Column(columnDefinition = "text")
     private String description;
+
+    @Column(name = "description_engloc", columnDefinition = "text")
+    private String descriptionEngloc;
+
+    @Column(name = "description_rusloc", columnDefinition = "text")
+    private String descriptionRusloc;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
@@ -48,6 +60,12 @@ public class CharacterClass {
 
     @Column(name = "armor_weapon_proficiencies", columnDefinition = "text")
     private String armorWeaponProficiencies;
+
+    @Column(name = "armor_weapon_proficiencies_engloc", columnDefinition = "text")
+    private String armorWeaponProficienciesEngloc;
+
+    @Column(name = "armor_weapon_proficiencies_rusloc", columnDefinition = "text")
+    private String armorWeaponProficienciesRusloc;
 
     @Column(name = "is_spellcaster", nullable = false)
     @Builder.Default

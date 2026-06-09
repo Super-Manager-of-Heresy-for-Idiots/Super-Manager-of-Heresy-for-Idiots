@@ -5,6 +5,7 @@ import com.dnd.app.dto.response.*;
 import com.dnd.app.config.CacheConfig;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
+import com.dnd.app.util.Localization;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class ReferenceDataService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public List<CharacterClassDetailResponse> getClasses(UUID campaignId, String username) {
+    public List<CharacterClassDetailResponse> getClasses(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
         Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
@@ -47,11 +48,11 @@ public class ReferenceDataService {
         Map<String, ProficiencySkill> skillByName = allSkills.stream()
                 .collect(Collectors.toMap(ProficiencySkill::getName, s -> s));
 
-        return classes.stream().map(c -> mapClassDetail(c, skillByName)).toList();
+        return classes.stream().map(c -> mapClassDetail(c, skillByName, lang)).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<CharacterRaceDetailResponse> getRaces(UUID campaignId, String username) {
+    public List<CharacterRaceDetailResponse> getRaces(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
         Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
@@ -62,11 +63,11 @@ public class ReferenceDataService {
             races = raceRepository.findAvailableActive(pkgIds);
         }
 
-        return races.stream().map(this::mapRaceDetail).toList();
+        return races.stream().map(r -> mapRaceDetail(r, lang)).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<BackgroundResponse> getBackgrounds(UUID campaignId, String username) {
+    public List<BackgroundResponse> getBackgrounds(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
         Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
@@ -75,19 +76,14 @@ public class ReferenceDataService {
             bgs.addAll(backgroundRepository.findAllByHomebrewIdIn(pkgIds));
         }
 
-        return bgs.stream().map(this::mapBackground).toList();
+        return bgs.stream().map(bg -> mapBackground(bg, lang)).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ProficiencySkillResponse> getSkills(UUID campaignId, String username) {
+    public List<ProficiencySkillResponse> getSkills(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
         return proficiencySkillRepository.findAll().stream()
-                .map(s -> ProficiencySkillResponse.builder()
-                        .id(s.getId())
-                        .name(s.getName())
-                        .governingStatId(s.getGoverningStat().getId())
-                        .governingStatName(s.getGoverningStat().getName())
-                        .build())
+                .map(s -> mapProficiencySkill(s, lang))
                 .toList();
     }
 
@@ -105,7 +101,7 @@ public class ReferenceDataService {
     }
 
     @Transactional(readOnly = true)
-    public List<CurrencyTypeResponse> getCurrencies(UUID campaignId, String username) {
+    public List<CurrencyTypeResponse> getCurrencies(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
         Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
@@ -115,18 +111,13 @@ public class ReferenceDataService {
         }
 
         return currencies.stream()
-                .map(ct -> CurrencyTypeResponse.builder()
-                        .id(ct.getId())
-                        .name(ct.getName())
-                        .exchangeRateToGold(ct.getExchangeRateToGold())
-                        .isDefault(ct.getIsDefault())
-                        .build())
+                .map(ct -> mapCurrency(ct, lang))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<SpellResponse> getSpells(UUID campaignId, String username,
-                                          UUID classId, Integer level, String school) {
+                                          UUID classId, Integer level, String school, String lang) {
         enforceAccess(campaignId, username);
         Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
 
@@ -145,44 +136,39 @@ public class ReferenceDataService {
                     .toList();
         }
 
-        return spells.stream().map(this::mapSpell).toList();
+        return spells.stream().map(s -> mapSpell(s, lang)).toList();
     }
 
     // --- Vanilla (no-campaign) variants for character templates ---
 
-    @Cacheable(CacheConfig.VANILLA_CLASSES)
+    @Cacheable(value = CacheConfig.VANILLA_CLASSES, key = "#lang")
     @Transactional(readOnly = true)
-    public List<CharacterClassDetailResponse> getVanillaClasses() {
+    public List<CharacterClassDetailResponse> getVanillaClasses(String lang) {
         List<CharacterClass> classes = classRepository.findAllByHomebrewIsNull();
         Map<String, ProficiencySkill> skillByName = proficiencySkillRepository.findAll().stream()
                 .collect(Collectors.toMap(ProficiencySkill::getName, s -> s));
-        return classes.stream().map(c -> mapClassDetail(c, skillByName)).toList();
+        return classes.stream().map(c -> mapClassDetail(c, skillByName, lang)).toList();
     }
 
-    @Cacheable(CacheConfig.VANILLA_RACES)
+    @Cacheable(value = CacheConfig.VANILLA_RACES, key = "#lang")
     @Transactional(readOnly = true)
-    public List<CharacterRaceDetailResponse> getVanillaRaces() {
+    public List<CharacterRaceDetailResponse> getVanillaRaces(String lang) {
         return raceRepository.findAvailableActiveSystemOnly().stream()
-                .map(this::mapRaceDetail).toList();
+                .map(r -> mapRaceDetail(r, lang)).toList();
     }
 
-    @Cacheable(CacheConfig.VANILLA_BACKGROUNDS)
+    @Cacheable(value = CacheConfig.VANILLA_BACKGROUNDS, key = "#lang")
     @Transactional(readOnly = true)
-    public List<BackgroundResponse> getVanillaBackgrounds() {
+    public List<BackgroundResponse> getVanillaBackgrounds(String lang) {
         return backgroundRepository.findAllByHomebrewIsNull().stream()
-                .map(this::mapBackground).toList();
+                .map(bg -> mapBackground(bg, lang)).toList();
     }
 
-    @Cacheable(CacheConfig.VANILLA_SKILLS)
+    @Cacheable(value = CacheConfig.VANILLA_SKILLS, key = "#lang")
     @Transactional(readOnly = true)
-    public List<ProficiencySkillResponse> getVanillaSkills() {
+    public List<ProficiencySkillResponse> getVanillaSkills(String lang) {
         return proficiencySkillRepository.findAll().stream()
-                .map(s -> ProficiencySkillResponse.builder()
-                        .id(s.getId())
-                        .name(s.getName())
-                        .governingStatId(s.getGoverningStat().getId())
-                        .governingStatName(s.getGoverningStat().getName())
-                        .build())
+                .map(s -> mapProficiencySkill(s, lang))
                 .toList();
     }
 
@@ -199,23 +185,18 @@ public class ReferenceDataService {
                 .toList();
     }
 
-    @Cacheable(CacheConfig.VANILLA_CURRENCIES)
+    @Cacheable(value = CacheConfig.VANILLA_CURRENCIES, key = "#lang")
     @Transactional(readOnly = true)
-    public List<CurrencyTypeResponse> getVanillaCurrencies() {
+    public List<CurrencyTypeResponse> getVanillaCurrencies(String lang) {
         return currencyTypeRepository.findByHomebrewIsNull().stream()
-                .map(ct -> CurrencyTypeResponse.builder()
-                        .id(ct.getId())
-                        .name(ct.getName())
-                        .exchangeRateToGold(ct.getExchangeRateToGold())
-                        .isDefault(ct.getIsDefault())
-                        .build())
+                .map(ct -> mapCurrency(ct, lang))
                 .toList();
     }
 
     @Cacheable(value = CacheConfig.VANILLA_SPELLS,
-            key = "T(java.util.Objects).hash(#classId, #level, #school)")
+            key = "T(java.util.Objects).hash(#classId, #level, #school, #lang)")
     @Transactional(readOnly = true)
-    public List<SpellResponse> getVanillaSpells(UUID classId, Integer level, String school) {
+    public List<SpellResponse> getVanillaSpells(UUID classId, Integer level, String school, String lang) {
         List<Spell> spells = spellRepository.findFilteredSystemOnly(level, school);
         if (classId != null) {
             String classIdStr = classId.toString();
@@ -224,12 +205,12 @@ public class ReferenceDataService {
                             && s.getAvailableToClassIdsJson().contains(classIdStr))
                     .toList();
         }
-        return spells.stream().map(this::mapSpell).toList();
+        return spells.stream().map(s -> mapSpell(s, lang)).toList();
     }
 
     // --- Mapping helpers ---
 
-    private CharacterClassDetailResponse mapClassDetail(CharacterClass c, Map<String, ProficiencySkill> skillByName) {
+    private CharacterClassDetailResponse mapClassDetail(CharacterClass c, Map<String, ProficiencySkill> skillByName, String lang) {
         List<String> savingThrowNames = parseJsonStringList(c.getSavingThrowStatIdsJson());
         List<String> skillOptionNames = parseJsonStringList(c.getSkillChoiceOptionIdsJson());
 
@@ -237,12 +218,7 @@ public class ReferenceDataService {
                 .map(name -> {
                     ProficiencySkill ps = skillByName.get(name);
                     if (ps == null) return null;
-                    return ProficiencySkillResponse.builder()
-                            .id(ps.getId())
-                            .name(ps.getName())
-                            .governingStatId(ps.getGoverningStat().getId())
-                            .governingStatName(ps.getGoverningStat().getName())
-                            .build();
+                    return mapProficiencySkill(ps, lang);
                 })
                 .filter(Objects::nonNull)
                 .toList();
@@ -260,19 +236,22 @@ public class ReferenceDataService {
 
         return CharacterClassDetailResponse.builder()
                 .id(c.getId())
-                .name(c.getName())
-                .description(c.getDescription())
+                .name(Localization.pick(lang, c.getNameRusloc(), c.getNameEngloc(), c.getName()))
+                .description(Localization.pick(lang, c.getDescriptionRusloc(), c.getDescriptionEngloc(), c.getDescription()))
                 .hitDie(c.getHitDie())
                 .primaryAbilityStatId(c.getPrimaryAbilityStat() != null ? c.getPrimaryAbilityStat().getId() : null)
                 .savingThrowStatNames(savingThrowNames)
                 .skillChoiceCount(c.getSkillChoiceCount())
                 .skillChoiceOptions(skillOptions)
-                .armorWeaponProficiencies(c.getArmorWeaponProficiencies())
+                .armorWeaponProficiencies(Localization.pick(lang,
+                        c.getArmorWeaponProficienciesRusloc(),
+                        c.getArmorWeaponProficienciesEngloc(),
+                        c.getArmorWeaponProficiencies()))
                 .spellcasting(spellcasting)
                 .build();
     }
 
-    private CharacterRaceDetailResponse mapRaceDetail(CharacterRace r) {
+    private CharacterRaceDetailResponse mapRaceDetail(CharacterRace r, String lang) {
         Integer walkSpeed = null;
         if (r.getSpeedJson() != null) {
             try {
@@ -304,7 +283,10 @@ public class ReferenceDataService {
                         new TypeReference<List<Map<String, Object>>>() {});
                 for (var t : traitList) {
                     if (t.containsKey("name")) {
-                        traits.add((String) t.get("name"));
+                        traits.add(Localization.pick(lang,
+                                (String) t.get("nameRusloc"),
+                                (String) t.get("nameEngloc"),
+                                (String) t.get("name")));
                     }
                 }
             } catch (Exception ignored) {}
@@ -317,8 +299,14 @@ public class ReferenceDataService {
                         new TypeReference<List<Map<String, Object>>>() {});
                 for (var lin : lineages) {
                     String id = lin.get("id") != null ? lin.get("id").toString() : null;
-                    String linName = (String) lin.get("name");
-                    String linDesc = (String) lin.get("description");
+                    String linName = Localization.pick(lang,
+                            (String) lin.get("nameRusloc"),
+                            (String) lin.get("nameEngloc"),
+                            (String) lin.get("name"));
+                    String linDesc = Localization.pick(lang,
+                            (String) lin.get("descriptionRusloc"),
+                            (String) lin.get("descriptionEngloc"),
+                            (String) lin.get("description"));
 
                     List<CharacterRaceDetailResponse.AbilityScoreIncrease> subAsis = new ArrayList<>();
                     List<String> subTraits = new ArrayList<>();
@@ -336,8 +324,8 @@ public class ReferenceDataService {
 
         return CharacterRaceDetailResponse.builder()
                 .id(r.getId())
-                .name(r.getName())
-                .description(r.getDescription())
+                .name(Localization.pick(lang, r.getNameRusloc(), r.getNameEngloc(), r.getName()))
+                .description(Localization.pick(lang, r.getDescriptionRusloc(), r.getDescriptionEngloc(), r.getDescription()))
                 .speed(walkSpeed)
                 .abilityScoreIncreases(asis)
                 .traits(traits)
@@ -345,18 +333,41 @@ public class ReferenceDataService {
                 .build();
     }
 
+    /** Canonical (English) mapping for callers without a UI-language context. */
     public BackgroundResponse mapBackground(Background bg) {
+        return mapBackground(bg, Localization.DEFAULT_LANG);
+    }
+
+    public BackgroundResponse mapBackground(Background bg, String lang) {
         List<String> skillNames = parseJsonStringList(bg.getSkillProficiencyIdsJson());
         return BackgroundResponse.builder()
                 .id(bg.getId())
-                .name(bg.getName())
-                .description(bg.getDescription())
+                .name(Localization.pick(lang, bg.getNameRusloc(), bg.getNameEngloc(), bg.getName()))
+                .description(Localization.pick(lang, bg.getDescriptionRusloc(), bg.getDescriptionEngloc(), bg.getDescription()))
                 .skillProficiencyNames(skillNames)
-                .grantedExtras(bg.getGrantedExtras())
+                .grantedExtras(Localization.pick(lang, bg.getGrantedExtrasRusloc(), bg.getGrantedExtrasEngloc(), bg.getGrantedExtras()))
                 .build();
     }
 
-    private SpellResponse mapSpell(Spell s) {
+    private ProficiencySkillResponse mapProficiencySkill(ProficiencySkill s, String lang) {
+        return ProficiencySkillResponse.builder()
+                .id(s.getId())
+                .name(Localization.pick(lang, s.getNameRusloc(), s.getNameEngloc(), s.getName()))
+                .governingStatId(s.getGoverningStat().getId())
+                .governingStatName(s.getGoverningStat().getName())
+                .build();
+    }
+
+    private CurrencyTypeResponse mapCurrency(CurrencyType ct, String lang) {
+        return CurrencyTypeResponse.builder()
+                .id(ct.getId())
+                .name(Localization.pick(lang, ct.getNameRusloc(), ct.getNameEngloc(), ct.getName()))
+                .exchangeRateToGold(ct.getExchangeRateToGold())
+                .isDefault(ct.getIsDefault())
+                .build();
+    }
+
+    private SpellResponse mapSpell(Spell s, String lang) {
         List<UUID> classIds = new ArrayList<>();
         if (s.getAvailableToClassIdsJson() != null) {
             try {
@@ -367,10 +378,10 @@ public class ReferenceDataService {
         }
         return SpellResponse.builder()
                 .id(s.getId())
-                .name(s.getName())
+                .name(Localization.pick(lang, s.getNameRusloc(), s.getNameEngloc(), s.getName()))
                 .level(s.getLevel())
                 .school(s.getSchool())
-                .description(s.getDescription())
+                .description(Localization.pick(lang, s.getDescriptionRusloc(), s.getDescriptionEngloc(), s.getDescription()))
                 .availableToClassIds(classIds)
                 .build();
     }
