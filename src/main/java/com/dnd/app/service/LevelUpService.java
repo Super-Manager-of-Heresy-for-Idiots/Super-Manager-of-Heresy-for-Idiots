@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LevelUpRequest;
+import com.dnd.app.dto.response.AbilityOptionInfo;
 import com.dnd.app.dto.response.DerivedInfo;
 import com.dnd.app.dto.response.HpGainInfo;
 import com.dnd.app.dto.response.LevelUpOptionsResponse;
@@ -162,6 +163,11 @@ public class LevelUpService {
             }
         }
 
+        // Валидирует и применяет распределение очков ASI (если уровень его даёт).
+        // Делается до прочих мутаций, чтобы некорректный запрос откатил транзакцию.
+        List<LevelUpResultResponse.AcquiredRewardSummary> asiSummaries =
+                applyAbilityScoreImprovement(character, availableRewards, request);
+
         List<ClassLevelReward> toAcquire = new ArrayList<>();
 
         for (Map.Entry<String, List<ClassLevelReward>> entry : rewardsByType.entrySet()) {
@@ -252,6 +258,11 @@ public class LevelUpService {
                     .build();
             acquiredRewardRepository.save(acquired);
 
+            // Для ASI сводка уже сформирована applyAbilityScoreImprovement (с учётом выбора игрока).
+            if ("ABILITY_SCORE_IMPROVEMENT".equals(reward.getRewardType())) {
+                continue;
+            }
+
             RewardDetailDto detail = rewardResolverRegistry.resolve(reward.getRewardType(), reward.getRewardId());
             RewardDetailInfo info = enrichDetail(character, reward, detail.getDetail());
             summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
@@ -261,6 +272,7 @@ public class LevelUpService {
                     .detail(info)
                     .build());
         }
+        summaries.addAll(asiSummaries);
 
         log.info("Level up committed: characterId={}, class='{}', newClassLevel={}, newTotalLevel={}, hpIncrease={}, rewardsAcquired={}, user={}",
                 characterId, targetClass.getName(), newClassLevel, character.getTotalLevel(), hpIncrease, summaries.size(), username);
@@ -351,23 +363,100 @@ public class LevelUpService {
     }
 
     /**
-     * Для ASI достраивает currentScore из характеристик персонажа
+     * Для ASI достраивает список характеристик персонажа как варианты выбора
      * (резолвер не имеет доступа к персонажу). Остальные типы возвращаются как есть.
      */
     private RewardDetailInfo enrichDetail(PlayerCharacter character, ClassLevelReward reward, RewardDetailInfo detail) {
-        if (detail != null && "ABILITY_SCORE_IMPROVEMENT".equals(reward.getRewardType())) {
-            detail.setCurrentScore(currentScoreForStat(character, reward.getRewardId()));
+        if (detail != null && "ABILITY_SCORE_IMPROVEMENT".equals(reward.getRewardType())
+                && character.getStats() != null) {
+            List<AbilityOptionInfo> options = character.getStats().stream()
+                    .map(s -> AbilityOptionInfo.builder()
+                            .statTypeId(s.getStatType().getId())
+                            .name(s.getStatType().getName())
+                            .currentScore(s.getValue())
+                            .maxScore(20)
+                            .build())
+                    .toList();
+            detail.setAbilityOptions(options);
         }
         return detail;
     }
 
-    private Integer currentScoreForStat(PlayerCharacter character, UUID statTypeId) {
-        if (character.getStats() == null) return null;
-        return character.getStats().stream()
-                .filter(s -> s.getStatType().getId().equals(statTypeId))
-                .map(CharacterStat::getValue)
-                .findFirst()
-                .orElse(null);
+    /**
+     * Проверяет и применяет распределение очков ASI по правилам PHB:
+     * +2 одной характеристике или +1 двум разным, итог не выше 20.
+     * ASI обязателен на уровнях, где он есть в каталоге, и не может быть пропущен.
+     * Возвращает сводки по применённым повышениям (для rewardsAcquired).
+     */
+    private List<LevelUpResultResponse.AcquiredRewardSummary> applyAbilityScoreImprovement(
+            PlayerCharacter character, List<ClassLevelReward> availableRewards, LevelUpRequest request) {
+
+        boolean asiGranted = availableRewards.stream()
+                .anyMatch(r -> "ABILITY_SCORE_IMPROVEMENT".equals(r.getRewardType()));
+
+        LevelUpRequest.AbilityScoreImprovement asi = request.getAbilityScoreImprovement();
+
+        if (!asiGranted) {
+            if (asi != null) {
+                throw new UnprocessableEntityException("Повышение характеристик не предусмотрено на этом уровне");
+            }
+            return List.of();
+        }
+
+        if (asi == null || asi.getIncreases() == null || asi.getIncreases().isEmpty()) {
+            throw new UnprocessableEntityException("Необходимо распределить очки повышения характеристик");
+        }
+
+        List<LevelUpRequest.StatIncrease> increases = asi.getIncreases();
+        int total = increases.stream().mapToInt(LevelUpRequest.StatIncrease::getAmount).sum();
+        if (total != 2) {
+            throw new UnprocessableEntityException(
+                    "Нужно распределить ровно 2 очка: +2 одной характеристике или +1 двум разным");
+        }
+        if (increases.size() == 1 && increases.get(0).getAmount() != 2) {
+            throw new UnprocessableEntityException("При выборе одной характеристики повышение должно быть на 2");
+        }
+        if (increases.size() == 2 &&
+                !(increases.get(0).getAmount() == 1 && increases.get(1).getAmount() == 1)) {
+            throw new UnprocessableEntityException("При выборе двух характеристик каждая повышается на 1");
+        }
+        long distinct = increases.stream()
+                .map(LevelUpRequest.StatIncrease::getStatTypeId)
+                .distinct().count();
+        if (distinct != increases.size()) {
+            throw new UnprocessableEntityException("Характеристики для повышения должны быть разными");
+        }
+
+        List<LevelUpResultResponse.AcquiredRewardSummary> summaries = new ArrayList<>();
+        for (LevelUpRequest.StatIncrease inc : increases) {
+            CharacterStat stat = character.getStats().stream()
+                    .filter(s -> s.getStatType().getId().equals(inc.getStatTypeId()))
+                    .findFirst()
+                    .orElseThrow(() -> new UnprocessableEntityException(
+                            "Характеристика не принадлежит персонажу: " + inc.getStatTypeId()));
+
+            int before = stat.getValue();
+            int after = before + inc.getAmount();
+            if (after > 20) {
+                throw new UnprocessableEntityException(
+                        "Значение характеристики '" + stat.getStatType().getName() + "' не может превысить 20");
+            }
+            stat.setValue(after);
+            characterStatRepository.save(stat);
+
+            RewardDetailInfo detail = RewardDetailInfo.builder()
+                    .abilityStatName(stat.getStatType().getName())
+                    .currentScore(after)
+                    .maxScore(20)
+                    .build();
+            summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
+                    .rewardType("ABILITY_SCORE_IMPROVEMENT")
+                    .name("+" + inc.getAmount() + " " + stat.getStatType().getName())
+                    .description(stat.getStatType().getName() + ": " + before + " → " + after)
+                    .detail(detail)
+                    .build());
+        }
+        return summaries;
     }
 
     private String buildHitDiceTotal(UUID characterId, CharacterClass leveledClass, int newClassLevel, boolean existedBefore) {

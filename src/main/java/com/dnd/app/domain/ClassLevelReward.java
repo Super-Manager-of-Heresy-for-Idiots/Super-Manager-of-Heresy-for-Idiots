@@ -31,7 +31,8 @@ public class ClassLevelReward {
     @Column(name = "reward_type", nullable = false, length = 30)
     private String rewardType;
 
-    @Column(name = "reward_id", nullable = false)
+    // nullable: параметрические награды (например ASI) не ссылаются на сущность.
+    @Column(name = "reward_id")
     private UUID rewardId;
 
     @Column(name = "is_choice", nullable = false)

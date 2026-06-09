@@ -43,5 +43,6 @@
     <include file="db/changelog/036-wallet-transactions.xml"/>
     <include file="db/changelog/037-add-character-sheet-text-fields.xml"/>
     <include file="db/changelog/038-seed-phb-full.xml"/>
+    <include file="db/changelog/039-asi-reward-id-nullable.xml"/>
 
 </databaseChangeLog>

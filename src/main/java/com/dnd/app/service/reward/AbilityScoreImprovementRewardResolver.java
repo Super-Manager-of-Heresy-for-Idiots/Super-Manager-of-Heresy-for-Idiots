@@ -1,20 +1,22 @@
 package com.dnd.app.service.reward;
 
-import com.dnd.app.domain.StatType;
 import com.dnd.app.dto.response.RewardDetailDto;
 import com.dnd.app.dto.response.RewardDetailInfo;
-import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.StatTypeRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+/**
+ * ASI — параметрическая награда: она не ссылается на конкретную характеристику
+ * (reward_id у таких записей = NULL). Резолвер возвращает описание правила;
+ * список доступных характеристик (abilityOptions) и применение выбора
+ * заполняются в LevelUpService, т.к. зависят от персонажа.
+ */
 @Component
-@RequiredArgsConstructor
 public class AbilityScoreImprovementRewardResolver implements RewardResolver {
 
-    private final StatTypeRepository statTypeRepository;
+    public static final int ASI_POINTS_TOTAL = 2;
+    public static final int ASI_MAX_SCORE = 20;
 
     @Override
     public String getSupportedType() {
@@ -23,26 +25,21 @@ public class AbilityScoreImprovementRewardResolver implements RewardResolver {
 
     @Override
     public RewardDetailDto resolve(UUID rewardId) {
-        StatType statType = statTypeRepository.findById(rewardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена: " + rewardId));
-        // currentScore зависит от персонажа и заполняется в LevelUpService;
-        // maxScore — потолок характеристики по правилам системы.
         RewardDetailInfo detail = RewardDetailInfo.builder()
-                .abilityStatName(statType.getName())
-                .maxScore(20)
+                .asiPointsTotal(ASI_POINTS_TOTAL)
+                .maxScore(ASI_MAX_SCORE)
                 .build();
         return RewardDetailDto.builder()
-                .rewardId(statType.getId())
-                .name(statType.getName())
-                .description("Увеличение " + statType.getName() + " на 1")
+                .rewardId(null)
+                .name("Увеличение характеристик")
+                .description("Повысьте одну характеристику на 2 или две характеристики на 1 (не выше "
+                        + ASI_MAX_SCORE + ")")
                 .detail(detail)
                 .build();
     }
 
     @Override
     public void validateRewardId(UUID rewardId) {
-        if (!statTypeRepository.existsById(rewardId)) {
-            throw new ResourceNotFoundException("Характеристика не найдена: " + rewardId);
-        }
+        // У ASI нет целевой сущности — валидировать нечего.
     }
 }

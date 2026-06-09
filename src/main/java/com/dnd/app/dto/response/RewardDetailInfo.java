@@ -35,4 +35,6 @@ public class RewardDetailInfo {
     private String abilityStatName;
     private Integer currentScore;
     private Integer maxScore;
+    private List<AbilityOptionInfo> abilityOptions;  // варианты выбора для ASI
+    private Integer asiPointsTotal;                   // сколько очков распределить (по правилам = 2)
 }
