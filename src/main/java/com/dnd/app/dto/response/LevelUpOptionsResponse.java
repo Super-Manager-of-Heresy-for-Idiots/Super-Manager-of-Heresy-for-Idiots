@@ -25,6 +25,8 @@ public class LevelUpOptionsResponse {
         private String className;
         private Integer currentLevelInClass;
         private Integer newLevelInClass;
+        private HpGainInfo hpGain;
+        private DerivedInfo derived;
         private List<RewardGroup> rewardGroups;
     }
 
@@ -48,5 +50,6 @@ public class LevelUpOptionsResponse {
         private String name;
         private String description;
         private Boolean alreadyAcquired;
+        private RewardDetailInfo detail;
     }
 }

@@ -2,6 +2,7 @@ package com.dnd.app.service.reward;
 
 import com.dnd.app.domain.Feat;
 import com.dnd.app.dto.response.RewardDetailDto;
+import com.dnd.app.dto.response.RewardDetailInfo;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.FeatRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,14 @@ public class FeatRewardResolver implements RewardResolver {
     public RewardDetailDto resolve(UUID rewardId) {
         Feat feat = featRepository.findById(rewardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + rewardId));
+        RewardDetailInfo detail = RewardDetailInfo.builder()
+                .prerequisites(feat.getPrerequisites())
+                .build();
         return RewardDetailDto.builder()
                 .rewardId(feat.getId())
                 .name(feat.getName())
                 .description(feat.getDescription())
+                .detail(detail)
                 .build();
     }
 

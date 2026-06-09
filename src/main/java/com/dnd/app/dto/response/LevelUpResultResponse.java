@@ -17,6 +17,8 @@ public class LevelUpResultResponse {
     private Integer newClassLevel;
     private Integer hpIncrease;
     private Integer newMaxHp;
+    private Integer proficiencyBonusBefore;
+    private Integer proficiencyBonusAfter;
     private List<AcquiredRewardSummary> rewardsAcquired;
 
     @Data
@@ -26,5 +28,7 @@ public class LevelUpResultResponse {
     public static class AcquiredRewardSummary {
         private String rewardType;
         private String name;
+        private String description;
+        private RewardDetailInfo detail;
     }
 }

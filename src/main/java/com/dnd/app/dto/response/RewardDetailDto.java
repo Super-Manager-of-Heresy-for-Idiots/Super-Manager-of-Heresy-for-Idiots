@@ -15,4 +15,5 @@ public class RewardDetailDto {
     private UUID rewardId;
     private String name;
     private String description;
+    private RewardDetailInfo detail;
 }

@@ -3,9 +3,12 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LevelUpRequest;
+import com.dnd.app.dto.response.DerivedInfo;
+import com.dnd.app.dto.response.HpGainInfo;
 import com.dnd.app.dto.response.LevelUpOptionsResponse;
 import com.dnd.app.dto.response.LevelUpResultResponse;
 import com.dnd.app.dto.response.RewardDetailDto;
+import com.dnd.app.dto.response.RewardDetailInfo;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
@@ -83,13 +86,15 @@ public class LevelUpService {
                     .findAllByCharacterClassIdAndRequiredLevel(cc.getId(), newLevel);
 
             List<LevelUpOptionsResponse.RewardGroup> groups = buildRewardGroups(
-                    rewards, acquiredRewardIds, classesWithSubclass.contains(cc.getId()));
+                    character, rewards, acquiredRewardIds, classesWithSubclass.contains(cc.getId()));
 
             options.add(LevelUpOptionsResponse.AvailableClassOption.builder()
                     .classId(cc.getId())
                     .className(cc.getName())
                     .currentLevelInClass(currentClassLevel)
                     .newLevelInClass(newLevel)
+                    .hpGain(buildHpGain(character, cc))
+                    .derived(buildDerived(character.getTotalLevel()))
                     .rewardGroups(groups)
                     .build());
         }
@@ -218,6 +223,7 @@ public class LevelUpService {
             classLevelRepository.save(ccl);
         }
 
+        int totalLevelBefore = character.getTotalLevel();
         character.setTotalLevel(character.getTotalLevel() + 1);
 
         // --- Update HP ---
@@ -247,9 +253,12 @@ public class LevelUpService {
             acquiredRewardRepository.save(acquired);
 
             RewardDetailDto detail = rewardResolverRegistry.resolve(reward.getRewardType(), reward.getRewardId());
+            RewardDetailInfo info = enrichDetail(character, reward, detail.getDetail());
             summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
                     .rewardType(reward.getRewardType())
                     .name(detail.getName())
+                    .description(detail.getDescription())
+                    .detail(info)
                     .build());
         }
 
@@ -262,6 +271,8 @@ public class LevelUpService {
                 .newClassLevel(newClassLevel)
                 .hpIncrease(hpIncrease)
                 .newMaxHp(character.getMaxHp())
+                .proficiencyBonusBefore(proficiencyBonus(totalLevelBefore))
+                .proficiencyBonusAfter(proficiencyBonus(character.getTotalLevel()))
                 .rewardsAcquired(summaries)
                 .build();
     }
@@ -308,6 +319,57 @@ public class LevelUpService {
         return (stat.get().getValue() - 10) / 2;
     }
 
+    /** Бонус мастерства по правилам системы как функция суммарного уровня. */
+    private int proficiencyBonus(int totalLevel) {
+        int level = Math.max(1, totalLevel);
+        return ((level - 1) / 4) + 2;
+    }
+
+    private HpGainInfo buildHpGain(PlayerCharacter character, CharacterClass cc) {
+        int hitDie = cc.getHitDie() != null ? cc.getHitDie() : 8;
+        int conMod = getConModifier(character);
+        int average = (hitDie / 2) + 1 + conMod;
+        if (average < 1) average = 1;
+        int rolledMin = Math.max(1, 1 + conMod);
+        int rolledMax = hitDie + conMod;
+        return HpGainInfo.builder()
+                .hitDie(hitDie)
+                .conModifier(conMod)
+                .average(average)
+                .rolledMin(rolledMin)
+                .rolledMax(rolledMax)
+                .currentMaxHp(character.getMaxHp())
+                .build();
+    }
+
+    private DerivedInfo buildDerived(int currentTotalLevel) {
+        // spellSlotsGained / cantripsGained пока не считаются (нет таблиц прогрессии в БД).
+        return DerivedInfo.builder()
+                .proficiencyBonusBefore(proficiencyBonus(currentTotalLevel))
+                .proficiencyBonusAfter(proficiencyBonus(currentTotalLevel + 1))
+                .build();
+    }
+
+    /**
+     * Для ASI достраивает currentScore из характеристик персонажа
+     * (резолвер не имеет доступа к персонажу). Остальные типы возвращаются как есть.
+     */
+    private RewardDetailInfo enrichDetail(PlayerCharacter character, ClassLevelReward reward, RewardDetailInfo detail) {
+        if (detail != null && "ABILITY_SCORE_IMPROVEMENT".equals(reward.getRewardType())) {
+            detail.setCurrentScore(currentScoreForStat(character, reward.getRewardId()));
+        }
+        return detail;
+    }
+
+    private Integer currentScoreForStat(PlayerCharacter character, UUID statTypeId) {
+        if (character.getStats() == null) return null;
+        return character.getStats().stream()
+                .filter(s -> s.getStatType().getId().equals(statTypeId))
+                .map(CharacterStat::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
     private String buildHitDiceTotal(UUID characterId, CharacterClass leveledClass, int newClassLevel, boolean existedBefore) {
         List<CharacterClassLevel> allLevels = classLevelRepository.findAllByCharacterId(characterId);
 
@@ -334,6 +396,7 @@ public class LevelUpService {
     }
 
     private List<LevelUpOptionsResponse.RewardGroup> buildRewardGroups(
+            PlayerCharacter character,
             List<ClassLevelReward> rewards,
             Set<UUID> acquiredRewardIds,
             boolean hasSubclassForThisClass) {
@@ -356,6 +419,7 @@ public class LevelUpService {
                                 .name(detail.getName())
                                 .description(detail.getDescription())
                                 .alreadyAcquired(acquiredRewardIds.contains(r.getId()))
+                                .detail(enrichDetail(character, r, detail.getDetail()))
                                 .build();
                     })
                     .toList();
