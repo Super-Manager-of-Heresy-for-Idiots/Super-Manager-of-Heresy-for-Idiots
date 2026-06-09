@@ -42,5 +42,6 @@
     <include file="db/changelog/035-add-temp-hp.xml"/>
     <include file="db/changelog/036-wallet-transactions.xml"/>
     <include file="db/changelog/037-add-character-sheet-text-fields.xml"/>
+    <include file="db/changelog/038-seed-phb-full.xml"/>
 
 </databaseChangeLog>
