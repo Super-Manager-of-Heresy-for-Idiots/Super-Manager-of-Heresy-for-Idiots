@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Bestiary schema (601 monsters). Structure per SCHEMA_CONTRACT_FOR_COWORK.md §A.
+      Postgres-only (gen_random_uuid, partial unique indexes, timestamptz).
+      damage_type / size / ability / section are varchar enum-literals (§D), not tables.
+    -->
+
+    <!-- =========================== Dictionaries (§A.1/A.2) =========================== -->
+    <changeSet id="040-dictionaries" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE creature_types (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_creature_types_code_system ON creature_types (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_creature_types_code_owner ON creature_types (code, homebrew_id);
+
+            CREATE TABLE alignments (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_alignments_code_system ON alignments (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_alignments_code_owner ON alignments (code, homebrew_id);
+
+            CREATE TABLE languages (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_languages_code_system ON languages (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_languages_code_owner ON languages (code, homebrew_id);
+
+            CREATE TABLE sense_types (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_sense_types_code_system ON sense_types (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_sense_types_code_owner ON sense_types (code, homebrew_id);
+
+            CREATE TABLE movement_types (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_movement_types_code_system ON movement_types (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_movement_types_code_owner ON movement_types (code, homebrew_id);
+
+            CREATE TABLE habitats (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_habitats_code_system ON habitats (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_habitats_code_owner ON habitats (code, homebrew_id);
+
+            CREATE TABLE treasure_tags (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_treasure_tags_code_system ON treasure_tags (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_treasure_tags_code_owner ON treasure_tags (code, homebrew_id);
+
+            CREATE TABLE bestiary_conditions (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_bestiary_conditions_code_system ON bestiary_conditions (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_bestiary_conditions_code_owner ON bestiary_conditions (code, homebrew_id);
+
+            CREATE TABLE monster_gear_items (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_monster_gear_items_code_system ON monster_gear_items (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_monster_gear_items_code_owner ON monster_gear_items (code, homebrew_id);
+
+            CREATE TABLE sources (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                book_code   varchar(20) NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_sources_code_system ON sources (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_sources_code_owner ON sources (code, homebrew_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- =============================== monsters (§A.3) =============================== -->
+    <changeSet id="040-monsters" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE monsters (
+                id                  uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+                source_external_id  bigint       NULL UNIQUE,
+                slug                varchar(120) NOT NULL UNIQUE,
+                name_engloc         text         NULL,
+                name_rusloc         text         NOT NULL,
+                alignment_id        uuid         NULL REFERENCES alignments(id),
+                size                varchar(20)  NOT NULL,
+                size_secondary      varchar(20)  NULL,
+                is_swarm            boolean      NOT NULL DEFAULT false,
+                swarm_size          varchar(20)  NULL,
+                armor_class         smallint     NOT NULL,
+                armor_class_text    text         NULL,
+                initiative_bonus    smallint     NULL,
+                initiative_score    smallint     NULL,
+                hp_average          int          NULL,
+                hp_dice_count       smallint     NULL,
+                hp_dice_sides       smallint     NULL,
+                hp_dice_modifier    int          NULL,
+                hp_formula          text         NULL,
+                str_score           smallint     NOT NULL,
+                dex_score           smallint     NOT NULL,
+                con_score           smallint     NOT NULL,
+                int_score           smallint     NOT NULL,
+                wis_score           smallint     NOT NULL,
+                cha_score           smallint     NOT NULL,
+                passive_perception  smallint     NULL,
+                telepathy_ft        int          NULL,
+                cr_rating           varchar(10)  NOT NULL,
+                cr_value            numeric(5,3) NOT NULL,
+                xp_base             int          NULL,
+                xp_lair             int          NULL,
+                proficiency_bonus   smallint     NULL,
+                legendary_uses_base smallint     NULL,
+                legendary_uses_lair smallint     NULL,
+                legendary_text      text         NULL,
+                lore_text           text         NULL,
+                campaign_id         uuid         NULL REFERENCES campaigns(id),
+                homebrew_id         uuid         NULL REFERENCES homebrew_packages(id),
+                created_at          timestamptz  NOT NULL DEFAULT now(),
+                updated_at          timestamptz  NOT NULL DEFAULT now(),
+                CONSTRAINT ck_monsters_campaign_xor_homebrew
+                    CHECK (NOT (campaign_id IS NOT NULL AND homebrew_id IS NOT NULL))
+            );
+            CREATE INDEX idx_monsters_cr_value ON monsters (cr_value);
+            CREATE INDEX idx_monsters_size ON monsters (size);
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================ junctions (§A.4) ============================ -->
+    <changeSet id="040-monster-junctions" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE monster_creature_types (
+                monster_id      uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                creature_type_id uuid NOT NULL REFERENCES creature_types(id),
+                PRIMARY KEY (monster_id, creature_type_id)
+            );
+
+            CREATE TABLE monster_speeds (
+                id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id       uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                movement_type_id uuid NOT NULL REFERENCES movement_types(id),
+                ft               int  NOT NULL,
+                hover            boolean NOT NULL DEFAULT false,
+                UNIQUE (monster_id, movement_type_id)
+            );
+
+            CREATE TABLE monster_senses (
+                id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id    uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                sense_type_id uuid NOT NULL REFERENCES sense_types(id),
+                ft            int  NOT NULL,
+                UNIQUE (monster_id, sense_type_id)
+            );
+
+            CREATE TABLE monster_languages (
+                monster_id  uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                language_id uuid NOT NULL REFERENCES languages(id),
+                PRIMARY KEY (monster_id, language_id)
+            );
+
+            CREATE TABLE monster_saving_throws (
+                id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id uuid        NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                ability    varchar(20) NOT NULL,
+                bonus      smallint    NOT NULL,
+                UNIQUE (monster_id, ability)
+            );
+
+            CREATE TABLE monster_skill_proficiencies (
+                id                   uuid     PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id           uuid     NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                proficiency_skill_id uuid     NOT NULL REFERENCES proficiency_skills(id),
+                bonus                smallint NOT NULL,
+                UNIQUE (monster_id, proficiency_skill_id)
+            );
+
+            CREATE TABLE monster_damage_resistances (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id  uuid        NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                damage_type varchar(20) NULL,
+                note        text        NULL,
+                UNIQUE (monster_id, damage_type)
+            );
+
+            CREATE TABLE monster_damage_immunities (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id  uuid        NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                damage_type varchar(20) NULL,
+                note        text        NULL,
+                UNIQUE (monster_id, damage_type)
+            );
+
+            CREATE TABLE monster_damage_vulnerabilities (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id  uuid        NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                damage_type varchar(20) NULL,
+                note        text        NULL,
+                UNIQUE (monster_id, damage_type)
+            );
+
+            CREATE TABLE monster_condition_immunities (
+                monster_id   uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                condition_id uuid NOT NULL REFERENCES bestiary_conditions(id),
+                PRIMARY KEY (monster_id, condition_id)
+            );
+
+            CREATE TABLE monster_habitats (
+                monster_id uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                habitat_id uuid NOT NULL REFERENCES habitats(id),
+                PRIMARY KEY (monster_id, habitat_id)
+            );
+
+            CREATE TABLE monster_treasures (
+                monster_id      uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                treasure_tag_id uuid NOT NULL REFERENCES treasure_tags(id),
+                PRIMARY KEY (monster_id, treasure_tag_id)
+            );
+
+            CREATE TABLE monster_sources (
+                monster_id uuid NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                source_id  uuid NOT NULL REFERENCES sources(id),
+                PRIMARY KEY (monster_id, source_id)
+            );
+
+            CREATE TABLE monster_gear (
+                id         uuid     PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id uuid     NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                item_id    uuid     NOT NULL REFERENCES monster_gear_items(id),
+                qty        smallint NOT NULL DEFAULT 1,
+                UNIQUE (monster_id, item_id)
+            );
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== monster_features / feature_damages (§A.5/A.6) ===================== -->
+    <changeSet id="040-monster-features" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE monster_features (
+                id                 uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                monster_id         uuid        NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+                section            varchar(30) NOT NULL,
+                sort_order         int         NOT NULL,
+                name_engloc        text        NULL,
+                name_rusloc        text        NULL,
+                kind               varchar(20) NOT NULL,
+                recharge_min       smallint    NULL,
+                recharge_max       smallint    NULL,
+                description_engloc text        NULL,
+                description_rusloc text        NOT NULL,
+                attack_type        varchar(10) NULL,
+                attack_bonus       smallint    NULL,
+                reach_ft           smallint    NULL,
+                range_ft           smallint    NULL,
+                range_long_ft      smallint    NULL,
+                save_ability       varchar(20) NULL,
+                save_dc            smallint    NULL
+            );
+            CREATE INDEX idx_monster_features_lookup ON monster_features (monster_id, section, sort_order);
+
+            CREATE TABLE feature_damages (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                feature_id  uuid        NOT NULL REFERENCES monster_features(id) ON DELETE CASCADE,
+                sort_order  int         NOT NULL,
+                average     smallint    NULL,
+                dice        varchar(30) NULL,
+                damage_type varchar(20) NULL,
+                note        text        NULL
+            );
+            CREATE INDEX idx_feature_damages_feature ON feature_damages (feature_id);
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

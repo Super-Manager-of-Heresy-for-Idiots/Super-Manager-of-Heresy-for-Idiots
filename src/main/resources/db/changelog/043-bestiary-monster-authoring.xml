@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Authoring columns for monsters: campaign visibility (GM reveal/hide), authorship,
+      clone provenance, soft-enable flag, and lookup indexes for homebrew/campaign scopes.
+    -->
+    <changeSet id="043-monster-authoring" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE monsters ADD COLUMN IF NOT EXISTS is_visible_to_players boolean NOT NULL DEFAULT false;
+            ALTER TABLE monsters ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+            ALTER TABLE monsters ADD COLUMN IF NOT EXISTS created_by uuid NULL REFERENCES users(id);
+            ALTER TABLE monsters ADD COLUMN IF NOT EXISTS updated_by uuid NULL REFERENCES users(id);
+            ALTER TABLE monsters ADD COLUMN IF NOT EXISTS source_monster_id uuid NULL REFERENCES monsters(id) ON DELETE SET NULL;
+
+            CREATE INDEX IF NOT EXISTS idx_monsters_homebrew ON monsters (homebrew_id) WHERE homebrew_id IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_monsters_campaign ON monsters (campaign_id) WHERE campaign_id IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_monsters_system ON monsters (cr_value) WHERE campaign_id IS NULL AND homebrew_id IS NULL;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

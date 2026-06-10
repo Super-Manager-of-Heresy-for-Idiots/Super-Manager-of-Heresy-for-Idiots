@@ -15,5 +15,6 @@ public enum ContentType {
     ITEM_TEMPLATE,
     BACKGROUND,
     SPELL,
-    PROFICIENCY_SKILL
+    PROFICIENCY_SKILL,
+    MONSTER
 }

@@ -44,5 +44,9 @@
     <include file="db/changelog/037-add-character-sheet-text-fields.xml"/>
     <include file="db/changelog/038-seed-phb-full.xml"/>
     <include file="db/changelog/039-asi-reward-id-nullable.xml"/>
+    <include file="db/changelog/040-create-bestiary-schema.xml"/>
+    <include file="db/changelog/041-seed-bestiary-dictionaries.xml"/>
+    <include file="db/changelog/042-seed-bestiary-monsters.xml"/>
+    <include file="db/changelog/043-bestiary-monster-authoring.xml"/>
 
 </databaseChangeLog>
