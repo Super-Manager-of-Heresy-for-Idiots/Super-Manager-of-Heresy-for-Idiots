@@ -2,9 +2,7 @@ package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.ContentType;
-import com.dnd.app.domain.enums.DamageType;
 import com.dnd.app.domain.enums.EffectRole;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.RewardType;
 import com.dnd.app.domain.enums.Role;
@@ -50,6 +48,7 @@ public class HomebrewAuthoringService {
     private final StatTypeRepository statTypeRepository;
     private final ClassLevelRewardRepository classLevelRewardRepository;
     private final RewardResolverRegistry rewardResolverRegistry;
+    private final com.dnd.app.service.ContentDictionaryResolver contentDictionaryResolver;
 
     @Transactional
     public HomebrewDetailResponse createPackage(CreateHomebrewRequest request, String username) {
@@ -164,17 +163,17 @@ public class HomebrewAuthoringService {
         if (itemTypeRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
         }
-        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateDamageFields(request.getDamageDice(), request.getDamageType(), pkg);
         validateItemTypeSkillFields(request.getSkillId(), request.getSkillActivation());
 
         ItemType itemType = ItemType.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .slot(parseSlot(request.getSlot()))
+                .slot(parseSlot(request.getSlot(), pkg))
                 .homebrew(pkg)
                 .damageDice(request.getDamageDice())
                 .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
-                .damageType(parseDamageType(request.getDamageType()))
+                .damageType(parseDamageType(request.getDamageType(), pkg))
                 .build();
         if (request.getSkillId() != null) {
             Skill skill = getAllowedPackageSkill(request.getSkillId(), pkg);
@@ -332,7 +331,7 @@ public class HomebrewAuthoringService {
         if (skillRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
-        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateDamageFields(request.getDamageDice(), request.getDamageType(), pkg);
 
         Skill skill = Skill.builder()
                 .name(request.getName())
@@ -341,7 +340,7 @@ public class HomebrewAuthoringService {
                 .homebrew(pkg)
                 .damageDice(request.getDamageDice())
                 .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
-                .damageType(parseDamageType(request.getDamageType()))
+                .damageType(parseDamageType(request.getDamageType(), pkg))
                 .build();
         Skill saved = skillRepository.save(skill);
         attachContentItem(pkg, ContentType.SKILL, saved.getId(), username);
@@ -492,23 +491,15 @@ public class HomebrewAuthoringService {
                 packageId, contentType, contentId, username);
     }
 
-    private EquipmentSlot parseSlot(String slot) {
-        try {
-            return EquipmentSlot.valueOf(slot);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный слот экипировки: " + slot);
+    private EquipmentSlot parseSlot(String slot, HomebrewPackage pkg) {
+        if (slot == null) {
+            throw new BadRequestException("Некорректный слот экипировки: null");
         }
+        return contentDictionaryResolver.resolveEquipmentSlot(slot, pkg);
     }
 
-    private DamageType parseDamageType(String damageType) {
-        if (damageType == null) {
-            return null;
-        }
-        try {
-            return DamageType.valueOf(damageType);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный тип урона: " + damageType);
-        }
+    private DamageType parseDamageType(String damageType, HomebrewPackage pkg) {
+        return contentDictionaryResolver.resolveDamageType(damageType, pkg);
     }
 
     private SkillActivation parseSkillActivation(String activation) {
@@ -522,12 +513,12 @@ public class HomebrewAuthoringService {
         }
     }
 
-    private void validateDamageFields(String damageDice, String damageType) {
+    private void validateDamageFields(String damageDice, String damageType, HomebrewPackage pkg) {
         if (damageDice != null && damageType == null) {
             throw new BadRequestException("Если указан damageDice, damageType обязателен");
         }
         if (damageType != null) {
-            parseDamageType(damageType);
+            parseDamageType(damageType, pkg);
         }
     }
 
@@ -707,7 +698,7 @@ public class HomebrewAuthoringService {
         if (skillRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("Умение с таким названием уже существует");
         }
-        validateDamageFields(request.getDamageDice(), request.getDamageType());
+        validateDamageFields(request.getDamageDice(), request.getDamageType(), pkg);
 
         Skill skill = Skill.builder()
                 .name(request.getName())
@@ -716,7 +707,7 @@ public class HomebrewAuthoringService {
                 .homebrew(pkg)
                 .damageDice(request.getDamageDice())
                 .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
-                .damageType(parseDamageType(request.getDamageType()))
+                .damageType(parseDamageType(request.getDamageType(), pkg))
                 .build();
         Skill saved = skillRepository.save(skill);
         if (pkg != null) {

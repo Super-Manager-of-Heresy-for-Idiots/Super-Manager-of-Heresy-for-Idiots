@@ -6,7 +6,6 @@ import com.dnd.app.dto.response.BuffDebuffResponse;
 import com.dnd.app.dto.response.EnchantmentResponse;
 import com.dnd.app.dto.response.EnchantmentTypeResponse;
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.DamageType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
@@ -35,6 +34,7 @@ public class EnchantmentService {
     private final BuffDebuffRepository buffDebuffRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final ContentDictionaryResolver contentDictionaryResolver;
 
     // ==================== Enchantment Type CRUD (admin) ====================
 
@@ -210,11 +210,7 @@ public class EnchantmentService {
         }
 
         if (request.getDamageType() != null) {
-            try {
-                DamageType.valueOf(request.getDamageType());
-            } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Недопустимый тип урона: " + request.getDamageType());
-            }
+            contentDictionaryResolver.resolveDamageType(request.getDamageType(), null);
         }
 
         if (excludeId == null) {
@@ -239,7 +235,7 @@ public class EnchantmentService {
         enchantmentType.setDescription(request.getDescription());
         enchantmentType.setDamageDice(request.getDamageDice());
         enchantmentType.setDamageBonus(request.getDamageBonus());
-        enchantmentType.setDamageType(request.getDamageType() != null ? DamageType.valueOf(request.getDamageType()) : null);
+        enchantmentType.setDamageType(contentDictionaryResolver.resolveDamageType(request.getDamageType(), null));
 
         if (request.getBuffDebuffId() != null) {
             BuffDebuff buffDebuff = buffDebuffRepository.findById(request.getBuffDebuffId())
@@ -257,7 +253,7 @@ public class EnchantmentService {
                 .id(et.getId()).name(et.getName()).description(et.getDescription())
                 .damageDice(et.getDamageDice())
                 .damageBonus(et.getDamageBonus())
-                .damageType(et.getDamageType() != null ? et.getDamageType().name() : null)
+                .damageType(et.getDamageType() != null ? et.getDamageType().getCode() : null)
                 .buffDebuff(et.getBuffDebuff() != null ? toBuffDebuffResponse(et.getBuffDebuff()) : null)
                 .build();
     }

@@ -11,6 +11,7 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignNpcRepository;
 import com.dnd.app.repository.NpcNoteRepository;
 import com.dnd.app.repository.UserRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("NpcService: видимость NPC для игроков и ГМ")
 class NpcServiceTest {
 
     @Mock private CampaignNpcRepository npcRepository;
@@ -77,6 +79,7 @@ class NpcServiceTest {
     // --- Tests ---
 
     @Test
+    @DisplayName("Игрок видит только видимых NPC")
     void listNpcs_playerOnlySeesVisibleNpcs() {
         User player = buildPlayer();
         Campaign campaign = buildCampaign();
@@ -100,6 +103,7 @@ class NpcServiceTest {
     }
 
     @Test
+    @DisplayName("ГМ видит всех NPC, включая скрытых")
     void listNpcs_gmSeesAllNpcs() {
         User gm = buildGm();
         Campaign campaign = buildCampaign();
@@ -123,6 +127,7 @@ class NpcServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может получить доступ к скрытому NPC")
     void getNpc_playerCannotAccessHiddenNpc() {
         User player = buildPlayer();
         Campaign campaign = buildCampaign();
@@ -138,6 +143,7 @@ class NpcServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок видит видимого NPC без приватного описания")
     void getNpc_playerSeesVisibleNpc_noPrivateDescription() {
         User player = buildPlayer();
         Campaign campaign = buildCampaign();
@@ -155,6 +161,7 @@ class NpcServiceTest {
     }
 
     @Test
+    @DisplayName("ГМ видит приватное описание NPC")
     void getNpc_gmSeesPrivateDescription() {
         User gm = buildGm();
         Campaign campaign = buildCampaign();
@@ -172,6 +179,7 @@ class NpcServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может создать NPC")
     void createNpc_playerCannotCreate() {
         User player = buildPlayer();
         Campaign campaign = buildCampaign();

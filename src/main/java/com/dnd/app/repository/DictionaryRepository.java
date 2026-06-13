@@ -20,6 +20,8 @@ public interface DictionaryRepository<T extends DictionaryEntry> extends JpaRepo
 
     Optional<T> findByCodeAndHomebrewIsNull(String code);
 
+    Optional<T> findByCodeAndHomebrewId(String code, UUID homebrewId);
+
     boolean existsByCodeAndHomebrewIsNull(String code);
 
     boolean existsByCodeAndHomebrewId(String code, UUID homebrewId);

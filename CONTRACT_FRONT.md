@@ -48,15 +48,22 @@ Pagination uses Spring `Page<T>`: `content`, `totalElements`, `totalPages`, `num
 | `CampaignStatus` | `ACTIVE`, `PAUSED`, `COMPLETED` |
 | `CharacterStatus` | `ACTIVE`, `DEAD`, `RESERVE` |
 | `ContentType` | `ITEM_TYPE`, `CHARACTER_CLASS`, `SKILL`, `FEAT`, `SUBCLASS`, `RACE`, `STAT_TYPE`, `BUFF_DEBUFF`, `ENCHANTMENT_TYPE`, `CURRENCY`, `CUSTOM_RESOURCE`, `ITEM_TEMPLATE` |
-| `DamageType` | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
+| `DamageType` † | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
 | `EffectRole` | `BUFF`, `DEBUFF` |
-| `EquipmentSlot` | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
+| `EquipmentSlot` † | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
 | `HomebrewStatus` | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
 | `QuestStatus` | `ACTIVE`, `COMPLETED`, `FAILED`, `HIDDEN`, `ARCHIVED` |
-| `Rarity` | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
+| `Rarity` † | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
 | `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED` |
+
+† **Не закрытый enum, а homebrew-дружелюбный справочник.** Запросы/ответы по-прежнему
+используют строковый `code` (`"MAIN_HAND"`, `"COMMON"`, `"SLASHING"`), но homebrew-пакет может
+добавлять свои значения. Перечисленные `code` — только системные (ванильные) дефолты; FE должен
+грузить полный список из `GET /dictionaries/{kind}` (`equipment-slots` / `item-rarities` /
+`content-damage-types`), а не хардкодить. Это же относится к размерам существ (`creature-sizes`)
+и характеристикам (`stat_types.code`, бывший `Ability`).
 
 ## REST Endpoints
 

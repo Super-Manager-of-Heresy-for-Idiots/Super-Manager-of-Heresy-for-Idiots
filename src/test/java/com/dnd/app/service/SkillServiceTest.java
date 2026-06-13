@@ -11,6 +11,7 @@ import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("AdminService.setSkillEffects: управление эффектами умений")
 class SkillServiceTest {
 
     @Mock private StatTypeRepository statTypeRepository;
@@ -46,6 +48,7 @@ class SkillServiceTest {
     @InjectMocks private AdminService adminService;
 
     @Test
+    @DisplayName("Установка эффектов заменяет все существующие")
     void setEffects_replacesAllExistingEffects() {
         UUID skillId = UUID.randomUUID();
         Skill skill = Skill.builder().id(skillId).name("Fire Ball").damageBonus(0).build();
@@ -73,6 +76,7 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("Роль BUFF на дебаффе возвращает 422")
     void setEffects_buffRoleOnDebuffRow_throws422() {
         UUID skillId = UUID.randomUUID();
         Skill skill = Skill.builder().id(skillId).name("Curse").damageBonus(0).build();
@@ -90,6 +94,7 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("Пустой список эффектов удаляет все эффекты")
     void setEffects_emptyList_removesAllEffects() {
         UUID skillId = UUID.randomUUID();
         Skill skill = Skill.builder().id(skillId).name("Slash").damageBonus(0).build();

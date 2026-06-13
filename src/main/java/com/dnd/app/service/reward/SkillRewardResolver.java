@@ -35,7 +35,7 @@ public class SkillRewardResolver implements RewardResolver {
                 .skillActivation(skill.getSkillType())
                 .damageDice(skill.getDamageDice())
                 .damageBonus(skill.getDamageBonus())
-                .damageType(skill.getDamageType() != null ? skill.getDamageType().name() : null)
+                .damageType(skill.getDamageType() != null ? skill.getDamageType().getCode() : null)
                 .effects(mapEffects(skill))
                 .build();
 

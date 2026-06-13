@@ -42,6 +42,13 @@ public class BestiaryDictionaryService {
     private final BestiaryConditionRepository bestiaryConditionRepository;
     private final MonsterGearItemRepository monsterGearItemRepository;
     private final SourceRepository sourceRepository;
+    private final BestiarySizeRepository bestiarySizeRepository;
+    private final BestiaryAbilityRepository bestiaryAbilityRepository;
+    private final BestiaryDamageTypeRepository bestiaryDamageTypeRepository;
+    private final DamageTypeRepository damageTypeRepository;
+    private final RarityRepository rarityRepository;
+    private final EquipmentSlotRepository equipmentSlotRepository;
+    private final CreatureSizeRepository creatureSizeRepository;
     private final UserRepository userRepository;
     private final HomebrewPackageRepository homebrewPackageRepository;
 
@@ -61,6 +68,13 @@ public class BestiaryDictionaryService {
         handlers.put(DictionaryKind.CONDITION, new Handler<>(bestiaryConditionRepository, BestiaryCondition::new));
         handlers.put(DictionaryKind.GEAR_ITEM, new Handler<>(monsterGearItemRepository, MonsterGearItem::new));
         handlers.put(DictionaryKind.SOURCE, new Handler<>(sourceRepository, Source::new));
+        handlers.put(DictionaryKind.SIZE, new Handler<>(bestiarySizeRepository, BestiarySize::new));
+        handlers.put(DictionaryKind.ABILITY, new Handler<>(bestiaryAbilityRepository, BestiaryAbility::new));
+        handlers.put(DictionaryKind.DAMAGE_TYPE, new Handler<>(bestiaryDamageTypeRepository, BestiaryDamageType::new));
+        handlers.put(DictionaryKind.CONTENT_DAMAGE_TYPE, new Handler<>(damageTypeRepository, DamageType::new));
+        handlers.put(DictionaryKind.ITEM_RARITY, new Handler<>(rarityRepository, Rarity::new));
+        handlers.put(DictionaryKind.EQUIPMENT_SLOT, new Handler<>(equipmentSlotRepository, EquipmentSlot::new));
+        handlers.put(DictionaryKind.CONTENT_SIZE, new Handler<>(creatureSizeRepository, CreatureSize::new));
     }
 
     // --- Reads ---

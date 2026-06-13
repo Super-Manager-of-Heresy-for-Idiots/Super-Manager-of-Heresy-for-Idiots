@@ -2,7 +2,6 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.EquipItemRequest;
@@ -38,6 +37,7 @@ public class ItemInstanceService {
     private final CampaignService campaignService;
     private final CampaignMemberRepository campaignMemberRepository;
     private final WebSocketEventService webSocketEventService;
+    private final ContentDictionaryResolver contentDictionaryResolver;
 
     @Transactional
     public ItemInstanceResponse grantItem(UUID campaignId, UUID characterId,
@@ -132,17 +132,12 @@ public class ItemInstanceService {
             throw new BadRequestException("Item does not belong to this character");
         }
 
-        EquipmentSlot slot;
-        try {
-            slot = EquipmentSlot.valueOf(request.getSlot().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid equipment slot: " + request.getSlot());
-        }
+        EquipmentSlot slot = contentDictionaryResolver.resolveSystemSlot(request.getSlot());
 
         itemInstanceRepository.findByOwnerCharacterIdAndSlot(characterId, slot)
                 .filter(occupant -> !occupant.getId().equals(instanceId))
                 .ifPresent(occupant -> {
-                    throw new BadRequestException("Slot " + slot + " is already occupied by item "
+                    throw new BadRequestException("Slot " + slot.getCode() + " is already occupied by item "
                             + occupant.getDisplayName() + ". Unequip it first.");
                 });
 
@@ -152,7 +147,7 @@ public class ItemInstanceService {
         // Auto-apply template buffs as active effects
         applyTemplateBuffs(character, instance.getTemplate(), user);
 
-        log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot, characterId);
+        log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot.getCode(), characterId);
         return toResponse(instance);
     }
 
@@ -361,9 +356,9 @@ public class ItemInstanceService {
                 .customName(instance.getCustomName())
                 .quantity(instance.getQuantity())
                 .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().name() : null)
+                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
                 .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().name() : null)
+                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getCode() : null)
                 .build();
     }
 }

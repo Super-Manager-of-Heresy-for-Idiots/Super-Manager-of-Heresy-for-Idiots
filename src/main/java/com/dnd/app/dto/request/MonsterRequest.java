@@ -28,12 +28,12 @@ public class MonsterRequest {
 
     private UUID alignmentId;
 
-    @NotBlank(message = "size is required")
-    private String size;
+    @NotNull(message = "sizeId is required")
+    private UUID sizeId;
 
-    private String sizeSecondary;
+    private UUID sizeSecondaryId;
     private Boolean isSwarm;
-    private String swarmSize;
+    private UUID swarmSizeId;
 
     @NotNull(message = "armorClass is required")
     private Short armorClass;
@@ -135,8 +135,8 @@ public class MonsterRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SavingThrowEntry {
-        @NotBlank
-        private String ability;
+        @NotNull
+        private UUID abilityId;
         @NotNull
         private Short bonus;
     }
@@ -157,7 +157,7 @@ public class MonsterRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class DamageEntry {
-        private String damageType;
+        private UUID damageTypeId;
         private String note;
     }
 
@@ -194,7 +194,7 @@ public class MonsterRequest {
         private Short reachFt;
         private Short rangeFt;
         private Short rangeLongFt;
-        private String saveAbility;
+        private UUID saveAbilityId;
         private Short saveDc;
         @Valid
         private List<FeatureDamageEntry> damages;
@@ -209,7 +209,7 @@ public class MonsterRequest {
         private Integer sortOrder;
         private Short average;
         private String dice;
-        private String damageType;
+        private UUID damageTypeId;
         private String note;
     }
 }

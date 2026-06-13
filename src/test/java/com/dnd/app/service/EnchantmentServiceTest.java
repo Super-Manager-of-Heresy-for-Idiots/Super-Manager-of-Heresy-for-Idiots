@@ -8,6 +8,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.repository.*;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("EnchantmentService: зачарование предметов и контроль доступа")
 class EnchantmentServiceTest {
 
     @Mock private EnchantmentTypeRepository enchantmentTypeRepository;
@@ -60,6 +62,7 @@ class EnchantmentServiceTest {
     // ---- Test 1: add enchantment to item not owned by character -> 400 ----
 
     @Test
+    @DisplayName("Зачарование предмета, не принадлежащего персонажу, возвращает 400")
     void addEnchantment_toItemNotOwnedByCharacter_throws400() {
         UUID charId = UUID.randomUUID();
         UUID instanceId = UUID.randomUUID();
@@ -78,6 +81,7 @@ class EnchantmentServiceTest {
     // ---- Test 2: duplicate enchantment on same item -> 409 ----
 
     @Test
+    @DisplayName("Повторное зачарование того же предмета возвращает 409")
     void addEnchantment_duplicateOnSameItem_throws409() {
         UUID charId = UUID.randomUUID();
         UUID instanceId = UUID.randomUUID();
@@ -99,6 +103,7 @@ class EnchantmentServiceTest {
     // ---- Test 3: add enchantment on other player's character -> 403 ----
 
     @Test
+    @DisplayName("Зачарование чужого персонажа возвращает 403")
     void addEnchantment_onOtherPlayersCharacter_throws403() {
         UUID charId = UUID.randomUUID();
         User owner = buildPlayer(UUID.randomUUID(), "owner");
@@ -115,6 +120,7 @@ class EnchantmentServiceTest {
     // ---- Test 4: remove enchantment on other player's character -> 403 ----
 
     @Test
+    @DisplayName("Снятие зачарования с чужого персонажа возвращает 403")
     void removeEnchantment_onOtherPlayersCharacter_throws403() {
         UUID charId = UUID.randomUUID();
         UUID enchId = UUID.randomUUID();
@@ -134,6 +140,7 @@ class EnchantmentServiceTest {
     // ---- Test 5: getItemEnchantments by GM of campaign -> succeeds ----
 
     @Test
+    @DisplayName("ГМ кампании может просматривать зачарования предмета")
     void getItemEnchantments_byGmOfCampaign_succeeds() {
         UUID charId = UUID.randomUUID();
         UUID instanceId = UUID.randomUUID();
@@ -157,6 +164,7 @@ class EnchantmentServiceTest {
     // ---- Test 6: getItemEnchantments by GM of other campaign -> 403 ----
 
     @Test
+    @DisplayName("ГМ чужой кампании не может просматривать зачарования предмета")
     void getItemEnchantments_byGmOfOtherCampaign_throws403() {
         UUID charId = UUID.randomUUID();
         UUID instanceId = UUID.randomUUID();

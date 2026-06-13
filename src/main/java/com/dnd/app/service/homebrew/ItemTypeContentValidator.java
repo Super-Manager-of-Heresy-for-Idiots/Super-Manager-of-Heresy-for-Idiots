@@ -35,7 +35,7 @@ public class ItemTypeContentValidator implements HomebrewContentValidator {
                 .id(item.getId())
                 .name(item.getName())
                 .description(item.getDescription())
-                .slot(item.getSlot().name())
+                .slot(item.getSlot().getCode())
                 .build();
     }
 

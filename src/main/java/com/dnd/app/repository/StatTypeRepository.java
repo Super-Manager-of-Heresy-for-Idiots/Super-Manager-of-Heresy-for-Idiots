@@ -8,4 +8,8 @@ import java.util.UUID;
 public interface StatTypeRepository extends JpaRepository<StatType, UUID> {
 
     boolean existsByName(String name);
+
+    boolean existsByCodeAndHomebrewIsNull(String code);
+
+    boolean existsByCodeAndHomebrewId(String code, UUID homebrewId);
 }

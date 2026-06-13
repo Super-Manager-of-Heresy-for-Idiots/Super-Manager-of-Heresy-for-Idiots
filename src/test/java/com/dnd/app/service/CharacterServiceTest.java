@@ -9,6 +9,7 @@ import com.dnd.app.dto.response.CharacterStatResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.mapper.CharacterMapper;
 import com.dnd.app.repository.*;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CharacterService: создание и доступ к персонажам")
 class CharacterServiceTest {
 
     @Mock private PlayerCharacterRepository characterRepository;
@@ -39,6 +41,7 @@ class CharacterServiceTest {
     @Mock private CampaignService campaignService;
     @Mock private CharacterMapper characterMapper;
     @Mock private RaceService raceService;
+    @Mock private ReferenceDataService referenceDataService;
 
     @InjectMocks private CharacterService characterService;
 
@@ -51,6 +54,7 @@ class CharacterServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок успешно создаёт персонажа в своей кампании")
     void createCharacter_success() {
         UUID playerId = UUID.randomUUID();
         UUID campaignId = UUID.randomUUID();
@@ -85,6 +89,7 @@ class CharacterServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может получить чужого персонажа")
     void getCharacterById_wrongPlayer_throws() {
         UUID ownerId = UUID.randomUUID();
         UUID otherPlayerId = UUID.randomUUID();
@@ -101,6 +106,7 @@ class CharacterServiceTest {
     }
 
     @Test
+    @DisplayName("GM может редактировать характеристики участника своей кампании")
     void updateStatValue_gmCanEditCampaignMember() {
         UUID gmId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -132,6 +138,7 @@ class CharacterServiceTest {
     }
 
     @Test
+    @DisplayName("GM не может редактировать характеристики персонажа вне своей кампании")
     void updateStatValue_gmCannotEditNonCampaignMember() {
         UUID gmId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -154,6 +161,7 @@ class CharacterServiceTest {
     }
 
     @Test
+    @DisplayName("GM не может создавать персонажей-игроков")
     void createCharacter_gameMasterCannotCreate() {
         UUID gmId = UUID.randomUUID();
         UUID campaignId = UUID.randomUUID();

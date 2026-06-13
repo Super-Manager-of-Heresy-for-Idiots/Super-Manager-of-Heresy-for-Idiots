@@ -1,8 +1,6 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.EquipmentSlot;
-import com.dnd.app.domain.enums.Rarity;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.EquipItemRequest;
 import com.dnd.app.dto.request.GrantItemRequest;
@@ -12,6 +10,7 @@ import com.dnd.app.dto.response.ItemInstanceResponse;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.repository.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("ItemInstanceService: выдача, передача, экипировка предметов")
 class ItemInstanceServiceTest {
 
     @Mock
@@ -54,6 +54,12 @@ class ItemInstanceServiceTest {
 
     @Mock
     private CampaignMemberRepository campaignMemberRepository;
+
+    @Mock
+    private ContentDictionaryResolver contentDictionaryResolver;
+
+    @Mock
+    private WebSocketEventService webSocketEventService;
 
     @InjectMocks
     private ItemInstanceService itemInstanceService;
@@ -103,7 +109,7 @@ class ItemInstanceServiceTest {
                 .id(templateId)
                 .name("Sword")
                 .isStackable(false)
-                .rarity(Rarity.COMMON)
+                .rarity(Rarity.builder().code("COMMON").build())
                 .build();
     }
 
@@ -112,6 +118,7 @@ class ItemInstanceServiceTest {
     // ========================================================================
 
     @Test
+    @DisplayName("Передача экипированного предмета запрещена")
     void transferItem_equippedItem_throws() {
         // Arrange
         ItemInstance equippedInstance = ItemInstance.builder()
@@ -120,7 +127,7 @@ class ItemInstanceServiceTest {
                 .ownerCharacter(fromCharacter)
                 .quantity(1)
                 .isUnique(false)
-                .slot(EquipmentSlot.MAIN_HAND)
+                .slot(EquipmentSlot.builder().code("MAIN_HAND").build())
                 .build();
 
         TransferItemRequest request = TransferItemRequest.builder()
@@ -141,6 +148,7 @@ class ItemInstanceServiceTest {
     }
 
     @Test
+    @DisplayName("Передача предмета персонажу из другой кампании запрещена")
     void transferItem_differentCampaign_throws() {
         // Arrange
         Campaign otherCampaign = Campaign.builder()
@@ -183,6 +191,7 @@ class ItemInstanceServiceTest {
     }
 
     @Test
+    @DisplayName("Передача предмета внутри кампании проходит успешно")
     void transferItem_sameCampaign_succeeds() {
         // Arrange
         PlayerCharacter toCharacter = PlayerCharacter.builder()
@@ -226,6 +235,7 @@ class ItemInstanceServiceTest {
     // ========================================================================
 
     @Test
+    @DisplayName("Стакающийся предмет: при наличии стака количество увеличивается атомарно")
     void grantItem_stackableExisting_incrementsQuantity() {
         // Arrange
         template.setIsStackable(true);
@@ -235,6 +245,14 @@ class ItemInstanceServiceTest {
                 .template(template)
                 .ownerCharacter(fromCharacter)
                 .quantity(3)
+                .isUnique(false)
+                .build();
+
+        ItemInstance incrementedInstance = ItemInstance.builder()
+                .id(instanceId)
+                .template(template)
+                .ownerCharacter(fromCharacter)
+                .quantity(5)
                 .isUnique(false)
                 .build();
 
@@ -250,18 +268,19 @@ class ItemInstanceServiceTest {
         when(itemTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
         when(itemInstanceRepository.findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(fromCharId, templateId))
                 .thenReturn(Optional.of(existingInstance));
-        when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(incrementedInstance));
 
         // Act
         ItemInstanceResponse response = itemInstanceService.grantItem(campaignId, fromCharId, request, USERNAME);
 
-        // Assert
-        ArgumentCaptor<ItemInstance> captor = ArgumentCaptor.forClass(ItemInstance.class);
-        verify(itemInstanceRepository).save(captor.capture());
-        assertEquals(5, captor.getValue().getQuantity());
+        // Assert: atomic DB increment by requested quantity, then re-read
+        verify(itemInstanceRepository).incrementQuantity(instanceId, 2);
+        verify(itemInstanceRepository, never()).save(any(ItemInstance.class));
+        assertEquals(5, response.getQuantity());
     }
 
     @Test
+    @DisplayName("Стакающийся предмет: без существующего стака создаётся новый инстанс")
     void grantItem_stackableNoExisting_createsNew() {
         // Arrange
         template.setIsStackable(true);
@@ -298,6 +317,7 @@ class ItemInstanceServiceTest {
     // ========================================================================
 
     @Test
+    @DisplayName("Экипировка предмета автоматически применяет баффы")
     void equipItem_autoAppliesBuffs() {
         // Arrange
         UUID buffDebuffId = UUID.randomUUID();
@@ -331,6 +351,8 @@ class ItemInstanceServiceTest {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
         when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+        when(contentDictionaryResolver.resolveSystemSlot("MAIN_HAND"))
+                .thenReturn(EquipmentSlot.builder().code("MAIN_HAND").build());
         when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(itemTemplateBuffRepository.findByTemplateId(templateId)).thenReturn(List.of(templateBuff));
         when(characterActiveEffectRepository.save(any(CharacterActiveEffect.class)))
@@ -350,6 +372,7 @@ class ItemInstanceServiceTest {
     // ========================================================================
 
     @Test
+    @DisplayName("Снятие предмета удаляет ранее применённые баффы")
     void unequipItem_removesBuffs() {
         // Arrange
         UUID buffDebuffId = UUID.randomUUID();
@@ -373,7 +396,7 @@ class ItemInstanceServiceTest {
                 .ownerCharacter(fromCharacter)
                 .quantity(1)
                 .isUnique(false)
-                .slot(EquipmentSlot.MAIN_HAND)
+                .slot(EquipmentSlot.builder().code("MAIN_HAND").build())
                 .build();
 
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
@@ -397,6 +420,7 @@ class ItemInstanceServiceTest {
     // ========================================================================
 
     @Test
+    @DisplayName("Переименование части стака отделяет уникальный предмет")
     void renameItem_stackSplit() {
         // Arrange
         ItemInstance instance = ItemInstance.builder()

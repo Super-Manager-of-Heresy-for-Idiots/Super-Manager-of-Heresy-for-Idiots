@@ -7,6 +7,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("RaceService: создание и доступ к расам")
 class RaceServiceTest {
 
     @Mock private CharacterRaceRepository raceRepository;
@@ -33,11 +35,13 @@ class RaceServiceTest {
     @Mock private HomebrewContentItemRepository contentItemRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
     @Mock private CampaignService campaignService;
+    @Mock private ContentDictionaryResolver contentDictionaryResolver;
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks private RaceService raceService;
 
     @Test
+    @DisplayName("Админ может создать системную расу")
     void adminCanCreateSystemRace() {
         User admin = user(Role.ADMIN);
         RaceCreateRequest request = baseRequest("Aasimar", "SYSTEM");
@@ -54,6 +58,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Мастер не может создать системную расу")
     void gameMasterCannotCreateSystemRace() {
         when(userRepository.findByUsername("gm")).thenReturn(Optional.of(user(Role.GAME_MASTER)));
 
@@ -62,6 +67,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Мастер может создать homebrew-расу с бонусами характеристик")
     void gameMasterCanCreateHomebrewRaceWithLegacyBonuses() {
         User gm = user(Role.GAME_MASTER);
         HomebrewPackage pkg = homebrew(gm);
@@ -88,6 +94,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может создать homebrew-расу")
     void playerCannotCreateHomebrewRace() {
         when(userRepository.findByUsername("player")).thenReturn(Optional.of(user(Role.PLAYER)));
 
@@ -96,6 +103,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок видит системные и подключённые homebrew-расы кампании")
     void playerSeesSystemAndAttachedHomebrewRace() {
         User player = user(Role.PLAYER);
         UUID campaignId = UUID.randomUUID();
@@ -117,6 +125,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Отключённую расу нельзя выбрать")
     void disabledRaceCannotBeSelected() {
         UUID raceId = UUID.randomUUID();
         CharacterRace race = CharacterRace.builder().id(raceId).name("Disabled").sourceType(RaceSourceType.SYSTEM).active(false).build();
@@ -127,6 +136,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Обязательную родословную нельзя пропустить")
     void requiredLineageCannotBeOmitted() {
         CharacterRace race = CharacterRace.builder()
                 .id(UUID.randomUUID())
@@ -142,6 +152,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Системная раса PHB 2024 не может иметь бонусы характеристик")
     void phb2024SystemRaceCannotHaveAbilityBonuses() {
         RaceCreateRequest request = baseRequest("Elf", "SYSTEM");
         request.setAllowAbilityScoreBonuses(true);
@@ -157,6 +168,7 @@ class RaceServiceTest {
     }
 
     @Test
+    @DisplayName("Дублирование системной расы в homebrew создаёт независимую копию")
     void duplicateSystemRaceIntoHomebrewCreatesIndependentCopy() {
         User gm = user(Role.GAME_MASTER);
         HomebrewPackage pkg = homebrew(gm);

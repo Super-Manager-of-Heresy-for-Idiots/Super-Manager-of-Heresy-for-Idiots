@@ -1,6 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.CreatureSize;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -43,21 +42,21 @@ public class Monster {
     @JoinColumn(name = "alignment_id")
     private Alignment alignment;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private CreatureSize size;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "size_id", nullable = false)
+    private BestiarySize size;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "size_secondary", length = 20)
-    private CreatureSize sizeSecondary;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "size_secondary_id")
+    private BestiarySize sizeSecondary;
 
     @Column(name = "is_swarm", nullable = false)
     @Builder.Default
     private Boolean isSwarm = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "swarm_size", length = 20)
-    private CreatureSize swarmSize;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "swarm_size_id")
+    private BestiarySize swarmSize;
 
     @Column(name = "armor_class", nullable = false)
     private Short armorClass;

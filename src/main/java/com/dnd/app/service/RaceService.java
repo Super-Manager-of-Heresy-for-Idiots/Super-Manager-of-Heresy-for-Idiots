@@ -37,6 +37,7 @@ public class RaceService {
     private final HomebrewContentItemRepository contentItemRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
+    private final ContentDictionaryResolver contentDictionaryResolver;
     private final ObjectMapper objectMapper;
 
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
@@ -281,7 +282,7 @@ public class RaceService {
     }
 
     private void applyRequest(CharacterRace race, RaceCreateRequest request, User actor, HomebrewPackage pkg) {
-        validateRequest(request);
+        validateRequest(request, pkg);
         validateUniqueness(race, request);
 
         race.setName(request.getName());
@@ -320,9 +321,10 @@ public class RaceService {
         race.setMetadataJson(write(request.getMetadata()));
     }
 
-    private void validateRequest(RaceCreateRequest request) {
+    private void validateRequest(RaceCreateRequest request, HomebrewPackage pkg) {
+        UUID hbId = pkg != null ? pkg.getId() : null;
         RaceSourceType sourceType = parseEnum(RaceSourceType.class, request.getSourceType(), "sourceType");
-        request.getSizeOptions().forEach(size -> parseEnum(CreatureSize.class, size, "sizeOptions"));
+        request.getSizeOptions().forEach(size -> contentDictionaryResolver.validateSize(size, hbId));
         if (request.getDefaultSize() != null && !request.getSizeOptions().contains(request.getDefaultSize())) {
             throw new BadRequestException("defaultSize must be one of sizeOptions");
         }
@@ -335,19 +337,19 @@ public class RaceService {
         }
         if (request.getAbilityScoreBonuses() != null) {
             for (RaceAbilityScoreBonusDto bonus : request.getAbilityScoreBonuses()) {
-                parseEnum(Ability.class, bonus.getAbility(), "abilityScoreBonuses.ability");
+                contentDictionaryResolver.validateAbility(bonus.getAbility(), hbId);
                 parseEnum(RaceAbilityBonusMode.class, bonus.getMode(), "abilityScoreBonuses.mode");
             }
         }
-        validateTraits(request.getTraits());
+        validateTraits(request.getTraits(), hbId);
         if (request.getLineageOptions() != null) {
             for (RaceLineageRequest lineage : request.getLineageOptions()) {
-                validateTraits(lineage.getTraits());
+                validateTraits(lineage.getTraits(), hbId);
             }
         }
     }
 
-    private void validateTraits(List<RaceTraitRequest> traits) {
+    private void validateTraits(List<RaceTraitRequest> traits, UUID hbId) {
         if (traits == null) return;
         for (RaceTraitRequest trait : traits) {
             if (trait.getUses() != null) {
@@ -362,10 +364,10 @@ public class RaceService {
                 parseEnum(RaceTraitActionType.class, trait.getActionType(), "trait.actionType");
             }
             if (trait.getDamage() != null && trait.getDamage().getDamageType() != null) {
-                parseEnum(DamageType.class, trait.getDamage().getDamageType(), "trait.damage.damageType");
+                contentDictionaryResolver.validateDamageType(trait.getDamage().getDamageType(), hbId);
             }
             if (trait.getSavingThrow() != null && trait.getSavingThrow().getAbility() != null) {
-                parseEnum(Ability.class, trait.getSavingThrow().getAbility(), "trait.savingThrow.ability");
+                contentDictionaryResolver.validateAbility(trait.getSavingThrow().getAbility(), hbId);
             }
         }
     }

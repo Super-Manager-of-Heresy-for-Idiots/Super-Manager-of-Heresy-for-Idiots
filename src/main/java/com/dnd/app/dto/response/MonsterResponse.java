@@ -25,10 +25,10 @@ public class MonsterResponse {
     private String nameEngloc;
 
     private DictionaryRef alignment;
-    private String size;
-    private String sizeSecondary;
+    private DictionaryRef size;
+    private DictionaryRef sizeSecondary;
     private Boolean isSwarm;
-    private String swarmSize;
+    private DictionaryRef swarmSize;
 
     private Short armorClass;
     private String armorClassText;
@@ -136,7 +136,7 @@ public class MonsterResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SavingThrowView {
         private UUID id;
-        private String ability;
+        private DictionaryRef ability;
         private Short bonus;
     }
 
@@ -159,7 +159,7 @@ public class MonsterResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class DamageView {
         private UUID id;
-        private String damageType;
+        private DictionaryRef damageType;
         private String note;
     }
 
@@ -195,7 +195,7 @@ public class MonsterResponse {
         private Short reachFt;
         private Short rangeFt;
         private Short rangeLongFt;
-        private String saveAbility;
+        private DictionaryRef saveAbility;
         private Short saveDc;
         private List<FeatureDamageView> damages;
     }
@@ -210,7 +210,7 @@ public class MonsterResponse {
         private Integer sortOrder;
         private Short average;
         private String dice;
-        private String damageType;
+        private DictionaryRef damageType;
         private String note;
     }
 }

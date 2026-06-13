@@ -10,6 +10,7 @@ import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.security.JwtTokenProvider;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("AuthService: регистрация и вход")
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
@@ -40,6 +42,7 @@ class AuthServiceTest {
     @InjectMocks private AuthService authService;
 
     @Test
+    @DisplayName("Успешная регистрация нового пользователя")
     void register_success() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("testuser").email("test@test.com").password("password123").role("PLAYER").build();
@@ -59,6 +62,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Регистрация с занятым именем пользователя выбрасывает ошибку")
     void register_duplicateUsername_throws() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("taken").email("x@x.com").password("password123").role("PLAYER").build();
@@ -69,6 +73,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Регистрация с занятым email выбрасывает ошибку")
     void register_duplicateEmail_throws() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("newuser").email("taken@x.com").password("password123").role("PLAYER").build();
@@ -79,6 +84,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Успешный вход возвращает токен")
     void login_success() {
         LoginRequest request = LoginRequest.builder().username("user1").password("pass123").build();
         User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
@@ -95,6 +101,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Вход с неверным паролем выбрасывает ошибку")
     void login_wrongPassword_throws() {
         LoginRequest request = LoginRequest.builder().username("user1").password("wrong").build();
         doThrow(new BadCredentialsException("Bad credentials"))

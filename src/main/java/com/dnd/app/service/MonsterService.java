@@ -43,6 +43,9 @@ public class MonsterService {
     private final BestiaryConditionRepository bestiaryConditionRepository;
     private final MonsterGearItemRepository monsterGearItemRepository;
     private final SourceRepository sourceRepository;
+    private final BestiarySizeRepository bestiarySizeRepository;
+    private final BestiaryAbilityRepository bestiaryAbilityRepository;
+    private final BestiaryDamageTypeRepository bestiaryDamageTypeRepository;
     private final ProficiencySkillRepository proficiencySkillRepository;
     private final UserRepository userRepository;
     private final HomebrewPackageRepository homebrewPackageRepository;
@@ -257,12 +260,13 @@ public class MonsterService {
         monster.setAlignment(request.getAlignmentId() == null ? null
                 : alignmentRepository.findById(request.getAlignmentId())
                 .orElseThrow(() -> new BadRequestException("Alignment not found: " + request.getAlignmentId())));
-        monster.setSize(parseEnum(CreatureSize.class, request.getSize(), "size"));
-        monster.setSizeSecondary(request.getSizeSecondary() == null ? null
-                : parseEnum(CreatureSize.class, request.getSizeSecondary(), "sizeSecondary"));
+        if (request.getSizeId() == null) {
+            throw new BadRequestException("sizeId is required");
+        }
+        monster.setSize(resolveOne(request.getSizeId(), bestiarySizeRepository::findById, "size"));
+        monster.setSizeSecondary(resolveOptional(request.getSizeSecondaryId(), bestiarySizeRepository::findById, "sizeSecondary"));
         monster.setIsSwarm(request.getIsSwarm() != null ? request.getIsSwarm() : false);
-        monster.setSwarmSize(request.getSwarmSize() == null ? null
-                : parseEnum(CreatureSize.class, request.getSwarmSize(), "swarmSize"));
+        monster.setSwarmSize(resolveOptional(request.getSwarmSizeId(), bestiarySizeRepository::findById, "swarmSize"));
         monster.setArmorClass(request.getArmorClass());
         monster.setArmorClassText(request.getArmorClassText());
         monster.setInitiativeBonus(request.getInitiativeBonus());
@@ -304,6 +308,24 @@ public class MonsterService {
         monster.setTreasureTags(resolveSet(request.getTreasureTagIds(), treasureTagRepository::findById, "treasureTag"));
         monster.setSources(resolveSet(request.getSourceIds(), sourceRepository::findById, "source"));
 
+        // On update, clear the child collections and flush so the orphan DELETEs are
+        // issued before the rebuild re-INSERTs below. Otherwise Hibernate orders all
+        // inserts ahead of deletes in a single flush and an unchanged row (same
+        // monster_id + damage_type_id, etc.) trips a unique constraint such as
+        // uq_monster_damage_immunities.
+        if (monster.getId() != null) {
+            monster.getSpeeds().clear();
+            monster.getSenses().clear();
+            monster.getSavingThrows().clear();
+            monster.getSkillProficiencies().clear();
+            monster.getDamageResistances().clear();
+            monster.getDamageImmunities().clear();
+            monster.getDamageVulnerabilities().clear();
+            monster.getGear().clear();
+            monster.getFeatures().clear();
+            monsterRepository.flush();
+        }
+
         rebuildSpeeds(monster, request);
         rebuildSenses(monster, request);
         rebuildSavingThrows(monster, request);
@@ -342,7 +364,7 @@ public class MonsterService {
         for (MonsterRequest.SavingThrowEntry e : request.getSavingThrows()) {
             monster.getSavingThrows().add(MonsterSavingThrow.builder()
                     .monster(monster)
-                    .ability(parseEnum(Ability.class, e.getAbility(), "savingThrow.ability"))
+                    .ability(resolveOne(e.getAbilityId(), bestiaryAbilityRepository::findById, "savingThrow.ability"))
                     .bonus(e.getBonus()).build());
         }
     }
@@ -363,21 +385,21 @@ public class MonsterService {
         if (request.getDamageResistances() != null) {
             for (MonsterRequest.DamageEntry e : request.getDamageResistances()) {
                 monster.getDamageResistances().add(MonsterDamageResistance.builder()
-                        .monster(monster).damageType(parseDamageNullable(e.getDamageType())).note(e.getNote()).build());
+                        .monster(monster).damageType(resolveDamageType(e.getDamageTypeId())).note(e.getNote()).build());
             }
         }
         monster.getDamageImmunities().clear();
         if (request.getDamageImmunities() != null) {
             for (MonsterRequest.DamageEntry e : request.getDamageImmunities()) {
                 monster.getDamageImmunities().add(MonsterDamageImmunity.builder()
-                        .monster(monster).damageType(parseDamageNullable(e.getDamageType())).note(e.getNote()).build());
+                        .monster(monster).damageType(resolveDamageType(e.getDamageTypeId())).note(e.getNote()).build());
             }
         }
         monster.getDamageVulnerabilities().clear();
         if (request.getDamageVulnerabilities() != null) {
             for (MonsterRequest.DamageEntry e : request.getDamageVulnerabilities()) {
                 monster.getDamageVulnerabilities().add(MonsterDamageVulnerability.builder()
-                        .monster(monster).damageType(parseDamageNullable(e.getDamageType())).note(e.getNote()).build());
+                        .monster(monster).damageType(resolveDamageType(e.getDamageTypeId())).note(e.getNote()).build());
             }
         }
     }
@@ -414,8 +436,7 @@ public class MonsterService {
                     .reachFt(fe.getReachFt())
                     .rangeFt(fe.getRangeFt())
                     .rangeLongFt(fe.getRangeLongFt())
-                    .saveAbility(fe.getSaveAbility() == null ? null
-                            : parseEnum(Ability.class, fe.getSaveAbility(), "feature.saveAbility"))
+                    .saveAbility(resolveOptional(fe.getSaveAbilityId(), bestiaryAbilityRepository::findById, "feature.saveAbility"))
                     .saveDc(fe.getSaveDc())
                     .build();
             if (fe.getDamages() != null) {
@@ -425,7 +446,7 @@ public class MonsterService {
                             .sortOrder(de.getSortOrder())
                             .average(de.getAverage())
                             .dice(de.getDice())
-                            .damageType(parseDamageNullable(de.getDamageType()))
+                            .damageType(resolveDamageType(de.getDamageTypeId()))
                             .note(de.getNote())
                             .build());
                 }
@@ -544,7 +565,7 @@ public class MonsterService {
                 .slug(m.getSlug())
                 .nameRusloc(m.getNameRusloc())
                 .nameEngloc(m.getNameEngloc())
-                .size(m.getSize() != null ? m.getSize().name() : null)
+                .size(m.getSize() != null ? ref(m.getSize()) : null)
                 .crRating(m.getCrRating())
                 .crValue(m.getCrValue())
                 .scope(scopeOf(m))
@@ -563,10 +584,10 @@ public class MonsterService {
                 .nameRusloc(m.getNameRusloc())
                 .nameEngloc(m.getNameEngloc())
                 .alignment(m.getAlignment() != null ? ref(m.getAlignment()) : null)
-                .size(m.getSize() != null ? m.getSize().name() : null)
-                .sizeSecondary(m.getSizeSecondary() != null ? m.getSizeSecondary().name() : null)
+                .size(m.getSize() != null ? ref(m.getSize()) : null)
+                .sizeSecondary(m.getSizeSecondary() != null ? ref(m.getSizeSecondary()) : null)
                 .isSwarm(m.getIsSwarm())
-                .swarmSize(m.getSwarmSize() != null ? m.getSwarmSize().name() : null)
+                .swarmSize(m.getSwarmSize() != null ? ref(m.getSwarmSize()) : null)
                 .armorClass(m.getArmorClass())
                 .armorClassText(m.getArmorClassText())
                 .initiativeBonus(m.getInitiativeBonus())
@@ -616,16 +637,16 @@ public class MonsterService {
                 .senses(m.getSenses().stream().map(s -> MonsterResponse.SenseView.builder()
                         .id(s.getId()).senseType(ref(s.getSenseType())).ft(s.getFt()).build()).toList())
                 .savingThrows(m.getSavingThrows().stream().map(s -> MonsterResponse.SavingThrowView.builder()
-                        .id(s.getId()).ability(s.getAbility() != null ? s.getAbility().name() : null).bonus(s.getBonus()).build()).toList())
+                        .id(s.getId()).ability(s.getAbility() != null ? ref(s.getAbility()) : null).bonus(s.getBonus()).build()).toList())
                 .skillProficiencies(m.getSkillProficiencies().stream().map(s -> MonsterResponse.SkillProficiencyView.builder()
                         .id(s.getId()).proficiencySkillId(s.getProficiencySkill().getId())
                         .skillName(s.getProficiencySkill().getName()).bonus(s.getBonus()).build()).toList())
                 .damageResistances(m.getDamageResistances().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? d.getDamageType().name() : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
                 .damageImmunities(m.getDamageImmunities().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? d.getDamageType().name() : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
                 .damageVulnerabilities(m.getDamageVulnerabilities().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? d.getDamageType().name() : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
                 .gear(m.getGear().stream().map(g -> MonsterResponse.GearView.builder()
                         .id(g.getId()).item(ref(g.getItem())).qty(g.getQty()).build()).toList())
                 .features(m.getFeatures().stream().map(this::featureView).toList())
@@ -649,11 +670,11 @@ public class MonsterService {
                 .reachFt(f.getReachFt())
                 .rangeFt(f.getRangeFt())
                 .rangeLongFt(f.getRangeLongFt())
-                .saveAbility(f.getSaveAbility() != null ? f.getSaveAbility().name() : null)
+                .saveAbility(f.getSaveAbility() != null ? ref(f.getSaveAbility()) : null)
                 .saveDc(f.getSaveDc())
                 .damages(f.getDamages().stream().map(d -> MonsterResponse.FeatureDamageView.builder()
                         .id(d.getId()).sortOrder(d.getSortOrder()).average(d.getAverage())
-                        .dice(d.getDice()).damageType(d.getDamageType() != null ? d.getDamageType().name() : null)
+                        .dice(d.getDice()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null)
                         .note(d.getNote()).build()).toList())
                 .build();
     }
@@ -755,9 +776,26 @@ public class MonsterService {
         return result;
     }
 
-    private DamageType parseDamageNullable(String value) {
-        if (value == null || value.isBlank()) return null;
-        return parseEnum(DamageType.class, value, "damageType");
+    private <T extends DictionaryEntry> T resolveOne(UUID id,
+                                                     Function<UUID, java.util.Optional<T>> finder,
+                                                     String label) {
+        if (id == null) {
+            throw new BadRequestException(label + " is required");
+        }
+        return finder.apply(id)
+                .orElseThrow(() -> new BadRequestException(label + " not found: " + id));
+    }
+
+    private <T extends DictionaryEntry> T resolveOptional(UUID id,
+                                                          Function<UUID, java.util.Optional<T>> finder,
+                                                          String label) {
+        if (id == null) return null;
+        return finder.apply(id)
+                .orElseThrow(() -> new BadRequestException(label + " not found: " + id));
+    }
+
+    private BestiaryDamageType resolveDamageType(UUID id) {
+        return resolveOptional(id, bestiaryDamageTypeRepository::findById, "damageType");
     }
 
     private String resolveSlug(Monster monster, MonsterRequest request) {
@@ -820,16 +858,5 @@ public class MonsterService {
     private User getUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-    }
-
-    private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value, String fieldName) {
-        if (value == null) {
-            throw new BadRequestException(fieldName + " is required");
-        }
-        try {
-            return Enum.valueOf(enumClass, value);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid " + fieldName + ": " + value);
-        }
     }
 }

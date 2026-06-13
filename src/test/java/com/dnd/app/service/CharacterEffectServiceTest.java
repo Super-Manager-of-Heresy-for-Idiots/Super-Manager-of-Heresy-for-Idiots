@@ -4,6 +4,7 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.response.AbilityCheckResponse;
 import com.dnd.app.repository.*;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CharacterEffectService: расчёт проверок характеристик и срок действия эффектов")
 class CharacterEffectServiceTest {
 
     @Mock private CharacterActiveEffectRepository characterActiveEffectRepository;
@@ -32,6 +34,7 @@ class CharacterEffectServiceTest {
     // ======================== calculateAbilityCheckModifier ========================
 
     @Test
+    @DisplayName("Проверка характеристики только по базовому модификатору")
     void calculateAbilityCheck_baseOnly() {
         UUID characterId = UUID.randomUUID();
         UUID statTypeId = UUID.randomUUID();
@@ -76,6 +79,7 @@ class CharacterEffectServiceTest {
     }
 
     @Test
+    @DisplayName("Проверка характеристики с учётом баффов и дебаффов")
     void calculateAbilityCheck_withBuffsAndDebuffs() {
         UUID characterId = UUID.randomUUID();
         UUID statTypeId = UUID.randomUUID();
@@ -188,6 +192,7 @@ class CharacterEffectServiceTest {
     }
 
     @Test
+    @DisplayName("Несоответствующие эффекты игнорируются при проверке")
     void calculateAbilityCheck_nonMatchingEffectsIgnored() {
         UUID characterId = UUID.randomUUID();
         UUID statTypeId = UUID.randomUUID();
@@ -278,6 +283,7 @@ class CharacterEffectServiceTest {
     // ======================== decrementRounds ========================
 
     @Test
+    @DisplayName("Уменьшение раундов до нуля снимает эффект")
     void decrementRounds_expiresEffect() {
         UUID characterId = UUID.randomUUID();
 
@@ -297,6 +303,7 @@ class CharacterEffectServiceTest {
     }
 
     @Test
+    @DisplayName("Уменьшение раундов снижает счётчик у действующего эффекта")
     void decrementRounds_decrementsNonExpired() {
         UUID characterId = UUID.randomUUID();
 
@@ -317,6 +324,7 @@ class CharacterEffectServiceTest {
     }
 
     @Test
+    @DisplayName("Постоянный эффект не изменяется при уменьшении раундов")
     void decrementRounds_permanentEffectUnchanged() {
         UUID characterId = UUID.randomUUID();
 

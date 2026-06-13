@@ -21,6 +21,9 @@ public class StatType {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
+    @Column(nullable = false, length = 60)
+    private String code;
+
     @Column(columnDefinition = "text")
     private String description;
 

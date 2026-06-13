@@ -48,5 +48,7 @@
     <include file="db/changelog/041-seed-bestiary-dictionaries.xml"/>
     <include file="db/changelog/042-seed-bestiary-monsters.xml"/>
     <include file="db/changelog/043-bestiary-monster-authoring.xml"/>
+    <include file="db/changelog/044-bestiary-enum-dicts-and-homebrew.xml"/>
+    <include file="db/changelog/045-content-enum-dicts-and-homebrew.xml"/>
 
 </databaseChangeLog>

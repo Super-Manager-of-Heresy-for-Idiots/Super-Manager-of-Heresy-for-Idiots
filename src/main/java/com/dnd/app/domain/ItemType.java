@@ -1,7 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.DamageType;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.SkillActivation;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,8 +25,8 @@ public class ItemType {
     @Column(columnDefinition = "text")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_id", nullable = false)
     private EquipmentSlot slot;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,8 +40,8 @@ public class ItemType {
     @Builder.Default
     private Integer damageBonus = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "damage_type", length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "damage_type_id")
     private DamageType damageType;
 
     @ManyToOne(fetch = FetchType.LAZY)

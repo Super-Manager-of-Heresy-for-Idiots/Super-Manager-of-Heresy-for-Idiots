@@ -1,7 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.DamageType;
-import com.dnd.app.domain.enums.Rarity;
 import com.dnd.app.domain.enums.SkillActivation;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,10 +34,9 @@ public class ItemTemplate {
     @JoinColumn(name = "item_type_id")
     private ItemType itemType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    @Builder.Default
-    private Rarity rarity = Rarity.COMMON;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rarity_id")
+    private Rarity rarity;
 
     @Column(name = "damage_dice", length = 10)
     private String damageDice;
@@ -48,8 +45,8 @@ public class ItemTemplate {
     @Builder.Default
     private Integer damageBonus = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "damage_type", length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "damage_type_id")
     private DamageType damageType;
 
     @Column(name = "is_stackable", nullable = false)

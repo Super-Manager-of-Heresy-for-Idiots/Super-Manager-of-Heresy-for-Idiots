@@ -1,6 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.Ability;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,9 +22,9 @@ public class MonsterSavingThrow {
     @JoinColumn(name = "monster_id", nullable = false)
     private Monster monster;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Ability ability;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ability_id", nullable = false)
+    private BestiaryAbility ability;
 
     @Column(nullable = false)
     private Short bonus;

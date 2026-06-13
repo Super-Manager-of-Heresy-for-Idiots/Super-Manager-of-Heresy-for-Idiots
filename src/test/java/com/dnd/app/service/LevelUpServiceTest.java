@@ -6,11 +6,11 @@ import com.dnd.app.dto.request.LevelUpRequest;
 import com.dnd.app.dto.response.LevelUpOptionsResponse;
 import com.dnd.app.dto.response.LevelUpResultResponse;
 import com.dnd.app.dto.response.RewardDetailDto;
-import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,9 +23,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("LevelUpService: повышение уровня персонажа и выдача наград")
 class LevelUpServiceTest {
 
     @Mock private PlayerCharacterRepository characterRepository;
@@ -34,8 +37,13 @@ class LevelUpServiceTest {
     @Mock private CharacterClassLevelRepository classLevelRepository;
     @Mock private ClassLevelRewardRepository rewardCatalogRepository;
     @Mock private CharacterAcquiredRewardRepository acquiredRewardRepository;
+    @Mock private CharacterStatRepository characterStatRepository;
+    @Mock private StatTypeRepository statTypeRepository;
+    @Mock private CampaignMemberRepository campaignMemberRepository;
+    @Mock private CampaignContentService campaignContentService;
     @Mock private RewardResolverRegistry rewardResolverRegistry;
     @Mock private LevelThresholdService thresholdService;
+    @Mock private CampaignService campaignService;
 
     @InjectMocks private LevelUpService levelUpService;
 
@@ -50,6 +58,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("getLevelUpOptions бросает 409, если персонаж ещё не накопил XP для нового уровня")
     void getLevelUpOptions_whenNotReady_throws409() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -65,6 +74,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("getLevelUpOptions группирует доступные награды класса по типу (SKILL, FEAT)")
     void getLevelUpOptions_groupsRewardsByType() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -90,7 +100,7 @@ class LevelUpServiceTest {
         when(thresholdService.isReadyToLevelUp(300L, 1)).thenReturn(true);
         when(classLevelRepository.findAllByCharacterId(charId)).thenReturn(List.of(ccl));
         when(acquiredRewardRepository.findAllByCharacterId(charId)).thenReturn(List.of());
-        when(classRepository.findAll()).thenReturn(List.of(cc));
+        when(classRepository.findAllByHomebrewIsNull()).thenReturn(List.of(cc));
         when(rewardCatalogRepository.findAllByCharacterClassIdAndRequiredLevel(classId, 2))
                 .thenReturn(List.of(skillReward, featReward));
         when(rewardResolverRegistry.resolve(eq("SKILL"), any())).thenReturn(
@@ -108,6 +118,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("getLevelUpOptions скрывает группу SUBCLASS, если подкласс уже взят у этого класса")
     void getLevelUpOptions_excludesSubclassGroup_whenAlreadyHasSubclass() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -131,7 +142,7 @@ class LevelUpServiceTest {
         when(thresholdService.isReadyToLevelUp(900L, 2)).thenReturn(true);
         when(classLevelRepository.findAllByCharacterId(charId)).thenReturn(List.of(ccl));
         when(acquiredRewardRepository.findAllByCharacterId(charId)).thenReturn(List.of(acquiredSub));
-        when(classRepository.findAll()).thenReturn(List.of(cc));
+        when(classRepository.findAllByHomebrewIsNull()).thenReturn(List.of(cc));
         when(rewardCatalogRepository.findAllByCharacterClassIdAndRequiredLevel(classId, 3))
                 .thenReturn(List.of(subReward));
 
@@ -143,6 +154,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("commitLevelUp выдаёт выбранную награду-выбор и все авто-награды уровня")
     void commitLevelUp_grantsAllSelectedAndAutoRewards() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -165,7 +177,7 @@ class LevelUpServiceTest {
                 .id(choiceEntryId).characterClass(cc).requiredLevel(2)
                 .rewardType("FEAT").rewardId(choiceFeatId).isChoice(true).build();
 
-        when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
+        when(characterRepository.findByIdForUpdate(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(thresholdService.isReadyToLevelUp(300L, 1)).thenReturn(true);
         when(classRepository.findById(classId)).thenReturn(Optional.of(cc));
@@ -199,6 +211,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("commitLevelUp в новый класс создаёт запись уровня класса с classLevel=1")
     void commitLevelUp_newClass_createsClassLevelEntry() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -207,7 +220,7 @@ class LevelUpServiceTest {
         PlayerCharacter character = makeCharacter(charId, player, 1, 300);
         CharacterClass newClass = CharacterClass.builder().id(newClassId).name("Wizard").build();
 
-        when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
+        when(characterRepository.findByIdForUpdate(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(thresholdService.isReadyToLevelUp(300L, 1)).thenReturn(true);
         when(classRepository.findById(newClassId)).thenReturn(Optional.of(newClass));
@@ -230,6 +243,7 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("commitLevelUp молча пропускает выбор второго подкласса, если подкласс уже есть")
     void commitLevelUp_duplicateSubclass_skippedSilently() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -255,7 +269,7 @@ class LevelUpServiceTest {
         CharacterAcquiredReward acquiredSub = CharacterAcquiredReward.builder()
                 .id(UUID.randomUUID()).character(character).classLevelReward(existingSub).build();
 
-        when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
+        when(characterRepository.findByIdForUpdate(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(thresholdService.isReadyToLevelUp(900L, 2)).thenReturn(true);
         when(classRepository.findById(classId)).thenReturn(Optional.of(cc));
@@ -272,12 +286,12 @@ class LevelUpServiceTest {
                         .rewardType("SUBCLASS").rewardEntryId(entryId2).build()))
                 .build();
 
-        // Duplicate subclass selection is silently skipped - level up succeeds
         LevelUpResultResponse result = levelUpService.commitLevelUp(charId, "player1", req);
         assertNotNull(result);
     }
 
     @Test
+    @DisplayName("commitLevelUp бросает 422, если выбранная награда принадлежит другому классу/уровню")
     void commitLevelUp_rewardNotBelongingToClassLevel_throws422() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
@@ -298,7 +312,7 @@ class LevelUpServiceTest {
                 .id(UUID.randomUUID()).characterClass(cc).requiredLevel(2)
                 .rewardType("FEAT").rewardId(UUID.randomUUID()).isChoice(true).build();
 
-        when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
+        when(characterRepository.findByIdForUpdate(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(thresholdService.isReadyToLevelUp(300L, 1)).thenReturn(true);
         when(classRepository.findById(classId)).thenReturn(Optional.of(cc));
@@ -318,15 +332,15 @@ class LevelUpServiceTest {
     }
 
     @Test
+    @DisplayName("commitLevelUp бросает 409 при повторном вызове до следующего набора XP")
     void commitLevelUp_calledTwice_beforeXpIncrement_throws409() {
         UUID charId = UUID.randomUUID();
         UUID playerId = UUID.randomUUID();
         UUID classId = UUID.randomUUID();
         User player = makePlayer(playerId, "player1");
         PlayerCharacter character = makeCharacter(charId, player, 2, 300);
-        CharacterClass cc = CharacterClass.builder().id(classId).name("Fighter").build();
 
-        when(characterRepository.findById(charId)).thenReturn(Optional.of(character));
+        when(characterRepository.findByIdForUpdate(charId)).thenReturn(Optional.of(character));
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(thresholdService.isReadyToLevelUp(300L, 2)).thenReturn(false);
 

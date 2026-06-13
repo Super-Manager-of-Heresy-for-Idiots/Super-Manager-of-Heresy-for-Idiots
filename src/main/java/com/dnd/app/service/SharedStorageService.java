@@ -193,9 +193,9 @@ public class SharedStorageService {
                 .customName(instance.getCustomName())
                 .quantity(instance.getQuantity())
                 .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().name() : null)
+                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
                 .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().name() : null)
+                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getCode() : null)
                 .build();
     }
 }

@@ -7,6 +7,7 @@ import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.*;
 import com.dnd.app.repository.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CampaignService: управление участниками и статусом кампании")
 class CampaignServiceTest {
 
     @Mock
@@ -36,6 +38,9 @@ class CampaignServiceTest {
 
     @Mock
     private PlayerCharacterRepository playerCharacterRepository;
+
+    @Mock
+    private WebSocketEventService webSocketEventService;
 
     @InjectMocks
     private CampaignService campaignService;
@@ -95,6 +100,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Создатель кампании может исключить участника")
     void kickMember_byCreator_succeeds() {
         KickMemberRequest request = KickMemberRequest.builder().userId(targetId).build();
 
@@ -135,6 +141,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Не-создатель не может исключать участников")
     void kickMember_byNonCreator_throws() {
         User nonCreatorGm = User.builder()
                 .id(UUID.randomUUID())
@@ -165,6 +172,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Создатель может изменить статус кампании")
     void changeCampaignStatus_byCreator_succeeds() {
         ChangeCampaignStatusRequest request = ChangeCampaignStatusRequest.builder()
                 .status("PAUSED")
@@ -189,6 +197,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Не-создатель (GM) не может менять статус кампании")
     void changeCampaignStatus_byNonCreatorGm_throws() {
         User nonCreatorGm = User.builder()
                 .id(UUID.randomUUID())
@@ -220,6 +229,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("При выходе из кампании персонажи игрока переводятся в резерв")
     void leaveCampaign_playerCharactersSetToReserve() {
         PlayerCharacter pc1 = PlayerCharacter.builder()
                 .id(UUID.randomUUID())
@@ -253,6 +263,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Создатель не может покинуть свою кампанию")
     void leaveCampaign_creatorCannotLeave() {
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         when(userRepository.findByUsername("creator")).thenReturn(Optional.of(creatorUser));
@@ -265,6 +276,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Код приглашения скрыт от игрока, когда в кампании есть GM")
     void inviteCode_hiddenFromPlayerWhenGmExists() {
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         when(userRepository.findByUsername("target")).thenReturn(Optional.of(targetUser));
@@ -287,6 +299,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Код приглашения виден игроку, когда GM отсутствуют")
     void inviteCode_visibleToPlayerWhenNoGms() {
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         when(userRepository.findByUsername("target")).thenReturn(Optional.of(targetUser));
@@ -309,6 +322,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может действовать в приостановленной кампании")
     void enforceCampaignActiveForPlayer_pausedCampaign_throws() {
         Campaign pausedCampaign = Campaign.builder()
                 .id(UUID.randomUUID())
@@ -329,6 +343,7 @@ class CampaignServiceTest {
     }
 
     @Test
+    @DisplayName("Исключённый пользователь не может повторно вступить в кампанию")
     void joinCampaign_kickedUserCannotRejoin() {
         User kickedUser = User.builder()
                 .id(UUID.randomUUID())

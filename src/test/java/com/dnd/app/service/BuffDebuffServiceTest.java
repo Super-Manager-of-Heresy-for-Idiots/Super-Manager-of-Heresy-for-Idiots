@@ -7,6 +7,7 @@ import com.dnd.app.repository.BuffDebuffRepository;
 import com.dnd.app.repository.EnchantmentTypeRepository;
 import com.dnd.app.repository.SkillEffectRepository;
 import com.dnd.app.repository.StatTypeRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("BuffDebuffService: создание и удаление баффов/дебаффов")
 class BuffDebuffServiceTest {
 
     @Mock private BuffDebuffRepository buffDebuffRepository;
@@ -30,6 +32,7 @@ class BuffDebuffServiceTest {
     @InjectMocks private BuffDebuffService buffDebuffService;
 
     @Test
+    @DisplayName("STAT_MODIFIER требует указания targetStatId")
     void create_withStatModifier_requiresTargetStatId() {
         CreateBuffDebuffRequest req = CreateBuffDebuffRequest.builder()
                 .name("TestBuff").effectType("STAT_MODIFIER").targetStatId(null).isBuff(true).build();
@@ -37,6 +40,7 @@ class BuffDebuffServiceTest {
     }
 
     @Test
+    @DisplayName("Удаление невозможно, если бафф используется эффектом умения")
     void delete_whenReferencedBySkillEffect_throws409() {
         UUID id = UUID.randomUUID();
         when(buffDebuffRepository.existsById(id)).thenReturn(true);
@@ -46,6 +50,7 @@ class BuffDebuffServiceTest {
     }
 
     @Test
+    @DisplayName("Удаление невозможно, если бафф используется типом зачарования")
     void delete_whenReferencedByEnchantmentType_throws409() {
         UUID id = UUID.randomUUID();
         when(buffDebuffRepository.existsById(id)).thenReturn(true);

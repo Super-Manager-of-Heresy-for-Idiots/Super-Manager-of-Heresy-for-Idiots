@@ -1,6 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.Ability;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -67,9 +66,9 @@ public class MonsterFeature {
     @Column(name = "range_long_ft")
     private Short rangeLongFt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "save_ability", length = 20)
-    private Ability saveAbility;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "save_ability_id")
+    private BestiaryAbility saveAbility;
 
     @Column(name = "save_dc")
     private Short saveDc;

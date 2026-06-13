@@ -1,6 +1,9 @@
 # Контракты API: бестиарий (монстры + справочники)
 
-Сгенерировано: 2026-06-10 16:18.
+Сгенерировано: 2026-06-10 16:18. Обновлено: 2026-06-12 16:23 — размер/характеристика/тип урона
+переведены из enum-строк в справочники (передаются UUID, разворачиваются в `DictionaryRef`).
+Теперь ВСЕ справочники homebrew-дружелюбны: `homebrewId == null` = CORE (системная строка),
+`homebrewId != null` = строка homebrew-модификации.
 
 Бэкенд завершён и компилируется. Ниже — полный контракт новых эндпоинтов бестиария
 для фронтенда: маршруты, роли, тела запросов/ответов, перечисления и сценарии.
@@ -21,7 +24,7 @@
   "data": { ... },        // payload эндпоинта (T), либо null для delete/void
   "message": "Monster created",  // человекочитаемое сообщение (не всегда)
   "error": "VALIDATION_ERROR",   // только при success=false
-  "fields": { "size": "size is required" }  // только при ошибке валидации
+  "fields": { "sizeId": "sizeId is required" }  // только при ошибке валидации
 }
 ```
 
@@ -46,14 +49,17 @@
 - `404` — сущность не найдена ИЛИ монстр кампании скрыт от игрока (намеренно 404, не 403).
 - `409`-семантика отдаётся как `400` с типом `DUPLICATE...` в сообщении.
 
-### 0.5 Перечисления (передаются строкой UPPERCASE)
-- `size`, `sizeSecondary`, `swarmSize` → `CreatureSize`:
-  `TINY | SMALL | MEDIUM | LARGE | HUGE | GARGANTUAN`
-- `ability`, `saveAbility` → `Ability`:
-  `STRENGTH | DEXTERITY | CONSTITUTION | INTELLIGENCE | WISDOM | CHARISMA`
-- `damageType` → `DamageType`:
-  `SLASHING | PIERCING | BLUDGEONING | FIRE | COLD | LIGHTNING | POISON | NECROTIC | RADIANT | PSYCHIC | FORCE | THUNDER | ACID`
-- `section`, `kind`, `attackType` — свободные строки (в БД нижний регистр), enum НЕ применять.
+### 0.5 Бывшие перечисления — теперь справочники (передаются UUID)
+Размер, характеристика и тип урона раньше были enum-строками — теперь это полноценные
+homebrew-дружелюбные справочники. В запросе передаётся `*Id` (UUID), в ответе разворачивается
+в `DictionaryRef`. Опции грузятся из соответствующих `GET /dictionaries/{kind}`, НЕ хардкодить.
+- `sizeId`, `sizeSecondaryId`, `swarmSizeId` → справочник `sizes`
+  (системные `code`: `TINY | SMALL | MEDIUM | LARGE | HUGE | GARGANTUAN`)
+- `abilityId` (saving throws), `saveAbilityId` (features) → справочник `abilities`
+  (системные `code`: `STRENGTH | DEXTERITY | CONSTITUTION | INTELLIGENCE | WISDOM | CHARISMA`)
+- `damageTypeId` → справочник `damage-types`
+  (системные `code`: `SLASHING | PIERCING | BLUDGEONING | FIRE | COLD | LIGHTNING | POISON | NECROTIC | RADIANT | PSYCHIC | FORCE | THUNDER | ACID`)
+- `section`, `kind`, `attackType` — по-прежнему свободные строки (в БД нижний регистр), enum НЕ применять.
 
 ### 0.6 Виды справочников (`{kind}` в пути = slug)
 | slug | смысл |
@@ -68,6 +74,9 @@
 | `conditions` | состояния (для иммунитетов) |
 | `gear-items` | снаряжение монстров |
 | `sources` | источники (книги); только здесь используется `bookCode` |
+| `sizes` | размеры существ (бывший enum `CreatureSize`) |
+| `abilities` | характеристики (бывший enum `Ability`) |
+| `damage-types` | типы урона (бывший enum `DamageType`) |
 
 ---
 
@@ -111,10 +120,10 @@
   "nameRusloc": "Гоблин",      // REQUIRED
   "nameEngloc": "Goblin",
   "alignmentId": "uuid|null",  // ссылка на справочник alignments
-  "size": "SMALL",             // REQUIRED (CreatureSize)
-  "sizeSecondary": null,       // CreatureSize|null
+  "sizeId": "uuid",            // REQUIRED, ссылка на справочник sizes
+  "sizeSecondaryId": null,     // uuid|null (sizes)
   "isSwarm": false,
-  "swarmSize": null,           // CreatureSize|null
+  "swarmSizeId": null,         // uuid|null (sizes)
   "armorClass": 15,            // REQUIRED (Short)
   "armorClassText": "кожаный доспех, щит",
   "initiativeBonus": 2,
@@ -154,11 +163,11 @@
 {
   "speeds":   [{ "movementTypeId": "uuid", "ft": 30, "hover": false }],
   "senses":   [{ "senseTypeId": "uuid", "ft": 60 }],
-  "savingThrows": [{ "ability": "DEXTERITY", "bonus": 4 }],
+  "savingThrows": [{ "abilityId": "uuid", "bonus": 4 }],
   "skillProficiencies": [{ "proficiencySkillId": "uuid", "bonus": 6 }],
-  "damageResistances":   [{ "damageType": "FIRE", "note": null }],
-  "damageImmunities":    [{ "damageType": "POISON", "note": null }],
-  "damageVulnerabilities":[{ "damageType": "COLD", "note": null }],
+  "damageResistances":   [{ "damageTypeId": "uuid", "note": null }],
+  "damageImmunities":    [{ "damageTypeId": "uuid", "note": null }],
+  "damageVulnerabilities":[{ "damageTypeId": "uuid", "note": null }],
   "gear": [{ "itemId": "uuid", "qty": 1 }],
   "features": [{
     "section": "actions",          // REQUIRED, свободная строка
@@ -175,29 +184,31 @@
     "reachFt": 5,
     "rangeFt": null,
     "rangeLongFt": null,
-    "saveAbility": null,           // Ability|null
+    "saveAbilityId": null,         // uuid|null (abilities)
     "saveDc": null,
     "damages": [{
       "sortOrder": 0,              // REQUIRED
       "average": 5,
       "dice": "1d6+2",
-      "damageType": "SLASHING",    // DamageType|null
+      "damageTypeId": "uuid",      // uuid|null (damage-types)
       "note": null
     }]
   }]
 }
 ```
 Примечания:
-- `damageType` в `DamageEntry`/`FeatureDamageEntry` может быть `null`/пустым (тогда тип урона не задан, остаётся только `note`).
+- `damageTypeId` в `DamageEntry`/`FeatureDamageEntry` может быть `null` (тогда тип урона не задан, остаётся только `note`).
 - `qty` по умолчанию `1`, `hover` по умолчанию `false`.
 
 ### `MonsterResponse`
 Возвращает весь граф. Ключевые отличия от запроса:
 - Справочные ссылки разворачиваются в объекты `DictionaryRef { id, code, nameRusloc, nameEngloc, homebrewId }`
-  (поля `alignment`, `creatureTypes[]`, `languages[]`, `conditionImmunities[]`, `habitats[]`,
-  `treasureTags[]`, `sources[]`, а также `movementType`/`senseType`/`item` внутри строк).
+  (поля `alignment`, `size`, `sizeSecondary`, `swarmSize`, `creatureTypes[]`, `languages[]`,
+  `conditionImmunities[]`, `habitats[]`, `treasureTags[]`, `sources[]`, а также
+  `movementType`/`senseType`/`item` внутри строк).
 - `skillProficiencies[]` → `{ id, proficiencySkillId, skillName, bonus }`.
-- `savingThrows[]`/`damage*[]`/`features[].saveAbility` отдают enum строкой.
+- `savingThrows[].ability`, `damage*[].damageType`, `features[].saveAbility`,
+  `features[].damages[].damageType` теперь тоже `DictionaryRef` (раньше — enum строка).
 - Метаданные: `id`, `sourceExternalId`, `scope`, `homebrewId`, `campaignId`,
   `sourceMonsterId` (если монстр склонирован — id источника), `isVisibleToPlayers`,
   `isActive`, `createdBy`/`createdByUsername`, `updatedBy`/`updatedByUsername`,
@@ -209,7 +220,8 @@
 {
   "id": "uuid", "slug": "goblin",
   "nameRusloc": "Гоблин", "nameEngloc": "Goblin",
-  "size": "SMALL", "crRating": "1/4", "crValue": 0.25,
+  "size": { "id": "uuid", "code": "SMALL", "nameRusloc": "Маленький", "nameEngloc": "Small", "homebrewId": null },
+  "crRating": "1/4", "crValue": 0.25,
   "scope": "SYSTEM", "homebrewId": null, "campaignId": null,
   "isVisibleToPlayers": false, "isActive": true
 }
@@ -277,11 +289,13 @@
 2. **Справочники как источники для селектов**: грузить `GET /api/bestiary/dictionaries/{kind}`
    (системные) и при работе в homebrew-пакете дополнительно мёржить
    `GET /api/homebrew/{packageId}/bestiary/dictionaries/{kind}`. В селектах хранить `id`, показывать `nameRusloc`.
-3. **Перечисления**: захардкодить опции `CreatureSize` / `Ability` / `DamageType` из §0.5
-   (UPPERCASE values, человекочитаемые подписи на RU). `section`/`kind`/`attackType` —
-   свободный ввод или пресет-подсказки, без жёсткого enum.
+   Это относится и к `sizes` / `abilities` / `damage-types` — больше НЕ enum.
+3. **Бывшие перечисления — теперь справочники**: для `sizeId` / `abilityId` / `damageTypeId`
+   грузить опции из `GET /dictionaries/{sizes|abilities|damage-types}` (как любой другой селект,
+   с homebrew-мёржем). НЕ хардкодить значения. `section`/`kind`/`attackType` остаются
+   свободным вводом/пресет-подсказками, без жёсткого enum.
 4. **Форма монстра**: одна большая форма строит `MonsterRequest`. Обязательные поля:
-   `nameRusloc`, `size`, `armorClass`, все шесть `*Score`, `crRating`, `crValue`. Вложенные
+   `nameRusloc`, `sizeId`, `armorClass`, все шесть `*Score`, `crRating`, `crValue`. Вложенные
    секции (speeds/senses/saves/skills/3×damage/gear/features→damages) — динамические списки
    с add/remove. Помнить: PUT перезаписывает вложенные списки целиком (rebuild), частичный
    PATCH не поддерживается — отправлять полный набор.

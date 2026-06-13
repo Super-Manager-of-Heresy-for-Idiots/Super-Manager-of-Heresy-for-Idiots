@@ -19,7 +19,7 @@ public class MonsterSummaryResponse {
     private String slug;
     private String nameRusloc;
     private String nameEngloc;
-    private String size;
+    private MonsterResponse.DictionaryRef size;
     private String crRating;
     private BigDecimal crValue;
     private String scope;

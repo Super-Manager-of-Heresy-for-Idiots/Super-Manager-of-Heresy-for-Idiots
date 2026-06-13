@@ -83,10 +83,7 @@
 | `CampaignStatus` | `ACTIVE`, `PAUSED`, `COMPLETED` |
 | `CharacterStatus` | `ACTIVE`, `DEAD`, `RESERVE` |
 | `ContentType` | `ITEM_TYPE`, `CHARACTER_CLASS`, `SKILL`, `FEAT`, `SUBCLASS`, `RACE`, `STAT_TYPE`, `BUFF_DEBUFF`, `ENCHANTMENT_TYPE`, `CURRENCY`, `CUSTOM_RESOURCE`, `ITEM_TEMPLATE`, `BACKGROUND`, `SPELL`, `PROFICIENCY_SKILL` |
-| `CreatureSize` | `TINY`, `SMALL`, `MEDIUM`, `LARGE`, `HUGE`, `GARGANTUAN` |
-| `DamageType` | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
 | `EffectRole` | `BUFF`, `DEBUFF` |
-| `EquipmentSlot` | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
 | `HomebrewStatus` | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
 | `QuestStatus` | `ACTIVE`, `COMPLETED`, `FAILED`, `HIDDEN`, `ARCHIVED` |
 | `RaceAbilityBonusMode` | `FIXED`, `CHOICE` |
@@ -94,12 +91,30 @@
 | `RaceTraitActionType` | `PASSIVE`, `ACTION`, `BONUS_ACTION`, `REACTION`, `PART_OF_ATTACK_ACTION` |
 | `RaceTraitRecharge` | `NONE`, `SHORT_REST`, `LONG_REST`, `PROFICIENCY_BONUS_PER_LONG_REST`, `CUSTOM` |
 | `RaceTraitUseType` | `PASSIVE`, `LIMITED`, `ACTION`, `BONUS_ACTION`, `REACTION` |
-| `Rarity` | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT`, `BUFF_DEBUFF`, `ABILITY_SCORE_IMPROVEMENT` |
 | `ScoreMethod` | `STANDARD_ARRAY`, `POINT_BUY`, `ROLL` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
 | `SkillProficiencySource` | `CLASS`, `BACKGROUND`, `RACE`, `MANUAL` |
-| `Ability` | `STRENGTH`, `DEXTERITY`, `CONSTITUTION`, `INTELLIGENCE`, `WISDOM`, `CHARISMA` |
+
+### Контентные перечисления → homebrew-дружелюбные справочники
+
+Бывшие enum-ы `CreatureSize`, `DamageType`, `EquipmentSlot`, `Rarity` и `Ability`
+больше **не** фиксированные перечисления. Они хранятся как самостоятельные справочные
+таблицы (миграция `045`) с колонкой `homebrew_id` (`null` = системная/ванильная строка,
+иначе принадлежит homebrew-пакету) и доступны через `GET/POST/PUT/DELETE /dictionaries/{kind}`:
+
+| Справочник | Таблица | `kind` | Системные `code` |
+|---|---|---|---|
+| Тип урона | `damage_types` | `content-damage-types` | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
+| Редкость | `item_rarities` | `item-rarities` | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
+| Слот экипировки | `equipment_slots` | `equipment-slots` | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
+| Размер существа | `creature_sizes` | `creature-sizes` | `TINY`, `SMALL`, `MEDIUM`, `LARGE`, `HUGE`, `GARGANTUAN` |
+| Характеристика (бывш. `Ability`) | `stat_types` (колонка `code`) | — | `STRENGTH`, `DEXTERITY`, `CONSTITUTION`, `INTELLIGENCE`, `WISDOM`, `CHARISMA` |
+
+На уровне БД и сущностей это FK (`slot_id`, `damage_type_id`, `rarity_id` и т.п.).
+**API/DTO по-прежнему принимают и отдают строковый `code`** (`"MAIN_HAND"`, `"COMMON"`,
+`"SLASHING"`) — сервис разрешает код в строку справочника (сначала строка пакета, затем
+системная). Поэтому JSON-примеры ниже не изменились.
 
 ---
 
@@ -212,7 +227,7 @@ PHB-список: Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Ar
 | `created_by`, `updated_by` | uuid → users |  | `null` для PHB-сида |
 | `homebrew_id` | uuid |  | `null` для PHB |
 | `creature_type` | varchar(40) | ✓ | `HUMANOID`, `DRAGONBORN` и т.п. (строка, не enum) |
-| `size_options_json` | text (JSON) |  | Список `CreatureSize`: `["MEDIUM"]` или `["SMALL","MEDIUM"]` |
+| `size_options_json` | text (JSON) |  | Список `code` справочника `creature-sizes`: `["MEDIUM"]` или `["SMALL","MEDIUM"]` (валидируется по справочнику) |
 | `default_size` | varchar(20) |  | `MEDIUM` |
 | `speed_json` | text (JSON) |  | `{"walk":30,"fly":0,"swim":0,"climb":0,"burrow":0}` |
 | `darkvision_range` | int |  | Футы (`60`, `120`); `null` если нет |
@@ -222,9 +237,9 @@ PHB-список: Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Ar
 | `languages_json` | text (JSON) |  | Список фиксированных: `["Common","Elvish"]` |
 | `language_options_json` | text (JSON) |  | Кол-во + пул для выбора: `{"count":1,"pool":"any"}` |
 | `proficiencies_json` | text (JSON) |  | Список владений (Dwarven combat training и т.п.) |
-| `resistances_json` | text (JSON) |  | Список `DamageType`: `["POISON"]` |
-| `vulnerabilities_json` | text (JSON) |  | Список `DamageType` |
-| `immunities_json` | text (JSON) |  | Список `DamageType` |
+| `resistances_json` | text (JSON) |  | Список `code` справочника `content-damage-types`: `["POISON"]` |
+| `vulnerabilities_json` | text (JSON) |  | Список `code` справочника `content-damage-types` |
+| `immunities_json` | text (JSON) |  | Список `code` справочника `content-damage-types` |
 | `condition_resistances_json` | text (JSON) |  | Состояния (Charmed и т.п.) |
 | `condition_advantages_json` | text (JSON) |  | Преимущество против состояний |
 | `innate_spells_json` | text (JSON) |  | Расовые заклинания |
@@ -312,7 +327,7 @@ PHB-список: Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Ar
 
 **Внутренний формат `lineages[]`:** `{"id": "<uuid>", "name": "string", "description": "string"}`. Этот UUID используется в `characters.selected_lineage_id` — сгенерируйте и сохраните.
 
-**Внутренний формат `abilityScoreBonuses[]`:** `{"ability": "<Ability enum>", "value": int, "mode": "FIXED" | "CHOICE"}`.
+**Внутренний формат `abilityScoreBonuses[]`:** `{"ability": "<stat_types.code>", "value": int, "mode": "FIXED" | "CHOICE"}` — `ability` валидируется по справочнику характеристик (`stat_types.code`, бывший enum `Ability`).
 
 PHB-список рас: Dwarf, Elf, Halfling, Human, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling.
 
@@ -433,10 +448,10 @@ PHB-фиты (42): Alert, Athlete, Actor, Charger, Crossbow Expert, Defensive Du
 | `id` | uuid | ✓ | |
 | `name` | varchar(50) UNIQUE | ✓ | `Longsword`, `Light Crossbow`, `Chain Mail`, `Shield`… |
 | `description` | text |  | |
-| `slot` | varchar(20) — `EquipmentSlot` | ✓ | См. enum |
+| `slot_id` | uuid → equipment_slots | ✓ | Справочник слотов; API отдаёт `code` |
 | `damage_dice` | varchar(10) |  | `"1d8"`, `"2d6"`; `null` для брони/щита |
 | `damage_bonus` | int | ✓ | По умолчанию 0 |
-| `damage_type` | varchar(20) — `DamageType` |  | `null` для не-оружия |
+| `damage_type_id` | uuid → damage_types |  | Справочник; `null` для не-оружия; API отдаёт `code` |
 | `skill_id` | uuid → skills |  | Если предмет даёт активную способность |
 | `skill_activation` | varchar(10) — `SkillActivation` |  | `PASSIVE` / `ACTIVE` |
 | `homebrew_id` | uuid |  | `null` для PHB |
@@ -465,10 +480,10 @@ PHB-фиты (42): Alert, Athlete, Actor, Charger, Crossbow Expert, Defensive Du
 | `name` | varchar(100) | ✓ | |
 | `description` | text |  | |
 | `item_type_id` | uuid → item_types |  | К какому типу относится |
-| `rarity` | varchar(20) — `Rarity` |  | `COMMON` по умолчанию |
+| `rarity_id` | uuid → item_rarities |  | Справочник редкостей; API отдаёт `code` |
 | `damage_dice` | varchar(10) |  | Можно переопределить базовый урон item_type |
 | `damage_bonus` | int |  | |
-| `damage_type` | varchar(20) — `DamageType` |  | |
+| `damage_type_id` | uuid → damage_types |  | Справочник; API отдаёт `code` |
 | `is_stackable` | bool | ✓ | Стопками или уникально (зелья → true, мечи → false) |
 | `skill_id` | uuid → skills |  | Активная способность предмета |
 | `skill_activation` | varchar(10) — `SkillActivation` |  | |
@@ -501,7 +516,7 @@ PHB-фиты (42): Alert, Athlete, Actor, Charger, Crossbow Expert, Defensive Du
 | `description` | text |  | |
 | `damage_dice` | varchar(10) |  | Доп. урон от чара |
 | `damage_bonus` | int | ✓ | По умолчанию 0 |
-| `damage_type` | varchar(20) — `DamageType` |  | |
+| `damage_type_id` | uuid → damage_types |  | Справочник; API отдаёт `code` |
 | `buff_debuff_id` | uuid → buffs_debuffs |  | Связанный бафф |
 
 ```json
@@ -558,7 +573,7 @@ PHB-состояния: Blinded, Charmed, Deafened, Frightened, Grappled, Incapa
 | `skill_type` | varchar(50) |  | Категория: `CLASS_FEATURE`, `RACIAL`, `ITEM_ACTIVATION` |
 | `damage_dice` | varchar(10) |  | Если способность наносит урон |
 | `damage_bonus` | int | ✓ | По умолчанию 0 |
-| `damage_type` | varchar(20) — `DamageType` |  | |
+| `damage_type_id` | uuid → damage_types |  | Справочник; API отдаёт `code` |
 | `homebrew_id` | uuid |  | `null` для PHB |
 
 ```json

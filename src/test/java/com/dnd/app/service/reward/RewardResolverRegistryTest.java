@@ -7,6 +7,7 @@ import com.dnd.app.repository.FeatRepository;
 import com.dnd.app.repository.SkillRepository;
 import com.dnd.app.repository.SubclassRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("RewardResolverRegistry: разрешение наград по типу")
 class RewardResolverRegistryTest {
 
     @Mock private SkillRepository skillRepository;
@@ -37,12 +39,14 @@ class RewardResolverRegistryTest {
     }
 
     @Test
+    @DisplayName("Разрешение неизвестного типа награды выбрасывает IllegalArgument")
     void resolve_unknownType_throwsIllegalArgument() {
         UUID id = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class, () -> registry.resolve("SPELL", id));
     }
 
     @Test
+    @DisplayName("Разрешение награды типа SKILL возвращает детали умения")
     void resolve_skill_returnsSkillDetail() {
         UUID skillId = UUID.randomUUID();
         Skill skill = Skill.builder().id(skillId).name("Extra Attack").description("Attack twice").build();
@@ -56,6 +60,7 @@ class RewardResolverRegistryTest {
     }
 
     @Test
+    @DisplayName("Разрешение награды типа FEAT возвращает детали черты")
     void resolve_feat_returnsFeatDetail() {
         UUID featId = UUID.randomUUID();
         Feat feat = Feat.builder().id(featId).name("Lucky").description("3 luck points").build();
@@ -68,6 +73,7 @@ class RewardResolverRegistryTest {
     }
 
     @Test
+    @DisplayName("Валидация неизвестного типа награды выбрасывает IllegalArgument")
     void validate_unknownType_throwsIllegalArgument() {
         assertThrows(IllegalArgumentException.class, () -> registry.validate("MANEUVER", UUID.randomUUID()));
     }

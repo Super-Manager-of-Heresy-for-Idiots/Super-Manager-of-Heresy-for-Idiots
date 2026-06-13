@@ -1,9 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.DamageType;
 import com.dnd.app.domain.enums.EffectRole;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.SkillActivation;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
@@ -46,6 +44,7 @@ public class AdminService {
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final RewardResolverRegistry rewardResolverRegistry;
+    private final ContentDictionaryResolver contentDictionaryResolver;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // --- Stat Types ---
@@ -128,7 +127,7 @@ public class AdminService {
             it.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
         }
         ItemType saved = itemTypeRepository.save(it);
-        log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot(), saved.getId());
+        log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot().getCode(), saved.getId());
         return toItemTypeResponse(saved);
     }
 
@@ -487,20 +486,14 @@ public class AdminService {
     }
 
     private EquipmentSlot parseSlot(String slot) {
-        try {
-            return EquipmentSlot.valueOf(slot);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный слот экипировки: " + slot);
+        if (slot == null) {
+            throw new BadRequestException("Некорректный слот экипировки: null");
         }
+        return contentDictionaryResolver.resolveEquipmentSlot(slot, null);
     }
 
     private DamageType parseDamageType(String damageType) {
-        if (damageType == null) return null;
-        try {
-            return DamageType.valueOf(damageType);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный тип урона: " + damageType);
-        }
+        return contentDictionaryResolver.resolveDamageType(damageType, null);
     }
 
     private SkillActivation parseSkillActivation(String activation) {
@@ -596,7 +589,7 @@ public class AdminService {
                 .skillType(s.getSkillType())
                 .damageDice(s.getDamageDice())
                 .damageBonus(s.getDamageBonus())
-                .damageType(s.getDamageType() != null ? s.getDamageType().name() : null)
+                .damageType(s.getDamageType() != null ? s.getDamageType().getCode() : null)
                 .effects(effectResponses)
                 .createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
@@ -605,10 +598,10 @@ public class AdminService {
     private ItemTypeResponse toItemTypeResponse(ItemType it) {
         return ItemTypeResponse.builder()
                 .id(it.getId()).name(it.getName()).description(it.getDescription())
-                .slot(it.getSlot().name())
+                .slot(it.getSlot().getCode())
                 .damageDice(it.getDamageDice())
                 .damageBonus(it.getDamageBonus())
-                .damageType(it.getDamageType() != null ? it.getDamageType().name() : null)
+                .damageType(it.getDamageType() != null ? it.getDamageType().getCode() : null)
                 .skillId(it.getSkill() != null ? it.getSkill().getId() : null)
                 .skillName(it.getSkill() != null ? it.getSkill().getName() : null)
                 .skillActivation(it.getSkillActivation() != null ? it.getSkillActivation().name() : null)

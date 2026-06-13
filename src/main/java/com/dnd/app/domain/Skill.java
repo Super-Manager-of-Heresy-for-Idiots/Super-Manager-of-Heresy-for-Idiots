@@ -1,6 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.DamageType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,8 +43,8 @@ public class Skill {
     @Builder.Default
     private Integer damageBonus = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "damage_type", length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "damage_type_id")
     private DamageType damageType;
 
     @OneToMany(mappedBy = "skill", cascade = CascadeType.ALL, orphanRemoval = true)

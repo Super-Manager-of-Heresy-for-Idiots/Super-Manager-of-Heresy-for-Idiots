@@ -12,7 +12,14 @@ public enum DictionaryKind {
     TREASURE_TAG("treasure-tags"),
     CONDITION("conditions"),
     GEAR_ITEM("gear-items"),
-    SOURCE("sources");
+    SOURCE("sources"),
+    SIZE("sizes"),
+    ABILITY("abilities"),
+    DAMAGE_TYPE("damage-types"),
+    CONTENT_DAMAGE_TYPE("content-damage-types"),
+    ITEM_RARITY("item-rarities"),
+    EQUIPMENT_SLOT("equipment-slots"),
+    CONTENT_SIZE("creature-sizes");
 
     private final String slug;
 
