@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -52,6 +53,7 @@ public class MonsterService {
     private final HomebrewContentItemRepository contentItemRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
+    private final WebSocketEventService webSocketEventService;
 
     // =================================== Reads ===================================
 
@@ -196,6 +198,9 @@ public class MonsterService {
         applyRequest(monster, request, user, null, campaign);
         Monster saved = monsterRepository.save(monster);
         log.info("Campaign monster created: campaignId={}, id={}, by={}", campaignId, saved.getId(), username);
+        if (Boolean.TRUE.equals(saved.getIsVisibleToPlayers())) {
+            emitVisibilityEvent(saved, true, user);
+        }
         return toResponse(saved);
     }
 
@@ -222,8 +227,14 @@ public class MonsterService {
         Monster monster = findMonster(id);
         requireScope(monster, "CAMPAIGN");
         campaignService.enforceGmOrAdmin(monster.getCampaign(), user);
+        boolean wasVisible = Boolean.TRUE.equals(monster.getIsVisibleToPlayers());
         applyRequest(monster, request, user, null, monster.getCampaign());
-        return toResponse(monsterRepository.save(monster));
+        Monster saved = monsterRepository.save(monster);
+        boolean nowVisible = Boolean.TRUE.equals(saved.getIsVisibleToPlayers());
+        if (nowVisible != wasVisible) {
+            emitVisibilityEvent(saved, nowVisible, user);
+        }
+        return toResponse(saved);
     }
 
     @Transactional
@@ -237,6 +248,7 @@ public class MonsterService {
         Monster saved = monsterRepository.save(monster);
         log.info("Campaign monster visibility toggled: id={}, visible={}, by={}",
                 id, saved.getIsVisibleToPlayers(), username);
+        emitVisibilityEvent(saved, Boolean.TRUE.equals(saved.getIsVisibleToPlayers()), user);
         return toResponse(saved);
     }
 
@@ -722,6 +734,15 @@ public class MonsterService {
 
     private boolean isGmOrAdmin(UUID campaignId, User user) {
         return user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
+    }
+
+    private void emitVisibilityEvent(Monster monster, boolean nowVisible, User actor) {
+        if (monster.getCampaign() == null) return;
+        webSocketEventService.sendCampaignEvent(
+                nowVisible ? WebSocketEventType.MONSTER_REVEALED : WebSocketEventType.MONSTER_HIDDEN,
+                monster.getCampaign().getId(),
+                Map.of("monsterId", monster.getId(), "monsterName", monster.getNameRusloc()),
+                actor.getId());
     }
 
     private String scopeOf(Monster m) {
