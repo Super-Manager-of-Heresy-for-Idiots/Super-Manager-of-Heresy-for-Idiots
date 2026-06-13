@@ -31,4 +31,8 @@ public class CharacterStat {
     @Column(nullable = false)
     @Builder.Default
     private Integer value = 10;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deprecated = false;
 }

@@ -31,6 +31,10 @@ public class StatType {
     @Builder.Default
     private Boolean isDefault = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deleted = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;

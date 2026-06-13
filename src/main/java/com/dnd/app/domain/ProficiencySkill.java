@@ -30,4 +30,8 @@ public class ProficiencySkill {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "governing_stat_id", nullable = false)
     private StatType governingStat;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deprecated = false;
 }

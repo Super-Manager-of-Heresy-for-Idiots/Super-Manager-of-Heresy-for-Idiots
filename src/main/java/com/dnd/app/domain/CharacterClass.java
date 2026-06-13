@@ -82,4 +82,8 @@ public class CharacterClass {
     @Column(name = "is_half_caster", nullable = false)
     @Builder.Default
     private Boolean isHalfCaster = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deprecated = false;
 }

@@ -9,12 +9,14 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
+import com.dnd.app.config.CacheConfig;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,7 @@ public class AdminService {
     private final BackgroundRepository backgroundRepository;
     private final SpellRepository spellRepository;
     private final ProficiencySkillRepository proficiencySkillRepository;
+    private final CharacterStatRepository characterStatRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final RewardResolverRegistry rewardResolverRegistry;
@@ -87,13 +90,28 @@ public class AdminService {
         return refMapper.toStatTypeResponse(statTypeRepository.save(st));
     }
 
+    // Soft delete only: the stat type is flagged deleted (and disappears from creation
+    // pickers), while every row that references it is flagged deprecated so the UI can
+    // surface it. Hard delete is performed exclusively through the DBMS.
+    @CacheEvict(cacheNames = CacheConfig.VANILLA_STAT_TYPES, allEntries = true)
     @Transactional
     public void deleteStatType(UUID id) {
-        if (!statTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Характеристика не найдена");
+        StatType st = statTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
+        if (Boolean.TRUE.equals(st.getDeleted())) {
+            return;
         }
-        log.info("Admin: stat type deleted — id={}", id);
-        statTypeRepository.deleteById(id);
+
+        st.setDeleted(true);
+        statTypeRepository.save(st);
+
+        int statRefs = characterStatRepository.markDeprecatedByStatTypeId(id);
+        int skillRefs = proficiencySkillRepository.markDeprecatedByGoverningStatId(id);
+        int classRefs = classRepository.markDeprecatedByStatTypeId(id);
+        int buffRefs = buffDebuffRepository.markDeprecatedByTargetStatId(id);
+
+        log.info("Admin: stat type soft-deleted — id={}, deprecated characterStats={}, skills={}, classes={}, buffs={}",
+                id, statRefs, skillRefs, classRefs, buffRefs);
     }
 
     // --- Item Types ---

@@ -90,12 +90,13 @@ public class ReferenceDataService {
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getStatTypes(UUID campaignId, String username) {
         enforceAccess(campaignId, username);
-        return statTypeRepository.findAll().stream()
+        return statTypeRepository.findByDeletedFalse().stream()
                 .map(st -> StatTypeResponse.builder()
                         .id(st.getId())
                         .name(st.getName())
                         .description(st.getDescription())
                         .isDefault(st.getIsDefault())
+                        .deleted(st.getDeleted())
                         .build())
                 .toList();
     }
@@ -175,12 +176,13 @@ public class ReferenceDataService {
     @Cacheable(CacheConfig.VANILLA_STAT_TYPES)
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getVanillaStatTypes() {
-        return statTypeRepository.findAll().stream()
+        return statTypeRepository.findByDeletedFalse().stream()
                 .map(st -> StatTypeResponse.builder()
                         .id(st.getId())
                         .name(st.getName())
                         .description(st.getDescription())
                         .isDefault(st.getIsDefault())
+                        .deleted(st.getDeleted())
                         .build())
                 .toList();
     }
