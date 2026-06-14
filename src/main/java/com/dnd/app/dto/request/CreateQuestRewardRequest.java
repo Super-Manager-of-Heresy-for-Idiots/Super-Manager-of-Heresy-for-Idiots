@@ -1,5 +1,6 @@
 package com.dnd.app.dto.request;
 
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,7 @@ public class CreateQuestRewardRequest {
     private UUID currencyTypeId;
 
     private BigDecimal currencyAmount;
+
+    @Min(value = 0, message = "XP amount must not be negative")
+    private Integer xpAmount;
 }

@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.enums.NpcSourceType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -7,7 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -43,6 +46,44 @@ public class CampaignNpc {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
+
+    // How the NPC was authored. NULL => legacy free-form NPC (pre-047).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", length = 20)
+    private NpcSourceType sourceType;
+
+    // --- CLASS_BASED build (all optional except race/class/level, enforced in service) ---
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "race_id")
+    private CharacterRace race;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id")
+    private CharacterClass characterClass;
+
+    @Column(name = "level")
+    private Integer level;
+
+    // Free-form, progression-independent abilities/features described by the GM.
+    @Column(name = "abilities", columnDefinition = "text")
+    private String abilities;
+
+    // Free, progression-independent spell selection. Not validated against level/class.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "campaign_npc_spells",
+            joinColumns = @JoinColumn(name = "npc_id"),
+            inverseJoinColumns = @JoinColumn(name = "spell_id")
+    )
+    @Builder.Default
+    private Set<Spell> spells = new LinkedHashSet<>();
+
+    // --- MONSTER_BASED build ---
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_monster_id")
+    private Monster sourceMonster;
 
     @OneToMany(mappedBy = "npc", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

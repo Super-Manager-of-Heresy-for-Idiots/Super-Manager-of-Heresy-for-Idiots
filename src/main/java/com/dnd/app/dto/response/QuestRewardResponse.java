@@ -21,4 +21,5 @@ public class QuestRewardResponse {
     private UUID currencyTypeId;
     private String currencyTypeName;
     private BigDecimal currencyAmount;
+    private Integer xpAmount;
 }

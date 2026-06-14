@@ -2,14 +2,25 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.CampaignNpc;
+import com.dnd.app.domain.CharacterClass;
+import com.dnd.app.domain.CharacterRace;
+import com.dnd.app.domain.HomebrewPackage;
+import com.dnd.app.domain.Monster;
 import com.dnd.app.domain.User;
+import com.dnd.app.domain.enums.NpcSourceType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateNpcRequest;
 import com.dnd.app.dto.response.NpcResponse;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CampaignNpcRepository;
+import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.CharacterRaceRepository;
+import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
+import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,6 +46,12 @@ class NpcServiceTest {
     @Mock private NpcNoteRepository noteRepository;
     @Mock private UserRepository userRepository;
     @Mock private CampaignService campaignService;
+    @Mock private WebSocketEventService webSocketEventService;
+    @Mock private CharacterRaceRepository raceRepository;
+    @Mock private CharacterClassRepository classRepository;
+    @Mock private SpellRepository spellRepository;
+    @Mock private MonsterRepository monsterRepository;
+    @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
 
     @InjectMocks private NpcService npcService;
 
@@ -198,6 +216,174 @@ class NpcServiceTest {
         assertThrows(AccessDeniedException.class,
                 () -> npcService.createNpc(campaignId, request, "player1"));
 
+        verify(npcRepository, never()).save(any());
+    }
+
+    // --- Source-based creation ---
+
+    private CharacterRace buildRace() {
+        return CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
+    }
+
+    private CharacterClass buildClass() {
+        return CharacterClass.builder().id(UUID.randomUUID()).name("Wizard").build();
+    }
+
+    private Monster buildCampaignMonster(Campaign campaign) {
+        return Monster.builder().id(UUID.randomUUID()).nameRusloc("Гоблин").campaign(campaign).build();
+    }
+
+    private Monster buildHomebrewMonster(HomebrewPackage pkg) {
+        return Monster.builder().id(UUID.randomUUID()).nameRusloc("Самопал").homebrew(pkg).build();
+    }
+
+    private void stubGmCreate(User gm, Campaign campaign) {
+        when(userRepository.findByUsername(gm.getUsername())).thenReturn(Optional.of(gm));
+        when(campaignService.findCampaign(campaign.getId())).thenReturn(campaign);
+        when(npcRepository.save(any(CampaignNpc.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    @Test
+    @DisplayName("Class-based NPC: абилки и заклинания опциональны, прогрессия не валидируется")
+    void createNpc_classBased_abilitiesAndSpellsOptional() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+        CharacterRace race = buildRace();
+        CharacterClass clazz = buildClass();
+
+        stubGmCreate(gm, campaign);
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(classRepository.findById(clazz.getId())).thenReturn(Optional.of(clazz));
+
+        // Level-20 NPC with no spells and no abilities — must be accepted as-is.
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Archmage")
+                .sourceType(NpcSourceType.CLASS_BASED)
+                .raceId(race.getId())
+                .classId(clazz.getId())
+                .level(20)
+                .build();
+
+        NpcResponse response = npcService.createNpc(campaign.getId(), request, gm.getUsername());
+
+        assertEquals(NpcSourceType.CLASS_BASED, response.getSourceType());
+        assertEquals(20, response.getLevel());
+        assertNull(response.getSpells());
+        assertNull(response.getAbilities());
+        verifyNoInteractions(spellRepository);
+    }
+
+    @Test
+    @DisplayName("Class-based NPC: без обязательных полей (race/class/level) — ошибка")
+    void createNpc_classBased_missingRequiredFields() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+
+        when(userRepository.findByUsername(gm.getUsername())).thenReturn(Optional.of(gm));
+        when(campaignService.findCampaign(campaign.getId())).thenReturn(campaign);
+
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Incomplete")
+                .sourceType(NpcSourceType.CLASS_BASED)
+                .build();
+
+        assertThrows(BadRequestException.class,
+                () -> npcService.createNpc(campaign.getId(), request, gm.getUsername()));
+        verify(npcRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Monster-based NPC: монстр из ЭТОЙ кампании принимается")
+    void createNpc_monsterBased_acceptsSameCampaignMonster() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+        Monster monster = buildCampaignMonster(campaign);
+
+        stubGmCreate(gm, campaign);
+        when(monsterRepository.findById(monster.getId())).thenReturn(Optional.of(monster));
+
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Goblin boss")
+                .sourceType(NpcSourceType.MONSTER_BASED)
+                .sourceMonsterId(monster.getId())
+                .build();
+
+        NpcResponse response = npcService.createNpc(campaign.getId(), request, gm.getUsername());
+
+        assertEquals(NpcSourceType.MONSTER_BASED, response.getSourceType());
+        assertNotNull(response.getSourceMonster());
+        assertEquals(monster.getId(), response.getSourceMonster().getId());
+    }
+
+    @Test
+    @DisplayName("Monster-based NPC: монстр из ДРУГОЙ кампании отклоняется")
+    void createNpc_monsterBased_rejectsForeignCampaignMonster() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+        Campaign otherCampaign = buildCampaign();
+        Monster foreign = buildCampaignMonster(otherCampaign);
+
+        when(userRepository.findByUsername(gm.getUsername())).thenReturn(Optional.of(gm));
+        when(campaignService.findCampaign(campaign.getId())).thenReturn(campaign);
+        when(monsterRepository.findById(foreign.getId())).thenReturn(Optional.of(foreign));
+
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Stolen monster")
+                .sourceType(NpcSourceType.MONSTER_BASED)
+                .sourceMonsterId(foreign.getId())
+                .build();
+
+        assertThrows(BadRequestException.class,
+                () -> npcService.createNpc(campaign.getId(), request, gm.getUsername()));
+        verify(npcRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Monster-based NPC: homebrew-монстр подключённого пакета принимается")
+    void createNpc_monsterBased_acceptsConnectedHomebrewMonster() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+        HomebrewPackage pkg = HomebrewPackage.builder().id(UUID.randomUUID()).build();
+        Monster monster = buildHomebrewMonster(pkg);
+
+        stubGmCreate(gm, campaign);
+        when(monsterRepository.findById(monster.getId())).thenReturn(Optional.of(monster));
+        when(campaignHomebrewRepository.findPackageIdsByCampaignId(campaign.getId()))
+                .thenReturn(Set.of(pkg.getId()));
+
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Homebrew creature")
+                .sourceType(NpcSourceType.MONSTER_BASED)
+                .sourceMonsterId(monster.getId())
+                .build();
+
+        NpcResponse response = npcService.createNpc(campaign.getId(), request, gm.getUsername());
+
+        assertEquals(monster.getId(), response.getSourceMonster().getId());
+    }
+
+    @Test
+    @DisplayName("Monster-based NPC: homebrew-монстр неподключённого пакета отклоняется")
+    void createNpc_monsterBased_rejectsUnconnectedHomebrewMonster() {
+        User gm = buildGm();
+        Campaign campaign = buildCampaign();
+        HomebrewPackage pkg = HomebrewPackage.builder().id(UUID.randomUUID()).build();
+        Monster monster = buildHomebrewMonster(pkg);
+
+        when(userRepository.findByUsername(gm.getUsername())).thenReturn(Optional.of(gm));
+        when(campaignService.findCampaign(campaign.getId())).thenReturn(campaign);
+        when(monsterRepository.findById(monster.getId())).thenReturn(Optional.of(monster));
+        when(campaignHomebrewRepository.findPackageIdsByCampaignId(campaign.getId()))
+                .thenReturn(Set.of());
+
+        CreateNpcRequest request = CreateNpcRequest.builder()
+                .name("Unavailable homebrew")
+                .sourceType(NpcSourceType.MONSTER_BASED)
+                .sourceMonsterId(monster.getId())
+                .build();
+
+        assertThrows(BadRequestException.class,
+                () -> npcService.createNpc(campaign.getId(), request, gm.getUsername()));
         verify(npcRepository, never()).save(any());
     }
 }

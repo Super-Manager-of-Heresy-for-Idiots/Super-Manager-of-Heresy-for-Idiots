@@ -51,5 +51,8 @@
     <include file="db/changelog/044-bestiary-enum-dicts-and-homebrew.xml"/>
     <include file="db/changelog/045-content-enum-dicts-and-homebrew.xml"/>
     <include file="db/changelog/046-stat-type-soft-delete.xml"/>
+    <include file="db/changelog/047-npc-build-and-source.xml"/>
+    <include file="db/changelog/048-add-quest-reward-xp.xml"/>
+    <include file="db/changelog/049-create-combat-model.xml"/>
 
 </databaseChangeLog>

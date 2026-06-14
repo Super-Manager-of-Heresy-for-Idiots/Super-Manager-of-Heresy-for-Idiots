@@ -4,12 +4,17 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.QuestStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
+import com.dnd.app.dto.request.CompleteQuestRequest;
 import com.dnd.app.dto.request.CreateNoteRequest;
 import com.dnd.app.dto.request.CreateQuestRewardRequest;
 import com.dnd.app.dto.request.CreateQuestRequest;
+import com.dnd.app.dto.request.DistributeXpRequest;
+import com.dnd.app.dto.request.GrantItemRequest;
+import com.dnd.app.dto.request.ModifyCurrencyRequest;
 import com.dnd.app.dto.request.UpdateNoteRequest;
 import com.dnd.app.dto.request.UpdateQuestRequest;
 import com.dnd.app.dto.response.NoteResponse;
+import com.dnd.app.dto.response.QuestCompletionResponse;
 import com.dnd.app.dto.response.QuestResponse;
 import com.dnd.app.dto.response.QuestRewardResponse;
 import com.dnd.app.exception.AccessDeniedException;
@@ -39,9 +44,13 @@ public class QuestService {
     private final CampaignLocationRepository locationRepository;
     private final ItemTemplateRepository itemTemplateRepository;
     private final CurrencyTypeRepository currencyTypeRepository;
+    private final PlayerCharacterRepository playerCharacterRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
+    private final ItemInstanceService itemInstanceService;
+    private final WalletService walletService;
+    private final XpService xpService;
 
     @Transactional
     public QuestResponse createQuest(UUID campaignId, CreateQuestRequest request, String username) {
@@ -111,11 +120,17 @@ public class QuestService {
         if (request.getDescription() != null) quest.setDescription(request.getDescription());
         if (request.getIsVisibleToPlayers() != null) quest.setIsVisibleToPlayers(request.getIsVisibleToPlayers());
         if (request.getStatus() != null) {
+            QuestStatus newStatus;
             try {
-                quest.setStatus(QuestStatus.valueOf(request.getStatus().toUpperCase()));
+                newStatus = QuestStatus.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid quest status: " + request.getStatus());
             }
+            if (newStatus == QuestStatus.COMPLETED && quest.getStatus() != QuestStatus.COMPLETED) {
+                throw new BadRequestException(
+                        "Use the quest completion endpoint to mark a quest COMPLETED and grant its reward");
+            }
+            quest.setStatus(newStatus);
         }
         quest = questRepository.save(quest);
 
@@ -204,9 +219,17 @@ public class QuestService {
         CampaignQuest quest = findQuest(questId);
         campaignService.enforceGmOrAdmin(quest.getCampaign(), user);
 
+        boolean hasItem = request.getItemTemplateId() != null;
+        boolean hasCurrency = request.getCurrencyTypeId() != null;
+        boolean hasXp = request.getXpAmount() != null && request.getXpAmount() > 0;
+        if (!hasItem && !hasCurrency && !hasXp) {
+            throw new BadRequestException("Reward must include an item, currency, or XP");
+        }
+
         QuestReward reward = QuestReward.builder()
                 .quest(quest)
                 .quantity(request.getQuantity() != null ? request.getQuantity() : 1)
+                .xpAmount(request.getXpAmount())
                 .build();
 
         if (request.getItemTemplateId() != null) {
@@ -246,6 +269,95 @@ public class QuestService {
 
         questRewardRepository.delete(reward);
         log.info("Quest reward deleted: rewardId={}, by={}", rewardId, username);
+    }
+
+    // --- Completion & reward issuance ---
+
+    /**
+     * Marks a quest COMPLETED and grants its full reward to the chosen recipient
+     * character: items are added to the recipient's inventory, currency is
+     * credited to the wallet, and XP is added to the character's experience.
+     *
+     * The recipient must belong to the quest's campaign and is selected at the
+     * moment of completion (not at quest creation). The optional {@code xpAmount}
+     * on the request overrides the total XP defined on the reward entries.
+     *
+     * Runs in a single transaction so the status change and all grants are atomic.
+     */
+    @Transactional
+    public QuestCompletionResponse completeQuest(UUID questId, CompleteQuestRequest request, String username) {
+        User user = getUser(username);
+        CampaignQuest quest = findQuest(questId);
+        Campaign campaign = quest.getCampaign();
+        campaignService.enforceGmOrAdmin(campaign, user);
+
+        if (quest.getStatus() == QuestStatus.COMPLETED) {
+            throw new BadRequestException("Quest is already completed");
+        }
+
+        PlayerCharacter recipient = playerCharacterRepository.findById(request.getRecipientCharacterId())
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient character not found"));
+        if (recipient.getCampaign() == null || !recipient.getCampaign().getId().equals(campaign.getId())) {
+            throw new BadRequestException("Recipient character does not belong to this campaign");
+        }
+
+        UUID campaignId = campaign.getId();
+        UUID recipientId = recipient.getId();
+        List<QuestReward> rewards = questRewardRepository.findByQuestId(questId);
+
+        int itemsGranted = 0;
+        long rewardXp = 0L;
+        for (QuestReward reward : rewards) {
+            if (reward.getItemTemplate() != null) {
+                GrantItemRequest grant = GrantItemRequest.builder()
+                        .templateId(reward.getItemTemplate().getId())
+                        .quantity(reward.getQuantity() != null ? reward.getQuantity() : 1)
+                        .build();
+                itemInstanceService.grantItem(campaignId, recipientId, grant, username);
+                itemsGranted++;
+            }
+            if (reward.getCurrencyType() != null && reward.getCurrencyAmount() != null
+                    && reward.getCurrencyAmount().signum() > 0) {
+                ModifyCurrencyRequest credit = ModifyCurrencyRequest.builder()
+                        .currencyTypeId(reward.getCurrencyType().getId())
+                        .amount(reward.getCurrencyAmount())
+                        .build();
+                walletService.modifyCurrency(recipientId, credit, username);
+            }
+            if (reward.getXpAmount() != null && reward.getXpAmount() > 0) {
+                rewardXp += reward.getXpAmount();
+            }
+        }
+
+        long xpToGrant = request.getXpAmount() != null ? request.getXpAmount() : rewardXp;
+        if (xpToGrant > 0) {
+            DistributeXpRequest xpRequest = DistributeXpRequest.builder()
+                    .amount(xpToGrant)
+                    .target("SINGLE")
+                    .characterIds(List.of(recipientId))
+                    .build();
+            xpService.distributeXp(campaignId, xpRequest, username);
+        }
+
+        quest.setStatus(QuestStatus.COMPLETED);
+        quest = questRepository.save(quest);
+
+        log.info("Quest completed: questId={}, recipientId={}, itemsGranted={}, xpGranted={}, by={}",
+                questId, recipientId, itemsGranted, xpToGrant, username);
+
+        if (Boolean.TRUE.equals(quest.getIsVisibleToPlayers())) {
+            webSocketEventService.sendCampaignEvent(WebSocketEventType.QUEST_UPDATED,
+                    campaignId, Map.of("questId", questId, "status", QuestStatus.COMPLETED.name()), user.getId());
+        }
+
+        return QuestCompletionResponse.builder()
+                .questId(questId)
+                .status(quest.getStatus().name())
+                .recipientCharacterId(recipientId)
+                .recipientCharacterName(recipient.getName())
+                .itemsGranted(itemsGranted)
+                .xpGranted(xpToGrant)
+                .build();
     }
 
     // --- Link/Unlink NPC ---
@@ -370,6 +482,7 @@ public class QuestService {
                 .currencyTypeId(reward.getCurrencyType() != null ? reward.getCurrencyType().getId() : null)
                 .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getName() : null)
                 .currencyAmount(reward.getCurrencyAmount())
+                .xpAmount(reward.getXpAmount())
                 .build();
     }
 

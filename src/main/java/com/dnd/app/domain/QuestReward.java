@@ -36,4 +36,7 @@ public class QuestReward {
 
     @Column(name = "currency_amount", precision = 15, scale = 2)
     private java.math.BigDecimal currencyAmount;
+
+    @Column(name = "xp_amount")
+    private Integer xpAmount;
 }

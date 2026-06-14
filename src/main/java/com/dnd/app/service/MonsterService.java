@@ -92,6 +92,21 @@ public class MonsterService {
         return toResponse(monster);
     }
 
+    /**
+     * Loads a monster the GM may field in a battle within {@code campaignId}: a system monster,
+     * a monster of this very campaign, or a homebrew monster whose package is installed in the
+     * campaign. Applies the same scope rules as cloning a monster into a campaign and returns
+     * the entity (callers need raw CR / XP / DEX values).
+     */
+    @Transactional(readOnly = true)
+    public Monster getUsableCampaignMonster(UUID campaignId, UUID monsterId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        Monster monster = findMonster(monsterId);
+        enforceCanUseAsCampaignSource(monster, campaign, user);
+        return monster;
+    }
+
     // ============================= ADMIN system CRUD =============================
 
     @Transactional
