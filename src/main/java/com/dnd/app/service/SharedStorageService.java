@@ -96,7 +96,9 @@ public class SharedStorageService {
                 || !instance.getOwnerCharacter().getCampaign().getId().equals(storage.getCampaign().getId())) {
             throw new BadRequestException("Item's owner character is not in the same campaign as this storage");
         }
-        if (user.getRole() != Role.ADMIN
+        boolean privileged = user.getRole() == Role.ADMIN
+                || campaignService.isGmInCampaign(storage.getCampaign().getId(), user.getId());
+        if (!privileged
                 && !instance.getOwnerCharacter().getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not own the character that has this item");
         }
@@ -185,7 +187,9 @@ public class SharedStorageService {
             throw new BadRequestException("Target character is not in the same campaign as this storage");
         }
 
-        if (user.getRole() != Role.ADMIN
+        boolean privileged = user.getRole() == Role.ADMIN
+                || campaignService.isGmInCampaign(storage.getCampaign().getId(), user.getId());
+        if (!privileged
                 && !character.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not own this character");
         }
