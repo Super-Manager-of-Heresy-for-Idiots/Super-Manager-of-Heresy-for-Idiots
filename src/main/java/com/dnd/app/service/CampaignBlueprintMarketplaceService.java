@@ -58,9 +58,21 @@ public class CampaignBlueprintMarketplaceService {
         // Any authenticated user (incl. PLAYER) may browse the blueprint marketplace.
         blueprintService.getUser(username);
         Pageable pageable = buildPageable(sort, page, size);
-        String s = (search == null || search.isBlank()) ? null : search;
-        String u = (universeSlug == null || universeSlug.isBlank()) ? null : universeSlug;
-        return blueprintRepository.findMarketplace(s, u, pageable).map(blueprintService::toResponse);
+        String s = (search == null || search.isBlank()) ? null : search.trim();
+        String u = (universeSlug == null || universeSlug.isBlank()) ? null : universeSlug.trim();
+
+        Page<CampaignBlueprint> blueprints;
+        if (s != null && u != null) {
+            blueprints = blueprintRepository.findMarketplaceBySearchAndUniverseSlug(s, u, pageable);
+        } else if (s != null) {
+            blueprints = blueprintRepository.findMarketplaceBySearch(s, pageable);
+        } else if (u != null) {
+            blueprints = blueprintRepository.findMarketplaceByUniverseSlug(u, pageable);
+        } else {
+            blueprints = blueprintRepository.findMarketplace(pageable);
+        }
+
+        return blueprints.map(blueprintService::toResponse);
     }
 
     @Transactional(readOnly = true)

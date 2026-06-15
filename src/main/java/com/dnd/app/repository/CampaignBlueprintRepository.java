@@ -19,11 +19,25 @@ public interface CampaignBlueprintRepository extends JpaRepository<CampaignBluep
     @Query("SELECT b FROM CampaignBlueprint b WHERE b.id = :id AND b.status = 'PUBLISHED' AND b.deletedAt IS NULL")
     Optional<CampaignBlueprint> findPublishedById(@Param("id") UUID id);
 
+    @Query("SELECT b FROM CampaignBlueprint b WHERE b.status = 'PUBLISHED' AND b.deletedAt IS NULL")
+    Page<CampaignBlueprint> findMarketplace(Pageable pageable);
+
     @Query("SELECT b FROM CampaignBlueprint b WHERE b.status = 'PUBLISHED' AND b.deletedAt IS NULL " +
-            "AND (:search IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(b.loreDescription) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-            "AND (:universeSlug IS NULL OR b.universe.slug = :universeSlug)")
-    Page<CampaignBlueprint> findMarketplace(@Param("search") String search,
-                                            @Param("universeSlug") String universeSlug,
-                                            Pageable pageable);
+            "AND b.universe.slug = :universeSlug")
+    Page<CampaignBlueprint> findMarketplaceByUniverseSlug(@Param("universeSlug") String universeSlug,
+                                                          Pageable pageable);
+
+    @Query("SELECT b FROM CampaignBlueprint b WHERE b.status = 'PUBLISHED' AND b.deletedAt IS NULL " +
+            "AND (LOWER(b.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(b.loreDescription) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<CampaignBlueprint> findMarketplaceBySearch(@Param("search") String search,
+                                                    Pageable pageable);
+
+    @Query("SELECT b FROM CampaignBlueprint b WHERE b.status = 'PUBLISHED' AND b.deletedAt IS NULL " +
+            "AND b.universe.slug = :universeSlug " +
+            "AND (LOWER(b.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(b.loreDescription) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<CampaignBlueprint> findMarketplaceBySearchAndUniverseSlug(@Param("search") String search,
+                                                                   @Param("universeSlug") String universeSlug,
+                                                                   Pageable pageable);
 }
