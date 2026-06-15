@@ -23,6 +23,8 @@ public interface ItemInstanceRepository extends JpaRepository<ItemInstance, UUID
 
     Optional<ItemInstance> findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(UUID characterId, UUID templateId);
 
+    Optional<ItemInstance> findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(UUID storageId, UUID templateId);
+
     Optional<ItemInstance> findByOwnerCharacterIdAndSlot(UUID characterId, EquipmentSlot slot);
 
     /**

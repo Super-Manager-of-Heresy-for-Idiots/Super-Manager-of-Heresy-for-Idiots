@@ -303,6 +303,30 @@ public class BattleService {
         return toResponse(battle, after);
     }
 
+    /**
+     * The fixed part of a character's initiative — Dexterity modifier plus the net of active
+     * Dexterity buffs/debuffs — so the client can preview the final initiative live as the
+     * player enters or rolls a d20 ({@code initiative = d20 + bonus}). Same math the join uses.
+     */
+    @Transactional(readOnly = true)
+    public int getCharacterInitiativeBonus(UUID campaignId, UUID battleId, UUID characterId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        findBattle(battleId, campaignId);
+
+        PlayerCharacter character = characterRepository.findById(characterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new BadRequestException("Character does not belong to this campaign");
+        }
+        boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
+        if (!gm && !character.getOwner().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You can only preview your own characters");
+        }
+        return CombatCalculator.abilityModifier(dexValue(character)) + dexBuffBonus(character);
+    }
+
     // ============================== Turn passing ===============================
 
     @Transactional

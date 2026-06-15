@@ -128,6 +128,18 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    @GetMapping("/{battleId}/characters/{characterId}/initiative-bonus")
+    @Operation(summary = "Preview a character's initiative bonus (DEX mod + buffs) so the UI can show d20 + bonus live")
+    public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> getInitiativeBonus(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID characterId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            int bonus = battleService.getCharacterInitiativeBonus(campaignId, battleId, characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(bonus));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/{battleId}/end-turn")
     @Operation(summary = "Pass the turn to the next combatant (GM or the active character's owner)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> endTurn(
