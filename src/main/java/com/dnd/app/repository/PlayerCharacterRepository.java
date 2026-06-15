@@ -32,6 +32,10 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
 
     List<PlayerCharacter> findByOwnerIdAndCampaignIsNull(UUID ownerId);
 
+    List<PlayerCharacter> findByBlueprintId(UUID blueprintId);
+
+    List<PlayerCharacter> findByBlueprintIdAndOwnerId(UUID blueprintId, UUID ownerId);
+
     /**
      * Pessimistic write lock on a character row. Use within @Transactional for
      * mutations that must serialize (XP, level-up, HP changes) to prevent

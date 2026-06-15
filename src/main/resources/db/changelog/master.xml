@@ -54,5 +54,9 @@
     <include file="db/changelog/047-npc-build-and-source.xml"/>
     <include file="db/changelog/048-add-quest-reward-xp.xml"/>
     <include file="db/changelog/049-create-combat-model.xml"/>
+    <include file="db/changelog/050-create-universes.xml"/>
+    <include file="db/changelog/051-create-campaign-blueprints.xml"/>
+    <include file="db/changelog/052-create-blueprint-content.xml"/>
+    <include file="db/changelog/053-add-blueprint-id-to-characters.xml"/>
 
 </databaseChangeLog>

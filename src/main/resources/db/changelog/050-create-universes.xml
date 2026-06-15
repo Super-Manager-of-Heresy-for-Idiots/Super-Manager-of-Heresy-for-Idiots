@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="050-create-universes" author="dnd-app">
+        <createTable tableName="universes">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="slug" type="varchar(60)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_universe_slug"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="created_by" type="uuid">
+                <constraints foreignKeyName="fk_universe_created_by" references="users(id)"/>
+            </column>
+            <column name="is_system" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="050-seed-system-universes" author="dnd-app">
+        <insert tableName="universes">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="slug" value="vanilla"/>
+            <column name="name" value="Ванильная вселенная"/>
+            <column name="description" value="Базовый набор правил без homebrew-контента."/>
+            <column name="is_system" valueBoolean="true"/>
+        </insert>
+        <insert tableName="universes">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="slug" value="vanilla-modded"/>
+            <column name="name" value="Ванильная вселенная с модами"/>
+            <column name="description" value="Базовые правила с возможностью подключать homebrew-контент."/>
+            <column name="is_system" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

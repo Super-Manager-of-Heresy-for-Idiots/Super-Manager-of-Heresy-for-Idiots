@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Pre-built characters for a blueprint. Invariant (enforced in service):
+         a character cannot have both blueprint_id and campaign_id set. -->
+    <changeSet id="053-add-blueprint-id-to-characters" author="dnd-app">
+        <addColumn tableName="characters">
+            <column name="blueprint_id" type="uuid">
+                <constraints foreignKeyName="fk_character_blueprint" references="campaign_blueprints(id)"/>
+            </column>
+        </addColumn>
+
+        <createIndex tableName="characters" indexName="idx_characters_blueprint_id">
+            <column name="blueprint_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

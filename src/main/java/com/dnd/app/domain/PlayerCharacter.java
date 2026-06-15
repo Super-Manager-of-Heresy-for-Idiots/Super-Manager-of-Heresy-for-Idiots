@@ -69,6 +69,12 @@ public class PlayerCharacter {
     @JoinColumn(name = "campaign_id")
     private Campaign campaign;
 
+    // Set when this character is a pre-built template attached to a blueprint.
+    // Invariant (enforced in service): blueprint and campaign cannot both be set.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "blueprint_id")
+    private CampaignBlueprint blueprint;
+
     @OneToMany(mappedBy = "character", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     @Builder.Default
     private List<CharacterClassLevel> classLevels = new ArrayList<>();
