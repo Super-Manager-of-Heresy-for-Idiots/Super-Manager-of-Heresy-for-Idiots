@@ -1,0 +1,162 @@
+[
+  {
+    "spell_level": 0,
+    "time_days": 1,
+    "cost": {
+      "raw": "15 ЗМ",
+      "amount": 15.0,
+      "currency_slug": "gp",
+      "copper_value": 1500.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "Заговор",
+      "Время": "1 день",
+      "Стоимость": "15 ЗМ"
+    }
+  },
+  {
+    "spell_level": 1,
+    "time_days": 1,
+    "cost": {
+      "raw": "25 ЗМ",
+      "amount": 25.0,
+      "currency_slug": "gp",
+      "copper_value": 2500.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "1",
+      "Время": "1 день",
+      "Стоимость": "25 ЗМ"
+    }
+  },
+  {
+    "spell_level": 2,
+    "time_days": 3,
+    "cost": {
+      "raw": "100 ЗМ",
+      "amount": 100.0,
+      "currency_slug": "gp",
+      "copper_value": 10000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "2",
+      "Время": "3 дня",
+      "Стоимость": "100 ЗМ"
+    }
+  },
+  {
+    "spell_level": 3,
+    "time_days": 5,
+    "cost": {
+      "raw": "150 ЗМ",
+      "amount": 150.0,
+      "currency_slug": "gp",
+      "copper_value": 15000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "3",
+      "Время": "5 дней",
+      "Стоимость": "150 ЗМ"
+    }
+  },
+  {
+    "spell_level": 4,
+    "time_days": 10,
+    "cost": {
+      "raw": "1000 ЗМ",
+      "amount": 1000.0,
+      "currency_slug": "gp",
+      "copper_value": 100000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "4",
+      "Время": "10 дней",
+      "Стоимость": "1000 ЗМ"
+    }
+  },
+  {
+    "spell_level": 5,
+    "time_days": 25,
+    "cost": {
+      "raw": "1500 ЗМ",
+      "amount": 1500.0,
+      "currency_slug": "gp",
+      "copper_value": 150000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "5",
+      "Время": "25 дней",
+      "Стоимость": "1500 ЗМ"
+    }
+  },
+  {
+    "spell_level": 6,
+    "time_days": 40,
+    "cost": {
+      "raw": "10 000 ЗМ",
+      "amount": 10000.0,
+      "currency_slug": "gp",
+      "copper_value": 1000000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "6",
+      "Время": "40 дней",
+      "Стоимость": "10 000 ЗМ"
+    }
+  },
+  {
+    "spell_level": 7,
+    "time_days": 50,
+    "cost": {
+      "raw": "12 500 ЗМ",
+      "amount": 12500.0,
+      "currency_slug": "gp",
+      "copper_value": 1250000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "7",
+      "Время": "50 дней",
+      "Стоимость": "12 500 ЗМ"
+    }
+  },
+  {
+    "spell_level": 8,
+    "time_days": 60,
+    "cost": {
+      "raw": "15 000 ЗМ",
+      "amount": 15000.0,
+      "currency_slug": "gp",
+      "copper_value": 1500000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "8",
+      "Время": "60 дней",
+      "Стоимость": "15 000 ЗМ"
+    }
+  },
+  {
+    "spell_level": 9,
+    "time_days": 120,
+    "cost": {
+      "raw": "50 000 ЗМ",
+      "amount": 50000.0,
+      "currency_slug": "gp",
+      "copper_value": 5000000.0,
+      "parse_status": "ok"
+    },
+    "raw": {
+      "Уровень заклинания": "9",
+      "Время": "120 дней",
+      "Стоимость": "50 000 ЗМ"
+    }
+  }
+]

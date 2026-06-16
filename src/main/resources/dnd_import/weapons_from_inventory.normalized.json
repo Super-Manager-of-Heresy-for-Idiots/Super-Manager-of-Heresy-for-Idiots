@@ -1,0 +1,1138 @@
+[
+  {
+    "name_ru": "Боевой посох",
+    "slug": "quarterstaff",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Дробящий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Универсальное ( 1к8 )",
+    "mastery_slug": "oprokidyvayuschee",
+    "mastery_ru": "Опрокидывающее",
+    "weight": {
+      "raw": "4 фнт.",
+      "pounds": 4.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "2 СМ",
+      "amount": 2.0,
+      "currency_slug": "sp",
+      "copper_value": 20.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Булава",
+    "slug": "mace",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Дробящий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "—",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "4 фнт.",
+      "pounds": 4.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Дубинка",
+    "slug": "club",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к4 Дробящий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "1 СМ",
+      "amount": 1.0,
+      "currency_slug": "sp",
+      "copper_value": 10.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кинжал",
+    "slug": "dagger",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к4 Колющий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое, Метательное ( дист. 20/60), Фехтовальное",
+    "mastery_slug": "bystroe",
+    "mastery_ru": "Быстрое",
+    "weight": {
+      "raw": "1 фнт.",
+      "pounds": 1.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "2 ЗМ",
+      "amount": 2.0,
+      "currency_slug": "gp",
+      "copper_value": 200.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Копьё",
+    "slug": "spear",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Колющий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Метательное ( дист . 20/60), Универсальное ( 1к8 )",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "1 ЗМ",
+      "amount": 1.0,
+      "currency_slug": "gp",
+      "copper_value": 100.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Лёгкий молот",
+    "slug": "light-hammer",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к4 Дробящий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое, Метательное ( дист . 20/60)",
+    "mastery_slug": "bystroe",
+    "mastery_ru": "Быстрое",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "2 ЗМ",
+      "amount": 2.0,
+      "currency_slug": "gp",
+      "copper_value": 200.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Метательное копьё",
+    "slug": "javelin",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Колющий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Метательное ( дист . 30/120)",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 СМ",
+      "amount": 5.0,
+      "currency_slug": "sp",
+      "copper_value": 50.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Одноручный топор",
+    "slug": "handaxe",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Рубящий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое, Метательное ( дист . 20/60)",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Палица",
+    "slug": "greatclub",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Дробящий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное",
+    "mastery_slug": "ottalkivayuschee",
+    "mastery_ru": "Отталкивающее",
+    "weight": {
+      "raw": "10 фнт.",
+      "pounds": 10.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "2 СМ",
+      "amount": 2.0,
+      "currency_slug": "sp",
+      "copper_value": 20.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Серп",
+    "slug": "sickle",
+    "group_ru": "Простое Рукопашное оружие",
+    "damage": {
+      "raw": "1к4 Рубящий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое",
+    "mastery_slug": "bystroe",
+    "mastery_ru": "Быстрое",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "1 ЗМ",
+      "amount": 1.0,
+      "currency_slug": "gp",
+      "copper_value": 100.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Дротик",
+    "slug": "dart",
+    "group_ru": "Простое Дальнобойное оружие",
+    "damage": {
+      "raw": "1к4 Колющий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Метательное ( дист . 20/60), Фехтовальное",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "1/4 фнт.",
+      "pounds": 0.25,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ММ",
+      "amount": 5.0,
+      "currency_slug": "cp",
+      "copper_value": 5.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Короткий лук",
+    "slug": "shortbow",
+    "group_ru": "Простое Дальнобойное оружие",
+    "damage": {
+      "raw": "1к6 Колющий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 80/320; Стрелы ), Двуручное",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "25 ЗМ",
+      "amount": 25.0,
+      "currency_slug": "gp",
+      "copper_value": 2500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Лёгкий арбалет",
+    "slug": "light-crossbow",
+    "group_ru": "Простое Дальнобойное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 80/320; Болты ), Двуручное, Перезарядка",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "5 фнт.",
+      "pounds": 5.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "25 ЗМ",
+      "amount": 25.0,
+      "currency_slug": "gp",
+      "copper_value": 2500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Праща",
+    "slug": "sling",
+    "group_ru": "Простое Дальнобойное оружие",
+    "damage": {
+      "raw": "1к4 Дробящий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 30/120; Снаряды для пращи )",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": null,
+    "cost": {
+      "raw": "1 СМ",
+      "amount": 1.0,
+      "currency_slug": "sp",
+      "copper_value": 10.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Алебарда",
+    "slug": "halberd",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к10 Рубящий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Досягаемость, Тяжёлое",
+    "mastery_slug": "prorubayuschee",
+    "mastery_ru": "Прорубающее",
+    "weight": {
+      "raw": "6 фнт.",
+      "pounds": 6.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "20 ЗМ",
+      "amount": 20.0,
+      "currency_slug": "gp",
+      "copper_value": 2000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Боевой молот",
+    "slug": "warhammer",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Дробящий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Универсальное ( 1к10 )",
+    "mastery_slug": "ottalkivayuschee",
+    "mastery_ru": "Отталкивающее",
+    "weight": {
+      "raw": "5 фнт.",
+      "pounds": 5.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "15 ЗМ",
+      "amount": 15.0,
+      "currency_slug": "gp",
+      "copper_value": 1500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Боевой топор",
+    "slug": "battleaxe",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Рубящий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Универсальное ( 1к10 )",
+    "mastery_slug": "oprokidyvayuschee",
+    "mastery_ru": "Опрокидывающее",
+    "weight": {
+      "raw": "4 фнт.",
+      "pounds": 4.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Глефа",
+    "slug": "glaive",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к10 Рубящий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Досягаемость, Тяжёлое",
+    "mastery_slug": "sekuschee",
+    "mastery_ru": "Секущее",
+    "weight": {
+      "raw": "6 фнт.",
+      "pounds": 6.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "20 ЗМ",
+      "amount": 20.0,
+      "currency_slug": "gp",
+      "copper_value": 2000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Двуручный меч",
+    "slug": "greatsword",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "2к6 Рубящий",
+      "dice_count": 2,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Тяжёлое",
+    "mastery_slug": "sekuschee",
+    "mastery_ru": "Секущее",
+    "weight": {
+      "raw": "6 фнт.",
+      "pounds": 6.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "50 ЗМ",
+      "amount": 50.0,
+      "currency_slug": "gp",
+      "copper_value": 5000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Длинный меч",
+    "slug": "longsword",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Рубящий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Универсальное ( 1к10 )",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "15 ЗМ",
+      "amount": 15.0,
+      "currency_slug": "gp",
+      "copper_value": 1500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кавалерийское копьё",
+    "slug": "lance",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к10 Колющий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Досягаемость, Тяжёлое",
+    "mastery_slug": "oprokidyvayuschee",
+    "mastery_ru": "Опрокидывающее",
+    "weight": {
+      "raw": "6 фнт.",
+      "pounds": 6.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Клевец",
+    "slug": "war-pick",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Универсальное ( 1к10 )",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кнут",
+    "slug": "whip",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к4 Рубящий",
+      "dice_count": 1,
+      "die_size": 4,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Досягаемость, Фехтовальное",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "2 ЗМ",
+      "amount": 2.0,
+      "currency_slug": "gp",
+      "copper_value": 200.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Короткий меч",
+    "slug": "shortsword",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Колющий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое, Фехтовальное",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Молот",
+    "slug": "maul",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "2к6 Дробящий",
+      "dice_count": 2,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Тяжёлое",
+    "mastery_slug": "oprokidyvayuschee",
+    "mastery_ru": "Опрокидывающее",
+    "weight": {
+      "raw": "10 фнт.",
+      "pounds": 10.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Моргенштерн",
+    "slug": "morningstar",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "—",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "4 фнт.",
+      "pounds": 4.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "15 ЗМ",
+      "amount": 15.0,
+      "currency_slug": "gp",
+      "copper_value": 1500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Пика",
+    "slug": "pike",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к10 Колющий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Досягаемость, Тяжёлое",
+    "mastery_slug": "ottalkivayuschee",
+    "mastery_ru": "Отталкивающее",
+    "weight": {
+      "raw": "18 фнт.",
+      "pounds": 18.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Рапира",
+    "slug": "rapier",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Фехтовальное",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "25 ЗМ",
+      "amount": 25.0,
+      "currency_slug": "gp",
+      "copper_value": 2500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Секира",
+    "slug": "greataxe",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к12 Рубящий",
+      "dice_count": 1,
+      "die_size": 12,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Двуручное, Тяжёлое",
+    "mastery_slug": "prorubayuschee",
+    "mastery_ru": "Прорубающее",
+    "weight": {
+      "raw": "7 фнт.",
+      "pounds": 7.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "30 ЗМ",
+      "amount": 30.0,
+      "currency_slug": "gp",
+      "copper_value": 3000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Скимитар",
+    "slug": "scimitar",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к6 Рубящий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "slashing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Лёгкое, Фехтовальное",
+    "mastery_slug": "bystroe",
+    "mastery_ru": "Быстрое",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "25 ЗМ",
+      "amount": 25.0,
+      "currency_slug": "gp",
+      "copper_value": 2500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Трезубец",
+    "slug": "trident",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Метательное ( дист . 20/60), Универсальное ( 1к10 )",
+    "mastery_slug": "oprokidyvayuschee",
+    "mastery_ru": "Опрокидывающее",
+    "weight": {
+      "raw": "4 фнт.",
+      "pounds": 4.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Цеп",
+    "slug": "flail",
+    "group_ru": "Воинское Рукопашное оружие",
+    "damage": {
+      "raw": "1к8 Дробящий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "bludgeoning",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "—",
+    "mastery_slug": "oslablyayuschee",
+    "mastery_ru": "Ослабляющее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Длинный лук",
+    "slug": "longbow",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1к8 Колющий",
+      "dice_count": 1,
+      "die_size": 8,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 150/600; Стрелы ), Двуручное, Тяжёлое",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "2 фнт.",
+      "pounds": 2.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "50 ЗМ",
+      "amount": 50.0,
+      "currency_slug": "gp",
+      "copper_value": 5000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Духовая трубка",
+    "slug": "blowgun",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1 Колющий",
+      "dice_count": null,
+      "die_size": null,
+      "bonus": null,
+      "flat_damage": 1,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok_flat"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 25/100; Иглы ), Перезарядка",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "1 фнт.",
+      "pounds": 1.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Мушкет",
+    "slug": "musket",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1к12 Колющий",
+      "dice_count": 1,
+      "die_size": 12,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 40/120; Пули ), Двуручное, Перезарядка",
+    "mastery_slug": "zamedlyayuschee",
+    "mastery_ru": "Замедляющее",
+    "weight": {
+      "raw": "10 фнт.",
+      "pounds": 10.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "500 ЗМ",
+      "amount": 500.0,
+      "currency_slug": "gp",
+      "copper_value": 50000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Одноручный арбалет",
+    "slug": "hand-crossbow",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1к6 Колющий",
+      "dice_count": 1,
+      "die_size": 6,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 30/120; Болты ), Лёгкое, Перезарядка",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "75 ЗМ",
+      "amount": 75.0,
+      "currency_slug": "gp",
+      "copper_value": 7500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Пистоль",
+    "slug": "pistol",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1к10 Колющий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 30/90; Пули ), Перезарядка",
+    "mastery_slug": "otvlekayuschee",
+    "mastery_ru": "Отвлекающее",
+    "weight": {
+      "raw": "3 фнт.",
+      "pounds": 3.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "250 ЗМ",
+      "amount": 250.0,
+      "currency_slug": "gp",
+      "copper_value": 25000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Тяжёлый арбалет",
+    "slug": "heavy-crossbow",
+    "group_ru": "Воинское Дальнобойное оружие",
+    "damage": {
+      "raw": "1к10 Колющий",
+      "dice_count": 1,
+      "die_size": 10,
+      "bonus": null,
+      "flat_damage": null,
+      "damage_type_slug": "piercing",
+      "parse_status": "ok"
+    },
+    "short_properties_raw": "Боеприпас ( дист . 100/400; Болты ), Двуручное, Перезарядка, Тяжёлое",
+    "mastery_slug": "ottalkivayuschee",
+    "mastery_ru": "Отталкивающее",
+    "weight": {
+      "raw": "18 фнт.",
+      "pounds": 18.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "50 ЗМ",
+      "amount": 50.0,
+      "currency_slug": "gp",
+      "copper_value": 5000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  }
+]
