@@ -9,14 +9,12 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.exception.UnprocessableEntityException;
-import com.dnd.app.config.CacheConfig;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +41,6 @@ public class AdminService {
     private final BackgroundRepository backgroundRepository;
     private final SpellRepository spellRepository;
     private final ProficiencySkillRepository proficiencySkillRepository;
-    private final CharacterStatRepository characterStatRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
     private final RewardResolverRegistry rewardResolverRegistry;
@@ -57,61 +54,10 @@ public class AdminService {
         return statTypeRepository.findAll().stream().map(refMapper::toStatTypeResponse).toList();
     }
 
-    @Transactional
-    public StatTypeResponse createStatType(CreateStatTypeRequest request) {
-        if (statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
-        }
-        StatType st = StatType.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .isDefault(false)
-                .build();
-        StatType saved = statTypeRepository.save(st);
-        log.info("Admin: stat type created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toStatTypeResponse(saved);
-    }
-
     @Transactional(readOnly = true)
     public StatTypeResponse getStatType(UUID id) {
         return refMapper.toStatTypeResponse(statTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена")));
-    }
-
-    @Transactional
-    public StatTypeResponse updateStatType(UUID id, CreateStatTypeRequest request) {
-        StatType st = statTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
-        if (!st.getName().equals(request.getName()) && statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
-        }
-        st.setName(request.getName());
-        st.setDescription(request.getDescription());
-        return refMapper.toStatTypeResponse(statTypeRepository.save(st));
-    }
-
-    // Soft delete only: the stat type is flagged deleted (and disappears from creation
-    // pickers), while every row that references it is flagged deprecated so the UI can
-    // surface it. Hard delete is performed exclusively through the DBMS.
-    @CacheEvict(cacheNames = CacheConfig.VANILLA_STAT_TYPES, allEntries = true)
-    @Transactional
-    public void deleteStatType(UUID id) {
-        StatType st = statTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
-        if (Boolean.TRUE.equals(st.getDeleted())) {
-            return;
-        }
-
-        st.setDeleted(true);
-        statTypeRepository.save(st);
-
-        int statRefs = characterStatRepository.markDeprecatedByStatTypeId(id);
-        int skillRefs = proficiencySkillRepository.markDeprecatedByGoverningStatId(id);
-        int classRefs = classRepository.markDeprecatedByStatTypeId(id);
-        int buffRefs = buffDebuffRepository.markDeprecatedByTargetStatId(id);
-
-        log.info("Admin: stat type soft-deleted — id={}, deprecated characterStats={}, skills={}, classes={}, buffs={}",
-                id, statRefs, skillRefs, classRefs, buffRefs);
     }
 
     // --- Item Types ---
@@ -409,16 +355,16 @@ public class AdminService {
 
     @Transactional
     public FeatResponse createFeat(CreateFeatRequest request) {
-        if (featRepository.existsByName(request.getName())) {
+        if (featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
         Feat feat = Feat.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .prerequisites(request.getPrerequisites())
                 .build();
         Feat saved = featRepository.save(feat);
-        log.info("Admin: feat created — name='{}', id={}", saved.getName(), saved.getId());
+        log.info("Admin: feat created — name='{}', id={}", saved.getNameRu(), saved.getId());
         return toFeatResponse(saved);
     }
 
@@ -432,12 +378,11 @@ public class AdminService {
     public FeatResponse updateFeat(UUID id, CreateFeatRequest request) {
         Feat feat = featRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена"));
-        if (!feat.getName().equals(request.getName()) && featRepository.existsByName(request.getName())) {
+        if (!feat.getNameRu().equals(request.getName()) && featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
-        feat.setName(request.getName());
+        feat.setNameRu(request.getName());
         feat.setDescription(request.getDescription());
-        feat.setPrerequisites(request.getPrerequisites());
         return toFeatResponse(featRepository.save(feat));
     }
 
@@ -632,7 +577,7 @@ public class AdminService {
                 .id(bd.getId()).name(bd.getName()).description(bd.getDescription())
                 .effectType(bd.getEffectType())
                 .targetStatId(bd.getTargetStat() != null ? bd.getTargetStat().getId() : null)
-                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getName() : null)
+                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getNameRu() : null)
                 .modifierValue(bd.getModifierValue())
                 .durationRounds(bd.getDurationRounds())
                 .isBuff(bd.getIsBuff())
@@ -656,8 +601,7 @@ public class AdminService {
 
     private FeatResponse toFeatResponse(Feat f) {
         return FeatResponse.builder()
-                .id(f.getId()).name(f.getName()).description(f.getDescription())
-                .prerequisites(f.getPrerequisites()).createdAt(f.getCreatedAt()).updatedAt(f.getUpdatedAt())
+                .id(f.getId()).name(f.getNameRu()).description(f.getDescription())
                 .build();
     }
 
@@ -670,17 +614,16 @@ public class AdminService {
 
     @Transactional
     public BackgroundResponse createBackground(CreateBackgroundRequest request) {
-        if (backgroundRepository.existsByName(request.getName())) {
+        if (backgroundRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Background with this name already exists");
         }
         Background bg = Background.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .skillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()))
-                .grantedExtras(request.getGrantedExtras())
                 .build();
         bg = backgroundRepository.save(bg);
-        log.info("Admin: background created — name='{}', id={}", bg.getName(), bg.getId());
+        log.info("Admin: background created — name='{}', id={}", bg.getNameRu(), bg.getId());
         return toBackgroundResponse(bg);
     }
 
@@ -695,10 +638,8 @@ public class AdminService {
     public BackgroundResponse updateBackground(UUID id, CreateBackgroundRequest request) {
         Background bg = backgroundRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
-        bg.setName(request.getName());
+        bg.setNameRu(request.getName());
         bg.setDescription(request.getDescription());
-        bg.setSkillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()));
-        bg.setGrantedExtras(request.getGrantedExtras());
         bg = backgroundRepository.save(bg);
         return toBackgroundResponse(bg);
     }
@@ -722,14 +663,13 @@ public class AdminService {
     @Transactional
     public SpellResponse createSpell(CreateSpellRequest request) {
         Spell spell = Spell.builder()
-                .name(request.getName())
+                .slug(java.util.UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .level(request.getLevel())
-                .school(request.getSchool())
                 .description(request.getDescription())
-                .availableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()))
                 .build();
         spell = spellRepository.save(spell);
-        log.info("Admin: spell created — name='{}', id={}", spell.getName(), spell.getId());
+        log.info("Admin: spell created — name='{}', id={}", spell.getNameRu(), spell.getId());
         return toSpellResponse(spell);
     }
 
@@ -744,11 +684,9 @@ public class AdminService {
     public SpellResponse updateSpell(UUID id, CreateSpellRequest request) {
         Spell spell = spellRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Spell not found"));
-        spell.setName(request.getName());
+        spell.setNameRu(request.getName());
         spell.setLevel(request.getLevel());
-        spell.setSchool(request.getSchool());
         spell.setDescription(request.getDescription());
-        spell.setAvailableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()));
         spell = spellRepository.save(spell);
         return toSpellResponse(spell);
     }
@@ -771,7 +709,7 @@ public class AdminService {
                         .id(ps.getId())
                         .name(ps.getName())
                         .governingStatId(ps.getGoverningStat().getId())
-                        .governingStatName(ps.getGoverningStat().getName())
+                        .governingStatName(ps.getGoverningStat().getNameRu())
                         .build())
                 .toList();
     }
@@ -790,7 +728,7 @@ public class AdminService {
                 .id(ps.getId())
                 .name(ps.getName())
                 .governingStatId(stat.getId())
-                .governingStatName(stat.getName())
+                .governingStatName(stat.getNameRu())
                 .build();
     }
 
@@ -806,38 +744,22 @@ public class AdminService {
     // --- Response helpers ---
 
     private BackgroundResponse toBackgroundResponse(Background bg) {
-        List<String> skillNames = new ArrayList<>();
-        if (bg.getSkillProficiencyIdsJson() != null) {
-            try {
-                skillNames = objectMapper.readValue(bg.getSkillProficiencyIdsJson(),
-                        new com.fasterxml.jackson.core.type.TypeReference<>() {});
-            } catch (Exception ignored) {}
-        }
         return BackgroundResponse.builder()
                 .id(bg.getId())
-                .name(bg.getName())
+                .name(bg.getNameRu())
                 .description(bg.getDescription())
-                .skillProficiencyNames(skillNames)
-                .grantedExtras(bg.getGrantedExtras())
+                .skillProficiencyNames(List.of())
                 .build();
     }
 
     private SpellResponse toSpellResponse(Spell s) {
-        List<java.util.UUID> classIds = new ArrayList<>();
-        if (s.getAvailableToClassIdsJson() != null) {
-            try {
-                var ids = objectMapper.readValue(s.getAvailableToClassIdsJson(),
-                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
-                classIds = ids.stream().map(java.util.UUID::fromString).toList();
-            } catch (Exception ignored) {}
-        }
         return SpellResponse.builder()
                 .id(s.getId())
-                .name(s.getName())
+                .name(s.getNameRu())
                 .level(s.getLevel())
-                .school(s.getSchool())
+                .school(s.getSchool() == null ? null : s.getSchool().getNameRu())
                 .description(s.getDescription())
-                .availableToClassIds(classIds)
+                .availableToClassIds(List.of())
                 .build();
     }
 

@@ -231,7 +231,7 @@ public class NpcService {
 
         List<NpcResponse.Ref> spellRefs = npc.getSpells().isEmpty() ? null
                 : npc.getSpells().stream()
-                        .map(s -> ref(s.getId(), displayName(s.getNameRusloc(), s.getName())))
+                        .map(s -> ref(s.getId(), s.getNameRu()))
                         .toList();
 
         return NpcResponse.builder()

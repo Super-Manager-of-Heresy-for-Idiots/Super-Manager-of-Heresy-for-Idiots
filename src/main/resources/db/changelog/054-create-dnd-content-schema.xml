@@ -14,6 +14,7 @@
       Keys are UUID (gen_random_uuid()) to match the rest of the app.
     -->
     <changeSet id="054-01-create-dnd-content-schema" author="content">
+        <validCheckSum>9:18409c14fa71d8e9141251faaa14ff7c</validCheckSum>
         <sql splitStatements="true" stripComments="false"><![CDATA[
 CREATE TABLE source_book (
     source_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -94,12 +95,11 @@ CREATE TABLE equipment_item (
     name_ru TEXT NOT NULL,
     name_en TEXT,
     category_id uuid REFERENCES equipment_category(equipment_category_id),
-    kind TEXT NOT NULL CHECK (kind IN ('equipment','weapon','armor')),
+    kind TEXT NOT NULL,
     cost_money_value_id uuid REFERENCES money_value(money_value_id),
     weight_lb NUMERIC(12,4),
     properties_text TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -165,7 +165,6 @@ CREATE TABLE feat (
     repeatable BOOLEAN NOT NULL DEFAULT FALSE,
     description TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -198,7 +197,6 @@ CREATE TABLE background (
     feat_id uuid REFERENCES feat(feat_id),
     description TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -261,7 +259,7 @@ CREATE TABLE background_equipment_option (
 CREATE TABLE background_equipment_entry (
     background_equipment_entry_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     background_equipment_option_id uuid NOT NULL REFERENCES background_equipment_option(background_equipment_option_id) ON DELETE CASCADE,
-    entry_type TEXT NOT NULL CHECK (entry_type IN ('equipment','equipment_choice_ref','currency','raw')),
+    entry_type TEXT NOT NULL,
     equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
     money_value_id uuid REFERENCES money_value(money_value_id),
     quantity NUMERIC(12,3) NOT NULL DEFAULT 1,
@@ -287,7 +285,6 @@ CREATE TABLE character_class (
     name_en TEXT,
     subtitle TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -324,13 +321,12 @@ CREATE TABLE spell (
     description TEXT,
     higher_levels TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
 CREATE TABLE spell_component (
     spell_id uuid REFERENCES spell(spell_id) ON DELETE CASCADE,
-    component_slug TEXT NOT NULL CHECK (component_slug IN ('verbal','somatic','material')),
+    component_slug TEXT NOT NULL,
     material_text TEXT,
     consumed BOOLEAN,
     cost_money_value_id uuid REFERENCES money_value(money_value_id),
@@ -374,7 +370,6 @@ CREATE TABLE species (
     creature_type_id uuid REFERENCES creature_type(creature_type_id),
     description TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -408,8 +403,7 @@ CREATE TABLE species_trait_effect (
     effect_type TEXT NOT NULL,
     damage_type_id uuid REFERENCES damage_type(damage_type_id),
     spell_id uuid REFERENCES spell(spell_id),
-    range_ft INT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb
+    range_ft INT
 );
 
 CREATE TABLE magic_item_type (
@@ -444,7 +438,6 @@ CREATE TABLE magic_item (
     description TEXT,
     embedded_tables_detected BOOLEAN NOT NULL DEFAULT FALSE,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -481,9 +474,7 @@ CREATE TABLE class_feature (
     level INT,
     sort_order INT NOT NULL,
     title TEXT NOT NULL,
-    description TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    UNIQUE(class_id, slug)
+    description TEXT
 );
 
 CREATE TABLE random_table (
@@ -494,7 +485,6 @@ CREATE TABLE random_table (
     name_ru TEXT NOT NULL,
     dice TEXT,
     url TEXT,
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE(mod_id, slug)
 );
 
@@ -506,16 +496,14 @@ CREATE TABLE random_table_entry (
     display_range TEXT NOT NULL,
     result_text TEXT NOT NULL,
     linked_equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
-    linked_magic_item_id uuid REFERENCES magic_item(magic_item_id),
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb
+    linked_magic_item_id uuid REFERENCES magic_item(magic_item_id)
 );
 
 CREATE TABLE spell_scroll_crafting_rule (
     spell_scroll_crafting_rule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     spell_level INT NOT NULL CHECK (spell_level BETWEEN 0 AND 9),
     time_days INT NOT NULL,
-    cost_money_value_id uuid REFERENCES money_value(money_value_id),
-    raw_json JSONB NOT NULL DEFAULT '{}'::jsonb
+    cost_money_value_id uuid REFERENCES money_value(money_value_id)
 );
 
 CREATE TABLE import_warning (
@@ -525,7 +513,6 @@ CREATE TABLE import_warning (
     entity_slug TEXT,
     warning_code TEXT NOT NULL,
     message TEXT NOT NULL,
-    raw_json JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -535,6 +522,8 @@ CREATE INDEX idx_content_magic_item_type_rarity ON magic_item(magic_item_type_id
 CREATE INDEX idx_content_background_name_ru ON background USING gin (to_tsvector('russian', name_ru));
 CREATE INDEX idx_content_equipment_name_ru ON equipment_item USING gin (to_tsvector('russian', name_ru));
 CREATE INDEX idx_content_spell_name_ru ON spell USING gin (to_tsvector('russian', name_ru));
+CREATE UNIQUE INDEX uq_class_feature_base_slug ON class_feature (class_id, slug) WHERE subclass_id IS NULL;
+CREATE UNIQUE INDEX uq_class_feature_subclass_slug ON class_feature (subclass_id, slug) WHERE subclass_id IS NOT NULL;
 ]]></sql>
         <rollback>
             <sql>

@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "currency_types")
+@Table(name = "currency")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,25 +17,28 @@ public class CurrencyType {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "currency_id")
     private UUID id;
 
-    @Column(nullable = false, length = 50)
-    private String name;
+    @Column(nullable = false, columnDefinition = "text")
+    private String slug;
 
-    @Column(name = "name_engloc", columnDefinition = "text")
-    private String nameEngloc;
+    @Column(name = "name_ru", nullable = false, columnDefinition = "text")
+    private String nameRu;
 
-    @Column(name = "name_rusloc", columnDefinition = "text")
-    private String nameRusloc;
+    @Column(name = "name_en", columnDefinition = "text")
+    private String nameEn;
 
-    @Column(name = "exchange_rate_to_gold", precision = 10, scale = 4)
-    private BigDecimal exchangeRateToGold;
+    @Column(name = "abbr_ru", nullable = false, columnDefinition = "text")
+    private String abbrRu;
+
+    @Column(name = "abbr_en", columnDefinition = "text")
+    private String abbrEn;
+
+    @Column(name = "copper_value", nullable = false, precision = 12, scale = 3)
+    private BigDecimal copperValue;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
-
-    @Column(name = "is_default", nullable = false)
-    @Builder.Default
-    private Boolean isDefault = false;
 }

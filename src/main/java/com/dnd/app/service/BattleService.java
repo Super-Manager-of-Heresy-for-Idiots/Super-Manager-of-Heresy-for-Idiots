@@ -41,7 +41,7 @@ import java.util.UUID;
 public class BattleService {
 
     /** Well-known code of the system Dexterity stat (used for initiative). */
-    private static final String DEX_CODE = "DEXTERITY";
+    private static final String DEX_CODE = "dex";
 
     private final BattleRepository battleRepository;
     private final BattleCombatantRepository combatantRepository;
@@ -422,7 +422,7 @@ public class BattleService {
 
     private int dexValue(PlayerCharacter character) {
         return character.getStats().stream()
-                .filter(s -> s.getStatType() != null && DEX_CODE.equals(s.getStatType().getCode()))
+                .filter(s -> s.getStatType() != null && DEX_CODE.equals(s.getStatType().getSlug()))
                 .findFirst()
                 .map(CharacterStat::getValue)
                 .orElse(10);
@@ -433,7 +433,7 @@ public class BattleService {
         for (CharacterActiveEffect effect : character.getActiveEffects()) {
             BuffDebuff bd = effect.getBuffDebuff();
             if (bd != null && "STAT_MODIFIER".equals(bd.getEffectType())
-                    && bd.getTargetStat() != null && DEX_CODE.equals(bd.getTargetStat().getCode())
+                    && bd.getTargetStat() != null && DEX_CODE.equals(bd.getTargetStat().getSlug())
                     && bd.getModifierValue() != null) {
                 total += Boolean.TRUE.equals(bd.getIsBuff()) ? bd.getModifierValue() : -bd.getModifierValue();
             }

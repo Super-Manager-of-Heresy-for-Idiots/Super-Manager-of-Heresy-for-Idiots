@@ -176,11 +176,11 @@ public class CampaignContentService {
         List<AvailableContentItem> feats = new ArrayList<>();
         featRepository.findAllByHomebrewIsNull().forEach(f ->
                 feats.add(AvailableContentItem.builder()
-                        .id(f.getId()).name(f.getName()).source("GLOBAL").build()));
+                        .id(f.getId()).name(f.getNameRu()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
             featRepository.findAllByHomebrewIdIn(activePackageIds).forEach(f ->
                     feats.add(AvailableContentItem.builder()
-                            .id(f.getId()).name(f.getName()).source("HOMEBREW")
+                            .id(f.getId()).name(f.getNameRu()).source("HOMEBREW")
                             .homebrewTitle(f.getHomebrew() != null ? f.getHomebrew().getTitle() : null)
                             .build()));
         }

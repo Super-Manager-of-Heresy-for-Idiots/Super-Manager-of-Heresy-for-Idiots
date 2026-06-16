@@ -26,11 +26,10 @@ public class FeatRewardResolver implements RewardResolver {
         Feat feat = featRepository.findById(rewardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + rewardId));
         RewardDetailInfo detail = RewardDetailInfo.builder()
-                .prerequisites(feat.getPrerequisites())
                 .build();
         return RewardDetailDto.builder()
                 .rewardId(feat.getId())
-                .name(feat.getName())
+                .name(feat.getNameRu())
                 .description(feat.getDescription())
                 .detail(detail)
                 .build();

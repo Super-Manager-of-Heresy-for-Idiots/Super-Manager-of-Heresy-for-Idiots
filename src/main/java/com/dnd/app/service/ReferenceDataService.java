@@ -14,6 +14,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -90,13 +92,10 @@ public class ReferenceDataService {
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getStatTypes(UUID campaignId, String username) {
         enforceAccess(campaignId, username);
-        return statTypeRepository.findByDeletedFalse().stream()
+        return statTypeRepository.findByHomebrewIsNull().stream()
                 .map(st -> StatTypeResponse.builder()
                         .id(st.getId())
-                        .name(st.getName())
-                        .description(st.getDescription())
-                        .isDefault(st.getIsDefault())
-                        .deleted(st.getDeleted())
+                        .name(st.getNameRu())
                         .build())
                 .toList();
     }
@@ -127,14 +126,6 @@ public class ReferenceDataService {
             spells = spellRepository.findFilteredSystemOnly(level, school);
         } else {
             spells = spellRepository.findFiltered(pkgIds, level, school);
-        }
-
-        if (classId != null) {
-            String classIdStr = classId.toString();
-            spells = spells.stream()
-                    .filter(s -> s.getAvailableToClassIdsJson() != null
-                            && s.getAvailableToClassIdsJson().contains(classIdStr))
-                    .toList();
         }
 
         return spells.stream().map(s -> mapSpell(s, lang)).toList();
@@ -176,13 +167,10 @@ public class ReferenceDataService {
     @Cacheable(CacheConfig.VANILLA_STAT_TYPES)
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getVanillaStatTypes() {
-        return statTypeRepository.findByDeletedFalse().stream()
+        return statTypeRepository.findByHomebrewIsNull().stream()
                 .map(st -> StatTypeResponse.builder()
                         .id(st.getId())
-                        .name(st.getName())
-                        .description(st.getDescription())
-                        .isDefault(st.getIsDefault())
-                        .deleted(st.getDeleted())
+                        .name(st.getNameRu())
                         .build())
                 .toList();
     }
@@ -200,13 +188,6 @@ public class ReferenceDataService {
     @Transactional(readOnly = true)
     public List<SpellResponse> getVanillaSpells(UUID classId, Integer level, String school, String lang) {
         List<Spell> spells = spellRepository.findFilteredSystemOnly(level, school);
-        if (classId != null) {
-            String classIdStr = classId.toString();
-            spells = spells.stream()
-                    .filter(s -> s.getAvailableToClassIdsJson() != null
-                            && s.getAvailableToClassIdsJson().contains(classIdStr))
-                    .toList();
-        }
         return spells.stream().map(s -> mapSpell(s, lang)).toList();
     }
 
@@ -230,7 +211,7 @@ public class ReferenceDataService {
             spellcasting = CharacterClassDetailResponse.SpellcastingInfo.builder()
                     .isSpellcaster(true)
                     .spellcastingStatId(c.getSpellcastingStat() != null ? c.getSpellcastingStat().getId() : null)
-                    .spellcastingStatName(c.getSpellcastingStat() != null ? c.getSpellcastingStat().getName() : null)
+                    .spellcastingStatName(c.getSpellcastingStat() != null ? c.getSpellcastingStat().getNameRu() : null)
                     .hasCantrips(c.getHasCantrips())
                     .isHalfCaster(c.getIsHalfCaster())
                     .build();
@@ -341,13 +322,11 @@ public class ReferenceDataService {
     }
 
     public BackgroundResponse mapBackground(Background bg, String lang) {
-        List<String> skillNames = parseJsonStringList(bg.getSkillProficiencyIdsJson());
         return BackgroundResponse.builder()
                 .id(bg.getId())
-                .name(Localization.pick(lang, bg.getNameRusloc(), bg.getNameEngloc(), bg.getName()))
-                .description(Localization.pick(lang, bg.getDescriptionRusloc(), bg.getDescriptionEngloc(), bg.getDescription()))
-                .skillProficiencyNames(skillNames)
-                .grantedExtras(Localization.pick(lang, bg.getGrantedExtrasRusloc(), bg.getGrantedExtrasEngloc(), bg.getGrantedExtras()))
+                .name(Localization.pick(lang, bg.getNameRu(), bg.getNameEn(), bg.getNameRu()))
+                .description(bg.getDescription())
+                .skillProficiencyNames(List.of())
                 .build();
     }
 
@@ -356,35 +335,31 @@ public class ReferenceDataService {
                 .id(s.getId())
                 .name(Localization.pick(lang, s.getNameRusloc(), s.getNameEngloc(), s.getName()))
                 .governingStatId(s.getGoverningStat().getId())
-                .governingStatName(s.getGoverningStat().getName())
+                .governingStatName(s.getGoverningStat().getNameRu())
                 .build();
     }
 
     private CurrencyTypeResponse mapCurrency(CurrencyType ct, String lang) {
+        BigDecimal exchangeRateToGold = ct.getCopperValue() != null
+                ? ct.getCopperValue().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                : null;
         return CurrencyTypeResponse.builder()
                 .id(ct.getId())
-                .name(Localization.pick(lang, ct.getNameRusloc(), ct.getNameEngloc(), ct.getName()))
-                .exchangeRateToGold(ct.getExchangeRateToGold())
-                .isDefault(ct.getIsDefault())
+                .name(Localization.pick(lang, ct.getNameRu(), ct.getNameEn(), ct.getNameRu()))
+                .exchangeRateToGold(exchangeRateToGold)
+                .isDefault("gp".equalsIgnoreCase(ct.getSlug()))
                 .build();
     }
 
     private SpellResponse mapSpell(Spell s, String lang) {
-        List<UUID> classIds = new ArrayList<>();
-        if (s.getAvailableToClassIdsJson() != null) {
-            try {
-                var ids = objectMapper.readValue(s.getAvailableToClassIdsJson(),
-                        new TypeReference<List<String>>() {});
-                classIds = ids.stream().map(UUID::fromString).toList();
-            } catch (Exception ignored) {}
-        }
+        SpellSchool school = s.getSchool();
         return SpellResponse.builder()
                 .id(s.getId())
-                .name(Localization.pick(lang, s.getNameRusloc(), s.getNameEngloc(), s.getName()))
+                .name(Localization.pick(lang, s.getNameRu(), s.getNameEn(), s.getNameRu()))
                 .level(s.getLevel())
-                .school(s.getSchool())
-                .description(Localization.pick(lang, s.getDescriptionRusloc(), s.getDescriptionEngloc(), s.getDescription()))
-                .availableToClassIds(classIds)
+                .school(school == null ? null : Localization.pick(lang, school.getNameRu(), school.getNameEn(), school.getNameRu()))
+                .description(s.getDescription())
+                .availableToClassIds(List.of())
                 .build();
     }
 

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -116,7 +117,7 @@ public class WalletService {
     @Transactional
     public void initializeDefaultWallet(PlayerCharacter character) {
         // Create Gold wallet entry with 0 amount
-        CurrencyType gold = currencyTypeRepository.findByNameIgnoreCase("Gold")
+        CurrencyType gold = currencyTypeRepository.findBySlugAndHomebrewIsNull("gp")
                 .orElse(null);
 
         if (gold != null) {
@@ -168,13 +169,15 @@ public class WalletService {
 
     private WalletEntryResponse toResponse(CharacterWallet wallet) {
         BigDecimal goldEquivalent = null;
-        if (wallet.getCurrencyType().getExchangeRateToGold() != null) {
-            goldEquivalent = wallet.getAmount().multiply(wallet.getCurrencyType().getExchangeRateToGold());
+        BigDecimal copperValue = wallet.getCurrencyType().getCopperValue();
+        if (copperValue != null) {
+            goldEquivalent = wallet.getAmount().multiply(copperValue)
+                    .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
         }
 
         return WalletEntryResponse.builder()
                 .currencyTypeId(wallet.getCurrencyType().getId())
-                .currencyName(wallet.getCurrencyType().getName())
+                .currencyName(wallet.getCurrencyType().getNameRu())
                 .amount(wallet.getAmount())
                 .goldEquivalent(goldEquivalent)
                 .build();
@@ -184,7 +187,7 @@ public class WalletService {
         return WalletHistoryEntryResponse.builder()
                 .id(transaction.getId())
                 .currencyTypeId(transaction.getCurrencyType().getId())
-                .currencyName(transaction.getCurrencyType().getName())
+                .currencyName(transaction.getCurrencyType().getNameRu())
                 .delta(transaction.getDelta())
                 .balanceAfter(transaction.getBalanceAfter())
                 .reason(transaction.getReason())

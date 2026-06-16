@@ -107,7 +107,7 @@ class QuestServiceTest {
     }
 
     private QuestReward currencyReward(BigDecimal amount) {
-        CurrencyType gold = CurrencyType.builder().id(UUID.randomUUID()).name("Gold").build();
+        CurrencyType gold = CurrencyType.builder().id(UUID.randomUUID()).slug("gp").nameRu("Gold").build();
         return QuestReward.builder().id(UUID.randomUUID()).quest(quest)
                 .currencyType(gold).currencyAmount(amount).build();
     }

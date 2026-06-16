@@ -800,7 +800,7 @@ public class CampaignBlueprintService {
 
     private NpcResponse toNpcResponse(BlueprintNpc npc) {
         List<NpcResponse.Ref> spellRefs = npc.getSpells().isEmpty() ? null
-                : npc.getSpells().stream().map(s -> ref(s.getId(), s.getName())).toList();
+                : npc.getSpells().stream().map(s -> ref(s.getId(), s.getNameRu())).toList();
         return NpcResponse.builder()
                 .id(npc.getId())
                 .name(npc.getName())
@@ -846,7 +846,7 @@ public class CampaignBlueprintService {
                 .itemTemplateName(reward.getItemTemplate() != null ? reward.getItemTemplate().getName() : null)
                 .quantity(reward.getQuantity())
                 .currencyTypeId(reward.getCurrencyType() != null ? reward.getCurrencyType().getId() : null)
-                .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getName() : null)
+                .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getNameRu() : null)
                 .currencyAmount(reward.getCurrencyAmount())
                 .xpAmount(reward.getXpAmount())
                 .build();

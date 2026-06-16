@@ -62,7 +62,7 @@ public class SkillRewardResolver implements RewardResolver {
                 .description(bd.getDescription())
                 .effectType(bd.getEffectType())
                 .targetStatId(bd.getTargetStat() != null ? bd.getTargetStat().getId() : null)
-                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getName() : null)
+                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getNameRu() : null)
                 .modifierValue(bd.getModifierValue())
                 .durationRounds(bd.getDurationRounds())
                 .isBuff(bd.getIsBuff())

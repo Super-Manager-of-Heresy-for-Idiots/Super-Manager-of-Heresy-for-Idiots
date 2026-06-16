@@ -7,6 +7,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "character_classes")
+/**
+ * Legacy class catalog mapped to the old plural content table.
+ * New class content must use {@link com.dnd.app.domain.content.ContentCharacterClass}.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

@@ -263,7 +263,7 @@ public class EnchantmentService {
                 .id(bd.getId()).name(bd.getName()).description(bd.getDescription())
                 .effectType(bd.getEffectType())
                 .targetStatId(bd.getTargetStat() != null ? bd.getTargetStat().getId() : null)
-                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getName() : null)
+                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getNameRu() : null)
                 .modifierValue(bd.getModifierValue())
                 .durationRounds(bd.getDurationRounds())
                 .isBuff(bd.getIsBuff())

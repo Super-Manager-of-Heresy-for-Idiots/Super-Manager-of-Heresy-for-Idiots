@@ -8,11 +8,11 @@ import java.util.UUID;
 
 public interface StatTypeRepository extends JpaRepository<StatType, UUID> {
 
-    boolean existsByName(String name);
+    List<StatType> findByHomebrewIsNull();
 
-    boolean existsByCodeAndHomebrewIsNull(String code);
+    List<StatType> findByHomebrewIdIn(List<UUID> ids);
 
-    boolean existsByCodeAndHomebrewId(String code, UUID homebrewId);
+    boolean existsBySlugAndHomebrewIsNull(String slug);
 
-    List<StatType> findByDeletedFalse();
+    boolean existsBySlugAndHomebrew_Id(String slug, UUID homebrewId);
 }

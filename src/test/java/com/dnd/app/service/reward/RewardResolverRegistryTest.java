@@ -63,7 +63,7 @@ class RewardResolverRegistryTest {
     @DisplayName("Разрешение награды типа FEAT возвращает детали черты")
     void resolve_feat_returnsFeatDetail() {
         UUID featId = UUID.randomUUID();
-        Feat feat = Feat.builder().id(featId).name("Lucky").description("3 luck points").build();
+        Feat feat = Feat.builder().id(featId).nameRu("Lucky").description("3 luck points").build();
         when(featRepository.findById(featId)).thenReturn(Optional.of(feat));
 
         RewardDetailDto result = registry.resolve("FEAT", featId);

@@ -352,14 +352,14 @@ public class HomebrewAuthoringService {
         User gm = getRequiredGameMaster(username);
         HomebrewPackage pkg = getEditablePackage(packageId, gm);
 
-        if (featRepository.existsByName(request.getName())) {
+        if (featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
 
         Feat feat = Feat.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .prerequisites(request.getPrerequisites())
                 .homebrew(pkg)
                 .build();
         Feat saved = featRepository.save(feat);
@@ -723,13 +723,13 @@ public class HomebrewAuthoringService {
             CreateFeatRequest request,
             Map<String, List<ContentSummaryDto>> createdContent,
             String username) {
-        if (featRepository.existsByName(request.getName())) {
+        if (featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
         Feat feat = Feat.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .prerequisites(request.getPrerequisites())
                 .homebrew(pkg)
                 .build();
         Feat saved = featRepository.save(feat);
@@ -931,9 +931,8 @@ public class HomebrewAuthoringService {
     private ContentSummaryDto summarizeFeat(Feat feat) {
         return ContentSummaryDto.builder()
                 .id(feat.getId())
-                .name(feat.getName())
+                .name(feat.getNameRu())
                 .description(feat.getDescription())
-                .prerequisites(feat.getPrerequisites())
                 .build();
     }
 

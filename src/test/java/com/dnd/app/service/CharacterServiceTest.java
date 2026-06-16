@@ -119,7 +119,7 @@ class CharacterServiceTest {
         Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
         PlayerCharacter character = PlayerCharacter.builder()
                 .id(charId).name("Hero").owner(player).campaign(campaign).build();
-        StatType st = StatType.builder().id(UUID.randomUUID()).name("STR").build();
+        StatType st = StatType.builder().id(UUID.randomUUID()).slug("str").nameRu("STR").nameEn("STR").build();
         CharacterStat stat = CharacterStat.builder()
                 .id(statId).character(character).statType(st).value(10).build();
 

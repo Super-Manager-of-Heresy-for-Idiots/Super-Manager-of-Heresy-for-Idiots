@@ -101,7 +101,7 @@ public class CharacterWizardService {
 
         List<StatType> allStatTypes = statTypeRepository.findAll();
         Map<String, StatType> statByName = allStatTypes.stream()
-                .collect(Collectors.toMap(StatType::getName, s -> s));
+                .collect(Collectors.toMap(StatType::getNameEn, s -> s));
 
         int walkSpeed = getWalkSpeed(race);
         int hitDie = charClass.getHitDie() != null ? charClass.getHitDie() : 8;
@@ -154,7 +154,7 @@ public class CharacterWizardService {
 
         for (StatType st : allStatTypes) {
             int base = baseScores.getOrDefault(st.getId(), 10);
-            int racial = racialBonuses.getOrDefault(st.getName(), 0);
+            int racial = racialBonuses.getOrDefault(st.getNameEn(), 0);
             CharacterStat stat = CharacterStat.builder()
                     .character(character)
                     .statType(st)
@@ -246,7 +246,7 @@ public class CharacterWizardService {
 
         List<StatType> allStatTypes = statTypeRepository.findAll();
         Map<String, StatType> statByName = allStatTypes.stream()
-                .collect(Collectors.toMap(StatType::getName, s -> s));
+                .collect(Collectors.toMap(StatType::getNameEn, s -> s));
 
         int walkSpeed = getWalkSpeed(race);
         int hitDie = charClass.getHitDie() != null ? charClass.getHitDie() : 8;
@@ -297,7 +297,7 @@ public class CharacterWizardService {
 
         for (StatType st : allStatTypes) {
             int base = baseScores.getOrDefault(st.getId(), 10);
-            int racial = racialBonuses.getOrDefault(st.getName(), 0);
+            int racial = racialBonuses.getOrDefault(st.getNameEn(), 0);
             CharacterStat stat = CharacterStat.builder()
                     .character(character)
                     .statType(st)
@@ -373,9 +373,9 @@ public class CharacterWizardService {
                 character.getKnownSpells().stream()
                         .map(ks -> CharacterKnownSpellResponse.builder()
                                 .spellId(ks.getSpell().getId())
-                                .name(ks.getSpell().getName())
+                                .name(ks.getSpell().getNameRu())
                                 .level(ks.getSpell().getLevel())
-                                .school(ks.getSpell().getSchool())
+                                .school(ks.getSpell().getSchool() == null ? null : ks.getSpell().getSchool().getNameRu())
                                 .build())
                         .toList()
         );
@@ -453,7 +453,7 @@ public class CharacterWizardService {
         List<String> allowedNames = referenceDataService.parseJsonStringList(charClass.getSkillChoiceOptionIdsJson());
         Set<String> allowedSet = new HashSet<>(allowedNames);
 
-        List<String> bgSkillNames = referenceDataService.parseJsonStringList(background.getSkillProficiencyIdsJson());
+        List<String> bgSkillNames = List.of();
         Set<String> bgSkillSet = new HashSet<>(bgSkillNames);
 
         for (UUID skillId : chosenIds) {
@@ -497,7 +497,7 @@ public class CharacterWizardService {
                 Spell spell = spellRepository.findById(spellId)
                         .orElseThrow(() -> new BadRequestException("Spell not found: " + spellId));
                 if (spell.getLevel() > maxSpellLevel) {
-                    throw new BadRequestException("Spell '" + spell.getName() + "' (level " + spell.getLevel()
+                    throw new BadRequestException("Spell '" + spell.getNameRu() + "' (level " + spell.getLevel()
                             + ") exceeds max spell level " + maxSpellLevel);
                 }
                 if (spell.getLevel() == 0) {
@@ -509,13 +509,9 @@ public class CharacterWizardService {
     }
 
     private void validateSpellsForClass(List<UUID> spellIds, CharacterClass charClass, Integer expectedLevel) {
-        String classIdStr = charClass.getId().toString();
         for (UUID spellId : spellIds) {
             Spell spell = spellRepository.findById(spellId)
                     .orElseThrow(() -> new BadRequestException("Spell not found: " + spellId));
-            if (spell.getAvailableToClassIdsJson() == null || !spell.getAvailableToClassIdsJson().contains(classIdStr)) {
-                throw new BadRequestException("Spell '" + spell.getName() + "' is not available for class '" + charClass.getName() + "'");
-            }
             if (expectedLevel != null && !spell.getLevel().equals(expectedLevel)) {
                 throw new BadRequestException("Expected spell level " + expectedLevel + " but got " + spell.getLevel());
             }
@@ -610,7 +606,7 @@ public class CharacterWizardService {
     // --- Skill saving ---
 
     private void saveSkillProficiencies(PlayerCharacter character, List<UUID> chosenClassSkillIds, Background background) {
-        List<String> bgSkillNames = referenceDataService.parseJsonStringList(background.getSkillProficiencyIdsJson());
+        List<String> bgSkillNames = List.of();
         for (String skillName : bgSkillNames) {
             ProficiencySkill ps = proficiencySkillRepository.findByName(skillName).orElse(null);
             if (ps != null) {

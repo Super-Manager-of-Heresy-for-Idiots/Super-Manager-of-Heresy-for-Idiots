@@ -153,7 +153,7 @@ public class CharacterEffectService {
         String statName = character.getStats().stream()
                 .filter(s -> s.getStatType().getId().equals(statTypeId))
                 .findFirst()
-                .map(s -> s.getStatType().getName())
+                .map(s -> s.getStatType().getNameRu())
                 .orElse("Unknown");
 
         return AbilityCheckResponse.builder()
@@ -205,7 +205,7 @@ public class CharacterEffectService {
                 .isBuff(effect.getBuffDebuff().getIsBuff())
                 .modifierValue(effect.getBuffDebuff().getModifierValue())
                 .targetStatName(effect.getBuffDebuff().getTargetStat() != null
-                        ? effect.getBuffDebuff().getTargetStat().getName() : null)
+                        ? effect.getBuffDebuff().getTargetStat().getNameRu() : null)
                 .remainingRounds(effect.getRemainingRounds())
                 .appliedByUsername(effect.getAppliedBy().getUsername())
                 .appliedAt(effect.getAppliedAt())

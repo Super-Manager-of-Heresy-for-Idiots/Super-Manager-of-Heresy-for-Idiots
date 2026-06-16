@@ -526,9 +526,9 @@ public class CharacterService {
                     character.getKnownSpells().stream()
                             .map(ks -> com.dnd.app.dto.response.CharacterKnownSpellResponse.builder()
                                     .spellId(ks.getSpell().getId())
-                                    .name(ks.getSpell().getName())
+                                    .name(ks.getSpell().getNameRu())
                                     .level(ks.getSpell().getLevel())
-                                    .school(ks.getSpell().getSchool())
+                                    .school(ks.getSpell().getSchool() == null ? null : ks.getSpell().getSchool().getNameRu())
                                     .build())
                             .toList()
             );

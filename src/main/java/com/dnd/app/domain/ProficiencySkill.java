@@ -7,6 +7,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "proficiency_skills")
+/**
+ * Legacy proficiency skill catalog mapped to the old plural content table.
+ * New proficiency content must use {@link com.dnd.app.domain.content.ContentSkill}.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

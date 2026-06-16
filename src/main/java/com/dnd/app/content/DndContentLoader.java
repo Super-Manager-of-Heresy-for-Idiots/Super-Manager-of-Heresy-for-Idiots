@@ -9,6 +9,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,9 +29,7 @@ import java.util.UUID;
  * homebrew / existing analog tables.
  *
  * Uses raw JDBC (no JPA entities for these content tables exist yet) with explicit
- * Java-generated UUIDs so child rows can be wired to parents in-memory. Every
- * top-level entity keeps its full source object in {@code raw_json} as a safety
- * net for anything not normalized into columns.
+ * Java-generated UUIDs so child rows can be wired to parents in-memory.
  */
 @Component
 public class DndContentLoader implements ApplicationRunner {
@@ -79,34 +78,41 @@ public class DndContentLoader implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        boolean coreAlreadyPresent;
         try {
             Integer existing = jdbc.queryForObject(
                     "SELECT count(*) FROM mod_package WHERE slug = ?", Integer.class, CORE_MOD_SLUG);
-            if (existing != null && existing > 0) {
-                log.info("dnd content already present (mod '{}'), skipping import", CORE_MOD_SLUG);
-                return;
-            }
+            coreAlreadyPresent = existing != null && existing > 0;
         } catch (DataAccessException e) {
             log.warn("content tables not available, skipping content import: {}", e.getMessage());
             return;
         }
 
-        log.info("Importing normalized D&D content into public schema...");
-        loadReferences();
-        loadEquipment();
-        loadInventoryWeapons();
-        loadInventoryArmors();
-        loadFeats();
-        loadClasses();
-        loadSpells();
-        loadSpecies();
-        loadMagicItems();
-        loadBackgrounds();
-        loadScrollCrafting();
-        loadRandomTables();
-        log.info("D&D content import complete: {} equipment, {} feats, {} classes, {} spells, "
-                        + "{} magic items dictionaries primed",
-                equipmentItems.size(), feats.size(), classes.size(), spells.size(), magicItemTypes.size());
+        if (coreAlreadyPresent) {
+            log.info("dnd content already present (mod '{}'), skipping base import", CORE_MOD_SLUG);
+        } else {
+            log.info("Importing normalized D&D content into public schema...");
+            loadReferences();
+            loadEquipment();
+            loadInventoryWeapons();
+            loadInventoryArmors();
+            loadFeats();
+            loadClasses();
+            loadSpells();
+            loadSpecies();
+            loadMagicItems();
+            loadBackgrounds();
+            loadScrollCrafting();
+            loadRandomTables();
+            log.info("D&D content import complete: {} equipment, {} feats, {} classes, {} spells, "
+                            + "{} magic items dictionaries primed",
+                    equipmentItems.size(), feats.size(), classes.size(), spells.size(), magicItemTypes.size());
+        }
+
+        // Class build mechanics are seeded separately and idempotently (own
+        // row-count guard) so they populate both a fresh import and an existing DB
+        // whose base content was loaded before this step existed.
+        loadClassMechanics();
     }
 
     // ------------------------------------------------------------------ references / dictionaries
@@ -204,12 +210,12 @@ public class DndContentLoader implements ApplicationRunner {
             String kind = orDefault(txt(item, "kind"), "equipment");
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO equipment_item(equipment_item_id, mod_id, source_id, slug, name_ru, name_en, "
-                            + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url, raw_json) "
-                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url) "
+                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, slug, txt(item, "name_ru"), txt(item, "name_en"),
                     equipmentCategories.get(txt(item, "category_slug")), kind,
                     insertMoneyValue(item.get("cost")), dec(weight(item), "pounds"),
-                    txt(item, "properties_text"), txt(item, "url"), json(item));
+                    txt(item, "properties_text"), txt(item, "url"));
             equipmentItems.put(slug, id);
 
             if ("weapon".equals(kind)) {
@@ -219,7 +225,7 @@ public class DndContentLoader implements ApplicationRunner {
 
         // Second pass: weapon ammunition / versatile FKs reference other equipment items,
         // but the schema models them via weapon_item_property which we already filled with
-        // raw text; ranges/ammo links are preserved in equipment_item.raw_json.
+        // raw text.
         log.info("Loaded {} equipment items", equipmentItems.size());
     }
 
@@ -266,11 +272,11 @@ public class DndContentLoader implements ApplicationRunner {
             }
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO equipment_item(equipment_item_id, mod_id, source_id, slug, name_ru, name_en, "
-                            + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url, raw_json) "
-                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url) "
+                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, slug, txt(item, "name_ru"), txt(item, "name_en"),
                     null, "weapon", insertMoneyValue(item.get("cost")), dec(weight(item), "pounds"),
-                    txt(item, "short_properties_raw"), txt(item, "source_url"), json(item));
+                    txt(item, "short_properties_raw"), txt(item, "source_url"));
             equipmentItems.put(slug, id);
 
             JsonNode damage = item.get("damage");
@@ -293,11 +299,11 @@ public class DndContentLoader implements ApplicationRunner {
             if (id == null) {
                 id = UUID.randomUUID();
                 jdbc.update("INSERT INTO equipment_item(equipment_item_id, mod_id, source_id, slug, name_ru, name_en, "
-                                + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url, raw_json) "
-                                + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                                + "category_id, kind, cost_money_value_id, weight_lb, properties_text, url) "
+                                + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                         id, modId, sourceId, slug, txt(item, "name_ru"), txt(item, "name_en"),
                         null, "armor", insertMoneyValue(item.get("cost")), dec(weight(item), "pounds"),
-                        txt(item, "group_ru"), txt(item, "source_url"), json(item));
+                        txt(item, "group_ru"), txt(item, "source_url"));
                 equipmentItems.put(slug, id);
             }
             if (!armorStatDone.add(id)) {
@@ -317,9 +323,9 @@ public class DndContentLoader implements ApplicationRunner {
             UUID categoryId = deriveFeatCategory(txt(feat, "category_slug"), txt(feat, "category_ru"));
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO feat(feat_id, mod_id, source_id, slug, name_ru, name_en, category_id, "
-                            + "repeatable, description, url, raw_json) VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "repeatable, description, url) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(feat, "slug"), txt(feat, "name_ru"), txt(feat, "name_en"),
-                    categoryId, bool(feat, "repeatable", false), txt(feat, "description"), txt(feat, "url"), json(feat));
+                    categoryId, bool(feat, "repeatable", false), txt(feat, "description"), txt(feat, "url"));
             feats.put(txt(feat, "slug"), id);
 
             int order = 0;
@@ -359,9 +365,9 @@ public class DndContentLoader implements ApplicationRunner {
         for (JsonNode cls : read("classes.normalized.json")) {
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO character_class(class_id, mod_id, source_id, slug, name_ru, name_en, subtitle, "
-                            + "url, raw_json) VALUES (?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "url) VALUES (?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(cls, "slug"), txt(cls, "name_ru"), txt(cls, "name_en"),
-                    txt(cls, "subtitle"), txt(cls, "url"), json(cls));
+                    txt(cls, "subtitle"), txt(cls, "url"));
             classes.put(txt(cls, "slug"), id);
 
             for (JsonNode sub : array(cls, "subclasses")) {
@@ -413,15 +419,15 @@ public class DndContentLoader implements ApplicationRunner {
             jdbc.update("INSERT INTO spell(spell_id, mod_id, source_id, slug, name_ru, name_en, level, school_id, "
                             + "casting_time_raw, casting_action_slug, is_ritual, range_type, range_distance, range_unit, "
                             + "duration_raw, duration_type, duration_amount, duration_unit, concentration, description, "
-                            + "higher_levels, url, raw_json) "
-                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "higher_levels, url) "
+                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(spell, "slug"), txt(spell, "name_ru"), txt(spell, "name_en"),
                     orZero(intg(spell, "level")), spellSchools.get(txt(spell, "school_slug")),
                     txt(casting, "raw"), txt(casting, "action_slug"), bool(casting, "ritual", false),
                     txt(range, "range_type"), intg(range, "distance"), txt(range, "unit"),
                     txt(duration, "raw"), txt(duration, "duration_type"), intg(duration, "amount"),
                     txt(duration, "unit"), bool(duration, "concentration", false),
-                    txt(spell, "description"), txt(spell, "higher_levels"), txt(spell, "url"), json(spell));
+                    txt(spell, "description"), txt(spell, "higher_levels"), txt(spell, "url"));
             spells.put(txt(spell, "slug"), id);
 
             Set<String> comps = new HashSet<>();
@@ -465,9 +471,9 @@ public class DndContentLoader implements ApplicationRunner {
             UUID creatureTypeId = deriveCreatureType(txt(sp, "creature_type_slug"), txt(sp, "creature_type_ru"));
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO species(species_id, mod_id, source_id, slug, name_ru, name_en, "
-                            + "creature_type_id, description, url, raw_json) VALUES (?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "creature_type_id, description, url) VALUES (?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(sp, "slug"), txt(sp, "name_ru"), txt(sp, "name_en"),
-                    creatureTypeId, txt(sp, "description"), txt(sp, "url"), json(sp));
+                    creatureTypeId, txt(sp, "description"), txt(sp, "url"));
             count++;
 
             Set<UUID> sizes = new HashSet<>();
@@ -502,11 +508,11 @@ public class DndContentLoader implements ApplicationRunner {
 
                 for (JsonNode eff : array(trait, "effects")) {
                     jdbc.update("INSERT INTO species_trait_effect(species_trait_effect_id, species_trait_id, "
-                                    + "effect_type, damage_type_id, spell_id, range_ft, raw_json) "
-                                    + "VALUES (?,?,?,?,?,?,?::jsonb)",
+                                    + "effect_type, damage_type_id, spell_id, range_ft) "
+                                    + "VALUES (?,?,?,?,?,?)",
                             UUID.randomUUID(), traitId, orDefault(txt(eff, "effect_type"), "unknown"),
                             damageTypes.get(txt(eff, "damage_type_slug")), spells.get(txt(eff, "spell_slug")),
-                            intg(eff, "range_ft"), json(eff));
+                            intg(eff, "range_ft"));
                 }
             }
         }
@@ -539,13 +545,13 @@ public class DndContentLoader implements ApplicationRunner {
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO magic_item(magic_item_id, mod_id, source_id, slug, name_ru, name_en, "
                             + "magic_item_type_id, type_restriction_raw, rarity_id, variable_rarity, attunement_required, "
-                            + "attunement_requirement, cost_money_value_id, description, embedded_tables_detected, url, "
-                            + "raw_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "attunement_requirement, cost_money_value_id, description, embedded_tables_detected, url) "
+                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(mi, "slug"), txt(mi, "name_ru"), txt(mi, "name_en"),
                     typeId, txt(type, "restriction_raw"), rarityId, bool(rarity, "variable", false),
                     bool(mi, "attunement_required", false), txt(mi, "attunement_requirement"),
                     insertMoneyValue(mi.get("cost")), txt(mi, "description"),
-                    bool(mi, "embedded_tables_detected", false), txt(mi, "url"), json(mi));
+                    bool(mi, "embedded_tables_detected", false), txt(mi, "url"));
             count++;
 
             if (type != null) {
@@ -599,9 +605,9 @@ public class DndContentLoader implements ApplicationRunner {
             UUID featId = featNode != null ? feats.get(txt(featNode, "feat_slug")) : null;
             UUID id = UUID.randomUUID();
             jdbc.update("INSERT INTO background(background_id, mod_id, source_id, slug, name_ru, name_en, feat_id, "
-                            + "description, url, raw_json) VALUES (?,?,?,?,?,?,?,?,?,?::jsonb)",
+                            + "description, url) VALUES (?,?,?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(bg, "slug"), txt(bg, "name_ru"), txt(bg, "name_en"),
-                    featId, txt(bg, "description"), txt(bg, "url"), json(bg));
+                    featId, txt(bg, "description"), txt(bg, "url"));
             count++;
 
             Set<UUID> abilitySet = new HashSet<>();
@@ -690,29 +696,114 @@ public class DndContentLoader implements ApplicationRunner {
                 continue;
             }
             jdbc.update("INSERT INTO spell_scroll_crafting_rule(spell_scroll_crafting_rule_id, spell_level, "
-                            + "time_days, cost_money_value_id, raw_json) VALUES (?,?,?,?,?::jsonb)",
+                            + "time_days, cost_money_value_id) VALUES (?,?,?,?)",
                     UUID.randomUUID(), level, orZero(intg(rule, "time_days")),
-                    insertMoneyValue(rule.get("cost")), json(rule));
+                    insertMoneyValue(rule.get("cost")));
         }
     }
 
     private void loadRandomTables() {
         for (JsonNode table : read("random_tables.normalized.json")) {
             UUID id = UUID.randomUUID();
-            jdbc.update("INSERT INTO random_table(random_table_id, mod_id, source_id, slug, name_ru, dice, url, "
-                            + "raw_json) VALUES (?,?,?,?,?,?,?,?::jsonb)",
+            jdbc.update("INSERT INTO random_table(random_table_id, mod_id, source_id, slug, name_ru, dice, url) "
+                            + "VALUES (?,?,?,?,?,?,?)",
                     id, modId, sourceId, txt(table, "slug"), txt(table, "name_ru"), txt(table, "dice"),
-                    txt(table, "url"), json(table));
+                    txt(table, "url"));
 
             for (JsonNode entry : array(table, "entries")) {
                 jdbc.update("INSERT INTO random_table_entry(random_table_entry_id, random_table_id, range_start, "
-                                + "range_end, display_range, result_text, linked_equipment_item_id, linked_magic_item_id, "
-                                + "raw_json) VALUES (?,?,?,?,?,?,?,?,?::jsonb)",
+                                + "range_end, display_range, result_text, linked_equipment_item_id, linked_magic_item_id) "
+                                + "VALUES (?,?,?,?,?,?,?,?)",
                         UUID.randomUUID(), id, intg(entry, "range_start"), intg(entry, "range_end"),
                         orDefault(txt(entry, "display_range"), ""), orDefault(txt(entry, "result_text"), ""),
-                        null, null, json(entry));
+                        null, null);
             }
         }
+    }
+
+    // ------------------------------------------------------------------ class mechanics
+
+    /**
+     * Seeds class build mechanics (hit die, saving throws, primary ability, skill
+     * choices, the spellcasting profile, and proficiency texts) from
+     * {@code class_mechanics.json} into the character_class columns and the
+     * class_saving_throw / class_primary_ability / class_skill_option tables added
+     * by migration 057.
+     *
+     * Idempotent and self-guarded by a row-count check. It resolves its slug to id
+     * lookups straight from the DB rather than the in-memory maps, so it works
+     * whether or not the base import ran in this same execution.
+     */
+    private void loadClassMechanics() {
+        try {
+            Integer seeded = jdbc.queryForObject("SELECT count(*) FROM class_saving_throw", Integer.class);
+            if (seeded != null && seeded > 0) {
+                log.info("class mechanics already seeded, skipping");
+                return;
+            }
+        } catch (DataAccessException e) {
+            log.warn("class mechanics tables not available, skipping: {}", e.getMessage());
+            return;
+        }
+
+        String coreModId = jdbc.queryForObject(
+                "SELECT mod_id FROM mod_package WHERE slug = ?", String.class, CORE_MOD_SLUG);
+        Map<String, UUID> abilityBySlug = loadSlugIds("SELECT slug, ability_score_id FROM ability_score");
+        Map<String, UUID> skillBySlug = loadSlugIds("SELECT slug, skill_id FROM skill");
+        Map<String, UUID> classBySlug = new HashMap<>();
+        jdbc.query("SELECT slug, class_id FROM character_class WHERE mod_id = ?",
+                (RowCallbackHandler) rs -> classBySlug.put(rs.getString(1), UUID.fromString(rs.getString(2))),
+                UUID.fromString(coreModId));
+
+        int updated = 0;
+        for (JsonNode cls : array(read("class_mechanics.json"), "classes")) {
+            String slug = txt(cls, "slug");
+            UUID classId = classBySlug.get(slug);
+            if (classId == null) {
+                log.warn("class mechanics: no character_class row for slug '{}', skipping", slug);
+                continue;
+            }
+
+            UUID castAbilityId = abilityBySlug.get(txt(cls, "spellcasting_ability_slug"));
+            jdbc.update("UPDATE character_class SET hit_die = ?, is_spellcaster = ?, has_cantrips = ?, "
+                            + "is_half_caster = ?, spellcasting_ability_id = ?, skill_choice_count = ?, "
+                            + "skill_choice_any = ?, armor_proficiency_text = ?, weapon_proficiency_text = ?, "
+                            + "tool_proficiency_text = ? WHERE class_id = ?",
+                    intg(cls, "hit_die"), bool(cls, "is_spellcaster", false), bool(cls, "has_cantrips", false),
+                    bool(cls, "is_half_caster", false), castAbilityId, orZero(intg(cls, "skill_choice_count")),
+                    bool(cls, "skill_choice_any", false), txt(cls, "armor_proficiency_text"),
+                    txt(cls, "weapon_proficiency_text"), txt(cls, "tool_proficiency_text"), classId);
+
+            insertClassAbilities(classId, abilityBySlug, array(cls, "saving_throw_slugs"),
+                    "INSERT INTO class_saving_throw(class_id, ability_score_id) VALUES (?,?) ON CONFLICT DO NOTHING");
+            insertClassAbilities(classId, abilityBySlug, array(cls, "primary_ability_slugs"),
+                    "INSERT INTO class_primary_ability(class_id, ability_score_id) VALUES (?,?) ON CONFLICT DO NOTHING");
+            for (JsonNode sk : array(cls, "skill_option_slugs")) {
+                UUID skillId = skillBySlug.get(sk.asText());
+                if (skillId != null) {
+                    jdbc.update("INSERT INTO class_skill_option(class_id, skill_id) VALUES (?,?) "
+                            + "ON CONFLICT DO NOTHING", classId, skillId);
+                }
+            }
+            updated++;
+        }
+        log.info("Seeded mechanics for {} classes", updated);
+    }
+
+    private void insertClassAbilities(UUID classId, Map<String, UUID> abilityBySlug,
+                                      Iterable<JsonNode> abilitySlugs, String sql) {
+        for (JsonNode node : abilitySlugs) {
+            UUID abilityId = abilityBySlug.get(node.asText());
+            if (abilityId != null) {
+                jdbc.update(sql, classId, abilityId);
+            }
+        }
+    }
+
+    private Map<String, UUID> loadSlugIds(String sql) {
+        Map<String, UUID> map = new HashMap<>();
+        jdbc.query(sql, (RowCallbackHandler) rs -> map.put(rs.getString(1), UUID.fromString(rs.getString(2))));
+        return map;
     }
 
     // ------------------------------------------------------------------ shared insert helpers
@@ -789,14 +880,6 @@ public class DndContentLoader implements ApplicationRunner {
 
     private static JsonNode weight(JsonNode item) {
         return item == null ? null : item.get("weight");
-    }
-
-    private String json(JsonNode node) {
-        try {
-            return mapper.writeValueAsString(node);
-        } catch (IOException e) {
-            return "{}";
-        }
     }
 
     private static String txt(JsonNode node, String field) {

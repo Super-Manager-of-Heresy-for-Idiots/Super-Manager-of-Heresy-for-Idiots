@@ -34,7 +34,7 @@ public abstract class CharacterMapper {
     public abstract List<ClassLevelResponse> toClassLevelResponseList(List<CharacterClassLevel> levels);
 
     @Mapping(target = "statTypeId", source = "statType.id")
-    @Mapping(target = "statTypeName", source = "statType.name")
+    @Mapping(target = "statTypeName", expression = "java(stat.getStatType() != null ? stat.getStatType().getNameRu() : null)")
     @Mapping(target = "effectiveValue", ignore = true)
     @Mapping(target = "activeModifiers", ignore = true)
     public abstract CharacterStatResponse toStatResponse(CharacterStat stat);

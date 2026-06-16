@@ -9,6 +9,11 @@ import java.util.UUID;
 @Entity
 @Table(name = "character_class_levels")
 @IdClass(CharacterClassLevelId.class)
+/**
+ * Transitional character class level table. It still points at the legacy class catalog
+ * until character creation and level-up are migrated to character_class.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

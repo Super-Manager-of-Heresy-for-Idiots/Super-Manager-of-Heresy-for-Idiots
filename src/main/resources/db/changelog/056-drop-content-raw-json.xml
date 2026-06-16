@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Legacy safety cleanup for local databases that were created before
+      054 stopped creating raw archive columns. Fresh databases no-op here.
+    -->
+    <changeSet id="056-01-drop-content-raw-json" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE equipment_item DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE feat DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE background DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE character_class DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE spell DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE species DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE species_trait_effect DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE magic_item DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE class_feature DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE random_table DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE random_table_entry DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE spell_scroll_crafting_rule DROP COLUMN IF EXISTS raw_json;
+ALTER TABLE import_warning DROP COLUMN IF EXISTS raw_json;
+]]></sql>
+        <rollback>
+            <sql>SELECT 1;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -6,7 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "spells")
+@Table(name = "spell")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,34 +16,27 @@ public class Spell {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "spell_id")
     private UUID id;
 
-    @Column(nullable = false, length = 120, unique = true)
-    private String name;
+    @Column(nullable = false, columnDefinition = "text")
+    private String slug;
 
-    @Column(name = "name_engloc", columnDefinition = "text")
-    private String nameEngloc;
+    @Column(name = "name_ru", nullable = false, columnDefinition = "text")
+    private String nameRu;
 
-    @Column(name = "name_rusloc", columnDefinition = "text")
-    private String nameRusloc;
+    @Column(name = "name_en", columnDefinition = "text")
+    private String nameEn;
 
     @Column(nullable = false)
     private Integer level;
 
-    @Column(nullable = false, length = 30)
-    private String school;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private SpellSchool school;
 
     @Column(columnDefinition = "text")
     private String description;
-
-    @Column(name = "description_engloc", columnDefinition = "text")
-    private String descriptionEngloc;
-
-    @Column(name = "description_rusloc", columnDefinition = "text")
-    private String descriptionRusloc;
-
-    @Column(name = "available_to_class_ids_json", columnDefinition = "text")
-    private String availableToClassIdsJson;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")

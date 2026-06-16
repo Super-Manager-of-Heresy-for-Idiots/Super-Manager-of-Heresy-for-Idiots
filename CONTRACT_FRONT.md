@@ -2,6 +2,9 @@
 
 This contract is checked against the Spring controllers and DTOs in `src/main/java/com/dnd/app` on 2026-05-31.
 
+New normalized DnD content migration notes for character creation, level-up, and homebrew class authoring are tracked in
+[`docs/frontend-new-content-migration-plan.md`](docs/frontend-new-content-migration-plan.md).
+
 ## Global Rules
 
 Base API path: `/api`.

@@ -40,36 +40,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
-    @PostMapping("/stat-types")
-    public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> createStatType(
-            @Valid @RequestBody CreateStatTypeRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createStatType(request), "Характеристика создана")),
-                controllerTaskExecutor);
-    }
-
     @GetMapping("/stat-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> getStatType(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(adminService.getStatType(id))),
                 controllerTaskExecutor);
-    }
-
-    @PutMapping("/stat-types/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> updateStatType(
-            @PathVariable UUID id, @Valid @RequestBody CreateStatTypeRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateStatType(id, request), "Характеристика обновлена")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/stat-types/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteStatType(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() -> {
-            adminService.deleteStatType(id);
-            return ResponseEntity.ok(ApiResponse.ok(null, "Характеристика удалена"));
-        }, controllerTaskExecutor);
     }
 
     // --- Item Types ---

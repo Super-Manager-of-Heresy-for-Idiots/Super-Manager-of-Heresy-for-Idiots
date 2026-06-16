@@ -74,11 +74,11 @@ public class ContentDictionaryResolver {
         if (code == null) {
             throw new BadRequestException("ability is required");
         }
-        String norm = code.toUpperCase();
-        if (homebrewId != null && statTypeRepository.existsByCodeAndHomebrewId(norm, homebrewId)) {
+        String norm = code.toLowerCase();
+        if (homebrewId != null && statTypeRepository.existsBySlugAndHomebrew_Id(norm, homebrewId)) {
             return;
         }
-        if (!statTypeRepository.existsByCodeAndHomebrewIsNull(norm)) {
+        if (!statTypeRepository.existsBySlugAndHomebrewIsNull(norm)) {
             throw new BadRequestException("Invalid ability: " + code);
         }
     }

@@ -9,6 +9,11 @@ import java.util.UUID;
 @Entity
 @Table(name = "character_skill_proficiencies",
         uniqueConstraints = @UniqueConstraint(columnNames = {"character_id", "skill_id"}))
+/**
+ * Transitional character proficiency table. It still points at legacy proficiency_skills
+ * until character creation and reward application are migrated to skill.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

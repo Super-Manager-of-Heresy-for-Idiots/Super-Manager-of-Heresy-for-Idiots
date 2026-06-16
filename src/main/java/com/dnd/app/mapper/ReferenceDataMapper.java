@@ -14,6 +14,10 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ReferenceDataMapper {
 
+    @Mapping(target = "name", source = "nameRu")
+    @Mapping(target = "description", ignore = true)
+    @Mapping(target = "isDefault", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     StatTypeResponse toStatTypeResponse(StatType statType);
 
     @Mapping(target = "slot", expression = "java(itemType.getSlot().getCode())")

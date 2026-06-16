@@ -48,7 +48,7 @@ class CharacterEffectServiceTest {
 
         StatType strStatType = StatType.builder()
                 .id(statTypeId)
-                .name("Strength")
+                .nameRu("Strength")
                 .build();
 
         CharacterStat strStat = CharacterStat.builder()
@@ -93,7 +93,7 @@ class CharacterEffectServiceTest {
 
         StatType strStatType = StatType.builder()
                 .id(statTypeId)
-                .name("Strength")
+                .nameRu("Strength")
                 .build();
 
         CharacterStat strStat = CharacterStat.builder()
@@ -207,12 +207,12 @@ class CharacterEffectServiceTest {
 
         StatType strStatType = StatType.builder()
                 .id(statTypeId)
-                .name("Strength")
+                .nameRu("Strength")
                 .build();
 
         StatType dexStatType = StatType.builder()
                 .id(otherStatTypeId)
-                .name("Dexterity")
+                .nameRu("Dexterity")
                 .build();
 
         CharacterStat strStat = CharacterStat.builder()

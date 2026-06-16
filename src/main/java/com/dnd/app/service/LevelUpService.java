@@ -319,7 +319,7 @@ public class LevelUpService {
 
     private int getConModifier(PlayerCharacter character) {
         Optional<StatType> conStat = statTypeRepository.findAll().stream()
-                .filter(st -> "Constitution".equals(st.getName()))
+                .filter(st -> "Constitution".equals(st.getNameEn()))
                 .findFirst();
         if (conStat.isEmpty()) return 0;
 
@@ -372,7 +372,7 @@ public class LevelUpService {
             List<AbilityOptionInfo> options = character.getStats().stream()
                     .map(s -> AbilityOptionInfo.builder()
                             .statTypeId(s.getStatType().getId())
-                            .name(s.getStatType().getName())
+                            .name(s.getStatType().getNameRu())
                             .currentScore(s.getValue())
                             .maxScore(20)
                             .build())
@@ -439,20 +439,20 @@ public class LevelUpService {
             int after = before + inc.getAmount();
             if (after > 20) {
                 throw new UnprocessableEntityException(
-                        "Значение характеристики '" + stat.getStatType().getName() + "' не может превысить 20");
+                        "Значение характеристики '" + stat.getStatType().getNameRu() + "' не может превысить 20");
             }
             stat.setValue(after);
             characterStatRepository.save(stat);
 
             RewardDetailInfo detail = RewardDetailInfo.builder()
-                    .abilityStatName(stat.getStatType().getName())
+                    .abilityStatName(stat.getStatType().getNameRu())
                     .currentScore(after)
                     .maxScore(20)
                     .build();
             summaries.add(LevelUpResultResponse.AcquiredRewardSummary.builder()
                     .rewardType("ABILITY_SCORE_IMPROVEMENT")
-                    .name("+" + inc.getAmount() + " " + stat.getStatType().getName())
-                    .description(stat.getStatType().getName() + ": " + before + " → " + after)
+                    .name("+" + inc.getAmount() + " " + stat.getStatType().getNameRu())
+                    .description(stat.getStatType().getNameRu() + ": " + before + " → " + after)
                     .detail(detail)
                     .build());
         }

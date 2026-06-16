@@ -480,7 +480,7 @@ public class QuestService {
                 .itemTemplateName(reward.getItemTemplate() != null ? reward.getItemTemplate().getName() : null)
                 .quantity(reward.getQuantity())
                 .currencyTypeId(reward.getCurrencyType() != null ? reward.getCurrencyType().getId() : null)
-                .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getName() : null)
+                .currencyTypeName(reward.getCurrencyType() != null ? reward.getCurrencyType().getNameRu() : null)
                 .currencyAmount(reward.getCurrencyAmount())
                 .xpAmount(reward.getXpAmount())
                 .build();

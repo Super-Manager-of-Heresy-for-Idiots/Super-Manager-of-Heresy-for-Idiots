@@ -10,6 +10,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "subclasses")
+/**
+ * Legacy subclass catalog mapped to the old plural content table.
+ * New subclass content must use {@link com.dnd.app.domain.content.ContentSubclass}.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

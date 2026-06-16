@@ -12,6 +12,11 @@ import java.util.UUID;
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"character_id", "class_level_reward_id"},
                 name = "uq_char_reward"))
+/**
+ * Legacy character reward acquisition table for old class_level_rewards.
+ * New selectable rewards must use character_reward_selection and child selection tables.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

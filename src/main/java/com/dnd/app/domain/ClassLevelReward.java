@@ -10,6 +10,11 @@ import java.util.UUID;
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"class_id", "required_level", "reward_type", "reward_id"},
                 name = "uq_class_level_reward"))
+/**
+ * Legacy flat reward model. New class rewards must use class_level_reward_group,
+ * class_level_reward_option, class_level_reward_grant and typed grant tables.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor

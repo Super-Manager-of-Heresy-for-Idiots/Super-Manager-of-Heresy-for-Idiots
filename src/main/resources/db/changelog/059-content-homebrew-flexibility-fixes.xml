@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Keeps databases that already applied the original 054 in sync with the
+      current homebrew-friendly schema. Fresh databases already get this shape
+      from 054; every statement here is idempotent for them.
+    -->
+    <changeSet id="059-01-content-homebrew-flexibility-fixes" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE equipment_item
+    DROP CONSTRAINT IF EXISTS equipment_item_kind_check;
+
+ALTER TABLE background_equipment_entry
+    DROP CONSTRAINT IF EXISTS background_equipment_entry_entry_type_check;
+
+ALTER TABLE spell_component
+    DROP CONSTRAINT IF EXISTS spell_component_component_slug_check;
+
+ALTER TABLE class_feature
+    DROP CONSTRAINT IF EXISTS class_feature_class_id_slug_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_class_feature_base_slug
+    ON class_feature (class_id, slug)
+    WHERE subclass_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_class_feature_subclass_slug
+    ON class_feature (subclass_id, slug)
+    WHERE subclass_id IS NOT NULL;
+]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+DROP INDEX IF EXISTS uq_class_feature_subclass_slug;
+DROP INDEX IF EXISTS uq_class_feature_base_slug;
+
+ALTER TABLE class_feature
+    ADD CONSTRAINT class_feature_class_id_slug_key UNIQUE (class_id, slug);
+
+ALTER TABLE spell_component
+    ADD CONSTRAINT spell_component_component_slug_check
+        CHECK (component_slug IN ('verbal','somatic','material'));
+
+ALTER TABLE background_equipment_entry
+    ADD CONSTRAINT background_equipment_entry_entry_type_check
+        CHECK (entry_type IN ('equipment','equipment_choice_ref','currency','raw'));
+
+ALTER TABLE equipment_item
+    ADD CONSTRAINT equipment_item_kind_check
+        CHECK (kind IN ('equipment','weapon','armor'));
+]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
