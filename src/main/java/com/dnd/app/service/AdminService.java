@@ -607,7 +607,7 @@ public class AdminService {
                 .skillType(s.getSkillType())
                 .damageDice(s.getDamageDice())
                 .damageBonus(s.getDamageBonus())
-                .damageType(s.getDamageType() != null ? s.getDamageType().getCode() : null)
+                .damageType(s.getDamageType() != null ? s.getDamageType().getSlug() : null)
                 .effects(effectResponses)
                 .createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
@@ -619,7 +619,7 @@ public class AdminService {
                 .slot(it.getSlot().getCode())
                 .damageDice(it.getDamageDice())
                 .damageBonus(it.getDamageBonus())
-                .damageType(it.getDamageType() != null ? it.getDamageType().getCode() : null)
+                .damageType(it.getDamageType() != null ? it.getDamageType().getSlug() : null)
                 .skillId(it.getSkill() != null ? it.getSkill().getId() : null)
                 .skillName(it.getSkill() != null ? it.getSkill().getName() : null)
                 .skillActivation(it.getSkillActivation() != null ? it.getSkillActivation().name() : null)

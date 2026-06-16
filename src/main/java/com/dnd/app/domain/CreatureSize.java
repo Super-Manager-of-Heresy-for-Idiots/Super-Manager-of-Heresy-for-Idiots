@@ -2,47 +2,33 @@ package com.dnd.app.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "creature_sizes")
+@Table(name = "character_size")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreatureSize implements DictionaryEntry {
+public class CreatureSize {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "character_size_id")
     private UUID id;
 
-    @Column(nullable = false, length = 60)
-    private String code;
+    @Column(nullable = false, columnDefinition = "text")
+    private String slug;
 
-    @Column(name = "name_engloc", columnDefinition = "text")
-    private String nameEngloc;
+    @Column(name = "name_ru", nullable = false, columnDefinition = "text")
+    private String nameRu;
 
-    @Column(name = "name_rusloc", columnDefinition = "text", nullable = false)
-    private String nameRusloc;
+    @Column(name = "name_en", columnDefinition = "text")
+    private String nameEn;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
-
-    @Column(name = "is_unique", nullable = false)
-    @Builder.Default
-    private Boolean isUnique = false;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
 }

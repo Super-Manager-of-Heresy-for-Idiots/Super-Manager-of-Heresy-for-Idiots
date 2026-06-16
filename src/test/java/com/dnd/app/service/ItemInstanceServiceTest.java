@@ -109,7 +109,7 @@ class ItemInstanceServiceTest {
                 .id(templateId)
                 .name("Sword")
                 .isStackable(false)
-                .rarity(Rarity.builder().code("COMMON").build())
+                .rarity(Rarity.builder().slug("common").build())
                 .build();
     }
 

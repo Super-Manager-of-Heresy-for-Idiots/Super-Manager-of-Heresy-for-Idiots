@@ -19,7 +19,7 @@ public interface ReferenceDataMapper {
     @Mapping(target = "slot", expression = "java(itemType.getSlot().getCode())")
     @Mapping(target = "damageDice", source = "damageDice")
     @Mapping(target = "damageBonus", source = "damageBonus")
-    @Mapping(target = "damageType", expression = "java(itemType.getDamageType() != null ? itemType.getDamageType().getCode() : null)")
+    @Mapping(target = "damageType", expression = "java(itemType.getDamageType() != null ? itemType.getDamageType().getSlug() : null)")
     @Mapping(target = "skillId", expression = "java(itemType.getSkill() != null ? itemType.getSkill().getId() : null)")
     @Mapping(target = "skillName", expression = "java(itemType.getSkill() != null ? itemType.getSkill().getName() : null)")
     @Mapping(target = "skillActivation", expression = "java(itemType.getSkillActivation() != null ? itemType.getSkillActivation().name() : null)")

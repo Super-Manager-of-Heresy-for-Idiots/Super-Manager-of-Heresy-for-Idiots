@@ -64,7 +64,7 @@ class HomebrewAuthoringServiceTest {
         when(itemTypeRepository.existsByName("Scoped Sword")).thenReturn(false);
         when(contentDictionaryResolver.resolveEquipmentSlot("MAIN_HAND", pkg)).thenReturn(mainHand);
         when(contentDictionaryResolver.resolveDamageType("SLASHING", pkg))
-                .thenReturn(DamageType.builder().code("SLASHING").build());
+                .thenReturn(DamageType.builder().slug("slashing").build());
         when(itemTypeRepository.save(any(ItemType.class))).thenAnswer(invocation -> {
             ItemType itemType = invocation.getArgument(0);
             itemType.setId(itemTypeId);

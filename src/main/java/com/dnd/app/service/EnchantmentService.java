@@ -253,7 +253,7 @@ public class EnchantmentService {
                 .id(et.getId()).name(et.getName()).description(et.getDescription())
                 .damageDice(et.getDamageDice())
                 .damageBonus(et.getDamageBonus())
-                .damageType(et.getDamageType() != null ? et.getDamageType().getCode() : null)
+                .damageType(et.getDamageType() != null ? et.getDamageType().getSlug() : null)
                 .buffDebuff(et.getBuffDebuff() != null ? toBuffDebuffResponse(et.getBuffDebuff()) : null)
                 .build();
     }

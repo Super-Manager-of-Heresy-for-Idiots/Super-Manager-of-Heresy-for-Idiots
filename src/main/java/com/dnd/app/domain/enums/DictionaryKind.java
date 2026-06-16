@@ -16,10 +16,7 @@ public enum DictionaryKind {
     SIZE("sizes"),
     ABILITY("abilities"),
     DAMAGE_TYPE("damage-types"),
-    CONTENT_DAMAGE_TYPE("content-damage-types"),
-    ITEM_RARITY("item-rarities"),
-    EQUIPMENT_SLOT("equipment-slots"),
-    CONTENT_SIZE("creature-sizes");
+    EQUIPMENT_SLOT("equipment-slots");
 
     private final String slug;
 

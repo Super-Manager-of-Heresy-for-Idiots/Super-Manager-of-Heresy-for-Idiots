@@ -145,10 +145,10 @@ public class ItemTemplateService {
                 .id(template.getId())
                 .name(template.getName())
                 .description(template.getDescription())
-                .rarity(template.getRarity() != null ? template.getRarity().getCode() : null)
+                .rarity(template.getRarity() != null ? template.getRarity().getSlug() : null)
                 .damageDice(template.getDamageDice())
                 .damageBonus(template.getDamageBonus())
-                .damageType(template.getDamageType() != null ? template.getDamageType().getCode() : null)
+                .damageType(template.getDamageType() != null ? template.getDamageType().getSlug() : null)
                 .isStackable(template.getIsStackable())
                 .sourceHomebrewTitle(template.getHomebrew() != null ? template.getHomebrew().getTitle() : null)
                 .build();

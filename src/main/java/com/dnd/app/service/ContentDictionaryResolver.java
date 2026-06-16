@@ -1,6 +1,5 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.CreatureSize;
 import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.DictionaryEntry;
 import com.dnd.app.domain.EquipmentSlot;
@@ -18,6 +17,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Resolves item/character content codes (damage type, rarity, equipment slot, size, ability)
@@ -35,11 +38,15 @@ public class ContentDictionaryResolver {
     private final StatTypeRepository statTypeRepository;
 
     public DamageType resolveDamageType(String code, HomebrewPackage homebrew) {
-        return resolve(damageTypeRepository, code, homebrew, "damageType");
+        return resolveBySlug(code, homebrew,
+                damageTypeRepository::findBySlugAndHomebrew_Id,
+                damageTypeRepository::findBySlugAndHomebrewIsNull, "damageType");
     }
 
     public Rarity resolveRarity(String code, HomebrewPackage homebrew) {
-        return resolve(rarityRepository, code, homebrew, "rarity");
+        return resolveBySlug(code, homebrew,
+                rarityRepository::findBySlugAndHomebrew_Id,
+                rarityRepository::findBySlugAndHomebrewIsNull, "rarity");
     }
 
     public EquipmentSlot resolveEquipmentSlot(String code, HomebrewPackage homebrew) {
@@ -52,11 +59,15 @@ public class ContentDictionaryResolver {
     }
 
     public void validateSize(String code, UUID homebrewId) {
-        validateExists(creatureSizeRepository, code, homebrewId, "size");
+        validateBySlug(code, homebrewId,
+                creatureSizeRepository::existsBySlugAndHomebrew_Id,
+                creatureSizeRepository::existsBySlugAndHomebrewIsNull, "size");
     }
 
     public void validateDamageType(String code, UUID homebrewId) {
-        validateExists(damageTypeRepository, code, homebrewId, "damageType");
+        validateBySlug(code, homebrewId,
+                damageTypeRepository::existsBySlugAndHomebrew_Id,
+                damageTypeRepository::existsBySlugAndHomebrewIsNull, "damageType");
     }
 
     public void validateAbility(String code, UUID homebrewId) {
@@ -72,6 +83,42 @@ public class ContentDictionaryResolver {
         }
     }
 
+    // --- new singular content dictionaries (looked up by slug) ---
+
+    private <T> T resolveBySlug(String code, HomebrewPackage homebrew,
+                                BiFunction<String, UUID, Optional<T>> byHomebrew,
+                                Function<String, Optional<T>> byVanilla, String label) {
+        if (code == null) {
+            return null;
+        }
+        String norm = code.toLowerCase();
+        if (homebrew != null) {
+            Optional<T> owned = byHomebrew.apply(norm, homebrew.getId());
+            if (owned.isPresent()) {
+                return owned.get();
+            }
+        }
+        return byVanilla.apply(norm)
+                .orElseThrow(() -> new BadRequestException("Invalid " + label + ": " + code));
+    }
+
+    private void validateBySlug(String code, UUID homebrewId,
+                                BiPredicate<String, UUID> byHomebrew,
+                                Predicate<String> byVanilla, String label) {
+        if (code == null) {
+            throw new BadRequestException(label + " is required");
+        }
+        String norm = code.toLowerCase();
+        if (homebrewId != null && byHomebrew.test(norm, homebrewId)) {
+            return;
+        }
+        if (!byVanilla.test(norm)) {
+            throw new BadRequestException("Invalid " + label + ": " + code);
+        }
+    }
+
+    // --- legacy DictionaryEntry dictionaries (looked up by code) ---
+
     private <T extends DictionaryEntry> T resolve(DictionaryRepository<T> repo, String code,
                                                   HomebrewPackage homebrew, String label) {
         if (code == null) {
@@ -86,19 +133,5 @@ public class ContentDictionaryResolver {
         }
         return repo.findByCodeAndHomebrewIsNull(norm)
                 .orElseThrow(() -> new BadRequestException("Invalid " + label + ": " + code));
-    }
-
-    private <T extends DictionaryEntry> void validateExists(DictionaryRepository<T> repo, String code,
-                                                            UUID homebrewId, String label) {
-        if (code == null) {
-            throw new BadRequestException(label + " is required");
-        }
-        String norm = code.toUpperCase();
-        if (homebrewId != null && repo.existsByCodeAndHomebrewId(norm, homebrewId)) {
-            return;
-        }
-        if (!repo.existsByCodeAndHomebrewIsNull(norm)) {
-            throw new BadRequestException("Invalid " + label + ": " + code);
-        }
     }
 }
