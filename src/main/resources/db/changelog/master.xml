@@ -58,5 +58,7 @@
     <include file="db/changelog/051-create-campaign-blueprints.xml"/>
     <include file="db/changelog/052-create-blueprint-content.xml"/>
     <include file="db/changelog/053-add-blueprint-id-to-characters.xml"/>
+    <include file="db/changelog/054-create-dnd-content-schema.xml"/>
+    <include file="db/changelog/055-add-homebrew-ownership-to-content.xml"/>
 
 </databaseChangeLog>
