@@ -5,10 +5,12 @@ import com.dnd.app.dto.content.ContentDataAuditReport;
 import com.dnd.app.dto.content.ContentDataQualityReport;
 import com.dnd.app.dto.content.ContentSeedSummary;
 import com.dnd.app.dto.content.ImportWarningResponse;
+import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.service.ClassRewardSeedService;
 import com.dnd.app.service.ContentDataAuditService;
 import com.dnd.app.service.ContentReferenceService;
+import com.dnd.app.service.RuntimeDataMigrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class AdminContentController {
     private final ContentDataAuditService contentDataAuditService;
     private final ContentReferenceService contentReferenceService;
     private final ClassRewardSeedService classRewardSeedService;
+    private final RuntimeDataMigrationService runtimeDataMigrationService;
     private final Executor controllerTaskExecutor;
 
     // --- read views (same model runtime uses) ---
@@ -86,6 +89,20 @@ public class AdminContentController {
     public CompletableFuture<ResponseEntity<ApiResponse<List<ImportWarningResponse>>>> importWarnings() {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(contentDataAuditService.listImportWarnings())),
+                controllerTaskExecutor);
+    }
+
+    // --- runtime data migration (Phase 10) ---
+
+    @PostMapping("/runtime-migration")
+    @Operation(summary = "Migrate legacy runtime IDs (class_id/skill_id) to new content IDs; "
+            + "dry-run by default, applying requires confirmBackup=true")
+    public CompletableFuture<ResponseEntity<ApiResponse<RuntimeMigrationReport>>> runtimeMigration(
+            @RequestParam(defaultValue = "true") boolean dryRun,
+            @RequestParam(defaultValue = "false") boolean confirmBackup) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                runtimeDataMigrationService.migrate(dryRun, confirmBackup))),
                 controllerTaskExecutor);
     }
 
