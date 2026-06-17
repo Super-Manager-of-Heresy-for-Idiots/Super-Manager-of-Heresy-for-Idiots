@@ -1,14 +1,28 @@
 package com.dnd.app.service;
 
+import com.dnd.app.domain.content.ClassFeature;
+import com.dnd.app.domain.content.ClassLevelRewardGrant;
 import com.dnd.app.domain.content.ClassLevelRewardGroup;
 import com.dnd.app.domain.content.ClassLevelRewardOption;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.dto.content.ContentDataAuditReport;
+import com.dnd.app.dto.content.ContentDataQualityReport;
+import com.dnd.app.dto.content.ImportWarningResponse;
 import com.dnd.app.dto.content.grant.GrantType;
 import com.dnd.app.repository.ClassFeatureRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantAbilityScoreRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantCustomTextRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantFeatRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantFeatureRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantNumericModifierRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantSkillProficiencyRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantSpellRepository;
+import com.dnd.app.repository.ClassLevelRewardGrantSubclassRepository;
 import com.dnd.app.repository.ClassLevelRewardGroupRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.ContentSubclassRepository;
+import com.dnd.app.repository.ImportWarningRepository;
 import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +47,16 @@ public class ContentDataAuditService {
     private final ContentSubclassRepository subclassRepo;
     private final ClassFeatureRepository featureRepo;
     private final ClassLevelRewardGroupRepository groupRepo;
+    private final ClassLevelRewardGrantRepository grantRepo;
+    private final ClassLevelRewardGrantFeatureRepository grantFeatureRepo;
+    private final ClassLevelRewardGrantSubclassRepository grantSubclassRepo;
+    private final ClassLevelRewardGrantFeatRepository grantFeatRepo;
+    private final ClassLevelRewardGrantSpellRepository grantSpellRepo;
+    private final ClassLevelRewardGrantSkillProficiencyRepository grantSkillRepo;
+    private final ClassLevelRewardGrantAbilityScoreRepository grantAbilityRepo;
+    private final ClassLevelRewardGrantNumericModifierRepository grantNumericRepo;
+    private final ClassLevelRewardGrantCustomTextRepository grantCustomRepo;
+    private final ImportWarningRepository importWarningRepo;
 
     @Transactional(readOnly = true)
     public ContentDataAuditReport buildReport(String lang) {
@@ -113,5 +137,77 @@ public class ContentDataAuditService {
             }
         }
         return false;
+    }
+
+    // --- Phase 9: deeper data-quality findings ---
+
+    @Transactional(readOnly = true)
+    public ContentDataQualityReport buildDataQualityReport() {
+        List<ContentDataQualityReport.FeatureGap> featuresWithoutRewards = new ArrayList<>();
+        for (ContentCharacterClass clazz : classRepo.findAllByHomebrewIsNull()) {
+            List<ClassLevelRewardGroup> groups =
+                    groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(clazz.getId());
+            for (ClassFeature feature : featureRepo.findAllByCharacterClassIdOrderByLevelAscSortOrderAsc(clazz.getId())) {
+                boolean referencedByGroup = groups.stream()
+                        .anyMatch(g -> g.getClassFeature() != null && g.getClassFeature().getId().equals(feature.getId()));
+                boolean grantedByFeatureGrant = !grantFeatureRepo.findAllByClassFeatureId(feature.getId()).isEmpty();
+                if (!referencedByGroup && !grantedByFeatureGrant) {
+                    featuresWithoutRewards.add(ContentDataQualityReport.FeatureGap.builder()
+                            .featureId(feature.getId())
+                            .featureSlug(feature.getSlug())
+                            .title(feature.getTitle())
+                            .classSlug(clazz.getSlug())
+                            .build());
+                }
+            }
+        }
+
+        List<UUID> grantsWithoutTypedPayload = new ArrayList<>();
+        List<UUID> orphanGrants = new ArrayList<>();
+        for (ClassLevelRewardGrant grant : grantRepo.findAll()) {
+            if (grant.getRewardGroup() == null && grant.getRewardOption() == null) {
+                orphanGrants.add(grant.getId());
+            }
+            if (!hasTypedPayload(grant)) {
+                grantsWithoutTypedPayload.add(grant.getId());
+            }
+        }
+
+        return ContentDataQualityReport.builder()
+                .featuresWithoutRewards(featuresWithoutRewards)
+                .grantsWithoutTypedPayload(grantsWithoutTypedPayload)
+                .orphanGrants(orphanGrants)
+                .build();
+    }
+
+    /** A known-typed grant must have its typed row; CUSTOM_TEXT/unknown render as custom and are fine. */
+    private boolean hasTypedPayload(ClassLevelRewardGrant grant) {
+        UUID id = grant.getId();
+        return switch (GrantType.fromTextOrCustom(grant.getGrantType())) {
+            case FEATURE -> grantFeatureRepo.existsById(id);
+            case SUBCLASS -> grantSubclassRepo.existsById(id);
+            // FEAT may be "choose any" (no fixed feat row) — that is a valid manual representation
+            case FEAT -> true;
+            case SPELL -> grantSpellRepo.existsById(id);
+            case SKILL_PROFICIENCY -> grantSkillRepo.existsById(id);
+            case ABILITY_SCORE -> grantAbilityRepo.existsById(id);
+            case NUMERIC_MODIFIER -> grantNumericRepo.existsById(id);
+            case CUSTOM_TEXT -> true;
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImportWarningResponse> listImportWarnings() {
+        return importWarningRepo.findAllByOrderByCreatedAtDesc().stream()
+                .map(w -> ImportWarningResponse.builder()
+                        .id(w.getId())
+                        .sourceSlug(w.getSourceSlug())
+                        .entityKind(w.getEntityKind())
+                        .entitySlug(w.getEntitySlug())
+                        .warningCode(w.getWarningCode())
+                        .message(w.getMessage())
+                        .createdAt(w.getCreatedAt())
+                        .build())
+                .toList();
     }
 }
