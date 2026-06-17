@@ -24,9 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Level-up endpoints on the new content model. Read (Phase 6) and commit (Phase 7)
- * run in parallel to the legacy level-up endpoints, which remain available until the
- * legacy routes are removed (Phases 11/12).
+ * Level-up endpoints on the new content model. The in-place routes are the final
+ * contract; the /content aliases are kept during rollout.
  */
 @RestController
 @RequiredArgsConstructor
@@ -37,7 +36,10 @@ public class ContentLevelUpController {
     private final LevelUpCommandService levelUpCommandService;
     private final Executor controllerTaskExecutor;
 
-    @GetMapping("/api/characters/{characterId}/content/level-up-options")
+    @GetMapping({
+            "/api/characters/{characterId}/level-up-options",
+            "/api/characters/{characterId}/content/level-up-options"
+    })
     @Operation(summary = "Get level-up options (reward groups/options/grants) from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<LevelUpOptionsResponse>>> getLevelUpOptions(
             @PathVariable UUID characterId,
@@ -49,7 +51,10 @@ public class ContentLevelUpController {
                 controllerTaskExecutor);
     }
 
-    @PostMapping("/api/characters/{characterId}/content/level-up")
+    @PostMapping({
+            "/api/characters/{characterId}/level-up",
+            "/api/characters/{characterId}/content/level-up"
+    })
     @Operation(summary = "Commit a level-up, persisting reward selections to the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<LevelUpResultResponse>>> commitLevelUp(
             @PathVariable UUID characterId,

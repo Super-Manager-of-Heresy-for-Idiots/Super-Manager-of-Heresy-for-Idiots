@@ -23,7 +23,8 @@ public class LevelUpController {
     private final CharacterRewardQueryService rewardQueryService;
     private final Executor controllerTaskExecutor;
 
-    @GetMapping("/{id}/level-up-options")
+    @Deprecated(forRemoval = true)
+    @GetMapping("/{id}/legacy/level-up-options")
     public CompletableFuture<ResponseEntity<ApiResponse<LevelUpOptionsResponse>>> getLevelUpOptions(
             @PathVariable UUID id, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
@@ -32,7 +33,8 @@ public class LevelUpController {
         }, controllerTaskExecutor);
     }
 
-    @PostMapping("/{id}/level-up")
+    @Deprecated(forRemoval = true)
+    @PostMapping("/{id}/legacy/level-up")
     public CompletableFuture<ResponseEntity<ApiResponse<LevelUpResultResponse>>> levelUp(
             @PathVariable UUID id, @Valid @RequestBody LevelUpRequest request, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {

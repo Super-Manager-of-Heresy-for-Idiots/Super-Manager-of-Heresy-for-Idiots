@@ -21,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Character creation on the new content model (Phase 5). Parallel to the legacy
- * wizard endpoints, which remain available during the migration.
+ * Character creation on the new content model. The stable wizard routes now resolve
+ * through this controller; legacy wizard persistence remains under /legacy/full.
  */
 @RestController
 @RequiredArgsConstructor
@@ -32,7 +32,10 @@ public class ContentCharacterController {
     private final ContentCharacterCreationService creationService;
     private final Executor controllerTaskExecutor;
 
-    @PostMapping("/api/campaigns/{campaignId}/characters/content")
+    @PostMapping({
+            "/api/campaigns/{campaignId}/characters/full",
+            "/api/campaigns/{campaignId}/characters/content"
+    })
     @Operation(summary = "Create a campaign character from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentCharacterCreationResponse>>> createCampaignCharacter(
             @PathVariable UUID campaignId,
@@ -45,7 +48,10 @@ public class ContentCharacterController {
         }, controllerTaskExecutor);
     }
 
-    @PostMapping("/api/characters/content")
+    @PostMapping({
+            "/api/characters/full",
+            "/api/characters/content"
+    })
     @Operation(summary = "Create a vanilla character template from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentCharacterCreationResponse>>> createVanillaCharacter(
             @Valid @RequestBody CreateContentCharacterRequest request,

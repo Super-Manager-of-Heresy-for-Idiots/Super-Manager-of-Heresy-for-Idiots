@@ -9,6 +9,8 @@ import com.dnd.app.domain.User;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.dto.content.ContentCharacterCreationResponse;
+import com.dnd.app.dto.content.LevelUpRequest;
+import com.dnd.app.dto.content.LevelUpResultResponse;
 import com.dnd.app.dto.request.CreateContentCharacterRequest;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.repository.BackgroundRepository;
@@ -52,6 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +79,7 @@ class ContentCharacterCreationServiceTest {
     @Mock private CampaignMemberRepository campaignMemberRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
     @Mock private RaceService raceService;
+    @Mock private LevelUpCommandService levelUpCommandService;
     @Mock private EntityManager entityManager;
 
     @InjectMocks private ContentCharacterCreationService service;
@@ -123,6 +127,8 @@ class ContentCharacterCreationServiceTest {
         lenient().when(skillProficiencyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(entityManager.getReference(eq(ProficiencySkill.class), any()))
                 .thenReturn(mock(ProficiencySkill.class));
+        lenient().when(levelUpCommandService.applyInitialRewardSelections(any(), any(), any(), any()))
+                .thenReturn(LevelUpResultResponse.builder().build());
     }
 
     private StatType stat(String slug, String nameEn) {
@@ -203,6 +209,32 @@ class ContentCharacterCreationServiceTest {
 
         assertThrows(BadRequestException.class,
                 () -> service.createCampaignCharacter(campaignId, req, "player1"));
+    }
+
+    @Test
+    @DisplayName("РџРµСЂРІРёС‡РЅС‹Рµ reward selections РїРµСЂРµРґР°СЋС‚СЃСЏ РІ final reward-selection pipeline")
+    void createWithInitialRewardSelections_delegatesToFinalRewardPipeline() {
+        ContentCharacterClass fighter = ContentCharacterClass.builder()
+                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Р’РѕРёРЅ")
+                .hitDie(10).spellcaster(false).skillChoiceCount(0).skillChoiceAny(false)
+                .skillOptions(Set.of()).build();
+        when(contentClassRepository.findById(fighter.getId())).thenReturn(Optional.of(fighter));
+
+        LevelUpRequest.GroupSelection selection = LevelUpRequest.GroupSelection.builder()
+                .rewardGroupId(UUID.randomUUID())
+                .optionIds(List.of(UUID.randomUUID()))
+                .build();
+        CreateContentCharacterRequest req = baseRequest(fighter.getId())
+                .initialRewardSelections(List.of(selection))
+                .build();
+
+        service.createCampaignCharacter(campaignId, req, "player1");
+
+        verify(levelUpCommandService).applyInitialRewardSelections(
+                any(PlayerCharacter.class),
+                eq(fighter),
+                eq(req.getInitialRewardSelections()),
+                eq("ru"));
     }
 
     @Test

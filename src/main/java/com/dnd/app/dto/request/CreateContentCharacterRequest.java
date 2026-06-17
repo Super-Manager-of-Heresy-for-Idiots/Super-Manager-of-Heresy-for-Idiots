@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.dnd.app.dto.content.LevelUpRequest;
 
 import java.util.List;
 import java.util.UUID;
@@ -73,6 +74,10 @@ public class CreateContentCharacterRequest {
     private List<UUID> spellIds;
 
     private List<StartingCoin> startingCoins;
+
+    @Valid
+    @Schema(description = "Initial level-1 reward-group selections")
+    private List<LevelUpRequest.GroupSelection> initialRewardSelections;
 
     @Data
     @Builder

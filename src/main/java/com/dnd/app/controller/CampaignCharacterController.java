@@ -32,10 +32,10 @@ public class CampaignCharacterController {
     private final CharacterResourceService characterResourceService;
     private final Executor controllerTaskExecutor;
 
-    // --- Full character creation (wizard) ---
+    // --- Legacy full character creation (old wizard persistence) ---
 
-    @PostMapping("/full")
-    @Operation(summary = "Create a full 5e character via wizard")
+    @PostMapping("/legacy/full")
+    @Operation(summary = "Create a full 5e character via legacy wizard persistence")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> createFullCharacter(
             @PathVariable UUID campaignId,
             @Valid @RequestBody CreateFullCharacterRequest request, Authentication auth) {

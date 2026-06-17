@@ -186,6 +186,39 @@ class LevelUpCommandServiceTest {
     }
 
     @Test
+    @DisplayName("Initial reward selection: selection СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ Р±РµР· РїРѕРІС‹С€РµРЅРёСЏ СѓСЂРѕРІРЅСЏ")
+    void applyInitialRewardSelections_persistsWithoutLevelChange() {
+        PlayerCharacter c = PlayerCharacter.builder()
+                .id(characterId).owner(player).totalLevel(1).experience(0L).maxHp(12).currentHp(12).build();
+        UUID grantId = UUID.randomUUID();
+        ClassLevelRewardGrant grant = ClassLevelRewardGrant.builder().id(grantId).grantType("SUBCLASS").build();
+        ClassLevelRewardOption option = ClassLevelRewardOption.builder()
+                .id(UUID.randomUUID()).grants(List.of(grant)).build();
+        ClassLevelRewardGroup group = ClassLevelRewardGroup.builder()
+                .id(UUID.randomUUID()).classLevel(1).groupKind("CHOICE").chooseMin(1).chooseMax(1)
+                .repeatable(false).options(List.of(option)).build();
+        when(rewardGroupRepository.findAllByCharacterClassIdAndClassLevelOrderBySortOrderAsc(fighter.getId(), 1))
+                .thenReturn(List.of(group));
+
+        LevelUpResultResponse result = service.applyInitialRewardSelections(
+                c,
+                fighter,
+                List.of(LevelUpRequest.GroupSelection.builder()
+                        .rewardGroupId(group.getId())
+                        .optionIds(List.of(option.getId()))
+                        .build()),
+                "en");
+
+        assertEquals(1, result.getNewClassLevel());
+        assertEquals(1, result.getNewTotalLevel());
+        assertEquals(0, result.getHpIncrease());
+        assertEquals(1, result.getAppliedGrants().size());
+        verify(rewardSelectionRepository).save(any());
+        verify(classLevelRepository, never()).save(any());
+        verify(characterRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("ASI +2: характеристика растёт на 2, child-selection сохранён")
     void commitAsiPlus2() {
         PlayerCharacter c = character();

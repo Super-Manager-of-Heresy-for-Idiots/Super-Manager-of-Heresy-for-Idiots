@@ -87,6 +87,7 @@ public class ContentCharacterCreationService {
     private final CampaignMemberRepository campaignMemberRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final RaceService raceService;
+    private final LevelUpCommandService levelUpCommandService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -238,6 +239,9 @@ public class ContentCharacterCreationService {
                         .build());
             }
         }
+
+        levelUpCommandService.applyInitialRewardSelections(
+                character, charClass, req.getInitialRewardSelections(), "ru");
 
         log.info("Content character created: id={}, name='{}', classId={}, level={}, owner={}, campaign={}",
                 character.getId(), character.getName(), charClass.getId(), level, owner.getUsername(),

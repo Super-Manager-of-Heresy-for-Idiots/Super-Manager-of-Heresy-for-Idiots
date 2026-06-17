@@ -19,9 +19,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Read-only reference endpoints for the new normalized content model. These are the
- * final {@link ContentClassDetailResponse}-shaped routes; the legacy reference
- * endpoints continue to work until the frontend migration (Phases 11/12).
+ * Read-only reference endpoints for the new normalized content model. The in-place
+ * routes are the final contract; the /content aliases are kept during rollout.
  */
 @RestController
 @RequiredArgsConstructor
@@ -31,7 +30,7 @@ public class ContentReferenceController {
     private final ContentReferenceService contentReferenceService;
     private final Executor controllerTaskExecutor;
 
-    @GetMapping("/api/reference/content/classes")
+    @GetMapping({"/api/reference/classes", "/api/reference/content/classes"})
     @Operation(summary = "Get core (vanilla) classes from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ContentClassDetailResponse>>>> getVanillaClasses(
             @RequestParam(defaultValue = "en") String lang) {
@@ -40,7 +39,7 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
-    @GetMapping("/api/reference/content/classes/{classId}")
+    @GetMapping({"/api/reference/classes/{classId}", "/api/reference/content/classes/{classId}"})
     @Operation(summary = "Get a single core (vanilla) class from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getVanillaClass(
             @PathVariable UUID classId,
@@ -50,7 +49,10 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
-    @GetMapping("/api/campaigns/{campaignId}/reference/content/classes")
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/classes",
+            "/api/campaigns/{campaignId}/reference/content/classes"
+    })
     @Operation(summary = "Get campaign-visible classes (core + active homebrew) from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ContentClassDetailResponse>>>> getCampaignClasses(
             @PathVariable UUID campaignId,
@@ -62,7 +64,10 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
-    @GetMapping("/api/campaigns/{campaignId}/reference/content/classes/{classId}")
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/classes/{classId}",
+            "/api/campaigns/{campaignId}/reference/content/classes/{classId}"
+    })
     @Operation(summary = "Get a single campaign-visible class from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getCampaignClass(
             @PathVariable UUID campaignId,

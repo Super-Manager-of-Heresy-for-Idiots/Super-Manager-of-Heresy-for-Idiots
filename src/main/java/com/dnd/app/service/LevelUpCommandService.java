@@ -211,6 +211,65 @@ public class LevelUpCommandService {
                 .build();
     }
 
+    /**
+     * Applies and persists selections for level-1 reward groups during character creation.
+     * This uses the final reward-selection model and intentionally does not change class
+     * level, total level, HP, XP, or proficiency.
+     */
+    public LevelUpResultResponse applyInitialRewardSelections(
+            PlayerCharacter character,
+            ContentCharacterClass targetClass,
+            List<LevelUpRequest.GroupSelection> selections,
+            String lang) {
+        String resolvedLang = Localization.normalize(lang);
+
+        List<ClassLevelRewardGroup> groups = rewardGroupRepository
+                .findAllByCharacterClassIdAndClassLevelOrderBySortOrderAsc(targetClass.getId(), 1);
+        Map<UUID, ClassLevelRewardGroup> groupById = groups.stream()
+                .collect(Collectors.toMap(ClassLevelRewardGroup::getId, g -> g));
+
+        Map<UUID, LevelUpRequest.GroupSelection> selectionByGroup = new LinkedHashMap<>();
+        if (selections != null) {
+            for (LevelUpRequest.GroupSelection sel : selections) {
+                if (sel.getRewardGroupId() == null || !groupById.containsKey(sel.getRewardGroupId())) {
+                    throw new UnprocessableEntityException(
+                            "Р“СЂСѓРїРїР° РЅР°РіСЂР°Рґ РЅРµ РѕС‚РЅРѕСЃРёС‚СЃСЏ Рє СЌС‚РѕРјСѓ РєР»Р°СЃСЃСѓ Рё 1 СѓСЂРѕРІРЅСЋ: "
+                                    + sel.getRewardGroupId());
+                }
+                if (selectionByGroup.put(sel.getRewardGroupId(), sel) != null) {
+                    throw new UnprocessableEntityException(
+                            "Р”СѓР±Р»РёСЂСѓСЋС‰Р°СЏСЃСЏ РіСЂСѓРїРїР° РЅР°РіСЂР°Рґ: " + sel.getRewardGroupId());
+                }
+            }
+        }
+
+        List<LevelUpResultResponse.AppliedGrant> applied = new ArrayList<>();
+        List<LevelUpResultResponse.ManualActionItem> manual = new ArrayList<>();
+
+        for (ClassLevelRewardGroup group : groups) {
+            LevelUpRequest.GroupSelection sel = selectionByGroup.get(group.getId());
+            if ("CHOICE".equalsIgnoreCase(group.getGroupKind())) {
+                processChoiceGroup(character, group, sel, applied, manual);
+            } else if (sel != null) {
+                throw new UnprocessableEntityException(
+                        "Р“СЂСѓРїРїР° РЅР°РіСЂР°Рґ РЅРµ СЏРІР»СЏРµС‚СЏ РіСЂСѓРїРїРѕР№ РІС‹Р±РѕСЂР°: " + group.getId());
+            }
+        }
+
+        return LevelUpResultResponse.builder()
+                .newTotalLevel(character.getTotalLevel())
+                .classLeveled(Localization.pick(resolvedLang, targetClass.getNameRu(), targetClass.getNameEn(),
+                        targetClass.getNameEn() != null ? targetClass.getNameEn() : targetClass.getNameRu()))
+                .newClassLevel(1)
+                .hpIncrease(0)
+                .newMaxHp(character.getMaxHp())
+                .proficiencyBonusBefore(proficiencyBonus(character.getTotalLevel()))
+                .proficiencyBonusAfter(proficiencyBonus(character.getTotalLevel()))
+                .appliedGrants(applied)
+                .manualActions(manual)
+                .build();
+    }
+
     private void processChoiceGroup(PlayerCharacter character, ClassLevelRewardGroup group,
                                     LevelUpRequest.GroupSelection sel,
                                     List<LevelUpResultResponse.AppliedGrant> applied,

@@ -29,8 +29,8 @@ public class CharacterTemplateController {
     private final CharacterWizardService characterWizardService;
     private final Executor controllerTaskExecutor;
 
-    @PostMapping("/full")
-    @Operation(summary = "Create a vanilla character template via wizard (no campaign)")
+    @PostMapping("/legacy/full")
+    @Operation(summary = "Create a vanilla character template via legacy wizard persistence")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> createVanillaCharacter(
             @Valid @RequestBody CreateFullCharacterRequest request, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
