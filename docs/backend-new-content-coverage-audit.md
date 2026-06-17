@@ -388,20 +388,18 @@ The authoring API must move from old `rewardType/rewardId` plans to group/option
 
 ### Step 1: Add read-only new content reference service
 
-Create a new service instead of rewriting all old service code at once:
+Introduce the final content reference service and route current reference endpoints through it:
 
 - `ContentReferenceService`
 - new mapper for `ContentCharacterClass`
 - new DTOs for class mechanics/features/reward groups/grants
-- endpoint can be either:
-  - versioned: `/api/campaigns/{campaignId}/reference/classes/content`
-  - or backwards-compatible extension of `/classes`
+- endpoint should replace the current class reference route in-place; do not add versioned duplicate routes.
 
-This gives frontend something real to integrate without breaking current character creation.
+Temporary frontend breakage is acceptable while character creation is moved to the final contract.
 
 ### Step 2: Add new level-up options read model
 
-Build `LevelUpOptionsResponseV2` from:
+Build `LevelUpOptionsResponse` from:
 
 - `ContentCharacterClassRepository`
 - `ClassLevelRewardGroupRepository`
@@ -410,16 +408,16 @@ Build `LevelUpOptionsResponseV2` from:
 
 Do not persist new selections yet in this step. Just make the UI able to render the real new model.
 
-### Step 3: Add new level-up commit path
+### Step 3: Replace level-up commit path
 
-Add `LevelUpRequestV2` and persist:
+Add the final `LevelUpRequest` and persist:
 
 - `character_reward_selection`
 - `character_reward_ability_score_selection`
 - `character_reward_skill_selection`
 - `character_reward_spell_selection`
 
-Keep old endpoint until frontend is switched.
+Replace the current level-up endpoint in-place when this path is ready.
 
 ### Step 4: Bridge character-owned class/skill state
 
@@ -447,9 +445,9 @@ Move rich class authoring to:
 
 This is where homebrew friendliness is won or lost.
 
-### Step 6: Retire old class reward APIs
+### Step 6: Remove legacy class reward APIs
 
-After frontend and services use V2:
+After frontend and services use the final grant model:
 
 - stop writing `class_level_rewards`
 - stop writing `character_acquired_rewards`

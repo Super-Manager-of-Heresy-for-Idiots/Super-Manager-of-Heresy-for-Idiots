@@ -41,7 +41,7 @@ public class ItemType {
     private Integer damageBonus = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "damage_type_id")
+    @JoinColumn(name = "damage_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private DamageType damageType;
 
     @ManyToOne(fetch = FetchType.LAZY)

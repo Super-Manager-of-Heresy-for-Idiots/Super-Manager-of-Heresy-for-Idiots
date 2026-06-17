@@ -28,20 +28,20 @@ The new model is relational and more expressive:
 
 The frontend must stop treating rewards as a flat list and start rendering a decision tree.
 
-## Safe Migration Rule
+## Migration Rule
 
-Keep current screens working as legacy mode until backend is ready.
+Do not start rewriting critical character creation or level-up screens until backend endpoints expose stable final DTOs. Once the contract is stable, replace the current frontend contract in-place.
 
 Recommended frontend adapter shape:
 
-- `legacyClassApi`: current endpoints and current DTOs
-- `contentClassApi`: new endpoints and new DTOs
+- `classApi`: final class reference endpoints and DTOs
+- `levelUpApi`: final level-up endpoints and DTOs
 - `ClassCreationViewModel`: normalized UI model used by the screen
 - `LevelUpViewModel`: normalized UI model used by the screen
 
 The screen should depend on view models, not directly on backend DTOs.
 
-This lets the frontend support old and new payloads during rollout without touching unrelated character sheet, campaign, inventory, bestiary, or combat flows.
+This keeps the rewrite local to character creation and level-up while avoiding duplicate API layers.
 
 ## New Frontend Types
 
@@ -369,14 +369,14 @@ Skill/spell grant:
 
 ## Rollout Order
 
-1. Add new frontend types and DTO adapters.
-2. Keep current screens on legacy mode.
-3. Update class detail rendering to display new mechanics when present.
-4. Add reward group renderer behind a feature flag or payload detection.
+1. Add final frontend types and DTO adapters.
+2. Replace current screen data contracts in-place.
+3. Update class detail rendering to display final mechanics.
+4. Add reward group renderer for the final payload shape.
 5. Use the renderer in level-up first because it is isolated.
 6. Use the same renderer in character creation for level 1 choices.
 7. Add homebrew class authoring last.
-8. Remove legacy reward rendering only after backend no longer returns old reward DTOs.
+8. Remove legacy reward rendering when the final renderer reaches parity.
 
 ## Critical Functionality Guardrails
 

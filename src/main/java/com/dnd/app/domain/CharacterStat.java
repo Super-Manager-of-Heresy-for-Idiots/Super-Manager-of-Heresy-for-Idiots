@@ -25,7 +25,7 @@ public class CharacterStat {
     private PlayerCharacter character;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stat_type_id", nullable = false)
+    @JoinColumn(name = "stat_type_id", nullable = false, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private StatType statType;
 
     @Column(nullable = false)

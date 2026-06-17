@@ -104,7 +104,7 @@ public class PlayerCharacter {
     private String alignment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "background_id")
+    @JoinColumn(name = "background_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Background background;
 
     @Column(name = "avatar_url", columnDefinition = "text")

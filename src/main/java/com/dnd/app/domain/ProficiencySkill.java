@@ -33,7 +33,7 @@ public class ProficiencySkill {
     private String nameRusloc;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "governing_stat_id", nullable = false)
+    @JoinColumn(name = "governing_stat_id", nullable = false, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private StatType governingStat;
 
     @Column(nullable = false)

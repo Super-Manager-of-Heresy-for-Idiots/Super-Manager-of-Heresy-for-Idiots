@@ -8,9 +8,9 @@ import java.util.UUID;
 
 public interface ClassLevelRewardGrantRepository extends JpaRepository<ClassLevelRewardGrant, UUID> {
 
-    List<ClassLevelRewardGrant> findAllByGroupIdOrderBySortOrderAsc(UUID groupId);
+    List<ClassLevelRewardGrant> findAllByRewardGroupIdOrderBySortOrderAsc(UUID groupId);
 
-    List<ClassLevelRewardGrant> findAllByOptionIdOrderBySortOrderAsc(UUID optionId);
+    List<ClassLevelRewardGrant> findAllByRewardOptionIdOrderBySortOrderAsc(UUID optionId);
 
     List<ClassLevelRewardGrant> findAllByGrantType(String grantType);
 }

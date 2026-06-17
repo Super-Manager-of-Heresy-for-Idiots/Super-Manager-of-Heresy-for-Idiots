@@ -35,7 +35,7 @@ public class ItemTemplate {
     private ItemType itemType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rarity_id")
+    @JoinColumn(name = "rarity_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Rarity rarity;
 
     @Column(name = "damage_dice", length = 10)
@@ -46,7 +46,7 @@ public class ItemTemplate {
     private Integer damageBonus = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "damage_type_id")
+    @JoinColumn(name = "damage_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private DamageType damageType;
 
     @Column(name = "is_stackable", nullable = false)

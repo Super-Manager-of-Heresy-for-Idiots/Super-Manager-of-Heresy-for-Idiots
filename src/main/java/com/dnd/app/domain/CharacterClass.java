@@ -50,7 +50,7 @@ public class CharacterClass {
     private Integer hitDie = 8;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "primary_ability_stat_id")
+    @JoinColumn(name = "primary_ability_stat_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private StatType primaryAbilityStat;
 
     @Column(name = "saving_throw_stat_ids_json", columnDefinition = "text")
@@ -77,7 +77,7 @@ public class CharacterClass {
     private Boolean isSpellcaster = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "spellcasting_stat_id")
+    @JoinColumn(name = "spellcasting_stat_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private StatType spellcastingStat;
 
     @Column(name = "has_cantrips", nullable = false)

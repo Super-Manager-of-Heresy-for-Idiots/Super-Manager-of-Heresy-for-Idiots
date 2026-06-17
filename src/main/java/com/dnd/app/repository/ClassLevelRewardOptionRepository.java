@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface ClassLevelRewardOptionRepository extends JpaRepository<ClassLevelRewardOption, UUID> {
 
-    Optional<ClassLevelRewardOption> findByGroupIdAndOptionKey(UUID groupId, String optionKey);
+    Optional<ClassLevelRewardOption> findByRewardGroupIdAndOptionKey(UUID groupId, String optionKey);
 
-    List<ClassLevelRewardOption> findAllByGroupIdOrderBySortOrderAsc(UUID groupId);
+    List<ClassLevelRewardOption> findAllByRewardGroupIdOrderBySortOrderAsc(UUID groupId);
 }

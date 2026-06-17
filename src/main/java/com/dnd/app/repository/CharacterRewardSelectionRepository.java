@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public interface CharacterRewardSelectionRepository extends JpaRepository<CharacterRewardSelection, UUID> {
 
-    Optional<CharacterRewardSelection> findByCharacterIdAndGroupId(UUID characterId, UUID groupId);
+    Optional<CharacterRewardSelection> findByCharacterIdAndRewardGroupId(UUID characterId, UUID groupId);
 
-    Optional<CharacterRewardSelection> findByCharacterIdAndOptionId(UUID characterId, UUID optionId);
+    Optional<CharacterRewardSelection> findByCharacterIdAndRewardOptionId(UUID characterId, UUID optionId);
 
     List<CharacterRewardSelection> findAllByCharacterId(UUID characterId);
 }

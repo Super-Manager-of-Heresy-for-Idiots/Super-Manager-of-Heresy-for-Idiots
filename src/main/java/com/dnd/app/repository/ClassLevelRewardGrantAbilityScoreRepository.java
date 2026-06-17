@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface ClassLevelRewardGrantAbilityScoreRepository extends JpaRepository<ClassLevelRewardGrantAbilityScore, UUID> {
 
-    List<ClassLevelRewardGrantAbilityScore> findAllByFixedAbilityScoreId(UUID abilityScoreId);
+    List<ClassLevelRewardGrantAbilityScore> findAllByAbilityScoreId(UUID abilityScoreId);
 }
