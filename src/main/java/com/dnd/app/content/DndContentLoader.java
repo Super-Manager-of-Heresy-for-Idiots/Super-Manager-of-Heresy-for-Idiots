@@ -45,6 +45,7 @@ public class DndContentLoader implements ApplicationRunner {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
+    private final com.dnd.app.service.ClassRewardSeedService classRewardSeedService;
 
     // slug -> generated UUID lookup tables, built as we go.
     private final Map<String, UUID> currencies = new HashMap<>();
@@ -70,9 +71,11 @@ public class DndContentLoader implements ApplicationRunner {
     private UUID sourceId;
     private UUID modId;
 
-    public DndContentLoader(JdbcTemplate jdbc, ObjectMapper mapper) {
+    public DndContentLoader(JdbcTemplate jdbc, ObjectMapper mapper,
+                            com.dnd.app.service.ClassRewardSeedService classRewardSeedService) {
         this.jdbc = jdbc;
         this.mapper = mapper;
+        this.classRewardSeedService = classRewardSeedService;
     }
 
     @Override
@@ -113,6 +116,14 @@ public class DndContentLoader implements ApplicationRunner {
         // row-count guard) so they populate both a fresh import and an existing DB
         // whose base content was loaded before this step existed.
         loadClassMechanics();
+
+        // Backfill reward groups derivable from the imported data (subclass-choice
+        // groups). Idempotent and safe to run on every startup; never touches homebrew.
+        try {
+            classRewardSeedService.seedCoreSubclassChoiceGroups();
+        } catch (DataAccessException e) {
+            log.warn("class reward backfill skipped: {}", e.getMessage());
+        }
     }
 
     // ------------------------------------------------------------------ references / dictionaries
