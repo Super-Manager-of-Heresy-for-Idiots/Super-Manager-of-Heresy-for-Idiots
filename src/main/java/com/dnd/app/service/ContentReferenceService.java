@@ -68,6 +68,8 @@ public class ContentReferenceService {
 
     // --- vanilla / core only ---
 
+    @org.springframework.cache.annotation.Cacheable(
+            value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, key = "#lang")
     @Transactional(readOnly = true)
     public List<ContentClassDetailResponse> getVanillaClasses(String lang) {
         String resolvedLang = Localization.normalize(lang);

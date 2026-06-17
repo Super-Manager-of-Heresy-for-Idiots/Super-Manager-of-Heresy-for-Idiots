@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -156,7 +157,7 @@ class ContentClassMapperTest {
 
         when(groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId))
                 .thenReturn(List.of(group));
-        when(grantFeatureRepo.findById(grantId)).thenReturn(Optional.of(
+        when(grantFeatureRepo.findAllById(any())).thenReturn(List.of(
                 ClassLevelRewardGrantFeature.builder().id(grantId).classFeature(feature).build()));
 
         RewardGroupDto g = mapper.toDetail(baseClass(), "en").getRewardGroups().get(0);
@@ -186,7 +187,7 @@ class ContentClassMapperTest {
 
         when(groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId))
                 .thenReturn(List.of(group));
-        when(grantSubclassRepo.findById(grantId)).thenReturn(Optional.of(
+        when(grantSubclassRepo.findAllById(any())).thenReturn(List.of(
                 ClassLevelRewardGrantSubclass.builder().id(grantId).subclass(subclass).build()));
 
         RewardGroupDto g = mapper.toDetail(baseClass(), "en").getRewardGroups().get(0);
@@ -212,7 +213,7 @@ class ContentClassMapperTest {
 
         when(groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId))
                 .thenReturn(List.of(group));
-        when(grantAbilityRepo.findById(grantId)).thenReturn(Optional.of(
+        when(grantAbilityRepo.findAllById(any())).thenReturn(List.of(
                 ClassLevelRewardGrantAbilityScore.builder()
                         .id(grantId).chooseCount(1).bonusPerChoice(2).totalBonus(2).maxPerAbility(2).maxScore(20)
                         .build()));
@@ -238,7 +239,7 @@ class ContentClassMapperTest {
 
         when(groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId))
                 .thenReturn(List.of(group));
-        when(grantCustomRepo.findById(grantId)).thenReturn(Optional.of(
+        when(grantCustomRepo.findAllById(any())).thenReturn(List.of(
                 ClassLevelRewardGrantCustomText.builder()
                         .id(grantId).titleEn("Stormborn").body("You can speak with creatures of the air.")
                         .userEditable(true).build()));
@@ -265,7 +266,7 @@ class ContentClassMapperTest {
         when(groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId))
                 .thenReturn(List.of(group));
         // unknown type resolves to CUSTOM_TEXT; no custom_text row exists => fallback
-        when(grantCustomRepo.findById(grantId)).thenReturn(Optional.empty());
+        when(grantCustomRepo.findAllById(any())).thenReturn(List.of());
 
         RewardGroupDto g = mapper.toDetail(baseClass(), "en").getRewardGroups().get(0);
         CustomTextGrantPayload payload = assertInstanceOf(CustomTextGrantPayload.class,

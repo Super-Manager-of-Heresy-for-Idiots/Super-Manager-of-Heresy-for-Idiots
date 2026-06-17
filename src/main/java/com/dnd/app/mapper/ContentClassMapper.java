@@ -3,6 +3,14 @@ package com.dnd.app.mapper;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.content.ClassFeature;
 import com.dnd.app.domain.content.ClassLevelRewardGrant;
+import com.dnd.app.domain.content.ClassLevelRewardGrantAbilityScore;
+import com.dnd.app.domain.content.ClassLevelRewardGrantCustomText;
+import com.dnd.app.domain.content.ClassLevelRewardGrantFeat;
+import com.dnd.app.domain.content.ClassLevelRewardGrantFeature;
+import com.dnd.app.domain.content.ClassLevelRewardGrantNumericModifier;
+import com.dnd.app.domain.content.ClassLevelRewardGrantSkillProficiency;
+import com.dnd.app.domain.content.ClassLevelRewardGrantSpell;
+import com.dnd.app.domain.content.ClassLevelRewardGrantSubclass;
 import com.dnd.app.domain.content.ClassLevelRewardGroup;
 import com.dnd.app.domain.content.ClassLevelRewardOption;
 import com.dnd.app.domain.content.ContentCharacterClass;
@@ -39,9 +47,14 @@ import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Maps the new-content class graph ({@link ContentCharacterClass} + features +
@@ -141,17 +154,29 @@ public class ContentClassMapper {
     // --- reward groups / options / grants ---
 
     private List<RewardGroupDto> mapRewardGroups(UUID classId, String lang) {
-        return groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId).stream()
-                .map(g -> mapGroup(g, lang))
-                .toList();
+        List<ClassLevelRewardGroup> groups =
+                groupRepo.findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId);
+        GrantDetailCache cache = buildCache(collectGrants(groups));
+        return groups.stream().map(g -> mapGroup(g, lang, cache)).toList();
     }
 
     /** Maps a single reward group (with options/grants) to the read DTO. */
     public RewardGroupDto toRewardGroupDto(ClassLevelRewardGroup group, String lang) {
-        return mapGroup(group, lang);
+        return mapGroup(group, lang, buildCache(collectGrants(List.of(group))));
     }
 
-    private RewardGroupDto mapGroup(ClassLevelRewardGroup g, String lang) {
+    private List<ClassLevelRewardGrant> collectGrants(List<ClassLevelRewardGroup> groups) {
+        List<ClassLevelRewardGrant> grants = new ArrayList<>();
+        for (ClassLevelRewardGroup group : groups) {
+            grants.addAll(group.getGrants());
+            for (ClassLevelRewardOption option : group.getOptions()) {
+                grants.addAll(option.getGrants());
+            }
+        }
+        return grants;
+    }
+
+    private RewardGroupDto mapGroup(ClassLevelRewardGroup g, String lang, GrantDetailCache cache) {
         return RewardGroupDto.builder()
                 .id(g.getId())
                 .classId(g.getCharacterClass() != null ? g.getCharacterClass().getId() : null)
@@ -164,12 +189,12 @@ public class ContentClassMapper {
                 .chooseMax(g.getChooseMax())
                 .repeatable(g.getRepeatable())
                 .sortOrder(g.getSortOrder())
-                .options(g.getOptions().stream().map(o -> mapOption(o, lang)).toList())
-                .grants(g.getGrants().stream().map(gr -> mapGrant(gr, lang)).toList())
+                .options(g.getOptions().stream().map(o -> mapOption(o, lang, cache)).toList())
+                .grants(g.getGrants().stream().map(gr -> mapGrant(gr, lang, cache)).toList())
                 .build();
     }
 
-    private RewardOptionDto mapOption(ClassLevelRewardOption o, String lang) {
+    private RewardOptionDto mapOption(ClassLevelRewardOption o, String lang, GrantDetailCache cache) {
         return RewardOptionDto.builder()
                 .id(o.getId())
                 .optionKey(o.getOptionKey())
@@ -179,11 +204,11 @@ public class ContentClassMapper {
                 .description(o.getDescription())
                 .recommended(o.getRecommended())
                 .sortOrder(o.getSortOrder())
-                .grants(o.getGrants().stream().map(gr -> mapGrant(gr, lang)).toList())
+                .grants(o.getGrants().stream().map(gr -> mapGrant(gr, lang, cache)).toList())
                 .build();
     }
 
-    private RewardGrantDto mapGrant(ClassLevelRewardGrant grant, String lang) {
+    private RewardGrantDto mapGrant(ClassLevelRewardGrant grant, String lang, GrantDetailCache cache) {
         return RewardGrantDto.builder()
                 .id(grant.getId())
                 .grantType(grant.getGrantType())
@@ -192,92 +217,133 @@ public class ContentClassMapper {
                 .labelEn(grant.getLabelEn())
                 .description(grant.getDescription())
                 .sortOrder(grant.getSortOrder())
-                .payload(mapPayload(grant, lang))
+                .payload(mapPayload(grant, lang, cache))
                 .build();
     }
 
-    private GrantPayload mapPayload(ClassLevelRewardGrant grant, String lang) {
+    private GrantPayload mapPayload(ClassLevelRewardGrant grant, String lang, GrantDetailCache cache) {
         UUID id = grant.getId();
         GrantType type = GrantType.fromTextOrCustom(grant.getGrantType());
         return switch (type) {
-            case FEATURE -> grantFeatureRepo.findById(id)
-                    .map(d -> (GrantPayload) FeatureGrantPayload.builder()
-                            .featureId(d.getClassFeature() != null ? d.getClassFeature().getId() : null)
-                            .build())
-                    .orElseGet(() -> customFallback(grant));
-            case SUBCLASS -> grantSubclassRepo.findById(id)
-                    .map(d -> (GrantPayload) SubclassGrantPayload.builder()
-                            .subclassId(d.getSubclass() != null ? d.getSubclass().getId() : null)
-                            .subclass(d.getSubclass() != null ? subclassLabel(d.getSubclass(), lang) : null)
-                            .build())
-                    .orElseGet(() -> customFallback(grant));
-            case FEAT -> grantFeatRepo.findById(id)
-                    .map(d -> (GrantPayload) FeatGrantPayload.builder()
-                            .mode("FIXED")
-                            .featId(d.getFeat() != null ? d.getFeat().getId() : null)
-                            .build())
-                    .orElseGet(() -> FeatGrantPayload.builder().mode("ANY").chooseCount(1).build());
-            case SPELL -> grantSpellRepo.findById(id)
-                    .map(d -> {
-                        if (d.getSpell() != null) {
-                            return (GrantPayload) SpellGrantPayload.builder()
-                                    .mode("FIXED")
-                                    .fixedSpellIds(List.of(d.getSpell().getId()))
-                                    .build();
-                        }
-                        return (GrantPayload) SpellGrantPayload.builder()
-                                .mode("CHOICE")
-                                .spellLevel(d.getSpellLevel())
-                                .schoolIds(d.getSchool() != null ? List.of(d.getSchool().getId()) : null)
-                                .chooseCount(d.getChooseCount())
-                                .build();
-                    })
-                    .orElseGet(() -> customFallback(grant));
-            case SKILL_PROFICIENCY -> grantSkillRepo.findById(id)
-                    .map(d -> {
-                        if (Boolean.TRUE.equals(d.getAnySkill())) {
-                            return (GrantPayload) SkillProficiencyGrantPayload.builder()
-                                    .mode("ANY").chooseCount(d.getChooseCount()).build();
-                        }
-                        if (d.getSkillOptions() != null && !d.getSkillOptions().isEmpty()) {
-                            return (GrantPayload) SkillProficiencyGrantPayload.builder()
-                                    .mode("CHOICE")
-                                    .chooseCount(d.getChooseCount())
-                                    .skillOptionIds(d.getSkillOptions().stream().map(ContentSkill::getId).toList())
-                                    .build();
-                        }
-                        return (GrantPayload) SkillProficiencyGrantPayload.builder()
-                                .mode("FIXED")
-                                .skillIds(d.getSkill() != null ? List.of(d.getSkill().getId()) : List.of())
-                                .build();
-                    })
-                    .orElseGet(() -> customFallback(grant));
-            case ABILITY_SCORE -> grantAbilityRepo.findById(id)
-                    .map(d -> (GrantPayload) AbilityScoreGrantPayload.builder()
-                            .chooseCount(d.getChooseCount())
-                            .bonusPerChoice(d.getBonusPerChoice())
-                            .totalBonus(d.getTotalBonus())
-                            .maxPerAbility(d.getMaxPerAbility())
-                            .maxScore(d.getMaxScore())
-                            .abilityOptionIds(abilityOptionIds(d))
-                            .build())
-                    .orElseGet(() -> customFallback(grant));
-            case NUMERIC_MODIFIER -> grantNumericRepo.findById(id)
-                    .map(d -> (GrantPayload) NumericModifierGrantPayload.builder()
-                            .modifierKey(d.getModifierKey())
-                            .amount(d.getAmount() != null ? d.getAmount().intValue() : null)
-                            .unitText(d.getUnitText())
-                            .durationText(d.getDurationText())
-                            .build())
-                    .orElseGet(() -> customFallback(grant));
-            case CUSTOM_TEXT -> grantCustomRepo.findById(id)
-                    .map(d -> (GrantPayload) CustomTextGrantPayload.builder()
-                            .title(Localization.pick(lang, d.getTitleRu(), d.getTitleEn(), d.getTitleEn()))
-                            .body(d.getBody())
-                            .userEditable(d.getUserEditable())
-                            .build())
-                    .orElseGet(() -> customFallback(grant));
+            case FEATURE -> {
+                ClassLevelRewardGrantFeature d = cache.features.get(id);
+                yield d == null ? customFallback(grant) : FeatureGrantPayload.builder()
+                        .featureId(d.getClassFeature() != null ? d.getClassFeature().getId() : null)
+                        .build();
+            }
+            case SUBCLASS -> {
+                ClassLevelRewardGrantSubclass d = cache.subclasses.get(id);
+                yield d == null ? customFallback(grant) : SubclassGrantPayload.builder()
+                        .subclassId(d.getSubclass() != null ? d.getSubclass().getId() : null)
+                        .subclass(d.getSubclass() != null ? subclassLabel(d.getSubclass(), lang) : null)
+                        .build();
+            }
+            case FEAT -> {
+                ClassLevelRewardGrantFeat d = cache.feats.get(id);
+                yield d == null
+                        ? FeatGrantPayload.builder().mode("ANY").chooseCount(1).build()
+                        : FeatGrantPayload.builder().mode("FIXED")
+                                .featId(d.getFeat() != null ? d.getFeat().getId() : null).build();
+            }
+            case SPELL -> {
+                ClassLevelRewardGrantSpell d = cache.spells.get(id);
+                if (d == null) {
+                    yield customFallback(grant);
+                }
+                if (d.getSpell() != null) {
+                    yield SpellGrantPayload.builder().mode("FIXED")
+                            .fixedSpellIds(List.of(d.getSpell().getId())).build();
+                }
+                yield SpellGrantPayload.builder().mode("CHOICE")
+                        .spellLevel(d.getSpellLevel())
+                        .schoolIds(d.getSchool() != null ? List.of(d.getSchool().getId()) : null)
+                        .chooseCount(d.getChooseCount())
+                        .build();
+            }
+            case SKILL_PROFICIENCY -> {
+                ClassLevelRewardGrantSkillProficiency d = cache.skills.get(id);
+                if (d == null) {
+                    yield customFallback(grant);
+                }
+                if (Boolean.TRUE.equals(d.getAnySkill())) {
+                    yield SkillProficiencyGrantPayload.builder().mode("ANY").chooseCount(d.getChooseCount()).build();
+                }
+                if (d.getSkillOptions() != null && !d.getSkillOptions().isEmpty()) {
+                    yield SkillProficiencyGrantPayload.builder().mode("CHOICE").chooseCount(d.getChooseCount())
+                            .skillOptionIds(d.getSkillOptions().stream().map(ContentSkill::getId).toList()).build();
+                }
+                yield SkillProficiencyGrantPayload.builder().mode("FIXED")
+                        .skillIds(d.getSkill() != null ? List.of(d.getSkill().getId()) : List.of()).build();
+            }
+            case ABILITY_SCORE -> {
+                ClassLevelRewardGrantAbilityScore d = cache.abilities.get(id);
+                yield d == null ? customFallback(grant) : AbilityScoreGrantPayload.builder()
+                        .chooseCount(d.getChooseCount())
+                        .bonusPerChoice(d.getBonusPerChoice())
+                        .totalBonus(d.getTotalBonus())
+                        .maxPerAbility(d.getMaxPerAbility())
+                        .maxScore(d.getMaxScore())
+                        .abilityOptionIds(abilityOptionIds(d))
+                        .build();
+            }
+            case NUMERIC_MODIFIER -> {
+                ClassLevelRewardGrantNumericModifier d = cache.numerics.get(id);
+                yield d == null ? customFallback(grant) : NumericModifierGrantPayload.builder()
+                        .modifierKey(d.getModifierKey())
+                        .amount(d.getAmount() != null ? d.getAmount().intValue() : null)
+                        .unitText(d.getUnitText())
+                        .durationText(d.getDurationText())
+                        .build();
+            }
+            case CUSTOM_TEXT -> {
+                ClassLevelRewardGrantCustomText d = cache.customs.get(id);
+                yield d == null ? customFallback(grant) : CustomTextGrantPayload.builder()
+                        .title(Localization.pick(lang, d.getTitleRu(), d.getTitleEn(), d.getTitleEn()))
+                        .body(d.getBody())
+                        .userEditable(d.getUserEditable())
+                        .build();
+            }
         };
+    }
+
+    /**
+     * Batch-loads all typed grant detail rows for the given grants in one query per type,
+     * avoiding the per-grant N+1 lookups.
+     */
+    private GrantDetailCache buildCache(Collection<ClassLevelRewardGrant> grants) {
+        List<UUID> ids = grants.stream().map(ClassLevelRewardGrant::getId).toList();
+        if (ids.isEmpty()) {
+            return GrantDetailCache.empty();
+        }
+        return new GrantDetailCache(
+                index(grantFeatureRepo.findAllById(ids), ClassLevelRewardGrantFeature::getId),
+                index(grantSubclassRepo.findAllById(ids), ClassLevelRewardGrantSubclass::getId),
+                index(grantFeatRepo.findAllById(ids), ClassLevelRewardGrantFeat::getId),
+                index(grantSpellRepo.findAllById(ids), ClassLevelRewardGrantSpell::getId),
+                index(grantSkillRepo.findAllById(ids), ClassLevelRewardGrantSkillProficiency::getId),
+                index(grantAbilityRepo.findAllById(ids), ClassLevelRewardGrantAbilityScore::getId),
+                index(grantNumericRepo.findAllById(ids), ClassLevelRewardGrantNumericModifier::getId),
+                index(grantCustomRepo.findAllById(ids), ClassLevelRewardGrantCustomText::getId));
+    }
+
+    private <T> Map<UUID, T> index(List<T> items, Function<T, UUID> idFn) {
+        return items.stream().collect(Collectors.toMap(idFn, Function.identity(), (a, b) -> a));
+    }
+
+    /** Preloaded typed grant detail rows keyed by grant id. */
+    private record GrantDetailCache(
+            Map<UUID, ClassLevelRewardGrantFeature> features,
+            Map<UUID, ClassLevelRewardGrantSubclass> subclasses,
+            Map<UUID, ClassLevelRewardGrantFeat> feats,
+            Map<UUID, ClassLevelRewardGrantSpell> spells,
+            Map<UUID, ClassLevelRewardGrantSkillProficiency> skills,
+            Map<UUID, ClassLevelRewardGrantAbilityScore> abilities,
+            Map<UUID, ClassLevelRewardGrantNumericModifier> numerics,
+            Map<UUID, ClassLevelRewardGrantCustomText> customs) {
+        static GrantDetailCache empty() {
+            return new GrantDetailCache(Map.of(), Map.of(), Map.of(), Map.of(),
+                    Map.of(), Map.of(), Map.of(), Map.of());
+        }
     }
 
     /** Fallback for known-typed grants missing their detail row, or unknown grant types. */

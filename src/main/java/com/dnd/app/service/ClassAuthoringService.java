@@ -113,12 +113,16 @@ public class ClassAuthoringService {
 
     // --- public API: admin/core ---
 
+    @org.springframework.cache.annotation.CacheEvict(
+            value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
     public ClassSaveResult createCoreClass(ClassWriteRequest request, String username, String lang) {
         requireAdmin(username);
         return create(null, request, lang);
     }
 
+    @org.springframework.cache.annotation.CacheEvict(
+            value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
     public ClassSaveResult updateCoreClass(UUID classId, ClassWriteRequest request, String username, String lang) {
         requireAdmin(username);
@@ -129,6 +133,8 @@ public class ClassAuthoringService {
         return update(existing, null, request, lang);
     }
 
+    @org.springframework.cache.annotation.CacheEvict(
+            value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
     public void deleteCoreClass(UUID classId, String username) {
         requireAdmin(username);
