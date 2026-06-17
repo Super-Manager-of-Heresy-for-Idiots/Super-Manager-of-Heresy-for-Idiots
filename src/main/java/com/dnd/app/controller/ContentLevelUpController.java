@@ -1,15 +1,21 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.content.LevelUpOptionsResponse;
+import com.dnd.app.dto.content.LevelUpRequest;
+import com.dnd.app.dto.content.LevelUpResultResponse;
 import com.dnd.app.dto.response.ApiResponse;
+import com.dnd.app.service.LevelUpCommandService;
 import com.dnd.app.service.LevelUpQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,16 +24,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Level-up READ endpoints on the new content model (Phase 6). Parallel to the legacy
- * level-up endpoints, which remain available until commit is migrated (Phase 7) and
- * the legacy routes are removed (Phases 11/12).
+ * Level-up endpoints on the new content model. Read (Phase 6) and commit (Phase 7)
+ * run in parallel to the legacy level-up endpoints, which remain available until the
+ * legacy routes are removed (Phases 11/12).
  */
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "Content Level-Up", description = "New content-model level-up read flow")
+@Tag(name = "Content Level-Up", description = "New content-model level-up read & commit flow")
 public class ContentLevelUpController {
 
     private final LevelUpQueryService levelUpQueryService;
+    private final LevelUpCommandService levelUpCommandService;
     private final Executor controllerTaskExecutor;
 
     @GetMapping("/api/characters/{characterId}/content/level-up-options")
@@ -39,6 +46,20 @@ public class ContentLevelUpController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 levelUpQueryService.getLevelUpOptions(characterId, auth.getName(), lang))),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/api/characters/{characterId}/content/level-up")
+    @Operation(summary = "Commit a level-up, persisting reward selections to the new content model")
+    public CompletableFuture<ResponseEntity<ApiResponse<LevelUpResultResponse>>> commitLevelUp(
+            @PathVariable UUID characterId,
+            @RequestParam(defaultValue = "en") String lang,
+            @Valid @RequestBody LevelUpRequest request,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                levelUpCommandService.commitLevelUp(characterId, auth.getName(), request, lang),
+                                "Уровень повышен")),
                 controllerTaskExecutor);
     }
 }
