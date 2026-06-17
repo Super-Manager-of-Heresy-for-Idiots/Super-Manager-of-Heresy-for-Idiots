@@ -64,5 +64,6 @@
     <include file="db/changelog/057-class-mechanics.xml"/>
     <include file="db/changelog/058-class-reward-choices.xml"/>
     <include file="db/changelog/059-content-homebrew-flexibility-fixes.xml"/>
+    <include file="db/changelog/060-relax-runtime-content-fks.xml"/>
 
 </databaseChangeLog>

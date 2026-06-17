@@ -29,8 +29,11 @@ public class CharacterSkillProficiency {
     @JoinColumn(name = "character_id", nullable = false)
     private PlayerCharacter character;
 
+    // Transitional: skill_id may hold a legacy proficiency_skills id OR a new skill id
+    // (Phase 5+). FK relaxed via changeset 060; the new model resolves by the raw id.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "skill_id", nullable = false)
+    @JoinColumn(name = "skill_id", nullable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private ProficiencySkill skill;
 
     @Enumerated(EnumType.STRING)
