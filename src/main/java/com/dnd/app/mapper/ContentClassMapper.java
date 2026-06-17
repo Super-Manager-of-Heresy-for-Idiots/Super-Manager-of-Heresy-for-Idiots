@@ -146,6 +146,11 @@ public class ContentClassMapper {
                 .toList();
     }
 
+    /** Maps a single reward group (with options/grants) to the read DTO. */
+    public RewardGroupDto toRewardGroupDto(ClassLevelRewardGroup group, String lang) {
+        return mapGroup(group, lang);
+    }
+
     private RewardGroupDto mapGroup(ClassLevelRewardGroup g, String lang) {
         return RewardGroupDto.builder()
                 .id(g.getId())
