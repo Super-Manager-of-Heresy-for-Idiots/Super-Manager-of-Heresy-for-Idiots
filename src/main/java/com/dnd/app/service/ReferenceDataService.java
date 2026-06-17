@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReferenceDataService {
 
-    private final CharacterClassRepository classRepository;
     private final CharacterRaceRepository raceRepository;
     private final BackgroundRepository backgroundRepository;
     private final ProficiencySkillRepository proficiencySkillRepository;
@@ -36,22 +35,7 @@ public class ReferenceDataService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    @Transactional(readOnly = true)
-    public List<CharacterClassDetailResponse> getClasses(UUID campaignId, String username, String lang) {
-        enforceAccess(campaignId, username);
-        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
-
-        List<CharacterClass> classes = new ArrayList<>(classRepository.findAllByHomebrewIsNull());
-        if (!pkgIds.isEmpty()) {
-            classes.addAll(classRepository.findAllByHomebrewIdIn(pkgIds));
-        }
-
-        List<ProficiencySkill> allSkills = proficiencySkillRepository.findAll();
-        Map<String, ProficiencySkill> skillByName = allSkills.stream()
-                .collect(Collectors.toMap(ProficiencySkill::getName, s -> s));
-
-        return classes.stream().map(c -> mapClassDetail(c, skillByName, lang)).toList();
-    }
+    // getClasses(...) removed in Phase 12 — class reference now served by ContentReferenceService.
 
     @Transactional(readOnly = true)
     public List<CharacterRaceDetailResponse> getRaces(UUID campaignId, String username, String lang) {
@@ -133,14 +117,7 @@ public class ReferenceDataService {
 
     // --- Vanilla (no-campaign) variants for character templates ---
 
-    @Cacheable(value = CacheConfig.VANILLA_CLASSES, key = "#lang")
-    @Transactional(readOnly = true)
-    public List<CharacterClassDetailResponse> getVanillaClasses(String lang) {
-        List<CharacterClass> classes = classRepository.findAllByHomebrewIsNull();
-        Map<String, ProficiencySkill> skillByName = proficiencySkillRepository.findAll().stream()
-                .collect(Collectors.toMap(ProficiencySkill::getName, s -> s));
-        return classes.stream().map(c -> mapClassDetail(c, skillByName, lang)).toList();
-    }
+    // getVanillaClasses(...) removed in Phase 12 — class reference now served by ContentReferenceService.
 
     @Cacheable(value = CacheConfig.VANILLA_RACES, key = "#lang")
     @Transactional(readOnly = true)
@@ -193,46 +170,7 @@ public class ReferenceDataService {
 
     // --- Mapping helpers ---
 
-    private CharacterClassDetailResponse mapClassDetail(CharacterClass c, Map<String, ProficiencySkill> skillByName, String lang) {
-        List<String> savingThrowNames = parseJsonStringList(c.getSavingThrowStatIdsJson());
-        List<String> skillOptionNames = parseJsonStringList(c.getSkillChoiceOptionIdsJson());
-
-        List<ProficiencySkillResponse> skillOptions = skillOptionNames.stream()
-                .map(name -> {
-                    ProficiencySkill ps = skillByName.get(name);
-                    if (ps == null) return null;
-                    return mapProficiencySkill(ps, lang);
-                })
-                .filter(Objects::nonNull)
-                .toList();
-
-        CharacterClassDetailResponse.SpellcastingInfo spellcasting = null;
-        if (Boolean.TRUE.equals(c.getIsSpellcaster())) {
-            spellcasting = CharacterClassDetailResponse.SpellcastingInfo.builder()
-                    .isSpellcaster(true)
-                    .spellcastingStatId(c.getSpellcastingStat() != null ? c.getSpellcastingStat().getId() : null)
-                    .spellcastingStatName(c.getSpellcastingStat() != null ? c.getSpellcastingStat().getNameRu() : null)
-                    .hasCantrips(c.getHasCantrips())
-                    .isHalfCaster(c.getIsHalfCaster())
-                    .build();
-        }
-
-        return CharacterClassDetailResponse.builder()
-                .id(c.getId())
-                .name(Localization.pick(lang, c.getNameRusloc(), c.getNameEngloc(), c.getName()))
-                .description(Localization.pick(lang, c.getDescriptionRusloc(), c.getDescriptionEngloc(), c.getDescription()))
-                .hitDie(c.getHitDie())
-                .primaryAbilityStatId(c.getPrimaryAbilityStat() != null ? c.getPrimaryAbilityStat().getId() : null)
-                .savingThrowStatNames(savingThrowNames)
-                .skillChoiceCount(c.getSkillChoiceCount())
-                .skillChoiceOptions(skillOptions)
-                .armorWeaponProficiencies(Localization.pick(lang,
-                        c.getArmorWeaponProficienciesRusloc(),
-                        c.getArmorWeaponProficienciesEngloc(),
-                        c.getArmorWeaponProficiencies()))
-                .spellcasting(spellcasting)
-                .build();
-    }
+    // mapClassDetail(...) removed in Phase 12 along with the legacy class reference endpoints.
 
     private CharacterRaceDetailResponse mapRaceDetail(CharacterRace r, String lang) {
         Integer walkSpeed = null;

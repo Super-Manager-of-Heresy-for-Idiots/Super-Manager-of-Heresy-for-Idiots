@@ -16,6 +16,8 @@ import java.util.UUID;
  * Legacy character reward acquisition table for old class_level_rewards.
  * New selectable rewards must use character_reward_selection and child selection tables.
  */
+// Phase 12: archive-only — read by the legacy level-up flow until runtime data is migrated;
+// new flows persist to character_reward_selection.
 @Deprecated(forRemoval = false)
 @Getter
 @Setter

@@ -11,6 +11,7 @@ import java.util.UUID;
  * Legacy proficiency skill catalog mapped to the old plural content table.
  * New proficiency content must use {@link com.dnd.app.domain.content.ContentSkill}.
  */
+// Phase 12: archive-only — read for audit/runtime-data migration; new flows use ContentSkill.
 @Deprecated(forRemoval = false)
 @Getter
 @Setter

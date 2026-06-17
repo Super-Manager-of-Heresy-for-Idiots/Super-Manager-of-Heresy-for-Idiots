@@ -22,14 +22,8 @@ public class VanillaReferenceController {
     private final ReferenceDataService referenceDataService;
     private final Executor controllerTaskExecutor;
 
-    @GetMapping("/classes")
-    @Operation(summary = "Get vanilla (system) classes for character templates")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses(
-            @RequestParam(defaultValue = "en") String lang) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaClasses(lang))),
-                controllerTaskExecutor);
-    }
+    // Legacy vanilla class reference endpoint removed in Phase 12 — superseded by
+    // GET /api/reference/content/classes (ContentReferenceController).
 
     @GetMapping("/races")
     @Operation(summary = "Get vanilla (system) races for character templates")

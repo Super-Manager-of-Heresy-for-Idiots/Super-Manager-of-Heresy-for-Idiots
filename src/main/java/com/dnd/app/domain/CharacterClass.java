@@ -11,6 +11,7 @@ import java.util.UUID;
  * Legacy class catalog mapped to the old plural content table.
  * New class content must use {@link com.dnd.app.domain.content.ContentCharacterClass}.
  */
+// Phase 12: archive-only — read for audit/runtime-data migration; new flows use ContentCharacterClass.
 @Deprecated(forRemoval = false)
 @Getter
 @Setter

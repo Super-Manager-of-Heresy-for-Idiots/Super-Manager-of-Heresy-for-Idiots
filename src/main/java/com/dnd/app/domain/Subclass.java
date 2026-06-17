@@ -14,6 +14,7 @@ import java.util.UUID;
  * Legacy subclass catalog mapped to the old plural content table.
  * New subclass content must use {@link com.dnd.app.domain.content.ContentSubclass}.
  */
+// Phase 12: archive-only — read for audit/runtime-data migration; new flows use ContentSubclass.
 @Deprecated(forRemoval = false)
 @Getter
 @Setter

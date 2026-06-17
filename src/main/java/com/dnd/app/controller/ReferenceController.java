@@ -23,17 +23,8 @@ public class ReferenceController {
     private final ReferenceDataService referenceDataService;
     private final Executor controllerTaskExecutor;
 
-    @GetMapping("/classes")
-    @Operation(summary = "Get available classes with 5e metadata")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassDetailResponse>>>> getClasses(
-            @PathVariable UUID campaignId,
-            @RequestParam(defaultValue = "en") String lang,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getClasses(campaignId, auth.getName(), lang))),
-                controllerTaskExecutor);
-    }
+    // Legacy class reference endpoint removed in Phase 12 — superseded by
+    // GET /api/campaigns/{campaignId}/reference/content/classes (ContentReferenceController).
 
     @GetMapping("/races")
     @Operation(summary = "Get available races with subraces")

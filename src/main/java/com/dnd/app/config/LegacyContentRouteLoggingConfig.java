@@ -23,17 +23,16 @@ import java.util.List;
 @Configuration
 public class LegacyContentRouteLoggingConfig implements WebMvcConfigurer {
 
-    /** Legacy non-bestiary content routes superseded by the new content-model endpoints. */
+    /**
+     * Still-active legacy routes tied to runtime data, kept until the Phase 10 data
+     * migration runs in prod (level-up and full character creation). The reference-class
+     * and rich class-authoring legacy routes were removed in Phase 12.
+     */
     private static final List<String> LEGACY_PATTERNS = List.of(
-            "/api/reference/classes",
-            "/api/campaigns/*/reference/classes",
             "/api/characters/*/level-up-options",
             "/api/characters/*/level-up",
             "/api/characters/full",
-            "/api/campaigns/*/characters/full",
-            "/api/homebrew/my/*/content/classes/rich",
-            "/api/homebrew/my/*/content/classes/import-json",
-            "/api/homebrew/my/*/content/classes/*/rich");
+            "/api/campaigns/*/characters/full");
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

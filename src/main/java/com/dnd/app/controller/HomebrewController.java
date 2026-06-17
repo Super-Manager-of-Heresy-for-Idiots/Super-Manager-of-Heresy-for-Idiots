@@ -106,37 +106,9 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
-    @PostMapping("/my/{packageId}/content/classes/rich")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> createPackageCharacterClassRich(
-            @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(data, "Класс и награды уровней добавлены в пакет"));
-        }, controllerTaskExecutor);
-    }
-
-    @PostMapping("/my/{packageId}/content/classes/import-json")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> importPackageCharacterClassJson(
-            @PathVariable UUID packageId, @Valid @RequestBody CreateHomebrewClassRequest request, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            HomebrewClassCreationResponse data = authoringService.createPackageCharacterClassRich(packageId, request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(data, "Класс импортирован из JSON"));
-        }, controllerTaskExecutor);
-    }
-
-    @PutMapping("/my/{packageId}/content/classes/{classId}/rich")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> updatePackageCharacterClassRich(
-            @PathVariable UUID packageId,
-            @PathVariable UUID classId,
-            @Valid @RequestBody CreateHomebrewClassRequest request,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            HomebrewClassCreationResponse data = authoringService.updatePackageCharacterClassRich(packageId, classId, request, auth.getName());
-            return ResponseEntity.ok(ApiResponse.ok(data, "Класс и награды уровней обновлены"));
-        }, controllerTaskExecutor);
-    }
+    // Legacy rich/import/update class-authoring endpoints removed in Phase 12 —
+    // superseded by the aggregate ClassAuthoringController
+    // (POST/PUT/DELETE /api/homebrew/packages/{packageId}/classes).
 
     @PostMapping("/my/{packageId}/content/skills")
     public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageSkill(

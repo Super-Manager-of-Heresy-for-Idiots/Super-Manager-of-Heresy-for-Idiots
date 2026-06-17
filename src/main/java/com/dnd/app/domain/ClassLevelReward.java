@@ -14,6 +14,8 @@ import java.util.UUID;
  * Legacy flat reward model. New class rewards must use class_level_reward_group,
  * class_level_reward_option, class_level_reward_grant and typed grant tables.
  */
+// Phase 12: archive-only — read by the legacy level-up flow until runtime data is migrated;
+// new flows use class_level_reward_group/option/grant.
 @Deprecated(forRemoval = false)
 @Getter
 @Setter
