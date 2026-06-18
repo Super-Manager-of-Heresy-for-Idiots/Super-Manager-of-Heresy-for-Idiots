@@ -197,9 +197,20 @@ R8b (выполнено):
 - [x] Тесты приведены к content-модели; `compileJava`+`compileTestJava` зелёные,
       затронутые unit-тесты проходят. BUILD SUCCESSFUL.
 
-Остаток на потом (не входит в R8b): drop orphan PHB-таблиц
-`stat_types`/`currency_types`/`spells`/`backgrounds` — их ещё читает R6 через JDBC, поэтому
-оставлены до завершения миграционного окна.
+R8c — закрытие миграционного окна (выполнено):
+- [x] Из `RuntimeDataMigrationService` удалены JDBC-чтения legacy plural-таблиц
+      (`migrateStats`/`migrateCurrency`/`migrateSpells`/`migrateBackgrounds` + helper
+      `legacyNamesFrom` + неиспользуемые поля/импорты). Остались class+skill remap.
+- [x] Changeset **066**: drop `stat_types`/`currency_types`/`spells`/`backgrounds` (CASCADE).
+      Эти таблицы — не чистые orphan'ы: на них висели устаревшие FK от живых фич
+      (`buffs_debuffs`/`combat_modifiers`/`campaign_npc_spells`/`blueprint_npc_spells`/
+      blueprint-награды), не входивших в миграцию `character_*`. CASCADE снимает эти FK;
+      колонки фич остаются, их сущности уже смотрят на content-таблицы (новые строки валидны),
+      старые строки с legacy id становятся висячими и считаются одноразовыми (решение:
+      новый контент работает, старый — выбрасывается). **Бестиарий не тронут.**
+- [x] `ddl-auto=validate` зелёный: ни один @Entity не маплен на дропаемые plural-таблицы
+      (StatType/CurrencyType/Spell/Background → ability_score/currency/spell/background).
+      После этого старой PHB-схемы в БД не остаётся.
 
 # R9. Integration / E2E Tests (roadmap Phase 12)
 

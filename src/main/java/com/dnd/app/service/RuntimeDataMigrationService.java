@@ -1,21 +1,12 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.Background;
-import com.dnd.app.domain.CurrencyType;
-import com.dnd.app.domain.ProficiencySkill;
-import com.dnd.app.domain.Spell;
-import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.exception.BadRequestException;
-import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.ContentSkillRepository;
-import com.dnd.app.repository.CurrencyTypeRepository;
 import com.dnd.app.repository.ProficiencySkillRepository;
-import com.dnd.app.repository.SpellRepository;
-import com.dnd.app.repository.StatTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -57,10 +48,6 @@ public class RuntimeDataMigrationService {
     private final ContentCharacterClassRepository contentClassRepository;
     private final ContentSkillRepository contentSkillRepository;
     private final ProficiencySkillRepository legacySkillRepository;
-    private final StatTypeRepository statTypeRepository;
-    private final CurrencyTypeRepository currencyTypeRepository;
-    private final SpellRepository spellRepository;
-    private final BackgroundRepository backgroundRepository;
 
     @Transactional
     public RuntimeMigrationReport migrate(boolean dryRun, boolean confirmBackup) {
@@ -78,11 +65,6 @@ public class RuntimeDataMigrationService {
         List<RuntimeMigrationReport.EntityMigration> entities = new ArrayList<>();
         entities.add(migrateClasses(dryRun));
         entities.add(migrateSkills(dryRun));
-        entities.add(migrateStats(dryRun));
-        entities.add(migrateCurrency(dryRun, "character_wallets"));
-        entities.add(migrateCurrency(dryRun, "wallet_transactions"));
-        entities.add(migrateSpells(dryRun));
-        entities.add(migrateBackgrounds(dryRun));
 
         int unresolved = entities.stream()
                 .mapToInt(e -> e.getAmbiguous().size() + e.getUnmapped().size())
@@ -120,44 +102,6 @@ public class RuntimeDataMigrationService {
                         .map(s -> new String[]{s.getName(), s.getNameEngloc(), s.getNameRusloc()})
                         .orElse(null),
                 byName, ContentSkill::getId, ContentSkill::getNameEn);
-    }
-
-    // --- stat / currency / spell / background: legacy names read from plural tables via JDBC ---
-
-    private RuntimeMigrationReport.EntityMigration migrateStats(boolean dryRun) {
-        Map<String, List<StatType>> byName = indexByName(
-                statTypeRepository.findByHomebrewIsNull(), StatType::getNameEn, StatType::getNameRu);
-        return remapColumn(dryRun, "character_stats", "stat_type_id",
-                "character_stats.stat_type_id -> ability_score",
-                statTypeRepository::existsById, legacyNamesFrom("stat_types"),
-                byName, StatType::getId, StatType::getNameEn);
-    }
-
-    private RuntimeMigrationReport.EntityMigration migrateCurrency(boolean dryRun, String runtimeTable) {
-        Map<String, List<CurrencyType>> byName = indexByName(
-                currencyTypeRepository.findByHomebrewIsNull(), CurrencyType::getNameEn, CurrencyType::getNameRu);
-        return remapColumn(dryRun, runtimeTable, "currency_type_id",
-                runtimeTable + ".currency_type_id -> currency",
-                currencyTypeRepository::existsById, legacyNamesFrom("currency_types"),
-                byName, CurrencyType::getId, CurrencyType::getNameEn);
-    }
-
-    private RuntimeMigrationReport.EntityMigration migrateSpells(boolean dryRun) {
-        Map<String, List<Spell>> byName = indexByName(
-                spellRepository.findAllByHomebrewIsNull(), Spell::getNameEn, Spell::getNameRu);
-        return remapColumn(dryRun, "character_known_spells", "spell_id",
-                "character_known_spells.spell_id -> spell",
-                spellRepository::existsById, legacyNamesFrom("spells"),
-                byName, Spell::getId, Spell::getNameEn);
-    }
-
-    private RuntimeMigrationReport.EntityMigration migrateBackgrounds(boolean dryRun) {
-        Map<String, List<Background>> byName = indexByName(
-                backgroundRepository.findAllByHomebrewIsNull(), Background::getNameEn, Background::getNameRu);
-        return remapColumn(dryRun, "characters", "background_id",
-                "characters.background_id -> background",
-                backgroundRepository::existsById, legacyNamesFrom("backgrounds"),
-                byName, Background::getId, Background::getNameEn);
     }
 
     // --- shared remap engine ---
@@ -219,19 +163,6 @@ public class RuntimeDataMigrationService {
                             }
                             return names;
                         }, legacyId);
-            } catch (DataAccessException e) {
-                return null;
-            }
-        };
-    }
-
-    /** Reads the legacy {@code name} for an id, tolerating a legacy table absent on fresh DBs. */
-    private Function<UUID, String[]> legacyNamesFrom(String legacyTable) {
-        return legacyId -> {
-            try {
-                String name = jdbc.query("SELECT name FROM " + legacyTable + " WHERE id = ?",
-                        rs -> rs.next() ? rs.getString(1) : null, legacyId);
-                return name == null ? null : new String[]{name};
             } catch (DataAccessException e) {
                 return null;
             }

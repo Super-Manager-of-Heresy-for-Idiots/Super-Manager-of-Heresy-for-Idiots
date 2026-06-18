@@ -545,3 +545,29 @@ content model, then removed the legacy entities + tables. Concrete changes:
   character_skill_proficiencies, character_stats, character_wallets, wallet_transactions,
   character_known_spells via DELETE; characters.background_id via SET NULL). Idempotent (no-op
   on a clean DB), empty rollback. Bestiary untouched; runtime/character data is disposable.
+
+### R8c — close migration window: drop last legacy PHB tables — DONE (build verified)
+- RuntimeDataMigrationService: removed the four legacy-table JDBC readers (migrateStats /
+  migrateCurrency / migrateSpells / migrateBackgrounds), the legacyNamesFrom helper, and the
+  now-unused fields/imports (StatType/CurrencyType/Spell/Background + their repositories).
+  migrate() now remaps only classes + skills; postValidation unchanged (queries content tables).
+- Investigation finding: stat_types/currency_types/spells/backgrounds were labelled "orphan" in
+  the roadmap only in the @Entity sense (no entity maps them — those map to the singular content
+  tables). At the DB level they still anchored STALE physical FKs from feature tables that were
+  never migrated with the character_* columns: buffs_debuffs.target_stat_id & combat_modifiers
+  -> stat_types; campaign_npc_spells.spell_id & blueprint_npc_spells.spell_id -> spells;
+  blueprint quest rewards & npc/quest currency -> currency_types.
+- Decision (user): new content must keep working, old content is disposable. So instead of a
+  full R6-style remap of those feature tables, drop the legacy tables with CASCADE: the stale
+  legacy FK constraints are removed, the feature COLUMNS survive, their entities already target
+  the content tables (new rows valid), and pre-existing rows holding legacy ids become dangling
+  (discarded). Bestiary untouched.
+- Changeset 066-drop-legacy-phb-tables.xml (registered in master.xml after 065):
+  DROP TABLE IF EXISTS stat_types, currency_types, spells, backgrounds CASCADE. Idempotent,
+  no-op rollback.
+- Verification: grep confirms no @Entity maps the plural tables (validate stays green);
+  ./gradlew compileJava compileTestJava -> BUILD SUCCESSFUL; RuntimeDataMigrationServiceTest
+  -> passes (removed repos are now unused lenient mocks in the test, harmless).
+- After 066 the legacy PHB schema is fully gone (character_classes/subclasses dropped in 065,
+  class_level_rewards/character_acquired_rewards in 064). proficiency_skills intentionally kept
+  (still entity-backed, used by the skill remap).

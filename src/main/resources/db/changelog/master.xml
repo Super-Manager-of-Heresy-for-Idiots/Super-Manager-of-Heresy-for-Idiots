@@ -71,5 +71,6 @@
     <include file="db/changelog/063-runtime-content-real-fks.xml"/>
     <include file="db/changelog/064-drop-legacy-reward-tables.xml"/>
     <include file="db/changelog/065-drop-legacy-class-subclass-tables.xml"/>
+    <include file="db/changelog/066-drop-legacy-phb-tables.xml"/>
 
 </databaseChangeLog>
