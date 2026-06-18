@@ -34,6 +34,10 @@ public class ReferenceDataService {
     private final CurrencyTypeRepository currencyTypeRepository;
     private final SpellRepository spellRepository;
     private final FeatRepository featRepository;
+    private final RarityRepository rarityRepository;
+    private final DamageTypeRepository damageTypeRepository;
+    private final SpellSchoolRepository spellSchoolRepository;
+    private final CreatureSizeRepository creatureSizeRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
@@ -201,6 +205,46 @@ public class ReferenceDataService {
                         .prerequisiteText(null)
                         .build())
                 .toList();
+    }
+
+    // --- System dictionary lookups (item/spell/size authoring dropdowns) ---
+
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getRarities(String lang) {
+        return rarityRepository.findByHomebrewIsNullOrderBySortOrderAscNameRuAsc().stream()
+                .map(r -> label(lang, r.getId(), r.getSlug(), r.getNameRu(), r.getNameEn()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getDamageTypes(String lang) {
+        return damageTypeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
+                .map(d -> label(lang, d.getId(), d.getSlug(), d.getNameRu(), d.getNameEn()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getSpellSchools(String lang) {
+        return spellSchoolRepository.findAllByOrderByNameRuAsc().stream()
+                .map(s -> label(lang, s.getId(), s.getSlug(), s.getNameRu(), s.getNameEn()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getSizes(String lang) {
+        return creatureSizeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
+                .map(s -> label(lang, s.getId(), s.getSlug(), s.getNameRu(), s.getNameEn()))
+                .toList();
+    }
+
+    private ContentLabelDto label(String lang, UUID id, String slug, String nameRu, String nameEn) {
+        return ContentLabelDto.builder()
+                .id(id)
+                .slug(slug)
+                .name(Localization.pick(lang, nameRu, nameEn, nameRu))
+                .nameRu(nameRu)
+                .nameEn(nameEn)
+                .build();
     }
 
     public List<ModifierKeyDto> getModifierKeys() {

@@ -111,4 +111,40 @@ public class VanillaReferenceController {
                 ResponseEntity.ok(ApiResponse.ok(referenceDataService.getModifierKeys())),
                 controllerTaskExecutor);
     }
+
+    @GetMapping("/rarities")
+    @Operation(summary = "Get magic item rarities for item-authoring dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getRarities(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getRarities(lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/damage-types")
+    @Operation(summary = "Get damage types (PHB) for item/spell/skill-authoring dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getDamageTypes(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getDamageTypes(lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/spell-schools")
+    @Operation(summary = "Get spell schools for spell-authoring/filter dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getSpellSchools(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getSpellSchools(lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/sizes")
+    @Operation(summary = "Get creature sizes (character_size) for race/character dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getSizes(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getSizes(lang))),
+                controllerTaskExecutor);
+    }
 }
