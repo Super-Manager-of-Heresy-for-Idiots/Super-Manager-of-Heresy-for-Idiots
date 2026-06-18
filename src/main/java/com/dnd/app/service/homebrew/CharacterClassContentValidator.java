@@ -1,9 +1,9 @@
 package com.dnd.app.service.homebrew;
 
-import com.dnd.app.domain.CharacterClass;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.dto.response.ContentSummaryDto;
 import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.ContentCharacterClassRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CharacterClassContentValidator implements HomebrewContentValidator {
 
-    private final CharacterClassRepository characterClassRepository;
+    private final ContentCharacterClassRepository characterClassRepository;
 
     @Override
     public String getSupportedType() {
@@ -29,18 +29,18 @@ public class CharacterClassContentValidator implements HomebrewContentValidator 
 
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
-        CharacterClass cc = characterClassRepository.findById(contentId)
+        ContentCharacterClass cc = characterClassRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден: " + contentId));
         return ContentSummaryDto.builder()
                 .id(cc.getId())
-                .name(cc.getName())
-                .description(cc.getDescription())
+                .name(cc.getNameRu())
+                .description(cc.getSubtitle())
                 .build();
     }
 
     @Override
     public UUID getOwnerId(UUID contentId) {
-        CharacterClass cc = characterClassRepository.findById(contentId)
+        ContentCharacterClass cc = characterClassRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден: " + contentId));
         return cc.getHomebrew() != null ? cc.getHomebrew().getAuthor().getId() : null;
     }

@@ -212,10 +212,10 @@ class ContentCharacterCreationServiceTest {
     }
 
     @Test
-    @DisplayName("РџРµСЂРІРёС‡РЅС‹Рµ reward selections РїРµСЂРµРґР°СЋС‚СЃСЏ РІ final reward-selection pipeline")
+    @DisplayName("Первичные reward selections передаются в final reward-selection pipeline")
     void createWithInitialRewardSelections_delegatesToFinalRewardPipeline() {
         ContentCharacterClass fighter = ContentCharacterClass.builder()
-                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Р’РѕРёРЅ")
+                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Воин")
                 .hitDie(10).spellcaster(false).skillChoiceCount(0).skillChoiceAny(false)
                 .skillOptions(Set.of()).build();
         when(contentClassRepository.findById(fighter.getId())).thenReturn(Optional.of(fighter));

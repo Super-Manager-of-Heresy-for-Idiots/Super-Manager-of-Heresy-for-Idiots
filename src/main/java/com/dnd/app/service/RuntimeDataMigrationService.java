@@ -1,17 +1,24 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.CharacterClass;
+import com.dnd.app.domain.Background;
+import com.dnd.app.domain.CurrencyType;
 import com.dnd.app.domain.ProficiencySkill;
+import com.dnd.app.domain.Spell;
+import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.exception.BadRequestException;
-import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.ContentSkillRepository;
+import com.dnd.app.repository.CurrencyTypeRepository;
 import com.dnd.app.repository.ProficiencySkillRepository;
+import com.dnd.app.repository.SpellRepository;
+import com.dnd.app.repository.StatTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +31,22 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * One-time migration of existing runtime FK columns from legacy plural-table IDs to the
- * new content-model IDs (Phase 10). Only {@code character_class_levels.class_id} and
- * {@code character_skill_proficiencies.skill_id} require remapping — stat/currency/spell/
- * background already reference the new tables.
+ * new content-model IDs (Phase 10 / roadmap R6).
  *
- * <p>Mapping strategy: legacy rows carry no slug, so matching is by name (name / nameEngloc
- * / nameRusloc ↔ new nameEn / nameRu). A unique name match is applied; multiple candidates
- * are reported as <b>ambiguous</b> and never auto-applied; no candidate is <b>unmapped</b>.
- * Dry-run by default; applying requires an explicit backup confirmation. User data is never
- * silently guessed.</p>
+ * <p>The runtime entities already map to the new content tables (ability_score, currency,
+ * spell, background, character_class, skill). On a fresh database every runtime id is
+ * already a content id and is reported as {@code alreadyNew}. On a legacy database some
+ * rows still carry old plural-table ids; those are remapped here.</p>
+ *
+ * <p>Mapping strategy: legacy rows carry no slug, so matching is by name — the legacy
+ * {@code name} (and, for class/skill, the localized variants) is matched against the new
+ * {@code nameEn}/{@code nameRu}. A unique match is applied; multiple candidates are
+ * <b>ambiguous</b> and never auto-applied; no candidate is <b>unmapped</b>. Dry-run by
+ * default; applying requires explicit backup confirmation. User data is never guessed.</p>
  */
 @Slf4j
 @Service
@@ -44,9 +55,12 @@ public class RuntimeDataMigrationService {
 
     private final JdbcTemplate jdbc;
     private final ContentCharacterClassRepository contentClassRepository;
-    private final CharacterClassRepository legacyClassRepository;
     private final ContentSkillRepository contentSkillRepository;
     private final ProficiencySkillRepository legacySkillRepository;
+    private final StatTypeRepository statTypeRepository;
+    private final CurrencyTypeRepository currencyTypeRepository;
+    private final SpellRepository spellRepository;
+    private final BackgroundRepository backgroundRepository;
 
     @Transactional
     public RuntimeMigrationReport migrate(boolean dryRun, boolean confirmBackup) {
@@ -61,68 +75,97 @@ public class RuntimeDataMigrationService {
             notes.add("ВНИМАНИЕ: применение выполнено. Убедитесь, что бэкап БД был сделан до запуска.");
         }
 
-        RuntimeMigrationReport.EntityMigration classes = migrateClasses(dryRun);
-        RuntimeMigrationReport.EntityMigration skills = migrateSkills(dryRun);
+        List<RuntimeMigrationReport.EntityMigration> entities = new ArrayList<>();
+        entities.add(migrateClasses(dryRun));
+        entities.add(migrateSkills(dryRun));
+        entities.add(migrateStats(dryRun));
+        entities.add(migrateCurrency(dryRun, "character_wallets"));
+        entities.add(migrateCurrency(dryRun, "wallet_transactions"));
+        entities.add(migrateSpells(dryRun));
+        entities.add(migrateBackgrounds(dryRun));
 
-        notes.add("Незамапленных/неоднозначных class_id: "
-                + (classes.getAmbiguous().size() + classes.getUnmapped().size())
-                + "; skill_id: " + (skills.getAmbiguous().size() + skills.getUnmapped().size())
-                + ". Эти строки требуют ручного разбора и не тронуты.");
-        notes.add(postValidation());
+        int unresolved = entities.stream()
+                .mapToInt(e -> e.getAmbiguous().size() + e.getUnmapped().size())
+                .sum();
+        notes.add("Незамапленных/неоднозначных строк (требуют ручного разбора, не тронуты): " + unresolved + ".");
+        notes.addAll(postValidation());
 
         return RuntimeMigrationReport.builder()
-                .dryRun(dryRun).classes(classes).skills(skills).notes(notes).build();
+                .dryRun(dryRun).entities(entities).notes(notes).build();
     }
+
+    // --- class: legacy names read from the plural table via JDBC (3 name variants) ---
 
     private RuntimeMigrationReport.EntityMigration migrateClasses(boolean dryRun) {
         Map<String, List<ContentCharacterClass>> byName = indexByName(
                 contentClassRepository.findAllByHomebrewIsNull(),
                 ContentCharacterClass::getNameEn, ContentCharacterClass::getNameRu);
-
-        List<RuntimeMigrationReport.Mapping> mapped = new ArrayList<>();
-        List<RuntimeMigrationReport.Mapping> ambiguous = new ArrayList<>();
-        List<RuntimeMigrationReport.Mapping> unmapped = new ArrayList<>();
-        int alreadyNew = 0;
-        int rowsUpdated = 0;
-
-        for (UUID legacyId : distinctIds("character_class_levels", "class_id")) {
-            if (contentClassRepository.existsById(legacyId)) {
-                alreadyNew++;
-                continue;
-            }
-            Optional<CharacterClass> legacy = legacyClassRepository.findById(legacyId);
-            String legacyName = legacy.map(CharacterClass::getName).orElse(null);
-            List<ContentCharacterClass> candidates = legacy
-                    .map(c -> matchByNames(byName, c.getName(), c.getNameEngloc(), c.getNameRusloc()))
-                    .orElse(List.of());
-
-            if (candidates.size() == 1) {
-                ContentCharacterClass target = candidates.get(0);
-                RuntimeMigrationReport.Mapping m = mapping(legacyId, legacyName, target.getId(),
-                        target.getNameEn(), 1);
-                if (!dryRun) {
-                    rowsUpdated += jdbc.update(
-                            "UPDATE character_class_levels SET class_id = ? WHERE class_id = ?",
-                            target.getId(), legacyId);
-                }
-                mapped.add(m);
-            } else if (candidates.size() > 1) {
-                ambiguous.add(mapping(legacyId, legacyName, null, null, candidates.size()));
-            } else {
-                unmapped.add(mapping(legacyId, legacyName, null, null, 0));
-            }
-        }
-
-        return RuntimeMigrationReport.EntityMigration.builder()
-                .target("character_class_levels.class_id -> character_class")
-                .alreadyNew(alreadyNew).mapped(mapped).ambiguous(ambiguous).unmapped(unmapped)
-                .rowsUpdated(rowsUpdated).build();
+        return remapColumn(dryRun, "character_class_levels", "class_id",
+                "character_class_levels.class_id -> character_class",
+                contentClassRepository::existsById,
+                legacyThreeNamesFrom("character_classes", "name", "name_engloc", "name_rusloc"),
+                byName, ContentCharacterClass::getId, ContentCharacterClass::getNameEn);
     }
+
+    // --- skill: legacy rows still backed by a JPA entity (3 name variants) ---
 
     private RuntimeMigrationReport.EntityMigration migrateSkills(boolean dryRun) {
         Map<String, List<ContentSkill>> byName = indexByName(
                 contentSkillRepository.findAllByHomebrewIsNull(),
                 ContentSkill::getNameEn, ContentSkill::getNameRu);
+        return remapColumn(dryRun, "character_skill_proficiencies", "skill_id",
+                "character_skill_proficiencies.skill_id -> skill",
+                contentSkillRepository::existsById,
+                legacyId -> legacySkillRepository.findById(legacyId)
+                        .map(s -> new String[]{s.getName(), s.getNameEngloc(), s.getNameRusloc()})
+                        .orElse(null),
+                byName, ContentSkill::getId, ContentSkill::getNameEn);
+    }
+
+    // --- stat / currency / spell / background: legacy names read from plural tables via JDBC ---
+
+    private RuntimeMigrationReport.EntityMigration migrateStats(boolean dryRun) {
+        Map<String, List<StatType>> byName = indexByName(
+                statTypeRepository.findByHomebrewIsNull(), StatType::getNameEn, StatType::getNameRu);
+        return remapColumn(dryRun, "character_stats", "stat_type_id",
+                "character_stats.stat_type_id -> ability_score",
+                statTypeRepository::existsById, legacyNamesFrom("stat_types"),
+                byName, StatType::getId, StatType::getNameEn);
+    }
+
+    private RuntimeMigrationReport.EntityMigration migrateCurrency(boolean dryRun, String runtimeTable) {
+        Map<String, List<CurrencyType>> byName = indexByName(
+                currencyTypeRepository.findByHomebrewIsNull(), CurrencyType::getNameEn, CurrencyType::getNameRu);
+        return remapColumn(dryRun, runtimeTable, "currency_type_id",
+                runtimeTable + ".currency_type_id -> currency",
+                currencyTypeRepository::existsById, legacyNamesFrom("currency_types"),
+                byName, CurrencyType::getId, CurrencyType::getNameEn);
+    }
+
+    private RuntimeMigrationReport.EntityMigration migrateSpells(boolean dryRun) {
+        Map<String, List<Spell>> byName = indexByName(
+                spellRepository.findAllByHomebrewIsNull(), Spell::getNameEn, Spell::getNameRu);
+        return remapColumn(dryRun, "character_known_spells", "spell_id",
+                "character_known_spells.spell_id -> spell",
+                spellRepository::existsById, legacyNamesFrom("spells"),
+                byName, Spell::getId, Spell::getNameEn);
+    }
+
+    private RuntimeMigrationReport.EntityMigration migrateBackgrounds(boolean dryRun) {
+        Map<String, List<Background>> byName = indexByName(
+                backgroundRepository.findAllByHomebrewIsNull(), Background::getNameEn, Background::getNameRu);
+        return remapColumn(dryRun, "characters", "background_id",
+                "characters.background_id -> background",
+                backgroundRepository::existsById, legacyNamesFrom("backgrounds"),
+                byName, Background::getId, Background::getNameEn);
+    }
+
+    // --- shared remap engine ---
+
+    private <N> RuntimeMigrationReport.EntityMigration remapColumn(
+            boolean dryRun, String runtimeTable, String runtimeColumn, String targetLabel,
+            Predicate<UUID> contentExists, Function<UUID, String[]> legacyNames,
+            Map<String, List<N>> contentByName, Function<N, UUID> idOf, Function<N, String> nameOf) {
 
         List<RuntimeMigrationReport.Mapping> mapped = new ArrayList<>();
         List<RuntimeMigrationReport.Mapping> ambiguous = new ArrayList<>();
@@ -130,27 +173,23 @@ public class RuntimeDataMigrationService {
         int alreadyNew = 0;
         int rowsUpdated = 0;
 
-        for (UUID legacyId : distinctIds("character_skill_proficiencies", "skill_id")) {
-            if (contentSkillRepository.existsById(legacyId)) {
+        for (UUID legacyId : distinctIds(runtimeTable, runtimeColumn)) {
+            if (contentExists.test(legacyId)) {
                 alreadyNew++;
                 continue;
             }
-            Optional<ProficiencySkill> legacy = legacySkillRepository.findById(legacyId);
-            String legacyName = legacy.map(ProficiencySkill::getName).orElse(null);
-            List<ContentSkill> candidates = legacy
-                    .map(s -> matchByNames(byName, s.getName(), s.getNameEngloc(), s.getNameRusloc()))
-                    .orElse(List.of());
+            String[] names = legacyNames.apply(legacyId);
+            String legacyName = names != null && names.length > 0 ? names[0] : null;
+            List<N> candidates = names == null ? List.of() : matchByNames(contentByName, names);
 
             if (candidates.size() == 1) {
-                ContentSkill target = candidates.get(0);
-                RuntimeMigrationReport.Mapping m = mapping(legacyId, legacyName, target.getId(),
-                        target.getNameEn(), 1);
+                N target = candidates.get(0);
+                mapped.add(mapping(legacyId, legacyName, idOf.apply(target), nameOf.apply(target), 1));
                 if (!dryRun) {
                     rowsUpdated += jdbc.update(
-                            "UPDATE character_skill_proficiencies SET skill_id = ? WHERE skill_id = ?",
-                            target.getId(), legacyId);
+                            "UPDATE " + runtimeTable + " SET " + runtimeColumn + " = ? WHERE " + runtimeColumn + " = ?",
+                            idOf.apply(target), legacyId);
                 }
-                mapped.add(m);
             } else if (candidates.size() > 1) {
                 ambiguous.add(mapping(legacyId, legacyName, null, null, candidates.size()));
             } else {
@@ -159,26 +198,67 @@ public class RuntimeDataMigrationService {
         }
 
         return RuntimeMigrationReport.EntityMigration.builder()
-                .target("character_skill_proficiencies.skill_id -> skill")
-                .alreadyNew(alreadyNew).mapped(mapped).ambiguous(ambiguous).unmapped(unmapped)
+                .target(targetLabel).alreadyNew(alreadyNew)
+                .mapped(mapped).ambiguous(ambiguous).unmapped(unmapped)
                 .rowsUpdated(rowsUpdated).build();
     }
 
-    /** Counts runtime rows still pointing at content rows that do not exist. */
-    private String postValidation() {
-        Integer danglingClasses = jdbc.queryForObject(
-                "SELECT count(*) FROM character_class_levels ccl "
-                        + "WHERE NOT EXISTS (SELECT 1 FROM character_class cc WHERE cc.class_id = ccl.class_id) "
-                        + "AND NOT EXISTS (SELECT 1 FROM character_classes oc WHERE oc.id = ccl.class_id)",
+    /** Reads several legacy name columns for an id, tolerating a legacy table absent on fresh DBs. */
+    private Function<UUID, String[]> legacyThreeNamesFrom(String legacyTable, String... columns) {
+        String select = String.join(", ", columns);
+        return legacyId -> {
+            try {
+                return jdbc.query("SELECT " + select + " FROM " + legacyTable + " WHERE id = ?",
+                        rs -> {
+                            if (!rs.next()) {
+                                return null;
+                            }
+                            String[] names = new String[columns.length];
+                            for (int i = 0; i < columns.length; i++) {
+                                names[i] = rs.getString(i + 1);
+                            }
+                            return names;
+                        }, legacyId);
+            } catch (DataAccessException e) {
+                return null;
+            }
+        };
+    }
+
+    /** Reads the legacy {@code name} for an id, tolerating a legacy table absent on fresh DBs. */
+    private Function<UUID, String[]> legacyNamesFrom(String legacyTable) {
+        return legacyId -> {
+            try {
+                String name = jdbc.query("SELECT name FROM " + legacyTable + " WHERE id = ?",
+                        rs -> rs.next() ? rs.getString(1) : null, legacyId);
+                return name == null ? null : new String[]{name};
+            } catch (DataAccessException e) {
+                return null;
+            }
+        };
+    }
+
+    /** Counts, per column, runtime rows still pointing at content rows that do not exist. */
+    private List<String> postValidation() {
+        List<String> out = new ArrayList<>();
+        out.add(danglingNote("character_class_levels", "class_id", "character_class", "class_id"));
+        out.add(danglingNote("character_skill_proficiencies", "skill_id", "skill", "skill_id"));
+        out.add(danglingNote("character_stats", "stat_type_id", "ability_score", "ability_score_id"));
+        out.add(danglingNote("character_wallets", "currency_type_id", "currency", "currency_id"));
+        out.add(danglingNote("wallet_transactions", "currency_type_id", "currency", "currency_id"));
+        out.add(danglingNote("character_known_spells", "spell_id", "spell", "spell_id"));
+        out.add(danglingNote("characters", "background_id", "background", "background_id"));
+        return out;
+    }
+
+    private String danglingNote(String runtimeTable, String runtimeColumn, String contentTable, String contentPk) {
+        Integer dangling = jdbc.queryForObject(
+                "SELECT count(*) FROM " + runtimeTable + " t WHERE t." + runtimeColumn + " IS NOT NULL "
+                        + "AND NOT EXISTS (SELECT 1 FROM " + contentTable + " c WHERE c." + contentPk
+                        + " = t." + runtimeColumn + ")",
                 Integer.class);
-        Integer danglingSkills = jdbc.queryForObject(
-                "SELECT count(*) FROM character_skill_proficiencies csp "
-                        + "WHERE NOT EXISTS (SELECT 1 FROM skill s WHERE s.skill_id = csp.skill_id) "
-                        + "AND NOT EXISTS (SELECT 1 FROM proficiency_skills ps WHERE ps.id = csp.skill_id)",
-                Integer.class);
-        return "Post-validation: dangling class_id rows=" + danglingClasses
-                + ", dangling skill_id rows=" + danglingSkills
-                + " (должны быть 0 после полной миграции).";
+        return "Post-validation: " + runtimeTable + "." + runtimeColumn + " dangling=" + dangling
+                + " (должно быть 0 после полной миграции).";
     }
 
     // --- helpers ---

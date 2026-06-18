@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.ContentCharacterClass;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.domain.Persistable;
@@ -33,13 +34,10 @@ public class CharacterClassLevel implements Persistable<CharacterClassLevelId> {
     @JoinColumn(name = "character_id", insertable = false, updatable = false)
     private PlayerCharacter character;
 
-    // Transitional: class_id may hold a legacy character_classes id OR a new
-    // character_class id (Phase 5+). FK relaxed via changeset 060; resolve the new
-    // model by the raw classId instead of this legacy association for new characters.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", insertable = false, updatable = false,
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    private CharacterClass characterClass;
+    private ContentCharacterClass characterClass;
 
     @Column(name = "class_level", nullable = false)
     @Builder.Default

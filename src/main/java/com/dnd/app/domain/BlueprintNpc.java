@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.NpcSourceType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -55,7 +56,7 @@ public class BlueprintNpc {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id")
-    private CharacterClass characterClass;
+    private ContentCharacterClass characterClass;
 
     @Column(name = "level")
     private Integer level;

@@ -186,7 +186,7 @@ class LevelUpCommandServiceTest {
     }
 
     @Test
-    @DisplayName("Initial reward selection: selection СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ Р±РµР· РїРѕРІС‹С€РµРЅРёСЏ СѓСЂРѕРІРЅСЏ")
+    @DisplayName("Initial reward selection: selection сохраняется без повышения уровня")
     void applyInitialRewardSelections_persistsWithoutLevelChange() {
         PlayerCharacter c = PlayerCharacter.builder()
                 .id(characterId).owner(player).totalLevel(1).experience(0L).maxHp(12).currentHp(12).build();

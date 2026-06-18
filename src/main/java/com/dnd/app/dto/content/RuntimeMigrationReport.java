@@ -11,9 +11,10 @@ import java.util.UUID;
 
 /**
  * Report of a runtime-data migration run (legacy plural-table IDs → new content IDs).
- * Only {@code character_class_levels.class_id} and {@code character_skill_proficiencies.skill_id}
- * need remapping; stat/currency/spell/background already reference the new tables (remapped
- * entities). Stats/wallets/known-spells are therefore not migrated here.
+ * Covers every runtime FK column that may still hold a legacy id: class, skill, stat,
+ * currency (wallets + transactions), known spell, background. Each is reported as a
+ * separate {@link EntityMigration}. Legacy acquired-rewards are report-only — they are
+ * counted as needing manual review and never auto-converted to reward selections.
  */
 @Data
 @Builder
@@ -25,8 +26,8 @@ public class RuntimeMigrationReport {
     @Schema(description = "True => no writes performed (preview only)")
     private boolean dryRun;
 
-    private EntityMigration classes;
-    private EntityMigration skills;
+    @Schema(description = "One migration block per runtime FK column")
+    private List<EntityMigration> entities;
 
     @Schema(description = "Operational notes (post-validation, backup requirement, etc.)")
     private List<String> notes;

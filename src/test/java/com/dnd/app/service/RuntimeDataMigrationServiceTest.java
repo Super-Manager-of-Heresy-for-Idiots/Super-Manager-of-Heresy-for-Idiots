@@ -1,13 +1,15 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.CharacterClass;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.exception.BadRequestException;
-import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.ContentSkillRepository;
+import com.dnd.app.repository.CurrencyTypeRepository;
 import com.dnd.app.repository.ProficiencySkillRepository;
+import com.dnd.app.repository.SpellRepository;
+import com.dnd.app.repository.StatTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,9 +45,12 @@ class RuntimeDataMigrationServiceTest {
 
     @Mock private JdbcTemplate jdbc;
     @Mock private ContentCharacterClassRepository contentClassRepository;
-    @Mock private CharacterClassRepository legacyClassRepository;
     @Mock private ContentSkillRepository contentSkillRepository;
     @Mock private ProficiencySkillRepository legacySkillRepository;
+    @Mock private StatTypeRepository statTypeRepository;
+    @Mock private CurrencyTypeRepository currencyTypeRepository;
+    @Mock private SpellRepository spellRepository;
+    @Mock private BackgroundRepository backgroundRepository;
 
     @InjectMocks private RuntimeDataMigrationService service;
 
@@ -66,24 +72,29 @@ class RuntimeDataMigrationServiceTest {
         lenient().when(contentClassRepository.findAllByHomebrewIsNull())
                 .thenReturn(List.of(newFighter, bardA, bardB));
         lenient().when(contentSkillRepository.findAllByHomebrewIsNull()).thenReturn(List.of());
+        lenient().when(statTypeRepository.findByHomebrewIsNull()).thenReturn(List.of());
+        lenient().when(currencyTypeRepository.findByHomebrewIsNull()).thenReturn(List.of());
+        lenient().when(spellRepository.findAllByHomebrewIsNull()).thenReturn(List.of());
+        lenient().when(backgroundRepository.findAllByHomebrewIsNull()).thenReturn(List.of());
 
-        // distinct class ids: one already-new + three legacy
+        // every other runtime column is empty; class_levels has one already-new + three legacy
+        lenient().when(jdbc.queryForList(any(String.class), eq(UUID.class)))
+                .thenReturn(List.of());
         lenient().when(jdbc.queryForList(contains("character_class_levels"), eq(UUID.class)))
                 .thenReturn(List.of(newFighter.getId(), legacyFighterId, legacyBardId, legacyGhostId));
-        lenient().when(jdbc.queryForList(contains("character_skill_proficiencies"), eq(UUID.class)))
-                .thenReturn(List.of());
 
         lenient().when(contentClassRepository.existsById(newFighter.getId())).thenReturn(true);
         lenient().when(contentClassRepository.existsById(legacyFighterId)).thenReturn(false);
         lenient().when(contentClassRepository.existsById(legacyBardId)).thenReturn(false);
         lenient().when(contentClassRepository.existsById(legacyGhostId)).thenReturn(false);
 
-        lenient().when(legacyClassRepository.findById(legacyFighterId))
-                .thenReturn(Optional.of(legacy("Fighter")));
-        lenient().when(legacyClassRepository.findById(legacyBardId))
-                .thenReturn(Optional.of(legacy("Bard")));
-        lenient().when(legacyClassRepository.findById(legacyGhostId))
-                .thenReturn(Optional.of(legacy("Ghost")));
+        // Legacy class names are now read from the plural table via JDBC (name, name_engloc, name_rusloc).
+        lenient().when(jdbc.query(contains("character_classes"), any(ResultSetExtractor.class), eq(legacyFighterId)))
+                .thenReturn(new String[]{"Fighter", null, null});
+        lenient().when(jdbc.query(contains("character_classes"), any(ResultSetExtractor.class), eq(legacyBardId)))
+                .thenReturn(new String[]{"Bard", null, null});
+        lenient().when(jdbc.query(contains("character_classes"), any(ResultSetExtractor.class), eq(legacyGhostId)))
+                .thenReturn(new String[]{"Ghost", null, null});
 
         lenient().when(jdbc.queryForObject(any(String.class), eq(Integer.class))).thenReturn(0);
     }
@@ -93,8 +104,11 @@ class RuntimeDataMigrationServiceTest {
                 .id(UUID.randomUUID()).slug(nameEn.toLowerCase()).nameEn(nameEn).nameRu(nameRu).build();
     }
 
-    private CharacterClass legacy(String name) {
-        return CharacterClass.builder().id(UUID.randomUUID()).name(name).build();
+    private RuntimeMigrationReport.EntityMigration entity(RuntimeMigrationReport report, String targetContains) {
+        return report.getEntities().stream()
+                .filter(e -> e.getTarget().contains(targetContains))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Не найден блок миграции для: " + targetContains));
     }
 
     @Test
@@ -102,7 +116,7 @@ class RuntimeDataMigrationServiceTest {
     void dryRun_classifiesWithoutWriting() {
         RuntimeMigrationReport report = service.migrate(true, false);
 
-        RuntimeMigrationReport.EntityMigration classes = report.getClasses();
+        RuntimeMigrationReport.EntityMigration classes = entity(report, "character_class_levels");
         assertEquals(1, classes.getAlreadyNew());
         assertEquals(1, classes.getMapped().size());
         assertEquals(newFighter.getId(), classes.getMapped().get(0).getNewId());
@@ -129,7 +143,7 @@ class RuntimeDataMigrationServiceTest {
 
         RuntimeMigrationReport report = service.migrate(false, true);
 
-        assertEquals(3, report.getClasses().getRowsUpdated());
+        assertEquals(3, entity(report, "character_class_levels").getRowsUpdated());
         verify(jdbc, times(1)).update(
                 contains("character_class_levels"), eq(newFighter.getId()), eq(legacyFighterId));
         // ambiguous/unmapped are never written

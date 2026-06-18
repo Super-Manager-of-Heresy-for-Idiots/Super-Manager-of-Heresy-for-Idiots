@@ -12,7 +12,6 @@ import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
-import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,13 +28,10 @@ public class AdminService {
 
     private final StatTypeRepository statTypeRepository;
     private final ItemTypeRepository itemTypeRepository;
-    private final CharacterClassRepository classRepository;
     private final CharacterRaceRepository raceRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
-    private final SubclassRepository subclassRepository;
     private final FeatRepository featRepository;
-    private final ClassLevelRewardRepository classLevelRewardRepository;
     private final SkillEffectRepository skillEffectRepository;
     private final BuffDebuffRepository buffDebuffRepository;
     private final BackgroundRepository backgroundRepository;
@@ -43,7 +39,6 @@ public class AdminService {
     private final ProficiencySkillRepository proficiencySkillRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
-    private final RewardResolverRegistry rewardResolverRegistry;
     private final ContentDictionaryResolver contentDictionaryResolver;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
@@ -136,54 +131,6 @@ public class AdminService {
         }
         log.info("Admin: item type deleted — id={}", id);
         itemTypeRepository.deleteById(id);
-    }
-
-    // --- Character Classes ---
-
-    @Transactional(readOnly = true)
-    public List<CharacterClassResponse> listCharacterClasses() {
-        return classRepository.findAll().stream().map(refMapper::toCharacterClassResponse).toList();
-    }
-
-    @Transactional
-    public CharacterClassResponse createCharacterClass(CreateCharacterClassRequest request) {
-        if (classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
-        }
-        CharacterClass cc = CharacterClass.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
-        CharacterClass saved = classRepository.save(cc);
-        log.info("Admin: character class created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toCharacterClassResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public CharacterClassResponse getCharacterClass(UUID id) {
-        return refMapper.toCharacterClassResponse(classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден")));
-    }
-
-    @Transactional
-    public CharacterClassResponse updateCharacterClass(UUID id, CreateCharacterClassRequest request) {
-        CharacterClass cc = classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        if (!cc.getName().equals(request.getName()) && classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
-        }
-        cc.setName(request.getName());
-        cc.setDescription(request.getDescription());
-        return refMapper.toCharacterClassResponse(classRepository.save(cc));
-    }
-
-    @Transactional
-    public void deleteCharacterClass(UUID id) {
-        if (!classRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Класс персонажа не найден");
-        }
-        log.info("Admin: character class deleted — id={}", id);
-        classRepository.deleteById(id);
     }
 
     // --- Character Races ---
@@ -292,60 +239,6 @@ public class AdminService {
         skillRepository.deleteById(id);
     }
 
-    // --- Subclasses ---
-
-    @Transactional(readOnly = true)
-    public List<SubclassResponse> listSubclasses() {
-        return subclassRepository.findAll().stream().map(this::toSubclassResponse).toList();
-    }
-
-    @Transactional
-    public SubclassResponse createSubclass(CreateSubclassRequest request) {
-        if (subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
-        }
-        CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        Subclass sub = Subclass.builder()
-                .name(request.getName())
-                .parentClass(parent)
-                .description(request.getDescription())
-                .build();
-        Subclass saved = subclassRepository.save(sub);
-        log.info("Admin: subclass created — name='{}', parentClass='{}', id={}", saved.getName(), parent.getName(), saved.getId());
-        return toSubclassResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public SubclassResponse getSubclass(UUID id) {
-        return toSubclassResponse(subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден")));
-    }
-
-    @Transactional
-    public SubclassResponse updateSubclass(UUID id, CreateSubclassRequest request) {
-        Subclass sub = subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден"));
-        if (!sub.getName().equals(request.getName()) && subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
-        }
-        CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        sub.setName(request.getName());
-        sub.setParentClass(parent);
-        sub.setDescription(request.getDescription());
-        return toSubclassResponse(subclassRepository.save(sub));
-    }
-
-    @Transactional
-    public void deleteSubclass(UUID id) {
-        if (!subclassRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Подкласс не найден");
-        }
-        log.info("Admin: subclass deleted — id={}", id);
-        subclassRepository.deleteById(id);
-    }
-
     // --- Feats ---
 
     @Transactional(readOnly = true)
@@ -395,46 +288,8 @@ public class AdminService {
         featRepository.deleteById(id);
     }
 
-    // --- Class Level Rewards ---
-
-    @Transactional(readOnly = true)
-    public List<ClassLevelRewardResponse> listClassLevelRewards(UUID classId) {
-        if (!classRepository.existsById(classId)) {
-            throw new ResourceNotFoundException("Класс персонажа не найден");
-        }
-        return classLevelRewardRepository.findAllByCharacterClassId(classId).stream()
-                .map(this::toClassLevelRewardResponse)
-                .toList();
-    }
-
-    @Transactional
-    public ClassLevelRewardResponse createClassLevelReward(UUID classId, CreateClassLevelRewardRequest request) {
-        CharacterClass cc = classRepository.findById(classId)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        rewardResolverRegistry.validate(request.getRewardType(), request.getRewardId());
-        ClassLevelReward clr = ClassLevelReward.builder()
-                .characterClass(cc)
-                .requiredLevel(request.getRequiredLevel())
-                .rewardType(request.getRewardType())
-                .rewardId(request.getRewardId())
-                .isChoice(request.getIsChoice() != null ? request.getIsChoice() : true)
-                .build();
-        ClassLevelReward saved = classLevelRewardRepository.save(clr);
-        log.info("Admin: class level reward created — classId={}, level={}, type={}, rewardId={}, id={}",
-                classId, saved.getRequiredLevel(), saved.getRewardType(), saved.getRewardId(), saved.getId());
-        return toClassLevelRewardResponse(saved);
-    }
-
-    @Transactional
-    public void deleteClassLevelReward(UUID classId, UUID rewardEntryId) {
-        ClassLevelReward clr = classLevelRewardRepository.findById(rewardEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Награда за уровень не найдена"));
-        if (!clr.getCharacterClass().getId().equals(classId)) {
-            throw new ResourceNotFoundException("Награда не относится к этому классу");
-        }
-        log.info("Admin: class level reward deleted — classId={}, rewardEntryId={}", classId, rewardEntryId);
-        classLevelRewardRepository.delete(clr);
-    }
+    // Legacy class level-rewards authoring removed — superseded by the new content model
+    // (class-builder reward groups/options/grants via ClassAuthoringService).
 
     // --- Users & Teams (read-only) ---
 
@@ -588,14 +443,6 @@ public class AdminService {
                 .buffDebuff(bdResp)
                 .effectRole(se.getEffectRole().name())
                 .chancePercent(se.getChancePercent())
-                .build();
-    }
-
-    private SubclassResponse toSubclassResponse(Subclass s) {
-        return SubclassResponse.builder()
-                .id(s.getId()).name(s.getName())
-                .classId(s.getParentClass().getId()).className(s.getParentClass().getName())
-                .description(s.getDescription()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
     }
 
@@ -782,16 +629,4 @@ public class AdminService {
         }
     }
 
-    private ClassLevelRewardResponse toClassLevelRewardResponse(ClassLevelReward clr) {
-        RewardDetailDto detail = rewardResolverRegistry.resolve(clr.getRewardType(), clr.getRewardId());
-        return ClassLevelRewardResponse.builder()
-                .id(clr.getId())
-                .classId(clr.getCharacterClass().getId())
-                .requiredLevel(clr.getRequiredLevel())
-                .rewardType(clr.getRewardType())
-                .rewardId(clr.getRewardId())
-                .rewardName(detail.getName())
-                .isChoice(clr.getIsChoice())
-                .build();
-    }
 }

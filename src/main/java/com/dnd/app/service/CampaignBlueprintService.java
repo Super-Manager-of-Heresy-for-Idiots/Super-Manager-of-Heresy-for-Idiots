@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.BlueprintStatus;
 import com.dnd.app.domain.enums.CharacterStatus;
 import com.dnd.app.domain.enums.NpcSourceType;
@@ -57,7 +58,7 @@ public class CampaignBlueprintService {
     private final UserRepository userRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
     private final CharacterRaceRepository raceRepository;
-    private final CharacterClassRepository classRepository;
+    private final ContentCharacterClassRepository classRepository;
     private final SpellRepository spellRepository;
     private final MonsterRepository monsterRepository;
     private final ItemTemplateRepository itemTemplateRepository;
@@ -656,7 +657,7 @@ public class CampaignBlueprintService {
                 .orElseThrow(() -> new ResourceNotFoundException("Раса не найдена"));
     }
 
-    private CharacterClass resolveClass(UUID classId) {
+    private ContentCharacterClass resolveClass(UUID classId) {
         return classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Класс не найден"));
     }
@@ -810,7 +811,7 @@ public class CampaignBlueprintService {
                 .sourceType(npc.getSourceType())
                 .race(npc.getRace() == null ? null : ref(npc.getRace().getId(), npc.getRace().getName()))
                 .characterClass(npc.getCharacterClass() == null ? null
-                        : ref(npc.getCharacterClass().getId(), npc.getCharacterClass().getName()))
+                        : ref(npc.getCharacterClass().getId(), npc.getCharacterClass().getNameRu()))
                 .level(npc.getLevel())
                 .abilities(npc.getAbilities())
                 .spells(spellRefs)

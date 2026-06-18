@@ -2,6 +2,9 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.dto.content.ContentLabelDto;
+import com.dnd.app.dto.content.FeatOptionDto;
+import com.dnd.app.dto.content.ModifierKeyDto;
 import com.dnd.app.config.CacheConfig;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
@@ -30,6 +33,7 @@ public class ReferenceDataService {
     private final StatTypeRepository statTypeRepository;
     private final CurrencyTypeRepository currencyTypeRepository;
     private final SpellRepository spellRepository;
+    private final FeatRepository featRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
@@ -168,6 +172,47 @@ public class ReferenceDataService {
         return spells.stream().map(s -> mapSpell(s, lang)).toList();
     }
 
+    // --- Authoring reference lookups (class builder dropdowns) ---
+
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getVanillaAbilities(String lang) {
+        return statTypeRepository.findByHomebrewIsNull().stream()
+                .map(st -> ContentLabelDto.builder()
+                        .id(st.getId())
+                        .slug(st.getSlug())
+                        .name(Localization.pick(lang, st.getNameRu(), st.getNameEn(), st.getNameRu()))
+                        .nameRu(st.getNameRu())
+                        .nameEn(st.getNameEn())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeatOptionDto> getVanillaFeats(String query, String lang) {
+        String needle = query == null ? null : query.trim().toLowerCase();
+        return featRepository.findAllByHomebrewIsNull().stream()
+                .filter(f -> needle == null || needle.isEmpty()
+                        || (f.getNameRu() != null && f.getNameRu().toLowerCase().contains(needle))
+                        || (f.getNameEn() != null && f.getNameEn().toLowerCase().contains(needle)))
+                .map(f -> FeatOptionDto.builder()
+                        .id(f.getId())
+                        .slug(f.getSlug())
+                        .name(Localization.pick(lang, f.getNameRu(), f.getNameEn(), f.getNameRu()))
+                        .prerequisiteText(null)
+                        .build())
+                .toList();
+    }
+
+    public List<ModifierKeyDto> getModifierKeys() {
+        return List.of(
+                ModifierKeyDto.builder().key("speed").label("Скорость").defaultUnit("ft").build(),
+                ModifierKeyDto.builder().key("ac").label("Класс брони").build(),
+                ModifierKeyDto.builder().key("hp_max").label("Максимум хитов").build(),
+                ModifierKeyDto.builder().key("initiative").label("Инициатива").build(),
+                ModifierKeyDto.builder().key("spell_save_dc").label("Сложность спасброска заклинаний").build(),
+                ModifierKeyDto.builder().key("attack").label("Бонус атаки").build());
+    }
+
     // --- Mapping helpers ---
 
     // mapClassDetail(...) removed in Phase 12 along with the legacy class reference endpoints.
@@ -294,6 +339,7 @@ public class ReferenceDataService {
         return SpellResponse.builder()
                 .id(s.getId())
                 .name(Localization.pick(lang, s.getNameRu(), s.getNameEn(), s.getNameRu()))
+                .nameEn(s.getNameEn())
                 .level(s.getLevel())
                 .school(school == null ? null : Localization.pick(lang, school.getNameRu(), school.getNameEn(), school.getNameRu()))
                 .description(s.getDescription())

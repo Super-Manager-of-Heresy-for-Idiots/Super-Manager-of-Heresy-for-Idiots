@@ -2,7 +2,7 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.CampaignNpc;
-import com.dnd.app.domain.CharacterClass;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.CharacterRace;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.Monster;
@@ -16,7 +16,7 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CampaignNpcRepository;
-import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.CharacterRaceRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
@@ -48,7 +48,7 @@ class NpcServiceTest {
     @Mock private CampaignService campaignService;
     @Mock private WebSocketEventService webSocketEventService;
     @Mock private CharacterRaceRepository raceRepository;
-    @Mock private CharacterClassRepository classRepository;
+    @Mock private ContentCharacterClassRepository classRepository;
     @Mock private SpellRepository spellRepository;
     @Mock private MonsterRepository monsterRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
@@ -225,8 +225,8 @@ class NpcServiceTest {
         return CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
     }
 
-    private CharacterClass buildClass() {
-        return CharacterClass.builder().id(UUID.randomUUID()).name("Wizard").build();
+    private ContentCharacterClass buildClass() {
+        return ContentCharacterClass.builder().id(UUID.randomUUID()).nameRu("Wizard").build();
     }
 
     private Monster buildCampaignMonster(Campaign campaign) {
@@ -249,7 +249,7 @@ class NpcServiceTest {
         User gm = buildGm();
         Campaign campaign = buildCampaign();
         CharacterRace race = buildRace();
-        CharacterClass clazz = buildClass();
+        ContentCharacterClass clazz = buildClass();
 
         stubGmCreate(gm, campaign);
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));

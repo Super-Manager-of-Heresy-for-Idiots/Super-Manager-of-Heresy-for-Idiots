@@ -83,6 +83,14 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(PreconditionFailedException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePreconditionFailed(
+            PreconditionFailedException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.PRECONDITION_FAILED, "PRECONDITION_FAILED", ex, request, null);
+        return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED)
+                .body(ApiResponse.error("PRECONDITION_FAILED", ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", ex, request, "bad credentials");

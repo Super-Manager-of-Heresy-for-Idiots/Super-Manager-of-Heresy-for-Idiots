@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateCharacterRequest;
 import com.dnd.app.dto.request.UpdateStatRequest;
@@ -30,7 +31,7 @@ class CharacterServiceTest {
 
     @Mock private PlayerCharacterRepository characterRepository;
     @Mock private UserRepository userRepository;
-    @Mock private CharacterClassRepository classRepository;
+    @Mock private ContentCharacterClassRepository classRepository;
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private CharacterStatRepository characterStatRepository;
@@ -60,7 +61,7 @@ class CharacterServiceTest {
         UUID campaignId = UUID.randomUUID();
         User player = makePlayer(playerId, "player1");
         Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
-        CharacterClass cc = CharacterClass.builder().id(UUID.randomUUID()).name("Fighter").build();
+        ContentCharacterClass cc = ContentCharacterClass.builder().id(UUID.randomUUID()).nameRu("Fighter").build();
         CharacterRace race = CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
         CreateCharacterRequest req = CreateCharacterRequest.builder()
                 .name("Hero").classId(cc.getId()).raceId(race.getId()).campaignId(campaignId).build();

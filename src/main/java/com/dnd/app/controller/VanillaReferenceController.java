@@ -1,6 +1,9 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.response.*;
+import com.dnd.app.dto.content.ContentLabelDto;
+import com.dnd.app.dto.content.FeatOptionDto;
+import com.dnd.app.dto.content.ModifierKeyDto;
 import com.dnd.app.service.ReferenceDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -79,6 +82,33 @@ public class VanillaReferenceController {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(
                         referenceDataService.getVanillaSpells(classId, level, school, lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/abilities")
+    @Operation(summary = "Get ability scores (ability_score) for authoring dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getAbilities(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaAbilities(lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feats")
+    @Operation(summary = "Get feats (searchable) for authoring dropdowns")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<FeatOptionDto>>>> getFeats(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaFeats(query, lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/modifier-keys")
+    @Operation(summary = "Get known numeric-modifier keys (free text still allowed)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ModifierKeyDto>>>> getModifierKeys() {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getModifierKeys())),
                 controllerTaskExecutor);
     }
 }

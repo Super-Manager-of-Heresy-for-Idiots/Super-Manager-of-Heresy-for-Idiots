@@ -5,7 +5,6 @@ import com.dnd.app.domain.CharacterKnownSpell;
 import com.dnd.app.domain.CharacterSkillProficiency;
 import com.dnd.app.domain.CharacterStat;
 import com.dnd.app.domain.PlayerCharacter;
-import com.dnd.app.domain.ProficiencySkill;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
@@ -233,12 +232,12 @@ public class LevelUpCommandService {
             for (LevelUpRequest.GroupSelection sel : selections) {
                 if (sel.getRewardGroupId() == null || !groupById.containsKey(sel.getRewardGroupId())) {
                     throw new UnprocessableEntityException(
-                            "Р“СЂСѓРїРїР° РЅР°РіСЂР°Рґ РЅРµ РѕС‚РЅРѕСЃРёС‚СЃСЏ Рє СЌС‚РѕРјСѓ РєР»Р°СЃСЃСѓ Рё 1 СѓСЂРѕРІРЅСЋ: "
+                            "Группа наград не относится к этому классу и 1 уровню: "
                                     + sel.getRewardGroupId());
                 }
                 if (selectionByGroup.put(sel.getRewardGroupId(), sel) != null) {
                     throw new UnprocessableEntityException(
-                            "Р”СѓР±Р»РёСЂСѓСЋС‰Р°СЏСЃСЏ РіСЂСѓРїРїР° РЅР°РіСЂР°Рґ: " + sel.getRewardGroupId());
+                            "Дублирующаяся группа наград: " + sel.getRewardGroupId());
                 }
             }
         }
@@ -252,7 +251,7 @@ public class LevelUpCommandService {
                 processChoiceGroup(character, group, sel, applied, manual);
             } else if (sel != null) {
                 throw new UnprocessableEntityException(
-                        "Р“СЂСѓРїРїР° РЅР°РіСЂР°Рґ РЅРµ СЏРІР»СЏРµС‚СЏ РіСЂСѓРїРїРѕР№ РІС‹Р±РѕСЂР°: " + group.getId());
+                        "Группа наград не является группой выбора: " + group.getId());
             }
         }
 
@@ -418,7 +417,7 @@ public class LevelUpCommandService {
             }
             skillProficiencyRepository.save(CharacterSkillProficiency.builder()
                     .character(character)
-                    .skill(entityManager.getReference(ProficiencySkill.class, skillId))
+                    .skill(entityManager.getReference(ContentSkill.class, skillId))
                     .source(SkillProficiencySource.CLASS).build());
             applied.add(appliedGrant(grant, "Владение навыком получено"));
         }

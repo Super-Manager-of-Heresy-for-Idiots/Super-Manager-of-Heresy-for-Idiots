@@ -5,7 +5,6 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
-import com.dnd.app.service.reward.RewardResolverRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,18 +24,14 @@ class ItemTypeServiceTest {
 
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private ItemTypeRepository itemTypeRepository;
-    @Mock private CharacterClassRepository classRepository;
     @Mock private CharacterRaceRepository raceRepository;
     @Mock private UserRepository userRepository;
     @Mock private SkillRepository skillRepository;
-    @Mock private SubclassRepository subclassRepository;
     @Mock private FeatRepository featRepository;
-    @Mock private ClassLevelRewardRepository classLevelRewardRepository;
     @Mock private SkillEffectRepository skillEffectRepository;
     @Mock private BuffDebuffRepository buffDebuffRepository;
     @Mock private ReferenceDataMapper refMapper;
     @Mock private UserMapper userMapper;
-    @Mock private RewardResolverRegistry rewardResolverRegistry;
     @Mock private ContentDictionaryResolver contentDictionaryResolver;
 
     @InjectMocks private AdminService adminService;

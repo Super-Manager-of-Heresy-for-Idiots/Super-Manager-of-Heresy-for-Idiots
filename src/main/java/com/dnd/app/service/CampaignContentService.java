@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.ContentType;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
@@ -27,7 +28,7 @@ public class CampaignContentService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final HomebrewPackageRepository homebrewPackageRepository;
     private final HomebrewContentItemRepository contentItemRepository;
-    private final CharacterClassRepository classRepository;
+    private final ContentCharacterClassRepository classRepository;
     private final CharacterRaceRepository raceRepository;
     private final ItemTypeRepository itemTypeRepository;
     private final SkillRepository skillRepository;
@@ -128,11 +129,11 @@ public class CampaignContentService {
         List<AvailableContentItem> classes = new ArrayList<>();
         classRepository.findAllByHomebrewIsNull().forEach(c ->
                 classes.add(AvailableContentItem.builder()
-                        .id(c.getId()).name(c.getName()).source("GLOBAL").build()));
+                        .id(c.getId()).name(c.getNameRu()).source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
             classRepository.findAllByHomebrewIdIn(activePackageIds).forEach(c ->
                     classes.add(AvailableContentItem.builder()
-                            .id(c.getId()).name(c.getName()).source("HOMEBREW")
+                            .id(c.getId()).name(c.getNameRu()).source("HOMEBREW")
                             .homebrewTitle(c.getHomebrew() != null ? c.getHomebrew().getTitle() : null)
                             .build()));
         }
@@ -191,7 +192,7 @@ public class CampaignContentService {
     }
 
     public boolean isClassAvailableInCampaign(UUID campaignId, UUID classId) {
-        CharacterClass cc = classRepository.findById(classId).orElse(null);
+        ContentCharacterClass cc = classRepository.findById(classId).orElse(null);
         if (cc == null) return false;
         if (cc.getHomebrew() == null) return true;
         Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);

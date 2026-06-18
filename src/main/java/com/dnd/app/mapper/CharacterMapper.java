@@ -28,7 +28,7 @@ public abstract class CharacterMapper {
     public abstract CharacterResponse toResponse(PlayerCharacter character);
 
     @Mapping(target = "classId", source = "classId")
-    @Mapping(target = "className", expression = "java(ccl.getCharacterClass() != null ? ccl.getCharacterClass().getName() : null)")
+    @Mapping(target = "className", expression = "java(ccl.getCharacterClass() != null ? ccl.getCharacterClass().getNameRu() : null)")
     public abstract ClassLevelResponse toClassLevelResponse(CharacterClassLevel ccl);
 
     public abstract List<ClassLevelResponse> toClassLevelResponseList(List<CharacterClassLevel> levels);

@@ -10,7 +10,6 @@ import com.dnd.app.domain.CharacterClassLevel;
 import com.dnd.app.domain.CharacterWallet;
 import com.dnd.app.domain.CurrencyType;
 import com.dnd.app.domain.PlayerCharacter;
-import com.dnd.app.domain.ProficiencySkill;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
@@ -57,9 +56,8 @@ import java.util.stream.Collectors;
 /**
  * Creates characters on the NEW content model (Phase 5). Reads options and validates
  * choices against the normalized tables (character_class, class_skill_option, skill,
- * spell, currency) and stores the new content IDs in the runtime tables. Runs in
- * parallel with the legacy {@link CharacterWizardService}; both remain available until
- * the legacy flow is removed (Phases 11/12).
+ * spell, currency) and stores the new content IDs in the runtime tables. This is the
+ * sole character-creation flow; the legacy wizard was removed in Phase 11/12.
  */
 @Slf4j
 @Service
@@ -210,9 +208,9 @@ public class ContentCharacterCreationService {
             character.getStats().add(stat);
         }
 
-        // class skill proficiencies store the NEW skill id (skill_id FK relaxed in 060)
+        // class skill proficiencies reference the content skill (skill_id FK relaxed in 060)
         for (UUID skillId : chosenSkills) {
-            ProficiencySkill skillRef = entityManager.getReference(ProficiencySkill.class, skillId);
+            ContentSkill skillRef = entityManager.getReference(ContentSkill.class, skillId);
             CharacterSkillProficiency csp = CharacterSkillProficiency.builder()
                     .character(character)
                     .skill(skillRef)

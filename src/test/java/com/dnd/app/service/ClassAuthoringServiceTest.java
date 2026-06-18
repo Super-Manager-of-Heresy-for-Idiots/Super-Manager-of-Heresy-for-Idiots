@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
+import com.dnd.app.domain.content.ClassAuthoringIdempotencyRecord;
 import com.dnd.app.domain.content.ClassLevelRewardGrant;
 import com.dnd.app.domain.content.ClassLevelRewardGroup;
 import com.dnd.app.domain.content.ClassLevelRewardOption;
@@ -16,6 +17,7 @@ import com.dnd.app.dto.request.ClassWriteRequest;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ClassValidationException;
 import com.dnd.app.mapper.ContentClassMapper;
+import com.dnd.app.repository.ClassAuthoringIdempotencyRepository;
 import com.dnd.app.repository.ClassFeatureRepository;
 import com.dnd.app.repository.ClassLevelRewardGrantAbilityScoreRepository;
 import com.dnd.app.repository.ClassLevelRewardGrantCustomTextRepository;
@@ -36,12 +38,14 @@ import com.dnd.app.repository.HomebrewPackageRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -49,11 +53,14 @@ import org.mockito.quality.Strictness;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +89,9 @@ class ClassAuthoringServiceTest {
     @Mock private SpellRepository spellRepository;
     @Mock private HomebrewPackageRepository packageRepository;
     @Mock private UserRepository userRepository;
+    @Mock private ClassAuthoringIdempotencyRepository idempotencyRepository;
     @Mock private ContentClassMapper classMapper;
+    @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks private ClassAuthoringService service;
 
@@ -158,7 +167,7 @@ class ClassAuthoringServiceTest {
         ClassWriteRequest.RewardGroupInput group = ClassWriteRequest.RewardGroupInput.builder()
                 .classLevel(1).groupKind("AUTO").chooseMin(0).chooseMax(0).grants(List.of(grant)).build();
 
-        var result = service.createPackageClass(packageId, baseClass().rewardGroups(List.of(group)).build(), "gm", "en");
+        var result = service.createPackageClass(packageId, baseClass().rewardGroups(List.of(group)).build(), "gm", "en", null);
 
         assertEquals(packageId, result.getPackageId());
         verify(classRepository).save(any());
@@ -181,7 +190,7 @@ class ClassAuthoringServiceTest {
                 .classLevel(3).groupKind("CHOICE").chooseMin(1).chooseMax(1).options(List.of(option)).build();
 
         service.createPackageClass(packageId,
-                baseClass().subclasses(List.of(sub)).rewardGroups(List.of(group)).build(), "gm", "en");
+                baseClass().subclasses(List.of(sub)).rewardGroups(List.of(group)).build(), "gm", "en", null);
 
         verify(subclassRepository).save(any());
         verify(grantSubclassRepository).save(any());
@@ -198,7 +207,7 @@ class ClassAuthoringServiceTest {
         ClassWriteRequest req = baseClass().rewardGroups(List.of(group)).build();
 
         assertThrows(ClassValidationException.class,
-                () -> service.createPackageClass(packageId, req, "gm", "en"));
+                () -> service.createPackageClass(packageId, req, "gm", "en", null));
     }
 
     @Test
@@ -206,7 +215,7 @@ class ClassAuthoringServiceTest {
     void invalidHitDie_rejected() {
         ClassWriteRequest req = baseClass().hitDie(7).build();
         assertThrows(ClassValidationException.class,
-                () -> service.createPackageClass(packageId, req, "gm", "en"));
+                () -> service.createPackageClass(packageId, req, "gm", "en", null));
     }
 
     @Test
@@ -218,7 +227,33 @@ class ClassAuthoringServiceTest {
 
         ClassWriteRequest req = baseClass().build();
         assertThrows(AccessDeniedException.class,
-                () -> service.createPackageClass(packageId, req, "gm", "en"));
+                () -> service.createPackageClass(packageId, req, "gm", "en", null));
+    }
+
+    @Test
+    @DisplayName("Повторный POST с тем же Idempotency-Key создаёт одну сущность")
+    void idempotentCreate_dedup() {
+        ClassWriteRequest req = baseClass().build();
+        String scope = "pkg:" + packageId + ":gm";
+
+        AtomicReference<ClassAuthoringIdempotencyRecord> stored = new AtomicReference<>();
+        when(idempotencyRepository.findByScopeAndIdemKey(eq(scope), eq("key-1")))
+                .thenAnswer(i -> Optional.ofNullable(stored.get()));
+        when(idempotencyRepository.save(any())).thenAnswer(i -> {
+            ClassAuthoringIdempotencyRecord r = i.getArgument(0);
+            stored.set(r);
+            return r;
+        });
+
+        var first = service.createPackageClass(packageId, req, "gm", "en", "key-1");
+
+        when(classRepository.findById(first.getId())).thenReturn(Optional.of(
+                ContentCharacterClass.builder().id(first.getId()).slug(first.getSlug()).build()));
+
+        var second = service.createPackageClass(packageId, req, "gm", "en", "key-1");
+
+        assertEquals(first.getId(), second.getId());
+        verify(classRepository, times(1)).save(any());
     }
 
     @Test
@@ -238,7 +273,7 @@ class ClassAuthoringServiceTest {
                 .classLevel(1).groupKind("AUTO").chooseMin(0).chooseMax(0).grants(List.of()).build();
 
         service.updatePackageClass(packageId, classId,
-                baseClass().rewardGroups(List.of(group)).build(), "gm", "en");
+                baseClass().rewardGroups(List.of(group)).build(), null, "gm", "en");
 
         verify(groupRepository).deleteAll(any());
         verify(groupRepository).save(any());

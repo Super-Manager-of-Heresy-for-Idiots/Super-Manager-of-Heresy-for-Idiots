@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateCharacterRequest;
@@ -32,7 +33,7 @@ public class CharacterService {
 
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
-    private final CharacterClassRepository classRepository;
+    private final ContentCharacterClassRepository classRepository;
     private final StatTypeRepository statTypeRepository;
     private final CharacterStatRepository characterStatRepository;
     private final CharacterActiveEffectRepository activeEffectRepository;
@@ -228,7 +229,7 @@ public class CharacterService {
             throw new BadRequestException("Selected class is not available in this campaign");
         }
 
-        CharacterClass charClass = classRepository.findById(request.getClassId())
+        ContentCharacterClass charClass = classRepository.findById(request.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
         CharacterRace race = raceService.getSelectableRace(campaign.getId(), request.getRaceId());
         raceService.validateLineageSelection(race, request.getSelectedLineageId());
@@ -245,7 +246,7 @@ public class CharacterService {
                 .build();
         character = characterRepository.saveAndFlush(character);
         log.info("Character created: id={}, name='{}', class='{}', race='{}', lineageId={}, owner={}, campaignId={}",
-                character.getId(), character.getName(), charClass.getName(), race.getName(),
+                character.getId(), character.getName(), charClass.getNameRu(), race.getName(),
                 request.getSelectedLineageId(), username, campaign.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
@@ -514,7 +515,7 @@ public class CharacterService {
                     character.getSkillProficiencies().stream()
                             .map(sp -> com.dnd.app.dto.response.CharacterSkillProficiencyResponse.builder()
                                     .skillId(sp.getSkill().getId())
-                                    .skillName(sp.getSkill().getName())
+                                    .skillName(sp.getSkill().getNameRu())
                                     .source(sp.getSource().name())
                                     .build())
                             .toList()

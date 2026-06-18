@@ -65,5 +65,11 @@
     <include file="db/changelog/058-class-reward-choices.xml"/>
     <include file="db/changelog/059-content-homebrew-flexibility-fixes.xml"/>
     <include file="db/changelog/060-relax-runtime-content-fks.xml"/>
+    <include file="db/changelog/061-class-authoring-idempotency.xml"/>
+    <include file="db/changelog/062-relax-runtime-content-fks-2.xml"/>
+    <include file="db/changelog/063a-cleanup-orphan-runtime-rows.xml"/>
+    <include file="db/changelog/063-runtime-content-real-fks.xml"/>
+    <include file="db/changelog/064-drop-legacy-reward-tables.xml"/>
+    <include file="db/changelog/065-drop-legacy-class-subclass-tables.xml"/>
 
 </databaseChangeLog>

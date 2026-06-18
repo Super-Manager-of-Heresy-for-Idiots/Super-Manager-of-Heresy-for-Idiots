@@ -1,9 +1,9 @@
 package com.dnd.app.service.homebrew;
 
-import com.dnd.app.domain.Subclass;
+import com.dnd.app.domain.content.ContentSubclass;
 import com.dnd.app.dto.response.ContentSummaryDto;
 import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.SubclassRepository;
+import com.dnd.app.repository.ContentSubclassRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubclassContentValidator implements HomebrewContentValidator {
 
-    private final SubclassRepository subclassRepository;
+    private final ContentSubclassRepository subclassRepository;
 
     @Override
     public String getSupportedType() {
@@ -29,20 +29,20 @@ public class SubclassContentValidator implements HomebrewContentValidator {
 
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
-        Subclass subclass = subclassRepository.findById(contentId)
+        ContentSubclass subclass = subclassRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден: " + contentId));
         return ContentSummaryDto.builder()
                 .id(subclass.getId())
-                .name(subclass.getName())
-                .description(subclass.getDescription())
-                .classId(subclass.getParentClass() != null ? subclass.getParentClass().getId() : null)
-                .className(subclass.getParentClass() != null ? subclass.getParentClass().getName() : null)
+                .name(subclass.getNameRu())
+                .description(null)
+                .classId(subclass.getCharacterClass() != null ? subclass.getCharacterClass().getId() : null)
+                .className(subclass.getCharacterClass() != null ? subclass.getCharacterClass().getNameRu() : null)
                 .build();
     }
 
     @Override
     public UUID getOwnerId(UUID contentId) {
-        Subclass subclass = subclassRepository.findById(contentId)
+        ContentSubclass subclass = subclassRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден: " + contentId));
         return subclass.getHomebrew() != null && subclass.getHomebrew().getAuthor() != null
                 ? subclass.getHomebrew().getAuthor().getId()

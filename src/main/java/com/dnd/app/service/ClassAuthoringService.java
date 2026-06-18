@@ -5,6 +5,7 @@ import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
+import com.dnd.app.domain.content.ClassAuthoringIdempotencyRecord;
 import com.dnd.app.domain.content.ClassFeature;
 import com.dnd.app.domain.content.ClassLevelRewardGrant;
 import com.dnd.app.domain.content.ClassLevelRewardGrantAbilityScore;
@@ -22,6 +23,7 @@ import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.domain.content.ContentSubclass;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.content.ClassSaveResult;
+import com.dnd.app.dto.content.ContentClassDetailResponse;
 import com.dnd.app.dto.content.ValidationIssue;
 import com.dnd.app.dto.content.grant.AbilityScoreGrantPayload;
 import com.dnd.app.dto.content.grant.CustomTextGrantPayload;
@@ -36,8 +38,12 @@ import com.dnd.app.dto.content.grant.SubclassGrantPayload;
 import com.dnd.app.dto.request.ClassWriteRequest;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ClassValidationException;
+import com.dnd.app.exception.PreconditionFailedException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dnd.app.mapper.ContentClassMapper;
+import com.dnd.app.repository.ClassAuthoringIdempotencyRepository;
 import com.dnd.app.repository.ClassFeatureRepository;
 import com.dnd.app.repository.ClassLevelRewardGrantAbilityScoreRepository;
 import com.dnd.app.repository.ClassLevelRewardGrantCustomTextRepository;
@@ -64,7 +70,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -109,27 +120,33 @@ public class ClassAuthoringService {
     private final SpellRepository spellRepository;
     private final HomebrewPackageRepository packageRepository;
     private final UserRepository userRepository;
+    private final ClassAuthoringIdempotencyRepository idempotencyRepository;
     private final ContentClassMapper classMapper;
+    private final ObjectMapper objectMapper;
+
+    private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
 
     // --- public API: admin/core ---
 
     @org.springframework.cache.annotation.CacheEvict(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
-    public ClassSaveResult createCoreClass(ClassWriteRequest request, String username, String lang) {
+    public ClassSaveResult createCoreClass(ClassWriteRequest request, String username, String lang, String idemKey) {
         requireAdmin(username);
-        return create(null, request, lang);
+        return createIdempotent("core:" + username, null, idemKey, request, lang, () -> create(null, request, lang));
     }
 
     @org.springframework.cache.annotation.CacheEvict(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
-    public ClassSaveResult updateCoreClass(UUID classId, ClassWriteRequest request, String username, String lang) {
+    public ClassSaveResult updateCoreClass(UUID classId, ClassWriteRequest request, String ifMatch,
+                                           String username, String lang) {
         requireAdmin(username);
         ContentCharacterClass existing = loadClass(classId);
         if (existing.getHomebrew() != null) {
             throw new ResourceNotFoundException("Класс не найден");
         }
+        enforceIfMatch(existing, ifMatch, lang);
         return update(existing, null, request, lang);
     }
 
@@ -149,19 +166,22 @@ public class ClassAuthoringService {
     // --- public API: homebrew package ---
 
     @Transactional
-    public ClassSaveResult createPackageClass(UUID packageId, ClassWriteRequest request, String username, String lang) {
+    public ClassSaveResult createPackageClass(UUID packageId, ClassWriteRequest request, String username, String lang,
+                                              String idemKey) {
         HomebrewPackage pkg = loadOwnedPackage(packageId, username);
-        return create(pkg, request, lang);
+        return createIdempotent("pkg:" + packageId + ":" + username, pkg.getId(), idemKey, request, lang,
+                () -> create(pkg, request, lang));
     }
 
     @Transactional
     public ClassSaveResult updatePackageClass(UUID packageId, UUID classId, ClassWriteRequest request,
-                                              String username, String lang) {
+                                              String ifMatch, String username, String lang) {
         HomebrewPackage pkg = loadOwnedPackage(packageId, username);
         ContentCharacterClass existing = loadClass(classId);
         if (existing.getHomebrew() == null || !existing.getHomebrew().getId().equals(pkg.getId())) {
             throw new AccessDeniedException("Этот класс не принадлежит указанному пакету");
         }
+        enforceIfMatch(existing, ifMatch, lang);
         return update(existing, pkg, request, lang);
     }
 
@@ -176,6 +196,55 @@ public class ClassAuthoringService {
         classRepository.delete(existing);
     }
 
+    // --- public API: read detail ---
+
+    @Transactional(readOnly = true)
+    public ContentClassDetailResponse getCoreClass(UUID classId, String username, String lang) {
+        requireAdmin(username);
+        ContentCharacterClass clazz = loadClass(classId);
+        if (clazz.getHomebrew() != null) {
+            throw new ResourceNotFoundException("Класс не найден");
+        }
+        return classMapper.toDetail(clazz, lang);
+    }
+
+    @Transactional(readOnly = true)
+    public ContentClassDetailResponse getPackageClass(UUID packageId, UUID classId, String username, String lang) {
+        HomebrewPackage pkg = loadOwnedPackage(packageId, username);
+        ContentCharacterClass clazz = loadClass(classId);
+        if (clazz.getHomebrew() == null || !clazz.getHomebrew().getId().equals(pkg.getId())) {
+            throw new AccessDeniedException("Этот класс не принадлежит указанному пакету");
+        }
+        return classMapper.toDetail(clazz, lang);
+    }
+
+    /** Strong validator over the canonical read model — changes whenever the class graph changes. */
+    public String etagFor(ContentClassDetailResponse detail) {
+        try {
+            byte[] json = objectMapper.writeValueAsBytes(detail);
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(json);
+            StringBuilder sb = new StringBuilder(2 + digest.length * 2);
+            sb.append('"');
+            for (byte b : digest) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.append('"').toString();
+        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Не удалось вычислить ETag класса", e);
+        }
+    }
+
+    private void enforceIfMatch(ContentCharacterClass existing, String ifMatch, String lang) {
+        if (ifMatch == null || ifMatch.isBlank() || "*".equals(ifMatch.trim())) {
+            return;
+        }
+        String current = etagFor(classMapper.toDetail(existing, lang));
+        if (!ifMatch.trim().equals(current)) {
+            throw new PreconditionFailedException(
+                    "Класс был изменён другим пользователем. Обновите страницу и повторите.");
+        }
+    }
+
     // --- create / update core ---
 
     private ClassSaveResult create(HomebrewPackage homebrew, ClassWriteRequest request, String lang) {
@@ -187,6 +256,66 @@ public class ClassAuthoringService {
         ContentCharacterClass clazz = classRepository.save(buildClass(new ContentCharacterClass(), request, homebrew));
         persistGraph(clazz, request, homebrew);
         return saveResult(clazz, homebrew, warnings(issues), lang);
+    }
+
+    // --- idempotency (R5) ---
+
+    private ClassSaveResult createIdempotent(String scope, UUID packageId, String idemKey,
+                                             ClassWriteRequest request, String lang,
+                                             Supplier<ClassSaveResult> creator) {
+        if (idemKey == null || idemKey.isBlank()) {
+            return creator.get();
+        }
+        pruneExpiredIdempotency();
+        String key = idemKey.trim();
+        String hash = requestHash(request);
+        Optional<ClassAuthoringIdempotencyRecord> existing = idempotencyRepository.findByScopeAndIdemKey(scope, key);
+        if (existing.isPresent()) {
+            return replayIdempotent(existing.get(), hash, lang);
+        }
+        ClassSaveResult result = creator.get();
+        // The unique (scope, key) constraint is the real guard: a concurrent duplicate
+        // loses the insert race, its transaction rolls back, and no second class survives.
+        idempotencyRepository.save(ClassAuthoringIdempotencyRecord.builder()
+                .scope(scope)
+                .idemKey(key)
+                .requestHash(hash)
+                .resultClassId(result.getId())
+                .packageId(packageId)
+                .createdAt(Instant.now())
+                .build());
+        return result;
+    }
+
+    private ClassSaveResult replayIdempotent(ClassAuthoringIdempotencyRecord record, String requestHash, String lang) {
+        if (!record.getRequestHash().equals(requestHash)) {
+            throw new PreconditionFailedException(
+                    "Idempotency-Key уже использован с другим телом запроса.");
+        }
+        ContentCharacterClass clazz = classRepository.findById(record.getResultClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Класс из idempotency-записи не найден"));
+        HomebrewPackage hb = record.getPackageId() != null
+                ? packageRepository.findById(record.getPackageId()).orElse(null)
+                : null;
+        return saveResult(clazz, hb, List.of(), lang);
+    }
+
+    private void pruneExpiredIdempotency() {
+        idempotencyRepository.deleteByCreatedAtBefore(Instant.now().minus(IDEMPOTENCY_TTL));
+    }
+
+    private String requestHash(ClassWriteRequest request) {
+        try {
+            byte[] json = objectMapper.writeValueAsBytes(request);
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(json);
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Не удалось вычислить хэш запроса", e);
+        }
     }
 
     private ClassSaveResult update(ContentCharacterClass existing, HomebrewPackage homebrew,
@@ -761,12 +890,13 @@ public class ClassAuthoringService {
         String base = hb == null
                 ? "/api/admin/character-classes/" + clazz.getId()
                 : "/api/homebrew/packages/" + hb.getId() + "/classes/" + clazz.getId();
+        ContentClassDetailResponse detail = classMapper.toDetail(clazz, lang);
         return ClassSaveResult.builder()
-                .clazz(classMapper.toDetail(clazz, lang))
+                .clazz(detail)
                 .id(clazz.getId())
                 .slug(clazz.getSlug())
                 .packageId(hb != null ? hb.getId() : null)
-                .etag(UUID.randomUUID().toString())
+                .etag(etagFor(detail))
                 .createdAt(Instant.now().toString())
                 .updatedAt(Instant.now().toString())
                 .warnings(warnings)

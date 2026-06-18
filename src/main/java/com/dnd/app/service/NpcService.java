@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.NpcSourceType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
@@ -15,7 +16,7 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CampaignNpcRepository;
-import com.dnd.app.repository.CharacterClassRepository;
+import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.CharacterRaceRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
@@ -43,7 +44,7 @@ public class NpcService {
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
     private final CharacterRaceRepository raceRepository;
-    private final CharacterClassRepository classRepository;
+    private final ContentCharacterClassRepository classRepository;
     private final SpellRepository spellRepository;
     private final MonsterRepository monsterRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
@@ -245,7 +246,7 @@ public class NpcService {
                         : ref(npc.getRace().getId(), displayName(npc.getRace().getNameRusloc(), npc.getRace().getName())))
                 .characterClass(npc.getCharacterClass() == null ? null
                         : ref(npc.getCharacterClass().getId(),
-                              displayName(npc.getCharacterClass().getNameRusloc(), npc.getCharacterClass().getName())))
+                              displayName(npc.getCharacterClass().getNameRu(), npc.getCharacterClass().getNameEn())))
                 .level(npc.getLevel())
                 .abilities(npc.getAbilities())
                 .spells(spellRefs)
@@ -331,7 +332,7 @@ public class NpcService {
                 .orElseThrow(() -> new ResourceNotFoundException("Race not found"));
     }
 
-    private CharacterClass resolveClass(UUID classId) {
+    private ContentCharacterClass resolveClass(UUID classId) {
         return classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
     }

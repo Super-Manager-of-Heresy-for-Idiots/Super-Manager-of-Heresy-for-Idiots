@@ -96,17 +96,7 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
-    @PostMapping("/my/{packageId}/content/classes")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageCharacterClass(
-            @PathVariable UUID packageId, @Valid @RequestBody CreateCharacterClassRequest request, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            HomebrewDetailResponse data = authoringService.createPackageCharacterClass(packageId, request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(data, "Класс добавлен в пакет"));
-        }, controllerTaskExecutor);
-    }
-
-    // Legacy rich/import/update class-authoring endpoints removed in Phase 12 —
+    // Legacy class-authoring endpoints (create/rich/import/update) removed in Phase 12 —
     // superseded by the aggregate ClassAuthoringController
     // (POST/PUT/DELETE /api/homebrew/packages/{packageId}/classes).
 

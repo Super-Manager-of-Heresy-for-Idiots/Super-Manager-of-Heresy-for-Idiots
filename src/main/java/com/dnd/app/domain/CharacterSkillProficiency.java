@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.domain.enums.SkillProficiencySource;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,10 +11,10 @@ import java.util.UUID;
 @Table(name = "character_skill_proficiencies",
         uniqueConstraints = @UniqueConstraint(columnNames = {"character_id", "skill_id"}))
 /**
- * Transitional character proficiency table. It still points at legacy proficiency_skills
- * until character creation and reward application are migrated to skill.
+ * Character proficiency table. {@code skill_id} references the content {@code skill}
+ * (ContentSkill). The FK stays NO_CONSTRAINT until existing legacy rows are migrated by
+ * {@link com.dnd.app.service.RuntimeDataMigrationService}; a real FK is added afterwards.
  */
-@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,12 +30,10 @@ public class CharacterSkillProficiency {
     @JoinColumn(name = "character_id", nullable = false)
     private PlayerCharacter character;
 
-    // Transitional: skill_id may hold a legacy proficiency_skills id OR a new skill id
-    // (Phase 5+). FK relaxed via changeset 060; the new model resolves by the raw id.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_id", nullable = false,
             foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    private ProficiencySkill skill;
+    private ContentSkill skill;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

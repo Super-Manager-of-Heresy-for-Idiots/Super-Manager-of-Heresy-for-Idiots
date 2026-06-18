@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Phase 11/12 (roadmap R8b). The legacy plural-table class catalog has been removed
+      from the codebase: CharacterClass / Subclass entities + their repositories, the old
+      admin class/subclass CRUD, and the legacy character wizard. Every live consumer
+      (characters, NPCs, blueprints, custom resources, homebrew validators) now points at
+      the content model (character_class / subclass). No @Entity maps to these tables
+      anymore, so ddl-auto:validate no longer needs them. Drop them now.
+      Idempotent (DROP TABLE IF EXISTS); CASCADE removes dependent FKs/data.
+      Bestiary is untouched.
+    -->
+    <changeSet id="065-01-drop-legacy-class-subclass-tables" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+DROP TABLE IF EXISTS subclasses CASCADE;
+
+DROP TABLE IF EXISTS character_classes CASCADE;
+]]></sql>
+        <rollback>
+            <comment>
+                Irreversible by design: legacy class/subclass tables are dropped after the
+                runtime switched to the content model (character_class / subclass). Restore
+                from backup if rollback is required.
+            </comment>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

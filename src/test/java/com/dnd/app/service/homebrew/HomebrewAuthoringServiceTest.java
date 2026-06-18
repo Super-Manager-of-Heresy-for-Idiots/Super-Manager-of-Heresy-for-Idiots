@@ -42,7 +42,6 @@ class HomebrewAuthoringServiceTest {
     @Mock private TagService tagService;
     @Mock private HomebrewContentValidatorRegistry validatorRegistry;
     @Mock private ItemTypeRepository itemTypeRepository;
-    @Mock private CharacterClassRepository classRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private FeatRepository featRepository;
     @Mock private ContentDictionaryResolver contentDictionaryResolver;

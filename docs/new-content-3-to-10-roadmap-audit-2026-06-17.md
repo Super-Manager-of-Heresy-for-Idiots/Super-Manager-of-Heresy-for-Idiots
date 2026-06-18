@@ -312,3 +312,41 @@ Working tree after verification:
 Final audit verdict:
 
 The developer's claim that almost the entire roadmap is complete is **not supported** by the current backend/frontend state. The implementation has many useful building blocks for the new model, but it is still a hybrid migration with active legacy runtime routes, active legacy admin tools, mismatched FE/BE contracts, incomplete character creation persistence, incomplete runtime data migration, and no final cleanup migration.
+
+## Resolution Addendum (2026-06-17, post-audit)
+
+Contract blockers closed since the audit (see fix-log Steps 1-3):
+
+- **Cross-project blocker #4 (class reference endpoint mismatch): RESOLVED.**
+  `ContentReferenceController` now serves the in-place routes the FE already calls
+  (`/api/reference/classes`, `/api/campaigns/{campaignId}/reference/classes`) alongside
+  the `/content` aliases.
+- **Cross-project blockers #2/#3 (creation/level-up route mismatch): RESOLVED at the
+  route level.** New content controllers now serve the stable `/full` and
+  `/level-up[-options]` routes; legacy paths were moved under `/legacy/*`.
+- **FE gap #5 (legacy admin class-level reward UI): RESOLVED.** `LevelRewardsPage` and its
+  route deleted; admin reward hooks/api methods removed; legacy reward + class CRUD
+  endpoints removed from `AdminController` / `AdminService` (this also fixed an ambiguous
+  Spring mapping that blocked startup).
+- **FE gap #6 (class-builder GET/ETag/If-Match): RESOLVED.** `ClassAuthoringController`
+  now has detail GETs returning `ContentClassDetailResponse` with a deterministic
+  SHA-256 content-hash ETag; updates honor `If-Match` and return `412` on conflict.
+- **FE gap #7 (builder reference dropdown endpoints): RESOLVED.** `/api/reference/abilities`,
+  `/api/reference/feats`, `/api/reference/modifier-keys` now exist.
+
+Still open after this addendum (carried into the new roadmap):
+
+- BE gap #2 (legacy level-up still an active runtime write path), gap #3/#11 (legacy full
+  creation still active), gap #4 (level-1 reward selection not persisted), gap #5 (mixed
+  `ContentSkill`/`ProficiencySkill` IDs), gap #7 (legacy homebrew authoring writes old
+  model), gap #8 (runtime data migration narrower than Phase 10), gap #9 (no final
+  cleanup Liquibase), gap #10 (no Testcontainers/E2E integration tests).
+- `Idempotency-Key` on class create is accepted but ignored (no dedup store).
+
+Revised score estimate after blockers closed:
+
+- Backend: ~**7/10**.
+- Frontend: ~**7/10** (normal builder/admin/reference workflows now contract-aligned).
+- Integrated product: ~**6.5/10**. The remaining distance to 10/10 is the deep runtime
+  switch-over (level-up commit, creation persistence, ID unification, data migration,
+  legacy removal, integration testing), not contract plumbing.
