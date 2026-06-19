@@ -1,10 +1,13 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.ApplyCombatantHpRequest;
+import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
+import com.dnd.app.dto.response.BattleActionResultResponse;
 import com.dnd.app.dto.response.BattleResponse;
 import com.dnd.app.dto.response.CombatantTurnResponse;
 import com.dnd.app.service.BattleService;
@@ -159,6 +162,31 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             CombatantTurnResponse data = battleService.getCurrentTurn(campaignId, battleId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/attack")
+    @Operation(summary = "The active combatant attacks a target: manual d20, server resolves hit/crit vs AC and rolls damage")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleActionResultResponse>>> attack(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody BattleAttackRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleActionResultResponse data = battleService.performAttack(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Attack resolved"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/hp")
+    @Operation(summary = "Adjust a combatant's HP (negative damages, positive heals) — GM only")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> applyCombatantHp(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody ApplyCombatantHpRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.applyCombatantHp(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "HP updated"));
         }, controllerTaskExecutor);
     }
 
