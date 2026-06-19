@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.ContentCharacterClass;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.domain.Persistable;
@@ -9,6 +10,11 @@ import java.util.UUID;
 @Entity
 @Table(name = "character_class_levels")
 @IdClass(CharacterClassLevelId.class)
+/**
+ * Transitional character class level table. It still points at the legacy class catalog
+ * until character creation and level-up are migrated to character_class.
+ */
+@Deprecated(forRemoval = false)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,8 +35,9 @@ public class CharacterClassLevel implements Persistable<CharacterClassLevelId> {
     private PlayerCharacter character;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id", insertable = false, updatable = false)
-    private CharacterClass characterClass;
+    @JoinColumn(name = "class_id", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private ContentCharacterClass characterClass;
 
     @Column(name = "class_level", nullable = false)
     @Builder.Default

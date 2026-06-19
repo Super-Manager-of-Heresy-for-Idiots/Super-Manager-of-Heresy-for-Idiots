@@ -33,9 +33,8 @@ public class FeatContentValidator implements HomebrewContentValidator {
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена: " + contentId));
         return ContentSummaryDto.builder()
                 .id(feat.getId())
-                .name(feat.getName())
+                .name(feat.getNameRu())
                 .description(feat.getDescription())
-                .prerequisites(feat.getPrerequisites())
                 .build();
     }
 

@@ -2,6 +2,9 @@
 
 This contract is checked against the Spring controllers and DTOs in `src/main/java/com/dnd/app` on 2026-05-31.
 
+New normalized DnD content migration notes for character creation, level-up, and homebrew class authoring are tracked in
+[`docs/frontend-new-content-migration-plan.md`](docs/frontend-new-content-migration-plan.md).
+
 ## Global Rules
 
 Base API path: `/api`.
@@ -48,15 +51,22 @@ Pagination uses Spring `Page<T>`: `content`, `totalElements`, `totalPages`, `num
 | `CampaignStatus` | `ACTIVE`, `PAUSED`, `COMPLETED` |
 | `CharacterStatus` | `ACTIVE`, `DEAD`, `RESERVE` |
 | `ContentType` | `ITEM_TYPE`, `CHARACTER_CLASS`, `SKILL`, `FEAT`, `SUBCLASS`, `RACE`, `STAT_TYPE`, `BUFF_DEBUFF`, `ENCHANTMENT_TYPE`, `CURRENCY`, `CUSTOM_RESOURCE`, `ITEM_TEMPLATE` |
-| `DamageType` | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
+| `DamageType` † | `SLASHING`, `PIERCING`, `BLUDGEONING`, `FIRE`, `COLD`, `LIGHTNING`, `POISON`, `NECROTIC`, `RADIANT`, `PSYCHIC`, `FORCE`, `THUNDER`, `ACID` |
 | `EffectRole` | `BUFF`, `DEBUFF` |
-| `EquipmentSlot` | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
+| `EquipmentSlot` † | `HEAD`, `CHEST`, `LEGS`, `FEET`, `MAIN_HAND`, `OFF_HAND`, `RING_LEFT`, `RING_RIGHT`, `NECK`, `CLOAK` |
 | `HomebrewStatus` | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
 | `QuestStatus` | `ACTIVE`, `COMPLETED`, `FAILED`, `HIDDEN`, `ARCHIVED` |
-| `Rarity` | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
+| `Rarity` † | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
-| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED` |
+| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED` |
+
+† **Не закрытый enum, а homebrew-дружелюбный справочник.** Запросы/ответы по-прежнему
+используют строковый `code` (`"MAIN_HAND"`, `"COMMON"`, `"SLASHING"`), но homebrew-пакет может
+добавлять свои значения. Перечисленные `code` — только системные (ванильные) дефолты; FE должен
+грузить полный список из `GET /dictionaries/{kind}` (`equipment-slots` / `item-rarities` /
+`content-damage-types`), а не хардкодить. Это же относится к размерам существ (`creature-sizes`)
+и характеристикам (`stat_types.code`, бывший `Ability`).
 
 ## REST Endpoints
 
@@ -108,6 +118,13 @@ All response types below are wrapped as `ApiResponse<T>`.
 | GET | `/api/campaigns/{campaignId}/characters/{characterId}/resources` | - | `List<ResourceResponse>` |
 | POST | `/api/campaigns/{campaignId}/characters/{characterId}/resources` | `ModifyResourceRequest` | `ResourceResponse` |
 | POST | `/api/campaigns/{campaignId}/characters/{characterId}/hp` | `ModifyHpRequest` | `CharacterResponse` |
+
+> **Wallet POST (`/wallet`)** is a single endpoint for **both** credit and debit. `ModifyCurrencyRequest.amount > 0`
+> adds; `amount < 0` deducts. The wallet entry for a currency is created on its **first credit** — you do not need to
+> initialize it first (only `Gold` is auto-created with the character). Debiting below zero, or debiting a currency the
+> character has no entry for, returns **400** `Insufficient funds for this operation`. On success the server broadcasts a
+> `WALLET_CHANGED` event (see WebSocket section). Available currency types come from
+> `GET /api/campaigns/{campaignId}/reference/currencies` (`List<CurrencyTypeResponse>`).
 
 ### Character Inventory and Effects
 
@@ -417,10 +434,24 @@ Server sends:
 
 | Destination | Payload |
 |---|---|
-| `/topic/campaign/{campaignId}` | `WebSocketEventPayload` |
+| `/topic/campaign.{campaignId}` | `WebSocketEventPayload` |
 | `/user/queue/notifications` | `WebSocketEventPayload` |
 
-Only `/topic/campaign/{campaignId}` subscriptions are membership-checked in `WebSocketAuthInterceptor`.
+Only `/topic/campaign.{campaignId}` subscriptions are membership-checked in `WebSocketAuthInterceptor`.
+
+> Note the **dot** before `{campaignId}`, not a slash. Under the RabbitMQ STOMP relay a `/topic/` destination
+> must be a single segment with no inner slash; `/topic/campaign/{id}` is rejected with `Invalid destination`.
+> The dot keeps the destination broker-valid while still encoding the campaign id.
+
+Event payloads (the `data` field of `WebSocketEventPayload`):
+
+| `type` | `characterId` | `data` |
+|---|---|---|
+| `WALLET_CHANGED` | the affected character | `WalletEntryResponse` (the **new** balance of the changed currency: `currencyTypeId`, `currencyName`, `amount`, `goldEquivalent`) |
+
+`WALLET_CHANGED` is broadcast on `/topic/campaign.{campaignId}` to the whole campaign (GM + players) after the
+currency change commits. Treat the payload as a notification: the FE should refetch authoritative wallet state
+(`GET …/wallet`) and history (`GET …/wallet/history`) rather than trusting `data` as the only source of truth.
 
 ## Removed or Not Present
 

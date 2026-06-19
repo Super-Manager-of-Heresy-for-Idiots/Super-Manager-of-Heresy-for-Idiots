@@ -31,6 +31,9 @@ public class CharacterResponse {
     private Integer maxHp;
     private Integer tempHp;
 
+    private String playerName;
+    private String proficiencies;
+    private String equipment;
     private String alignment;
     private BackgroundResponse background;
     private String avatarUrl;

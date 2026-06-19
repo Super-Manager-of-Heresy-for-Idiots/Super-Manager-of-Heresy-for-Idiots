@@ -1,11 +1,11 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.DamageType;
-import com.dnd.app.domain.enums.Rarity;
 import com.dnd.app.domain.enums.SkillActivation;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
@@ -36,10 +36,13 @@ public class ItemTemplate {
     @JoinColumn(name = "item_type_id")
     private ItemType itemType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    @Builder.Default
-    private Rarity rarity = Rarity.COMMON;
+    // Legacy seeds left dangling rarity_id values (no matching magic_item_rarity row).
+    // NotFoundAction.IGNORE resolves a missing reference to null instead of throwing
+    // EntityNotFoundException on lazy init, which otherwise 500s the whole listing.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rarity_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
+    private Rarity rarity;
 
     @Column(name = "damage_dice", length = 10)
     private String damageDice;
@@ -48,8 +51,9 @@ public class ItemTemplate {
     @Builder.Default
     private Integer damageBonus = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "damage_type", length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "damage_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
     private DamageType damageType;
 
     @Column(name = "is_stackable", nullable = false)

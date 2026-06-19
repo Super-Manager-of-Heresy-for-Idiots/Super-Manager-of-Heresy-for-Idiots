@@ -1,7 +1,7 @@
 package com.dnd.app.repository;
 
+import com.dnd.app.domain.EquipmentSlot;
 import com.dnd.app.domain.ItemInstance;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -22,6 +22,8 @@ public interface ItemInstanceRepository extends JpaRepository<ItemInstance, UUID
     List<ItemInstance> findBySharedStorageId(UUID storageId);
 
     Optional<ItemInstance> findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(UUID characterId, UUID templateId);
+
+    Optional<ItemInstance> findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(UUID storageId, UUID templateId);
 
     Optional<ItemInstance> findByOwnerCharacterIdAndSlot(UUID characterId, EquipmentSlot slot);
 

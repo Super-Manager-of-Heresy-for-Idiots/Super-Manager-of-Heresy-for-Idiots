@@ -1,0 +1,288 @@
+[
+  {
+    "name_ru": "Стёганый доспех",
+    "slug": "padded-armor",
+    "group_ru": "Лёгкие доспехи (1 минута на снятие, 1 минута на надевание)",
+    "armor_class": "11 + модификатор Ловкости",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "8 фнт.",
+      "pounds": 8.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "5 ЗМ",
+      "amount": 5.0,
+      "currency_slug": "gp",
+      "copper_value": 500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кожаный доспех",
+    "slug": "leather-armor",
+    "group_ru": "Лёгкие доспехи (1 минута на снятие, 1 минута на надевание)",
+    "armor_class": "11 + модификатор Ловкости",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "10 фнт.",
+      "pounds": 10.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Проклёпанный кожаный доспех",
+    "slug": "studded-leather-armor",
+    "group_ru": "Лёгкие доспехи (1 минута на снятие, 1 минута на надевание)",
+    "armor_class": "12 + модификатор Ловкости",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "13 фнт.",
+      "pounds": 13.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "45 ЗМ",
+      "amount": 45.0,
+      "currency_slug": "gp",
+      "copper_value": 4500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Шкурный доспех",
+    "slug": "hide-armor",
+    "group_ru": "Средние доспехи (1 минута на снятие, 5 минут на надевание)",
+    "armor_class": "12 + модификатор Ловкости (не более 2)",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "12 фнт.",
+      "pounds": 12.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кольчужная рубаха",
+    "slug": "chain-shirt",
+    "group_ru": "Средние доспехи (1 минута на снятие, 5 минут на надевание)",
+    "armor_class": "13 + модификатор Ловкости (не более 2)",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "20 фнт.",
+      "pounds": 20.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "50 ЗМ",
+      "amount": 50.0,
+      "currency_slug": "gp",
+      "copper_value": 5000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Чешуйчатый доспех",
+    "slug": "scale-mail",
+    "group_ru": "Средние доспехи (1 минута на снятие, 5 минут на надевание)",
+    "armor_class": "14 + модификатор Ловкости (не более 2)",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "45 фнт.",
+      "pounds": 45.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "50 ЗМ",
+      "amount": 50.0,
+      "currency_slug": "gp",
+      "copper_value": 5000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кираса",
+    "slug": "breastplate",
+    "group_ru": "Средние доспехи (1 минута на снятие, 5 минут на надевание)",
+    "armor_class": "14 + модификатор Ловкости (не более 2)",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "20 фнт.",
+      "pounds": 20.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "400 ЗМ",
+      "amount": 400.0,
+      "currency_slug": "gp",
+      "copper_value": 40000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Полулаты",
+    "slug": "half-plate-armor",
+    "group_ru": "Средние доспехи (1 минута на снятие, 5 минут на надевание)",
+    "armor_class": "15 + модификатор Ловкости (не более 2)",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "40 фнт.",
+      "pounds": 40.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "750 ЗМ",
+      "amount": 750.0,
+      "currency_slug": "gp",
+      "copper_value": 75000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Колечный доспех",
+    "slug": "ring-mail",
+    "group_ru": "Тяжёлые доспехи (5 минут на снятие, 10 минут на надевание)",
+    "armor_class": "14",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "40 фнт.",
+      "pounds": 40.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "30 ЗМ",
+      "amount": 30.0,
+      "currency_slug": "gp",
+      "copper_value": 3000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Кольчужный доспех",
+    "slug": "chain-mail",
+    "group_ru": "Тяжёлые доспехи (5 минут на снятие, 10 минут на надевание)",
+    "armor_class": "16",
+    "strength_required_raw": "Сила 13",
+    "strength_required": 13,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "55 фнт.",
+      "pounds": 55.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "75 ЗМ",
+      "amount": 75.0,
+      "currency_slug": "gp",
+      "copper_value": 7500.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Пластинчатый доспех",
+    "slug": "splint-armor",
+    "group_ru": "Тяжёлые доспехи (5 минут на снятие, 10 минут на надевание)",
+    "armor_class": "17",
+    "strength_required_raw": "Сила 15",
+    "strength_required": 15,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "60 фнт.",
+      "pounds": 60.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "200 ЗМ",
+      "amount": 200.0,
+      "currency_slug": "gp",
+      "copper_value": 20000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Латный доспех",
+    "slug": "plate-armor",
+    "group_ru": "Тяжёлые доспехи (5 минут на снятие, 10 минут на надевание)",
+    "armor_class": "18",
+    "strength_required_raw": "Сила 15",
+    "strength_required": 15,
+    "stealth_disadvantage": true,
+    "weight": {
+      "raw": "65 фнт.",
+      "pounds": 65.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "1500 ЗМ",
+      "amount": 1500.0,
+      "currency_slug": "gp",
+      "copper_value": 150000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  },
+  {
+    "name_ru": "Щит",
+    "slug": "shield",
+    "group_ru": "Щит (снятие или надевание действием Использование )",
+    "armor_class": "+2",
+    "strength_required_raw": "—",
+    "strength_required": null,
+    "stealth_disadvantage": false,
+    "weight": {
+      "raw": "6 фнт.",
+      "pounds": 6.0,
+      "parse_status": "ok"
+    },
+    "cost": {
+      "raw": "10 ЗМ",
+      "amount": 10.0,
+      "currency_slug": "gp",
+      "copper_value": 1000.0,
+      "parse_status": "ok"
+    },
+    "source_url": "https://next.dnd.su/inventory/weapons-and-armor"
+  }
+]

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Make the remaining bestiary enum-as-varchar references homebrew-friendly dictionaries,
+      and add homebrew_id to the dictionary child/detail tables that lacked it.
+
+      Convention (per existing dictionaries, e.g. 040): every dictionary row carries
+      homebrew_id uuid NULL REFERENCES homebrew_packages(id). homebrew_id IS NULL => CORE
+      (system / vanilla) row; NOT NULL => belongs to a homebrew package.
+
+      Postgres-only (gen_random_uuid, partial unique indexes, timestamptz). Dropping a column
+      cascades its dependent UNIQUE constraints / single-column indexes automatically.
+    -->
+
+    <!-- ===================== 1. Enum -> dictionary tables ===================== -->
+    <changeSet id="044-01-create-enum-dicts" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE bestiary_sizes (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_bestiary_sizes_code_system ON bestiary_sizes (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_bestiary_sizes_code_owner ON bestiary_sizes (code, homebrew_id);
+
+            CREATE TABLE bestiary_abilities (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_bestiary_abilities_code_system ON bestiary_abilities (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_bestiary_abilities_code_owner ON bestiary_abilities (code, homebrew_id);
+
+            CREATE TABLE bestiary_damage_types (
+                id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+                code        varchar(60) NOT NULL,
+                name_engloc text        NULL,
+                name_rusloc text        NOT NULL,
+                homebrew_id uuid        NULL REFERENCES homebrew_packages(id),
+                is_unique   boolean     NOT NULL DEFAULT false,
+                created_at  timestamptz NOT NULL DEFAULT now(),
+                updated_at  timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE UNIQUE INDEX uq_bestiary_damage_types_code_system ON bestiary_damage_types (code) WHERE homebrew_id IS NULL;
+            CREATE UNIQUE INDEX uq_bestiary_damage_types_code_owner ON bestiary_damage_types (code, homebrew_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 2. Seed system (CORE) rows ===================== -->
+    <changeSet id="044-02-seed-enum-dicts" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            INSERT INTO bestiary_sizes (code, name_rusloc, name_engloc) VALUES
+                ('TINY',       'Крошечный', 'Tiny'),
+                ('SMALL',      'Маленький', 'Small'),
+                ('MEDIUM',     'Средний',   'Medium'),
+                ('LARGE',      'Большой',   'Large'),
+                ('HUGE',       'Огромный',  'Huge'),
+                ('GARGANTUAN', 'Громадный', 'Gargantuan');
+
+            INSERT INTO bestiary_abilities (code, name_rusloc, name_engloc) VALUES
+                ('STRENGTH',     'Сила',        'Strength'),
+                ('DEXTERITY',    'Ловкость',    'Dexterity'),
+                ('CONSTITUTION', 'Телосложение','Constitution'),
+                ('INTELLIGENCE', 'Интеллект',   'Intelligence'),
+                ('WISDOM',       'Мудрость',    'Wisdom'),
+                ('CHARISMA',     'Харизма',     'Charisma');
+
+            INSERT INTO bestiary_damage_types (code, name_rusloc, name_engloc) VALUES
+                ('SLASHING',    'Рубящий',       'Slashing'),
+                ('PIERCING',    'Колющий',       'Piercing'),
+                ('BLUDGEONING', 'Дробящий',      'Bludgeoning'),
+                ('FIRE',        'Огонь',         'Fire'),
+                ('COLD',        'Холод',         'Cold'),
+                ('LIGHTNING',   'Электричество', 'Lightning'),
+                ('POISON',      'Яд',            'Poison'),
+                ('NECROTIC',    'Некротический', 'Necrotic'),
+                ('RADIANT',     'Излучение',     'Radiant'),
+                ('PSYCHIC',     'Психический',   'Psychic'),
+                ('FORCE',       'Силовое поле',  'Force'),
+                ('THUNDER',     'Звук',          'Thunder'),
+                ('ACID',        'Кислота',       'Acid');
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 3. Repoint monsters.size* -> FK ===================== -->
+    <changeSet id="044-03-repoint-monster-sizes" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE monsters ADD COLUMN size_id           uuid NULL REFERENCES bestiary_sizes(id);
+            ALTER TABLE monsters ADD COLUMN size_secondary_id uuid NULL REFERENCES bestiary_sizes(id);
+            ALTER TABLE monsters ADD COLUMN swarm_size_id     uuid NULL REFERENCES bestiary_sizes(id);
+
+            UPDATE monsters m SET size_id =
+                (SELECT b.id FROM bestiary_sizes b WHERE b.code = m.size AND b.homebrew_id IS NULL);
+            UPDATE monsters m SET size_secondary_id =
+                (SELECT b.id FROM bestiary_sizes b WHERE b.code = m.size_secondary AND b.homebrew_id IS NULL)
+                WHERE m.size_secondary IS NOT NULL;
+            UPDATE monsters m SET swarm_size_id =
+                (SELECT b.id FROM bestiary_sizes b WHERE b.code = m.swarm_size AND b.homebrew_id IS NULL)
+                WHERE m.swarm_size IS NOT NULL;
+
+            ALTER TABLE monsters ALTER COLUMN size_id SET NOT NULL;
+
+            DROP INDEX IF EXISTS idx_monsters_size;
+            ALTER TABLE monsters DROP COLUMN size;
+            ALTER TABLE monsters DROP COLUMN size_secondary;
+            ALTER TABLE monsters DROP COLUMN swarm_size;
+
+            CREATE INDEX idx_monsters_size_id ON monsters (size_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 4. Repoint monster_saving_throws.ability -> FK ===================== -->
+    <changeSet id="044-04-repoint-saving-throws" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE monster_saving_throws ADD COLUMN ability_id uuid NULL REFERENCES bestiary_abilities(id);
+
+            UPDATE monster_saving_throws st SET ability_id =
+                (SELECT b.id FROM bestiary_abilities b WHERE b.code = st.ability AND b.homebrew_id IS NULL);
+
+            ALTER TABLE monster_saving_throws ALTER COLUMN ability_id SET NOT NULL;
+            ALTER TABLE monster_saving_throws DROP COLUMN ability;
+            ALTER TABLE monster_saving_throws ADD CONSTRAINT uq_monster_saving_throws UNIQUE (monster_id, ability_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 5. Repoint damage tables.damage_type -> FK ===================== -->
+    <changeSet id="044-05-repoint-damage-tables" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE monster_damage_resistances    ADD COLUMN damage_type_id uuid NULL REFERENCES bestiary_damage_types(id);
+            ALTER TABLE monster_damage_immunities      ADD COLUMN damage_type_id uuid NULL REFERENCES bestiary_damage_types(id);
+            ALTER TABLE monster_damage_vulnerabilities ADD COLUMN damage_type_id uuid NULL REFERENCES bestiary_damage_types(id);
+
+            UPDATE monster_damage_resistances t SET damage_type_id =
+                (SELECT b.id FROM bestiary_damage_types b WHERE b.code = t.damage_type AND b.homebrew_id IS NULL)
+                WHERE t.damage_type IS NOT NULL;
+            UPDATE monster_damage_immunities t SET damage_type_id =
+                (SELECT b.id FROM bestiary_damage_types b WHERE b.code = t.damage_type AND b.homebrew_id IS NULL)
+                WHERE t.damage_type IS NOT NULL;
+            UPDATE monster_damage_vulnerabilities t SET damage_type_id =
+                (SELECT b.id FROM bestiary_damage_types b WHERE b.code = t.damage_type AND b.homebrew_id IS NULL)
+                WHERE t.damage_type IS NOT NULL;
+
+            ALTER TABLE monster_damage_resistances    DROP COLUMN damage_type;
+            ALTER TABLE monster_damage_immunities      DROP COLUMN damage_type;
+            ALTER TABLE monster_damage_vulnerabilities DROP COLUMN damage_type;
+
+            ALTER TABLE monster_damage_resistances    ADD CONSTRAINT uq_monster_damage_resistances    UNIQUE (monster_id, damage_type_id);
+            ALTER TABLE monster_damage_immunities      ADD CONSTRAINT uq_monster_damage_immunities      UNIQUE (monster_id, damage_type_id);
+            ALTER TABLE monster_damage_vulnerabilities ADD CONSTRAINT uq_monster_damage_vulnerabilities UNIQUE (monster_id, damage_type_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 6. Repoint feature ability / damage -> FK ===================== -->
+    <changeSet id="044-06-repoint-features" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE monster_features ADD COLUMN save_ability_id uuid NULL REFERENCES bestiary_abilities(id);
+            UPDATE monster_features f SET save_ability_id =
+                (SELECT b.id FROM bestiary_abilities b WHERE b.code = f.save_ability AND b.homebrew_id IS NULL)
+                WHERE f.save_ability IS NOT NULL;
+            ALTER TABLE monster_features DROP COLUMN save_ability;
+
+            ALTER TABLE feature_damages ADD COLUMN damage_type_id uuid NULL REFERENCES bestiary_damage_types(id);
+            UPDATE feature_damages d SET damage_type_id =
+                (SELECT b.id FROM bestiary_damage_types b WHERE b.code = d.damage_type AND b.homebrew_id IS NULL)
+                WHERE d.damage_type IS NOT NULL;
+            ALTER TABLE feature_damages DROP COLUMN damage_type;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ===================== 7. homebrew_id on dictionary child/detail tables ===================== -->
+    <changeSet id="044-07-homebrew-on-dict-children" author="bestiary">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE proficiency_skills   ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
+            ALTER TABLE skill_effects        ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
+            ALTER TABLE class_level_rewards  ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
+            ALTER TABLE item_template_buffs  ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

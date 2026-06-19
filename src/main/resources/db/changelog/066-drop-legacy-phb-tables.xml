@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Roadmap R7/R8 finale: drop the last legacy plural PHB tables. The runtime/character
+      columns were already re-pointed to the content model in 060/062/063, and no @Entity maps
+      these tables any more (StatType/CurrencyType/Spell/Background map to the SINGULAR content
+      tables ability_score/currency/spell/background), so ddl-auto=validate stays green.
+
+      These tables are NOT pure orphans: stale physical FKs from other feature tables still
+      reference them and were never migrated with the character_* columns:
+        * stat_types     <- buffs_debuffs.target_stat_id, combat_modifiers (+ wizard tables)
+        * spells         <- campaign_npc_spells.spell_id, blueprint_npc_spells.spell_id
+        * currency_types <- blueprint quest rewards, npc/quest currency
+        * backgrounds    <- (characters.background_id already re-pointed in 063)
+      CASCADE drops those stale legacy FK constraints. The feature COLUMNS survive and their
+      entities already target the content tables, so NEW rows are valid. Pre-existing rows that
+      still hold legacy ids become dangling references — accepted as disposable (decision: new
+      content must work, old content is discardable). Bestiary is untouched.
+
+      Idempotent (IF EXISTS); rollback is intentionally a no-op (re-creating legacy PHB schema
+      is not supported).
+    -->
+    <changeSet id="066-01-drop-legacy-phb-tables" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+DROP TABLE IF EXISTS stat_types CASCADE;
+DROP TABLE IF EXISTS currency_types CASCADE;
+DROP TABLE IF EXISTS spells CASCADE;
+DROP TABLE IF EXISTS backgrounds CASCADE;
+]]></sql>
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>

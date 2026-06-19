@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface BackgroundRepository extends JpaRepository<Background, UUID> {
 
-    boolean existsByName(String name);
+    boolean existsByNameRu(String nameRu);
 
     List<Background> findAllByHomebrewIsNull();
 

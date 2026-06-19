@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -32,7 +33,10 @@ public class CampaignService {
     private final ItemInstanceRepository itemInstanceRepository;
     private final CharacterWalletRepository characterWalletRepository;
     private final CharacterResourceRepository characterResourceRepository;
+    private final MonsterRepository monsterRepository;
+    private final CampaignNpcRepository campaignNpcRepository;
     private final com.dnd.app.mapper.CharacterMapper characterMapper;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public CampaignResponse createCampaign(CreateCampaignRequest request, String username) {
@@ -126,6 +130,13 @@ public class CampaignService {
         Campaign campaign = findCampaign(id);
         User user = getUser(username);
         enforceCreatorOrAdmin(campaign, user);
+
+        // Campaign-scoped monsters (campaign_id set) are owned by this campaign and die with it.
+        // System/homebrew monsters are untouched. monsters.campaign_id has no ON DELETE, so the
+        // campaign cannot be removed while they exist; clear NPC references, then drop the monsters.
+        campaignNpcRepository.clearSourceMonsterByCampaignId(id);
+        monsterRepository.deleteByCampaignId(id);
+
         log.info("Campaign deleted: id={}, name='{}', by={}", id, campaign.getName(), username);
         campaignRepository.delete(campaign);
     }
@@ -228,6 +239,13 @@ public class CampaignService {
         }
 
         log.info("Member kicked from campaign: userId={}, campaignId={}, by={}", request.getUserId(), campaignId, username);
+
+        // Notify the kicked user directly (their campaign-topic subscription is about to be torn down)
+        webSocketEventService.sendUserEvent(target.getUser().getUsername(), WebSocketEventType.MEMBER_KICKED,
+                campaignId, Map.of("campaignId", campaignId), creator.getId());
+        // Notify the rest of the campaign so they refresh the roster
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.MEMBER_KICKED, campaignId,
+                Map.of("userId", request.getUserId()), creator.getId());
     }
 
     @Transactional
@@ -246,6 +264,9 @@ public class CampaignService {
         campaign.setStatus(newStatus);
         campaign = campaignRepository.save(campaign);
         log.info("Campaign status changed: campaignId={}, newStatus={}, by={}", campaignId, newStatus, username);
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.CAMPAIGN_STATUS_CHANGED, campaignId,
+                Map.of("status", newStatus.name()), user.getId());
         return toCampaignResponse(campaign, user);
     }
 

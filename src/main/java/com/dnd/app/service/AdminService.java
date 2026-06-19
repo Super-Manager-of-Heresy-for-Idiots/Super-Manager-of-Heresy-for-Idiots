@@ -1,9 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.DamageType;
 import com.dnd.app.domain.enums.EffectRole;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.SkillActivation;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
@@ -14,7 +12,6 @@ import com.dnd.app.exception.UnprocessableEntityException;
 import com.dnd.app.mapper.ReferenceDataMapper;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.*;
-import com.dnd.app.service.reward.RewardResolverRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,13 +28,9 @@ public class AdminService {
 
     private final StatTypeRepository statTypeRepository;
     private final ItemTypeRepository itemTypeRepository;
-    private final CharacterClassRepository classRepository;
-    private final CharacterRaceRepository raceRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
-    private final SubclassRepository subclassRepository;
     private final FeatRepository featRepository;
-    private final ClassLevelRewardRepository classLevelRewardRepository;
     private final SkillEffectRepository skillEffectRepository;
     private final BuffDebuffRepository buffDebuffRepository;
     private final BackgroundRepository backgroundRepository;
@@ -45,7 +38,7 @@ public class AdminService {
     private final ProficiencySkillRepository proficiencySkillRepository;
     private final ReferenceDataMapper refMapper;
     private final UserMapper userMapper;
-    private final RewardResolverRegistry rewardResolverRegistry;
+    private final ContentDictionaryResolver contentDictionaryResolver;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // --- Stat Types ---
@@ -55,46 +48,10 @@ public class AdminService {
         return statTypeRepository.findAll().stream().map(refMapper::toStatTypeResponse).toList();
     }
 
-    @Transactional
-    public StatTypeResponse createStatType(CreateStatTypeRequest request) {
-        if (statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
-        }
-        StatType st = StatType.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .isDefault(false)
-                .build();
-        StatType saved = statTypeRepository.save(st);
-        log.info("Admin: stat type created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toStatTypeResponse(saved);
-    }
-
     @Transactional(readOnly = true)
     public StatTypeResponse getStatType(UUID id) {
         return refMapper.toStatTypeResponse(statTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена")));
-    }
-
-    @Transactional
-    public StatTypeResponse updateStatType(UUID id, CreateStatTypeRequest request) {
-        StatType st = statTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Характеристика не найдена"));
-        if (!st.getName().equals(request.getName()) && statTypeRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Характеристика с таким названием уже существует");
-        }
-        st.setName(request.getName());
-        st.setDescription(request.getDescription());
-        return refMapper.toStatTypeResponse(statTypeRepository.save(st));
-    }
-
-    @Transactional
-    public void deleteStatType(UUID id) {
-        if (!statTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Характеристика не найдена");
-        }
-        log.info("Admin: stat type deleted — id={}", id);
-        statTypeRepository.deleteById(id);
     }
 
     // --- Item Types ---
@@ -128,7 +85,7 @@ public class AdminService {
             it.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
         }
         ItemType saved = itemTypeRepository.save(it);
-        log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot(), saved.getId());
+        log.info("Admin: item type created — name='{}', slot={}, id={}", saved.getName(), saved.getSlot().getCode(), saved.getId());
         return toItemTypeResponse(saved);
     }
 
@@ -175,101 +132,7 @@ public class AdminService {
         itemTypeRepository.deleteById(id);
     }
 
-    // --- Character Classes ---
-
-    @Transactional(readOnly = true)
-    public List<CharacterClassResponse> listCharacterClasses() {
-        return classRepository.findAll().stream().map(refMapper::toCharacterClassResponse).toList();
-    }
-
-    @Transactional
-    public CharacterClassResponse createCharacterClass(CreateCharacterClassRequest request) {
-        if (classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
-        }
-        CharacterClass cc = CharacterClass.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
-        CharacterClass saved = classRepository.save(cc);
-        log.info("Admin: character class created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toCharacterClassResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public CharacterClassResponse getCharacterClass(UUID id) {
-        return refMapper.toCharacterClassResponse(classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден")));
-    }
-
-    @Transactional
-    public CharacterClassResponse updateCharacterClass(UUID id, CreateCharacterClassRequest request) {
-        CharacterClass cc = classRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        if (!cc.getName().equals(request.getName()) && classRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Класс персонажа с таким названием уже существует");
-        }
-        cc.setName(request.getName());
-        cc.setDescription(request.getDescription());
-        return refMapper.toCharacterClassResponse(classRepository.save(cc));
-    }
-
-    @Transactional
-    public void deleteCharacterClass(UUID id) {
-        if (!classRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Класс персонажа не найден");
-        }
-        log.info("Admin: character class deleted — id={}", id);
-        classRepository.deleteById(id);
-    }
-
-    // --- Character Races ---
-
-    @Transactional(readOnly = true)
-    public List<CharacterRaceResponse> listCharacterRaces() {
-        return raceRepository.findAll().stream().map(refMapper::toCharacterRaceResponse).toList();
-    }
-
-    @Transactional
-    public CharacterRaceResponse createCharacterRace(CreateCharacterRaceRequest request) {
-        if (raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
-        }
-        CharacterRace cr = CharacterRace.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
-        CharacterRace saved = raceRepository.save(cr);
-        log.info("Admin: character race created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toCharacterRaceResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public CharacterRaceResponse getCharacterRace(UUID id) {
-        return refMapper.toCharacterRaceResponse(raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена")));
-    }
-
-    @Transactional
-    public CharacterRaceResponse updateCharacterRace(UUID id, CreateCharacterRaceRequest request) {
-        CharacterRace cr = raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
-        if (!cr.getName().equals(request.getName()) && raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
-        }
-        cr.setName(request.getName());
-        cr.setDescription(request.getDescription());
-        return refMapper.toCharacterRaceResponse(raceRepository.save(cr));
-    }
-
-    @Transactional
-    public void deleteCharacterRace(UUID id) {
-        if (!raceRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Раса персонажа не найдена");
-        }
-        log.info("Admin: character race deleted — id={}", id);
-        raceRepository.deleteById(id);
-    }
+    // Legacy character-race admin CRUD removed in S5 — species are authored on the new content model.
 
     // --- Skills ---
 
@@ -329,60 +192,6 @@ public class AdminService {
         skillRepository.deleteById(id);
     }
 
-    // --- Subclasses ---
-
-    @Transactional(readOnly = true)
-    public List<SubclassResponse> listSubclasses() {
-        return subclassRepository.findAll().stream().map(this::toSubclassResponse).toList();
-    }
-
-    @Transactional
-    public SubclassResponse createSubclass(CreateSubclassRequest request) {
-        if (subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
-        }
-        CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        Subclass sub = Subclass.builder()
-                .name(request.getName())
-                .parentClass(parent)
-                .description(request.getDescription())
-                .build();
-        Subclass saved = subclassRepository.save(sub);
-        log.info("Admin: subclass created — name='{}', parentClass='{}', id={}", saved.getName(), parent.getName(), saved.getId());
-        return toSubclassResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public SubclassResponse getSubclass(UUID id) {
-        return toSubclassResponse(subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден")));
-    }
-
-    @Transactional
-    public SubclassResponse updateSubclass(UUID id, CreateSubclassRequest request) {
-        Subclass sub = subclassRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Подкласс не найден"));
-        if (!sub.getName().equals(request.getName()) && subclassRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Подкласс с таким названием уже существует");
-        }
-        CharacterClass parent = classRepository.findById(request.getClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        sub.setName(request.getName());
-        sub.setParentClass(parent);
-        sub.setDescription(request.getDescription());
-        return toSubclassResponse(subclassRepository.save(sub));
-    }
-
-    @Transactional
-    public void deleteSubclass(UUID id) {
-        if (!subclassRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Подкласс не найден");
-        }
-        log.info("Admin: subclass deleted — id={}", id);
-        subclassRepository.deleteById(id);
-    }
-
     // --- Feats ---
 
     @Transactional(readOnly = true)
@@ -392,16 +201,16 @@ public class AdminService {
 
     @Transactional
     public FeatResponse createFeat(CreateFeatRequest request) {
-        if (featRepository.existsByName(request.getName())) {
+        if (featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
         Feat feat = Feat.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .prerequisites(request.getPrerequisites())
                 .build();
         Feat saved = featRepository.save(feat);
-        log.info("Admin: feat created — name='{}', id={}", saved.getName(), saved.getId());
+        log.info("Admin: feat created — name='{}', id={}", saved.getNameRu(), saved.getId());
         return toFeatResponse(saved);
     }
 
@@ -415,12 +224,11 @@ public class AdminService {
     public FeatResponse updateFeat(UUID id, CreateFeatRequest request) {
         Feat feat = featRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена"));
-        if (!feat.getName().equals(request.getName()) && featRepository.existsByName(request.getName())) {
+        if (!feat.getNameRu().equals(request.getName()) && featRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Черта с таким названием уже существует");
         }
-        feat.setName(request.getName());
+        feat.setNameRu(request.getName());
         feat.setDescription(request.getDescription());
-        feat.setPrerequisites(request.getPrerequisites());
         return toFeatResponse(featRepository.save(feat));
     }
 
@@ -433,46 +241,8 @@ public class AdminService {
         featRepository.deleteById(id);
     }
 
-    // --- Class Level Rewards ---
-
-    @Transactional(readOnly = true)
-    public List<ClassLevelRewardResponse> listClassLevelRewards(UUID classId) {
-        if (!classRepository.existsById(classId)) {
-            throw new ResourceNotFoundException("Класс персонажа не найден");
-        }
-        return classLevelRewardRepository.findAllByCharacterClassId(classId).stream()
-                .map(this::toClassLevelRewardResponse)
-                .toList();
-    }
-
-    @Transactional
-    public ClassLevelRewardResponse createClassLevelReward(UUID classId, CreateClassLevelRewardRequest request) {
-        CharacterClass cc = classRepository.findById(classId)
-                .orElseThrow(() -> new ResourceNotFoundException("Класс персонажа не найден"));
-        rewardResolverRegistry.validate(request.getRewardType(), request.getRewardId());
-        ClassLevelReward clr = ClassLevelReward.builder()
-                .characterClass(cc)
-                .requiredLevel(request.getRequiredLevel())
-                .rewardType(request.getRewardType())
-                .rewardId(request.getRewardId())
-                .isChoice(request.getIsChoice() != null ? request.getIsChoice() : true)
-                .build();
-        ClassLevelReward saved = classLevelRewardRepository.save(clr);
-        log.info("Admin: class level reward created — classId={}, level={}, type={}, rewardId={}, id={}",
-                classId, saved.getRequiredLevel(), saved.getRewardType(), saved.getRewardId(), saved.getId());
-        return toClassLevelRewardResponse(saved);
-    }
-
-    @Transactional
-    public void deleteClassLevelReward(UUID classId, UUID rewardEntryId) {
-        ClassLevelReward clr = classLevelRewardRepository.findById(rewardEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Награда за уровень не найдена"));
-        if (!clr.getCharacterClass().getId().equals(classId)) {
-            throw new ResourceNotFoundException("Награда не относится к этому классу");
-        }
-        log.info("Admin: class level reward deleted — classId={}, rewardEntryId={}", classId, rewardEntryId);
-        classLevelRewardRepository.delete(clr);
-    }
+    // Legacy class level-rewards authoring removed — superseded by the new content model
+    // (class-builder reward groups/options/grants via ClassAuthoringService).
 
     // --- Users & Teams (read-only) ---
 
@@ -487,20 +257,14 @@ public class AdminService {
     }
 
     private EquipmentSlot parseSlot(String slot) {
-        try {
-            return EquipmentSlot.valueOf(slot);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный слот экипировки: " + slot);
+        if (slot == null) {
+            throw new BadRequestException("Некорректный слот экипировки: null");
         }
+        return contentDictionaryResolver.resolveEquipmentSlot(slot, null);
     }
 
     private DamageType parseDamageType(String damageType) {
-        if (damageType == null) return null;
-        try {
-            return DamageType.valueOf(damageType);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Некорректный тип урона: " + damageType);
-        }
+        return contentDictionaryResolver.resolveDamageType(damageType, null);
     }
 
     private SkillActivation parseSkillActivation(String activation) {
@@ -596,7 +360,7 @@ public class AdminService {
                 .skillType(s.getSkillType())
                 .damageDice(s.getDamageDice())
                 .damageBonus(s.getDamageBonus())
-                .damageType(s.getDamageType() != null ? s.getDamageType().name() : null)
+                .damageType(s.getDamageType() != null ? s.getDamageType().getSlug() : null)
                 .effects(effectResponses)
                 .createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
                 .build();
@@ -605,10 +369,10 @@ public class AdminService {
     private ItemTypeResponse toItemTypeResponse(ItemType it) {
         return ItemTypeResponse.builder()
                 .id(it.getId()).name(it.getName()).description(it.getDescription())
-                .slot(it.getSlot().name())
+                .slot(it.getSlot().getCode())
                 .damageDice(it.getDamageDice())
                 .damageBonus(it.getDamageBonus())
-                .damageType(it.getDamageType() != null ? it.getDamageType().name() : null)
+                .damageType(it.getDamageType() != null ? it.getDamageType().getSlug() : null)
                 .skillId(it.getSkill() != null ? it.getSkill().getId() : null)
                 .skillName(it.getSkill() != null ? it.getSkill().getName() : null)
                 .skillActivation(it.getSkillActivation() != null ? it.getSkillActivation().name() : null)
@@ -621,7 +385,7 @@ public class AdminService {
                 .id(bd.getId()).name(bd.getName()).description(bd.getDescription())
                 .effectType(bd.getEffectType())
                 .targetStatId(bd.getTargetStat() != null ? bd.getTargetStat().getId() : null)
-                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getName() : null)
+                .targetStatName(bd.getTargetStat() != null ? bd.getTargetStat().getNameRu() : null)
                 .modifierValue(bd.getModifierValue())
                 .durationRounds(bd.getDurationRounds())
                 .isBuff(bd.getIsBuff())
@@ -635,18 +399,9 @@ public class AdminService {
                 .build();
     }
 
-    private SubclassResponse toSubclassResponse(Subclass s) {
-        return SubclassResponse.builder()
-                .id(s.getId()).name(s.getName())
-                .classId(s.getParentClass().getId()).className(s.getParentClass().getName())
-                .description(s.getDescription()).createdAt(s.getCreatedAt()).updatedAt(s.getUpdatedAt())
-                .build();
-    }
-
     private FeatResponse toFeatResponse(Feat f) {
         return FeatResponse.builder()
-                .id(f.getId()).name(f.getName()).description(f.getDescription())
-                .prerequisites(f.getPrerequisites()).createdAt(f.getCreatedAt()).updatedAt(f.getUpdatedAt())
+                .id(f.getId()).name(f.getNameRu()).description(f.getDescription())
                 .build();
     }
 
@@ -659,17 +414,16 @@ public class AdminService {
 
     @Transactional
     public BackgroundResponse createBackground(CreateBackgroundRequest request) {
-        if (backgroundRepository.existsByName(request.getName())) {
+        if (backgroundRepository.existsByNameRu(request.getName())) {
             throw new DuplicateResourceException("Background with this name already exists");
         }
         Background bg = Background.builder()
-                .name(request.getName())
+                .slug(UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .description(request.getDescription())
-                .skillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()))
-                .grantedExtras(request.getGrantedExtras())
                 .build();
         bg = backgroundRepository.save(bg);
-        log.info("Admin: background created — name='{}', id={}", bg.getName(), bg.getId());
+        log.info("Admin: background created — name='{}', id={}", bg.getNameRu(), bg.getId());
         return toBackgroundResponse(bg);
     }
 
@@ -684,10 +438,8 @@ public class AdminService {
     public BackgroundResponse updateBackground(UUID id, CreateBackgroundRequest request) {
         Background bg = backgroundRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
-        bg.setName(request.getName());
+        bg.setNameRu(request.getName());
         bg.setDescription(request.getDescription());
-        bg.setSkillProficiencyIdsJson(serializeStringList(request.getSkillProficiencyNames()));
-        bg.setGrantedExtras(request.getGrantedExtras());
         bg = backgroundRepository.save(bg);
         return toBackgroundResponse(bg);
     }
@@ -711,14 +463,13 @@ public class AdminService {
     @Transactional
     public SpellResponse createSpell(CreateSpellRequest request) {
         Spell spell = Spell.builder()
-                .name(request.getName())
+                .slug(java.util.UUID.randomUUID().toString())
+                .nameRu(request.getName())
                 .level(request.getLevel())
-                .school(request.getSchool())
                 .description(request.getDescription())
-                .availableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()))
                 .build();
         spell = spellRepository.save(spell);
-        log.info("Admin: spell created — name='{}', id={}", spell.getName(), spell.getId());
+        log.info("Admin: spell created — name='{}', id={}", spell.getNameRu(), spell.getId());
         return toSpellResponse(spell);
     }
 
@@ -733,11 +484,9 @@ public class AdminService {
     public SpellResponse updateSpell(UUID id, CreateSpellRequest request) {
         Spell spell = spellRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Spell not found"));
-        spell.setName(request.getName());
+        spell.setNameRu(request.getName());
         spell.setLevel(request.getLevel());
-        spell.setSchool(request.getSchool());
         spell.setDescription(request.getDescription());
-        spell.setAvailableToClassIdsJson(serializeUuidList(request.getAvailableToClassIds()));
         spell = spellRepository.save(spell);
         return toSpellResponse(spell);
     }
@@ -760,7 +509,7 @@ public class AdminService {
                         .id(ps.getId())
                         .name(ps.getName())
                         .governingStatId(ps.getGoverningStat().getId())
-                        .governingStatName(ps.getGoverningStat().getName())
+                        .governingStatName(ps.getGoverningStat().getNameRu())
                         .build())
                 .toList();
     }
@@ -779,7 +528,7 @@ public class AdminService {
                 .id(ps.getId())
                 .name(ps.getName())
                 .governingStatId(stat.getId())
-                .governingStatName(stat.getName())
+                .governingStatName(stat.getNameRu())
                 .build();
     }
 
@@ -795,38 +544,22 @@ public class AdminService {
     // --- Response helpers ---
 
     private BackgroundResponse toBackgroundResponse(Background bg) {
-        List<String> skillNames = new ArrayList<>();
-        if (bg.getSkillProficiencyIdsJson() != null) {
-            try {
-                skillNames = objectMapper.readValue(bg.getSkillProficiencyIdsJson(),
-                        new com.fasterxml.jackson.core.type.TypeReference<>() {});
-            } catch (Exception ignored) {}
-        }
         return BackgroundResponse.builder()
                 .id(bg.getId())
-                .name(bg.getName())
+                .name(bg.getNameRu())
                 .description(bg.getDescription())
-                .skillProficiencyNames(skillNames)
-                .grantedExtras(bg.getGrantedExtras())
+                .skillProficiencyNames(List.of())
                 .build();
     }
 
     private SpellResponse toSpellResponse(Spell s) {
-        List<java.util.UUID> classIds = new ArrayList<>();
-        if (s.getAvailableToClassIdsJson() != null) {
-            try {
-                var ids = objectMapper.readValue(s.getAvailableToClassIdsJson(),
-                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
-                classIds = ids.stream().map(java.util.UUID::fromString).toList();
-            } catch (Exception ignored) {}
-        }
         return SpellResponse.builder()
                 .id(s.getId())
-                .name(s.getName())
+                .name(s.getNameRu())
                 .level(s.getLevel())
-                .school(s.getSchool())
+                .school(s.getSchool() == null ? null : s.getSchool().getNameRu())
                 .description(s.getDescription())
-                .availableToClassIds(classIds)
+                .availableToClassIds(List.of())
                 .build();
     }
 
@@ -849,16 +582,4 @@ public class AdminService {
         }
     }
 
-    private ClassLevelRewardResponse toClassLevelRewardResponse(ClassLevelReward clr) {
-        RewardDetailDto detail = rewardResolverRegistry.resolve(clr.getRewardType(), clr.getRewardId());
-        return ClassLevelRewardResponse.builder()
-                .id(clr.getId())
-                .classId(clr.getCharacterClass().getId())
-                .requiredLevel(clr.getRequiredLevel())
-                .rewardType(clr.getRewardType())
-                .rewardId(clr.getRewardId())
-                .rewardName(detail.getName())
-                .isChoice(clr.getIsChoice())
-                .build();
-    }
 }

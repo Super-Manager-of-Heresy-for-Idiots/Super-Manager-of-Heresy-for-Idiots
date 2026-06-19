@@ -1,9 +1,15 @@
 HELP.md
 .gradle
+.gradle/*
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+### Gradle cache lock files (under .gradle/, listed explicitly) ###
+buildOutputCleanup.lock
+executionHistory.lock
+fileHashes.lock
 
 ### STS ###
 .apt_generated

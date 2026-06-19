@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Награда за квест теперь может включать опыт (XP) наравне с предметами и
+      валютой. XP задаётся на той же записи награды (quest_rewards) и
+      начисляется персонажу-получателю в момент перевода квеста в COMPLETED.
+    -->
+    <changeSet id="048-add-quest-reward-xp" author="claude">
+        <addColumn tableName="quest_rewards">
+            <column name="xp_amount" type="int"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

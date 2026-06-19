@@ -13,5 +13,5 @@ public interface CurrencyTypeRepository extends JpaRepository<CurrencyType, UUID
 
     List<CurrencyType> findByHomebrewIdIn(List<UUID> ids);
 
-    Optional<CurrencyType> findByNameIgnoreCase(String name);
+    Optional<CurrencyType> findBySlugAndHomebrewIsNull(String slug);
 }

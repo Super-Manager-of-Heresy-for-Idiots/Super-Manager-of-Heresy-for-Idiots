@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Ownership bridge for the full content migration.
+      The new singular content tables (created in 054) become the single home for BOTH
+      vanilla/core content (owned via mod_id -> mod_package) AND user homebrew content
+      (owned via homebrew_id -> homebrew_packages), so the old plural tables can be retired.
+
+        homebrew_id IS NULL  -> vanilla / core (mod_id points at the core mod package)
+        homebrew_id NOT NULL -> user homebrew owned by that homebrew_packages row
+
+      This keeps the homebrew_packages table and the whole homebrew subsystem intact;
+      we only add an ownership pointer to the new content rows.
+
+      Uniqueness mirrors the old resolver semantics (vanilla slug unique globally;
+      homebrew slug unique per owning package), via partial unique indexes.
+      Only tables created in 054 are altered here - no old/bestiary table is touched.
+    -->
+    <changeSet id="055-01-add-homebrew-ownership" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+-- ---- top-level content (homebrew-ownable) -------------------------------------------
+ALTER TABLE equipment_item   ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE feat             ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE background       ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE character_class  ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE subclass         ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE spell            ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE species          ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE magic_item       ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+
+-- ---- homebrew-ownable dictionaries -------------------------------------------------
+ALTER TABLE damage_type        ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE ability_score      ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE skill              ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE currency           ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE magic_item_rarity  ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE magic_item_type    ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE character_size     ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+ALTER TABLE equipment_category ADD COLUMN homebrew_id uuid REFERENCES homebrew_packages(id);
+
+-- ---- top-level content: enforce homebrew slug uniqueness per package ----------------
+-- (vanilla uniqueness is already enforced by the existing UNIQUE(mod_id, slug);
+--  homebrew rows have mod_id NULL, so we need a dedicated partial index for them.)
+CREATE UNIQUE INDEX uq_equipment_item_hb_slug  ON equipment_item (homebrew_id, slug)  WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_feat_hb_slug            ON feat (homebrew_id, slug)            WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_background_hb_slug      ON background (homebrew_id, slug)      WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_character_class_hb_slug ON character_class (homebrew_id, slug) WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_subclass_hb_slug        ON subclass (homebrew_id, slug)        WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_spell_hb_slug           ON spell (homebrew_id, slug)           WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_species_hb_slug         ON species (homebrew_id, slug)         WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_magic_item_hb_slug      ON magic_item (homebrew_id, slug)      WHERE homebrew_id IS NOT NULL;
+
+-- ---- dictionaries: replace the global UNIQUE(slug) with split vanilla/homebrew rules -
+ALTER TABLE damage_type        DROP CONSTRAINT damage_type_slug_key;
+ALTER TABLE ability_score      DROP CONSTRAINT ability_score_slug_key;
+ALTER TABLE skill              DROP CONSTRAINT skill_slug_key;
+ALTER TABLE currency           DROP CONSTRAINT currency_slug_key;
+ALTER TABLE magic_item_rarity  DROP CONSTRAINT magic_item_rarity_slug_key;
+ALTER TABLE magic_item_type    DROP CONSTRAINT magic_item_type_slug_key;
+ALTER TABLE character_size     DROP CONSTRAINT character_size_slug_key;
+ALTER TABLE equipment_category DROP CONSTRAINT equipment_category_slug_key;
+
+CREATE UNIQUE INDEX uq_damage_type_vanilla_slug        ON damage_type (slug)        WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_damage_type_hb_slug             ON damage_type (homebrew_id, slug)        WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_ability_score_vanilla_slug      ON ability_score (slug)      WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_ability_score_hb_slug           ON ability_score (homebrew_id, slug)      WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_skill_vanilla_slug              ON skill (slug)              WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_skill_hb_slug                   ON skill (homebrew_id, slug)              WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_currency_vanilla_slug           ON currency (slug)           WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_currency_hb_slug                ON currency (homebrew_id, slug)           WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_magic_item_rarity_vanilla_slug  ON magic_item_rarity (slug)  WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_magic_item_rarity_hb_slug       ON magic_item_rarity (homebrew_id, slug)  WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_magic_item_type_vanilla_slug    ON magic_item_type (slug)    WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_magic_item_type_hb_slug         ON magic_item_type (homebrew_id, slug)    WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_character_size_vanilla_slug     ON character_size (slug)     WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_character_size_hb_slug          ON character_size (homebrew_id, slug)     WHERE homebrew_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_equipment_category_vanilla_slug ON equipment_category (slug) WHERE homebrew_id IS NULL;
+CREATE UNIQUE INDEX uq_equipment_category_hb_slug      ON equipment_category (homebrew_id, slug) WHERE homebrew_id IS NOT NULL;
+
+-- ---- helpful lookup indexes for the vanilla-vs-homebrew resolver --------------------
+CREATE INDEX idx_content_damage_type_hb        ON damage_type (homebrew_id);
+CREATE INDEX idx_content_ability_score_hb      ON ability_score (homebrew_id);
+CREATE INDEX idx_content_skill_hb              ON skill (homebrew_id);
+CREATE INDEX idx_content_currency_hb           ON currency (homebrew_id);
+CREATE INDEX idx_content_magic_item_rarity_hb  ON magic_item_rarity (homebrew_id);
+CREATE INDEX idx_content_magic_item_type_hb    ON magic_item_type (homebrew_id);
+CREATE INDEX idx_content_character_size_hb     ON character_size (homebrew_id);
+CREATE INDEX idx_content_equipment_category_hb ON equipment_category (homebrew_id);
+        ]]></sql>
+
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+DROP INDEX IF EXISTS idx_content_equipment_category_hb;
+DROP INDEX IF EXISTS idx_content_character_size_hb;
+DROP INDEX IF EXISTS idx_content_magic_item_type_hb;
+DROP INDEX IF EXISTS idx_content_magic_item_rarity_hb;
+DROP INDEX IF EXISTS idx_content_currency_hb;
+DROP INDEX IF EXISTS idx_content_skill_hb;
+DROP INDEX IF EXISTS idx_content_ability_score_hb;
+DROP INDEX IF EXISTS idx_content_damage_type_hb;
+
+DROP INDEX IF EXISTS uq_equipment_category_hb_slug;
+DROP INDEX IF EXISTS uq_equipment_category_vanilla_slug;
+DROP INDEX IF EXISTS uq_character_size_hb_slug;
+DROP INDEX IF EXISTS uq_character_size_vanilla_slug;
+DROP INDEX IF EXISTS uq_magic_item_type_hb_slug;
+DROP INDEX IF EXISTS uq_magic_item_type_vanilla_slug;
+DROP INDEX IF EXISTS uq_magic_item_rarity_hb_slug;
+DROP INDEX IF EXISTS uq_magic_item_rarity_vanilla_slug;
+DROP INDEX IF EXISTS uq_currency_hb_slug;
+DROP INDEX IF EXISTS uq_currency_vanilla_slug;
+DROP INDEX IF EXISTS uq_skill_hb_slug;
+DROP INDEX IF EXISTS uq_skill_vanilla_slug;
+DROP INDEX IF EXISTS uq_ability_score_hb_slug;
+DROP INDEX IF EXISTS uq_ability_score_vanilla_slug;
+DROP INDEX IF EXISTS uq_damage_type_hb_slug;
+DROP INDEX IF EXISTS uq_damage_type_vanilla_slug;
+
+ALTER TABLE equipment_category ADD CONSTRAINT equipment_category_slug_key UNIQUE (slug);
+ALTER TABLE character_size     ADD CONSTRAINT character_size_slug_key UNIQUE (slug);
+ALTER TABLE magic_item_type    ADD CONSTRAINT magic_item_type_slug_key UNIQUE (slug);
+ALTER TABLE magic_item_rarity  ADD CONSTRAINT magic_item_rarity_slug_key UNIQUE (slug);
+ALTER TABLE currency           ADD CONSTRAINT currency_slug_key UNIQUE (slug);
+ALTER TABLE skill              ADD CONSTRAINT skill_slug_key UNIQUE (slug);
+ALTER TABLE ability_score      ADD CONSTRAINT ability_score_slug_key UNIQUE (slug);
+ALTER TABLE damage_type        ADD CONSTRAINT damage_type_slug_key UNIQUE (slug);
+
+DROP INDEX IF EXISTS uq_magic_item_hb_slug;
+DROP INDEX IF EXISTS uq_species_hb_slug;
+DROP INDEX IF EXISTS uq_spell_hb_slug;
+DROP INDEX IF EXISTS uq_subclass_hb_slug;
+DROP INDEX IF EXISTS uq_character_class_hb_slug;
+DROP INDEX IF EXISTS uq_background_hb_slug;
+DROP INDEX IF EXISTS uq_feat_hb_slug;
+DROP INDEX IF EXISTS uq_equipment_item_hb_slug;
+
+ALTER TABLE equipment_category DROP COLUMN homebrew_id;
+ALTER TABLE character_size     DROP COLUMN homebrew_id;
+ALTER TABLE magic_item_type    DROP COLUMN homebrew_id;
+ALTER TABLE magic_item_rarity  DROP COLUMN homebrew_id;
+ALTER TABLE currency           DROP COLUMN homebrew_id;
+ALTER TABLE skill              DROP COLUMN homebrew_id;
+ALTER TABLE ability_score      DROP COLUMN homebrew_id;
+ALTER TABLE damage_type        DROP COLUMN homebrew_id;
+ALTER TABLE magic_item       DROP COLUMN homebrew_id;
+ALTER TABLE species          DROP COLUMN homebrew_id;
+ALTER TABLE spell            DROP COLUMN homebrew_id;
+ALTER TABLE subclass         DROP COLUMN homebrew_id;
+ALTER TABLE character_class  DROP COLUMN homebrew_id;
+ALTER TABLE background       DROP COLUMN homebrew_id;
+ALTER TABLE feat             DROP COLUMN homebrew_id;
+ALTER TABLE equipment_item   DROP COLUMN homebrew_id;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

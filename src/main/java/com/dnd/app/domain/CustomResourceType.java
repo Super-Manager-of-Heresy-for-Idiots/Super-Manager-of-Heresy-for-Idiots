@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.ContentCharacterClass;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,5 +34,5 @@ public class CustomResourceType {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_bound_id")
-    private CharacterClass classBound;
+    private ContentCharacterClass classBound;
 }

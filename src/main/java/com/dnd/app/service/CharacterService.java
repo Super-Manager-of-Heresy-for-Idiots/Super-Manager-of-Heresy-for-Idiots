@@ -1,7 +1,9 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateCharacterRequest;
 import com.dnd.app.dto.request.ModifyHpRequest;
 import com.dnd.app.dto.request.UpdateCharacterRequest;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,7 +33,7 @@ public class CharacterService {
 
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
-    private final CharacterClassRepository classRepository;
+    private final ContentCharacterClassRepository classRepository;
     private final StatTypeRepository statTypeRepository;
     private final CharacterStatRepository characterStatRepository;
     private final CharacterActiveEffectRepository activeEffectRepository;
@@ -40,13 +43,14 @@ public class CharacterService {
     private final CampaignContentService campaignContentService;
     private final CampaignService campaignService;
     private final CharacterMapper characterMapper;
-    private final RaceService raceService;
+    private final SpeciesService speciesService;
     private final ReferenceDataService referenceDataService;
     private final CharacterSkillProficiencyRepository skillProficiencyRepository;
     private final CharacterKnownSpellRepository knownSpellRepository;
     private final CharacterWalletRepository walletRepository;
     private final CharacterResourceRepository resourceRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional(readOnly = true)
     public List<CharacterResponse> listTemplates(String username) {
@@ -225,25 +229,25 @@ public class CharacterService {
             throw new BadRequestException("Selected class is not available in this campaign");
         }
 
-        CharacterClass charClass = classRepository.findById(request.getClassId())
+        ContentCharacterClass charClass = classRepository.findById(request.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
-        CharacterRace race = raceService.getSelectableRace(campaign.getId(), request.getRaceId());
-        raceService.validateLineageSelection(race, request.getSelectedLineageId());
+        com.dnd.app.domain.content.Species species =
+                speciesService.getSelectableSpecies(campaign.getId(), request.getRaceId());
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(request.getName())
                 .totalLevel(1)
                 .experience(0L)
-                .race(race)
-                .selectedLineageId(request.getSelectedLineageId())
-                .raceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()))
+                .race(species)
+                .selectedLineageId(null)
+                .raceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species))
                 .owner(owner)
                 .campaign(campaign)
                 .build();
         character = characterRepository.saveAndFlush(character);
-        log.info("Character created: id={}, name='{}', class='{}', race='{}', lineageId={}, owner={}, campaignId={}",
-                character.getId(), character.getName(), charClass.getName(), race.getName(),
-                request.getSelectedLineageId(), username, campaign.getId());
+        log.info("Character created: id={}, name='{}', class='{}', speciesId={}, owner={}, campaignId={}",
+                character.getId(), character.getName(), charClass.getNameRu(), species.getId(),
+                username, campaign.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
 
@@ -326,23 +330,44 @@ public class CharacterService {
         if (request.getName() != null) {
             character.setName(request.getName());
         }
+        if (request.getPlayerName() != null) {
+            character.setPlayerName(request.getPlayerName());
+        }
+        if (request.getProficiencies() != null) {
+            character.setProficiencies(request.getProficiencies());
+        }
+        if (request.getEquipment() != null) {
+            character.setEquipment(request.getEquipment());
+        }
+        if (request.getFeatures() != null) {
+            character.setFeatures(request.getFeatures());
+        }
+        if (request.getAlignment() != null) {
+            character.setAlignment(request.getAlignment());
+        }
+        if (request.getBiography() != null) {
+            character.setBiographyJson(serializeCharacterPayload(request.getBiography()));
+        }
+        if (request.getAttacks() != null) {
+            character.setAttacksJson(serializeCharacterPayload(request.getAttacks()));
+        }
         if (request.getRaceId() != null) {
             if (character.getCampaign() == null) {
                 throw new BadRequestException("Cannot change race for character without campaign");
             }
-            CharacterRace race = raceService.getSelectableRace(character.getCampaign().getId(), request.getRaceId());
-            raceService.validateLineageSelection(race, request.getSelectedLineageId());
-            character.setRace(race);
-            character.setSelectedLineageId(request.getSelectedLineageId());
-            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()));
-        } else if (request.getSelectedLineageId() != null) {
-            raceService.validateLineageSelection(character.getRace(), request.getSelectedLineageId());
-            character.setSelectedLineageId(request.getSelectedLineageId());
-            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(character.getRace(), request.getSelectedLineageId()));
+            com.dnd.app.domain.content.Species species =
+                    speciesService.getSelectableSpecies(character.getCampaign().getId(), request.getRaceId());
+            character.setRace(species);
+            character.setSelectedLineageId(null);
+            character.setRaceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species));
         }
 
         character = characterRepository.save(character);
-        return toResponse(character);
+        CharacterResponse response = toResponse(character);
+        UUID campaignId = character.getCampaign() != null ? character.getCampaign().getId() : null;
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.CHARACTER_UPDATED, campaignId,
+                character.getId(), response, user.getId());
+        return response;
     }
 
     @Transactional
@@ -439,6 +464,10 @@ public class CharacterService {
 
         log.info("HP modified: characterId={}, amount={}, setTempHp={}, newHp={}, newTempHp={}, by user={}",
                 characterId, request.getAmount(), request.getSetTempHp(), currentHp, tempHp, username);
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
+                characterId, Map.of("currentHp", currentHp, "tempHp", tempHp, "maxHp", character.getMaxHp()),
+                user.getId());
         return toResponse(character);
     }
 
@@ -467,7 +496,15 @@ public class CharacterService {
 
     private CharacterResponse toResponse(PlayerCharacter character) {
         CharacterResponse response = characterMapper.toResponse(character);
-        response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
+        if (character.getRace() != null) {
+            com.dnd.app.domain.content.Species sp = character.getRace();
+            response.setRace(com.dnd.app.dto.response.CharacterRaceResponse.builder()
+                    .id(sp.getId())
+                    .name(sp.getNameEn() != null ? sp.getNameEn() : sp.getNameRu())
+                    .description(sp.getDescription())
+                    .build());
+        }
+        response.setRaceSnapshot(speciesService.parseSnapshot(character.getRaceSnapshotJson()));
         response.setCurrentHp(character.getCurrentHp());
         response.setMaxHp(character.getMaxHp());
         response.setTempHp(character.getTempHp());
@@ -494,7 +531,7 @@ public class CharacterService {
                     character.getSkillProficiencies().stream()
                             .map(sp -> com.dnd.app.dto.response.CharacterSkillProficiencyResponse.builder()
                                     .skillId(sp.getSkill().getId())
-                                    .skillName(sp.getSkill().getName())
+                                    .skillName(sp.getSkill().getNameRu())
                                     .source(sp.getSource().name())
                                     .build())
                             .toList()
@@ -506,9 +543,9 @@ public class CharacterService {
                     character.getKnownSpells().stream()
                             .map(ks -> com.dnd.app.dto.response.CharacterKnownSpellResponse.builder()
                                     .spellId(ks.getSpell().getId())
-                                    .name(ks.getSpell().getName())
+                                    .name(ks.getSpell().getNameRu())
                                     .level(ks.getSpell().getLevel())
-                                    .school(ks.getSpell().getSchool())
+                                    .school(ks.getSpell().getSchool() == null ? null : ks.getSpell().getSchool().getNameRu())
                                     .build())
                             .toList()
             );
@@ -529,6 +566,17 @@ public class CharacterService {
         }
 
         return response;
+    }
+
+    private String serializeCharacterPayload(Object value) {
+        if (value instanceof List<?> list && list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to serialize character payload");
+        }
     }
 
     private void enforceWriteAccess(PlayerCharacter character, User user) {

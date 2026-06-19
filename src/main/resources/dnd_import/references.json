@@ -1,0 +1,521 @@
+{
+  "source": {
+    "slug": "next-dnd-su-2024-ru",
+    "name": "next.dnd.su structured export",
+    "url": "https://next.dnd.su/",
+    "license_note": "Справочные данные импортированы из приложенных JSON; авторские материалы принадлежат правообладателям."
+  },
+  "currencies": [
+    {
+      "slug": "gp",
+      "name_ru": "Золотая монета",
+      "name_en": "Gold Piece",
+      "abbr_ru": "ЗМ",
+      "abbr_en": "GP",
+      "to_copper": 100
+    },
+    {
+      "slug": "sp",
+      "name_ru": "Серебряная монета",
+      "name_en": "Silver Piece",
+      "abbr_ru": "СМ",
+      "abbr_en": "SP",
+      "to_copper": 10
+    },
+    {
+      "slug": "cp",
+      "name_ru": "Медная монета",
+      "name_en": "Copper Piece",
+      "abbr_ru": "ММ",
+      "abbr_en": "CP",
+      "to_copper": 1
+    },
+    {
+      "slug": "ep",
+      "name_ru": "Электрумовая монета",
+      "name_en": "Electrum Piece",
+      "abbr_ru": "ЭМ",
+      "abbr_en": "EP",
+      "to_copper": 50
+    },
+    {
+      "slug": "pp",
+      "name_ru": "Платиновая монета",
+      "name_en": "Platinum Piece",
+      "abbr_ru": "ПМ",
+      "abbr_en": "PP",
+      "to_copper": 1000
+    }
+  ],
+  "ability_scores": [
+    {
+      "slug": "str",
+      "name_ru": "Сила",
+      "name_en": "Strength"
+    },
+    {
+      "slug": "dex",
+      "name_ru": "Ловкость",
+      "name_en": "Dexterity"
+    },
+    {
+      "slug": "con",
+      "name_ru": "Телосложение",
+      "name_en": "Constitution"
+    },
+    {
+      "slug": "int",
+      "name_ru": "Интеллект",
+      "name_en": "Intelligence"
+    },
+    {
+      "slug": "wis",
+      "name_ru": "Мудрость",
+      "name_en": "Wisdom"
+    },
+    {
+      "slug": "cha",
+      "name_ru": "Харизма",
+      "name_en": "Charisma"
+    }
+  ],
+  "skills": [
+    {
+      "slug": "acrobatics",
+      "name_ru": "Акробатика",
+      "name_en": "Acrobatics",
+      "ability_slug": "dex"
+    },
+    {
+      "slug": "animal-handling",
+      "name_ru": "Обращение с животными",
+      "name_en": "Animal Handling",
+      "ability_slug": "wis"
+    },
+    {
+      "slug": "arcana",
+      "name_ru": "Тайная магия",
+      "name_en": "Arcana",
+      "ability_slug": "int"
+    },
+    {
+      "slug": "athletics",
+      "name_ru": "Атлетика",
+      "name_en": "Athletics",
+      "ability_slug": "str"
+    },
+    {
+      "slug": "deception",
+      "name_ru": "Обман",
+      "name_en": "Deception",
+      "ability_slug": "cha"
+    },
+    {
+      "slug": "history",
+      "name_ru": "История",
+      "name_en": "History",
+      "ability_slug": "int"
+    },
+    {
+      "slug": "insight",
+      "name_ru": "Проницательность",
+      "name_en": "Insight",
+      "ability_slug": "wis"
+    },
+    {
+      "slug": "intimidation",
+      "name_ru": "Запугивание",
+      "name_en": "Intimidation",
+      "ability_slug": "cha"
+    },
+    {
+      "slug": "investigation",
+      "name_ru": "Расследование",
+      "name_en": "Investigation",
+      "ability_slug": "int"
+    },
+    {
+      "slug": "medicine",
+      "name_ru": "Медицина",
+      "name_en": "Medicine",
+      "ability_slug": "wis"
+    },
+    {
+      "slug": "nature",
+      "name_ru": "Природа",
+      "name_en": "Nature",
+      "ability_slug": "int"
+    },
+    {
+      "slug": "perception",
+      "name_ru": "Восприятие",
+      "name_en": "Perception",
+      "ability_slug": "wis"
+    },
+    {
+      "slug": "performance",
+      "name_ru": "Выступление",
+      "name_en": "Performance",
+      "ability_slug": "cha"
+    },
+    {
+      "slug": "persuasion",
+      "name_ru": "Убеждение",
+      "name_en": "Persuasion",
+      "ability_slug": "cha"
+    },
+    {
+      "slug": "religion",
+      "name_ru": "Религия",
+      "name_en": "Religion",
+      "ability_slug": "int"
+    },
+    {
+      "slug": "sleight-of-hand",
+      "name_ru": "Ловкость рук",
+      "name_en": "Sleight of Hand",
+      "ability_slug": "dex"
+    },
+    {
+      "slug": "stealth",
+      "name_ru": "Скрытность",
+      "name_en": "Stealth",
+      "ability_slug": "dex"
+    },
+    {
+      "slug": "survival",
+      "name_ru": "Выживание",
+      "name_en": "Survival",
+      "ability_slug": "wis"
+    }
+  ],
+  "damage_types": [
+    {
+      "slug": "acid",
+      "name_ru": "Кислота",
+      "name_en": "Acid"
+    },
+    {
+      "slug": "bludgeoning",
+      "name_ru": "Дробящий",
+      "name_en": "Bludgeoning"
+    },
+    {
+      "slug": "cold",
+      "name_ru": "Холод",
+      "name_en": "Cold"
+    },
+    {
+      "slug": "fire",
+      "name_ru": "Огонь",
+      "name_en": "Fire"
+    },
+    {
+      "slug": "force",
+      "name_ru": "Силовой",
+      "name_en": "Force"
+    },
+    {
+      "slug": "lightning",
+      "name_ru": "Электричество",
+      "name_en": "Lightning"
+    },
+    {
+      "slug": "necrotic",
+      "name_ru": "Некротический",
+      "name_en": "Necrotic"
+    },
+    {
+      "slug": "piercing",
+      "name_ru": "Колющий",
+      "name_en": "Piercing"
+    },
+    {
+      "slug": "poison",
+      "name_ru": "Яд",
+      "name_en": "Poison"
+    },
+    {
+      "slug": "psychic",
+      "name_ru": "Психический",
+      "name_en": "Psychic"
+    },
+    {
+      "slug": "radiant",
+      "name_ru": "Излучение",
+      "name_en": "Radiant"
+    },
+    {
+      "slug": "slashing",
+      "name_ru": "Рубящий",
+      "name_en": "Slashing"
+    },
+    {
+      "slug": "thunder",
+      "name_ru": "Звук",
+      "name_en": "Thunder"
+    }
+  ],
+  "equipment_categories": [
+    {
+      "slug": "adventuring-gear",
+      "name_ru": "Предмет снаряжения",
+      "name_en": null
+    },
+    {
+      "slug": "ammunition",
+      "name_ru": "Боеприпас",
+      "name_en": null
+    },
+    {
+      "slug": "arcane-focus",
+      "name_ru": "Заклинательная фокусировка (Волшебник, Колдун, Чародей)",
+      "name_en": null
+    },
+    {
+      "slug": "artisan-tool",
+      "name_ru": "Ремесленный инструмент",
+      "name_en": null
+    },
+    {
+      "slug": "boepripasy-trebuyutsya-dlya-oruzhiya-obladayuschego-svoystvom-boepripas-v-opisanii-oruzhiya-ukazyvaetsya-tip-boepripasov-ispolzuemyh-etim-oruzhiem-sleduyuschaya-tablitsa-pokazyvaet-razlichnye-tipy-boepripasov-v-tablitse-ukazano-kakoe-kolichestvo-shtuk-priobretaetsya-za-ukazannuyu-stoimost-a-takzhe-predmet-obychno-ispolzuemyy-dlya-hraneniya-boepripasov-etogo-tipa-etot-konteyner-nuzhno-priobretat-otdelno",
+      "name_ru": "Боеприпасы требуются для оружия, обладающего свойством Боеприпас. В описании оружия указывается тип боеприпасов, используемых этим оружием. Следующая таблица показывает различные типы боеприпасов. В таблице указано, какое количество штук приобретается за указанную стоимость, а также предмет, обычно используемый для хранения боеприпасов этого типа; этот контейнер нужно приобретать отдельно.",
+      "name_en": null
+    },
+    {
+      "slug": "druidic-focus",
+      "name_ru": "Заклинательная фокусировка (Друид, Следопыт)",
+      "name_en": null
+    },
+    {
+      "slug": "equipment-pack",
+      "name_ru": "Набор снаряжения",
+      "name_en": null
+    },
+    {
+      "slug": "heavy-armor",
+      "name_ru": "Тяжёлый доспех",
+      "name_en": null
+    },
+    {
+      "slug": "holy-symbol",
+      "name_ru": "Заклинательная фокусировка (Жрец, Паладин)",
+      "name_en": null
+    },
+    {
+      "slug": "light-armor",
+      "name_ru": "Лёгкий доспех",
+      "name_en": null
+    },
+    {
+      "slug": "martial-melee-weapon",
+      "name_ru": "Воинское Рукопашное оружие",
+      "name_en": null
+    },
+    {
+      "slug": "martial-ranged-weapon",
+      "name_ru": "Воинское Дальнобойное оружие",
+      "name_en": null
+    },
+    {
+      "slug": "medium-armor",
+      "name_ru": "Средний доспех",
+      "name_en": null
+    },
+    {
+      "slug": "shield",
+      "name_ru": "Щит",
+      "name_en": null
+    },
+    {
+      "slug": "simple-melee-weapon",
+      "name_ru": "Простое Рукопашное оружие",
+      "name_en": null
+    },
+    {
+      "slug": "simple-ranged-weapon",
+      "name_ru": "Простое Дальнобойное оружие",
+      "name_en": null
+    },
+    {
+      "slug": "tool",
+      "name_ru": "Инструмент",
+      "name_en": null
+    }
+  ],
+  "weapon_properties": [
+    {
+      "slug": "ammunition",
+      "name_ru": "Боеприпас",
+      "name_en": "Ammunition"
+    },
+    {
+      "slug": "finesse",
+      "name_ru": "Фехтовальное",
+      "name_en": "Finesse"
+    },
+    {
+      "slug": "heavy",
+      "name_ru": "Тяжёлое",
+      "name_en": "Heavy"
+    },
+    {
+      "slug": "light",
+      "name_ru": "Лёгкое",
+      "name_en": "Light"
+    },
+    {
+      "slug": "loading",
+      "name_ru": "Перезарядка",
+      "name_en": "Loading"
+    },
+    {
+      "slug": "reach",
+      "name_ru": "Досягаемость",
+      "name_en": "Reach"
+    },
+    {
+      "slug": "thrown",
+      "name_ru": "Метательное",
+      "name_en": "Thrown"
+    },
+    {
+      "slug": "two-handed",
+      "name_ru": "Двуручное",
+      "name_en": "Two-Handed"
+    },
+    {
+      "slug": "versatile",
+      "name_ru": "Универсальное",
+      "name_en": "Versatile"
+    }
+  ],
+  "weapon_masteries": [
+    {
+      "slug": "bystroe",
+      "name_ru": "Быстрое",
+      "name_en": null
+    },
+    {
+      "slug": "oprokidyvayuschee",
+      "name_ru": "Опрокидывающее",
+      "name_en": null
+    },
+    {
+      "slug": "oslablyayuschee",
+      "name_ru": "Ослабляющее",
+      "name_en": null
+    },
+    {
+      "slug": "ottalkivayuschee",
+      "name_ru": "Отталкивающее",
+      "name_en": null
+    },
+    {
+      "slug": "otvlekayuschee",
+      "name_ru": "Отвлекающее",
+      "name_en": null
+    },
+    {
+      "slug": "prorubayuschee",
+      "name_ru": "Прорубающее",
+      "name_en": null
+    },
+    {
+      "slug": "sekuschee",
+      "name_ru": "Секущее",
+      "name_en": null
+    },
+    {
+      "slug": "zamedlyayuschee",
+      "name_ru": "Замедляющее",
+      "name_en": null
+    }
+  ],
+  "spell_schools": [
+    {
+      "slug": "evocation",
+      "name_ru": "Воплощение",
+      "name_en": "Evocation"
+    },
+    {
+      "slug": "abjuration",
+      "name_ru": "Ограждение",
+      "name_en": "Abjuration"
+    },
+    {
+      "slug": "divination",
+      "name_ru": "Прорицание",
+      "name_en": "Divination"
+    },
+    {
+      "slug": "enchantment",
+      "name_ru": "Очарование",
+      "name_en": "Enchantment"
+    },
+    {
+      "slug": "illusion",
+      "name_ru": "Иллюзия",
+      "name_en": "Illusion"
+    },
+    {
+      "slug": "necromancy",
+      "name_ru": "Некромантия",
+      "name_en": "Necromancy"
+    },
+    {
+      "slug": "conjuration",
+      "name_ru": "Вызов",
+      "name_en": "Conjuration"
+    },
+    {
+      "slug": "transmutation",
+      "name_ru": "Преобразование",
+      "name_en": "Transmutation"
+    },
+    {
+      "slug": "conjuration",
+      "name_ru": "Призыв",
+      "name_en": "Conjuration"
+    }
+  ],
+  "sizes": [
+    {
+      "slug": "small",
+      "name_ru": "Маленький",
+      "name_en": "Small"
+    },
+    {
+      "slug": "medium",
+      "name_ru": "Средний",
+      "name_en": "Medium"
+    },
+    {
+      "slug": "large",
+      "name_ru": "Большой",
+      "name_en": "Large"
+    }
+  ],
+  "speed_types": [
+    {
+      "slug": "walk",
+      "name_ru": "Ходьба",
+      "name_en": "Walk"
+    },
+    {
+      "slug": "fly",
+      "name_ru": "Полёт",
+      "name_en": "Fly"
+    },
+    {
+      "slug": "climb",
+      "name_ru": "Лазание",
+      "name_en": "Climb"
+    },
+    {
+      "slug": "swim",
+      "name_ru": "Плавание",
+      "name_en": "Swim"
+    }
+  ]
+}

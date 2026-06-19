@@ -81,6 +81,18 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    @PostMapping("/{questId}/complete")
+    @Operation(summary = "Complete quest and grant its reward to a recipient character (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<QuestCompletionResponse>>> completeQuest(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId,
+            @Valid @RequestBody com.dnd.app.dto.request.CompleteQuestRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            QuestCompletionResponse response = questService.completeQuest(questId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Quest completed and reward granted"));
+        }, controllerTaskExecutor);
+    }
+
     // --- Quest rewards ---
 
     @GetMapping("/{questId}/rewards")

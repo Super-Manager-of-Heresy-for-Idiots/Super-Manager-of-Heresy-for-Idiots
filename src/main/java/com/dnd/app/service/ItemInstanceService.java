@@ -2,8 +2,8 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.EquipItemRequest;
 import com.dnd.app.dto.request.GrantItemRequest;
 import com.dnd.app.dto.request.RenameItemRequest;
@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +36,8 @@ public class ItemInstanceService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final CampaignMemberRepository campaignMemberRepository;
+    private final WebSocketEventService webSocketEventService;
+    private final ContentDictionaryResolver contentDictionaryResolver;
 
     @Transactional
     public ItemInstanceResponse grantItem(UUID campaignId, UUID characterId,
@@ -60,7 +63,10 @@ public class ItemInstanceService {
                         .orElseThrow(() -> new ResourceNotFoundException("Item instance not found"));
                 log.info("Item stacked: instanceId={}, characterId={}, quantity={}",
                         instance.getId(), characterId, instance.getQuantity());
-                return toResponse(instance);
+                ItemInstanceResponse stackedResponse = toResponse(instance);
+                webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
+                        characterId, stackedResponse, user.getId());
+                return stackedResponse;
             }
         }
 
@@ -75,7 +81,10 @@ public class ItemInstanceService {
 
         log.info("Item granted: instanceId={}, templateId={}, characterId={}, by={}",
                 instance.getId(), template.getId(), characterId, username);
-        return toResponse(instance);
+        ItemInstanceResponse response = toResponse(instance);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
+                characterId, response, user.getId());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -123,17 +132,12 @@ public class ItemInstanceService {
             throw new BadRequestException("Item does not belong to this character");
         }
 
-        EquipmentSlot slot;
-        try {
-            slot = EquipmentSlot.valueOf(request.getSlot().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid equipment slot: " + request.getSlot());
-        }
+        EquipmentSlot slot = contentDictionaryResolver.resolveSystemSlot(request.getSlot());
 
         itemInstanceRepository.findByOwnerCharacterIdAndSlot(characterId, slot)
                 .filter(occupant -> !occupant.getId().equals(instanceId))
                 .ifPresent(occupant -> {
-                    throw new BadRequestException("Slot " + slot + " is already occupied by item "
+                    throw new BadRequestException("Slot " + slot.getCode() + " is already occupied by item "
                             + occupant.getDisplayName() + ". Unequip it first.");
                 });
 
@@ -143,7 +147,7 @@ public class ItemInstanceService {
         // Auto-apply template buffs as active effects
         applyTemplateBuffs(character, instance.getTemplate(), user);
 
-        log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot, characterId);
+        log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot.getCode(), characterId);
         return toResponse(instance);
     }
 
@@ -194,6 +198,9 @@ public class ItemInstanceService {
             itemInstanceRepository.delete(instance);
             log.info("Item removed: instanceId={}, characterId={}", instanceId, characterId);
         }
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_REMOVED, campaignId,
+                characterId, Map.of("instanceId", instanceId), user.getId());
     }
 
     @Transactional
@@ -349,9 +356,9 @@ public class ItemInstanceService {
                 .customName(instance.getCustomName())
                 .quantity(instance.getQuantity())
                 .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().name() : null)
+                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
                 .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().name() : null)
+                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getSlug() : null)
                 .build();
     }
 }

@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Normalized D&D PHB content. Tables live in the default `public` schema
+      alongside the rest of the app. Their names are SINGULAR (spell, feat,
+      character_class, ...) so they do NOT collide with the existing PLURAL
+      analog tables (spells, feats, character_classes, ...) that they will
+      gradually replace. Bestiary / homebrew tables are NOT touched.
+      Keys are UUID (gen_random_uuid()) to match the rest of the app.
+    -->
+    <changeSet id="054-01-create-dnd-content-schema" author="content">
+        <validCheckSum>9:18409c14fa71d8e9141251faaa14ff7c</validCheckSum>
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+CREATE TABLE source_book (
+    source_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    url TEXT,
+    license_note TEXT
+);
+
+CREATE TABLE mod_package (
+    mod_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    is_core BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE currency (
+    currency_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    abbr_ru TEXT NOT NULL,
+    abbr_en TEXT,
+    copper_value NUMERIC(12,3) NOT NULL
+);
+
+CREATE TABLE money_value (
+    money_value_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    amount NUMERIC(12,3),
+    currency_id uuid REFERENCES currency(currency_id),
+    copper_value NUMERIC(14,3),
+    raw_text TEXT
+);
+
+CREATE TABLE ability_score (
+    ability_score_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT NOT NULL
+);
+
+CREATE TABLE skill (
+    skill_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    ability_score_id uuid REFERENCES ability_score(ability_score_id)
+);
+
+CREATE TABLE damage_type (
+    damage_type_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE dice_formula (
+    dice_formula_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    dice_count INT,
+    die_size INT,
+    bonus INT,
+    raw_text TEXT
+);
+
+CREATE TABLE equipment_category (
+    equipment_category_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE equipment_item (
+    equipment_item_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    category_id uuid REFERENCES equipment_category(equipment_category_id),
+    kind TEXT NOT NULL,
+    cost_money_value_id uuid REFERENCES money_value(money_value_id),
+    weight_lb NUMERIC(12,4),
+    properties_text TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE weapon_property (
+    weapon_property_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE weapon_mastery (
+    weapon_mastery_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    description TEXT
+);
+
+CREATE TABLE weapon_stat (
+    equipment_item_id uuid PRIMARY KEY REFERENCES equipment_item(equipment_item_id) ON DELETE CASCADE,
+    damage_dice_formula_id uuid REFERENCES dice_formula(dice_formula_id),
+    damage_type_id uuid REFERENCES damage_type(damage_type_id),
+    flat_damage INT,
+    mastery_id uuid REFERENCES weapon_mastery(weapon_mastery_id)
+);
+
+CREATE TABLE weapon_item_property (
+    equipment_item_id uuid REFERENCES equipment_item(equipment_item_id) ON DELETE CASCADE,
+    weapon_property_id uuid REFERENCES weapon_property(weapon_property_id),
+    normal_range_ft INT,
+    long_range_ft INT,
+    versatile_dice_formula_id uuid REFERENCES dice_formula(dice_formula_id),
+    ammunition_equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
+    raw_text TEXT,
+    PRIMARY KEY (equipment_item_id, weapon_property_id)
+);
+
+CREATE TABLE armor_stat (
+    equipment_item_id uuid PRIMARY KEY REFERENCES equipment_item(equipment_item_id) ON DELETE CASCADE,
+    base_ac INT,
+    dex_bonus_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+    max_dex_bonus INT,
+    strength_required INT,
+    stealth_disadvantage BOOLEAN NOT NULL DEFAULT FALSE,
+    armor_class_raw TEXT
+);
+
+CREATE TABLE feat_category (
+    feat_category_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE feat (
+    feat_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    category_id uuid REFERENCES feat_category(feat_category_id),
+    repeatable BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE feat_prerequisite (
+    feat_prerequisite_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    feat_id uuid NOT NULL REFERENCES feat(feat_id) ON DELETE CASCADE,
+    prerequisite_type TEXT NOT NULL,
+    level_required INT,
+    ability_score_id uuid REFERENCES ability_score(ability_score_id),
+    minimum_score INT,
+    group_key TEXT,
+    raw_text TEXT
+);
+
+CREATE TABLE feat_section (
+    feat_section_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    feat_id uuid NOT NULL REFERENCES feat(feat_id) ON DELETE CASCADE,
+    sort_order INT NOT NULL,
+    title TEXT,
+    body TEXT
+);
+
+CREATE TABLE background (
+    background_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    feat_id uuid REFERENCES feat(feat_id),
+    description TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE background_feat_option (
+    background_feat_option_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_id uuid NOT NULL REFERENCES background(background_id) ON DELETE CASCADE,
+    feat_id uuid REFERENCES feat(feat_id),
+    feat_category_id uuid REFERENCES feat_category(feat_category_id),
+    choose_count INT NOT NULL DEFAULT 1,
+    selected_option_raw TEXT,
+    recommended_feat_id uuid REFERENCES feat(feat_id),
+    raw_text TEXT
+);
+
+CREATE TABLE background_ability_option (
+    background_id uuid REFERENCES background(background_id) ON DELETE CASCADE,
+    ability_score_id uuid REFERENCES ability_score(ability_score_id),
+    PRIMARY KEY(background_id, ability_score_id)
+);
+
+CREATE TABLE background_skill_proficiency (
+    background_id uuid REFERENCES background(background_id) ON DELETE CASCADE,
+    skill_id uuid REFERENCES skill(skill_id),
+    PRIMARY KEY(background_id, skill_id)
+);
+
+CREATE TABLE background_tool_proficiency (
+    background_tool_proficiency_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_id uuid REFERENCES background(background_id) ON DELETE CASCADE,
+    equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
+    choose_count INT,
+    choice_group_slug TEXT,
+    raw_text TEXT
+);
+
+CREATE TABLE background_language_proficiency (
+    background_language_proficiency_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_id uuid REFERENCES background(background_id) ON DELETE CASCADE,
+    language_slug TEXT,
+    choose_count INT,
+    raw_text TEXT
+);
+
+CREATE TABLE background_equipment_choice_group (
+    background_equipment_choice_group_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_id uuid NOT NULL REFERENCES background(background_id) ON DELETE CASCADE,
+    group_slug TEXT NOT NULL,
+    choose_count INT,
+    raw_text TEXT
+);
+
+CREATE TABLE background_equipment_option (
+    background_equipment_option_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_equipment_choice_group_id uuid NOT NULL REFERENCES background_equipment_choice_group(background_equipment_choice_group_id) ON DELETE CASCADE,
+    option_code TEXT NOT NULL,
+    sort_order INT NOT NULL,
+    raw_text TEXT
+);
+
+CREATE TABLE background_equipment_entry (
+    background_equipment_entry_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    background_equipment_option_id uuid NOT NULL REFERENCES background_equipment_option(background_equipment_option_id) ON DELETE CASCADE,
+    entry_type TEXT NOT NULL,
+    equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
+    money_value_id uuid REFERENCES money_value(money_value_id),
+    quantity NUMERIC(12,3) NOT NULL DEFAULT 1,
+    quantity_unit_raw TEXT,
+    variant_note TEXT,
+    choice_ref TEXT,
+    raw_text TEXT
+);
+
+CREATE TABLE spell_school (
+    spell_school_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE character_class (
+    class_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    subtitle TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE subclass (
+    subclass_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    class_id uuid NOT NULL REFERENCES character_class(class_id) ON DELETE CASCADE,
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    is_empty_placeholder BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE(class_id, slug)
+);
+
+CREATE TABLE spell (
+    spell_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    level INT NOT NULL CHECK (level BETWEEN 0 AND 9),
+    school_id uuid REFERENCES spell_school(spell_school_id),
+    casting_time_raw TEXT,
+    casting_action_slug TEXT,
+    is_ritual BOOLEAN NOT NULL DEFAULT FALSE,
+    range_type TEXT,
+    range_distance INT,
+    range_unit TEXT,
+    duration_raw TEXT,
+    duration_type TEXT,
+    duration_amount INT,
+    duration_unit TEXT,
+    concentration BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT,
+    higher_levels TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE spell_component (
+    spell_id uuid REFERENCES spell(spell_id) ON DELETE CASCADE,
+    component_slug TEXT NOT NULL,
+    material_text TEXT,
+    consumed BOOLEAN,
+    cost_money_value_id uuid REFERENCES money_value(money_value_id),
+    PRIMARY KEY(spell_id, component_slug)
+);
+
+CREATE TABLE spell_class (
+    spell_id uuid REFERENCES spell(spell_id) ON DELETE CASCADE,
+    class_id uuid REFERENCES character_class(class_id) ON DELETE CASCADE,
+    PRIMARY KEY(spell_id, class_id)
+);
+
+CREATE TABLE spell_subclass (
+    spell_id uuid REFERENCES spell(spell_id) ON DELETE CASCADE,
+    subclass_id uuid REFERENCES subclass(subclass_id) ON DELETE CASCADE,
+    raw_text TEXT,
+    PRIMARY KEY(spell_id, subclass_id)
+);
+
+CREATE TABLE creature_type (
+    creature_type_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE character_size (
+    character_size_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE species (
+    species_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    creature_type_id uuid REFERENCES creature_type(creature_type_id),
+    description TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE species_size_option (
+    species_id uuid REFERENCES species(species_id) ON DELETE CASCADE,
+    character_size_id uuid REFERENCES character_size(character_size_id),
+    PRIMARY KEY(species_id, character_size_id)
+);
+
+CREATE TABLE species_speed (
+    species_speed_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    species_id uuid REFERENCES species(species_id) ON DELETE CASCADE,
+    speed_type_slug TEXT NOT NULL,
+    amount_ft INT,
+    raw_text TEXT
+);
+
+CREATE TABLE species_trait (
+    species_trait_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    species_id uuid REFERENCES species(species_id) ON DELETE CASCADE,
+    slug TEXT NOT NULL,
+    sort_order INT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    UNIQUE(species_id, slug)
+);
+
+CREATE TABLE species_trait_effect (
+    species_trait_effect_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    species_trait_id uuid REFERENCES species_trait(species_trait_id) ON DELETE CASCADE,
+    effect_type TEXT NOT NULL,
+    damage_type_id uuid REFERENCES damage_type(damage_type_id),
+    spell_id uuid REFERENCES spell(spell_id),
+    range_ft INT
+);
+
+CREATE TABLE magic_item_type (
+    magic_item_type_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT
+);
+
+CREATE TABLE magic_item_rarity (
+    magic_item_rarity_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    sort_order INT
+);
+
+CREATE TABLE magic_item (
+    magic_item_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    name_en TEXT,
+    magic_item_type_id uuid REFERENCES magic_item_type(magic_item_type_id),
+    type_restriction_raw TEXT,
+    rarity_id uuid REFERENCES magic_item_rarity(magic_item_rarity_id),
+    variable_rarity BOOLEAN NOT NULL DEFAULT FALSE,
+    attunement_required BOOLEAN NOT NULL DEFAULT FALSE,
+    attunement_requirement TEXT,
+    cost_money_value_id uuid REFERENCES money_value(money_value_id),
+    description TEXT,
+    embedded_tables_detected BOOLEAN NOT NULL DEFAULT FALSE,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE magic_item_allowed_equipment (
+    magic_item_id uuid REFERENCES magic_item(magic_item_id) ON DELETE CASCADE,
+    equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
+    raw_text TEXT,
+    PRIMARY KEY(magic_item_id, equipment_item_id)
+);
+
+CREATE TABLE class_progression_column (
+    class_progression_column_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    class_id uuid NOT NULL REFERENCES character_class(class_id) ON DELETE CASCADE,
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    sort_order INT NOT NULL,
+    UNIQUE(class_id, slug)
+);
+
+CREATE TABLE class_progression_value (
+    class_id uuid REFERENCES character_class(class_id) ON DELETE CASCADE,
+    class_level INT NOT NULL CHECK (class_level BETWEEN 1 AND 20),
+    class_progression_column_id uuid REFERENCES class_progression_column(class_progression_column_id) ON DELETE CASCADE,
+    value_raw TEXT,
+    value_numeric INT,
+    PRIMARY KEY(class_id, class_level, class_progression_column_id)
+);
+
+CREATE TABLE class_feature (
+    class_feature_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    class_id uuid NOT NULL REFERENCES character_class(class_id) ON DELETE CASCADE,
+    subclass_id uuid REFERENCES subclass(subclass_id),
+    slug TEXT NOT NULL,
+    level INT,
+    sort_order INT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE random_table (
+    random_table_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    mod_id uuid REFERENCES mod_package(mod_id),
+    source_id uuid REFERENCES source_book(source_id),
+    slug TEXT NOT NULL,
+    name_ru TEXT NOT NULL,
+    dice TEXT,
+    url TEXT,
+    UNIQUE(mod_id, slug)
+);
+
+CREATE TABLE random_table_entry (
+    random_table_entry_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    random_table_id uuid NOT NULL REFERENCES random_table(random_table_id) ON DELETE CASCADE,
+    range_start INT,
+    range_end INT,
+    display_range TEXT NOT NULL,
+    result_text TEXT NOT NULL,
+    linked_equipment_item_id uuid REFERENCES equipment_item(equipment_item_id),
+    linked_magic_item_id uuid REFERENCES magic_item(magic_item_id)
+);
+
+CREATE TABLE spell_scroll_crafting_rule (
+    spell_scroll_crafting_rule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    spell_level INT NOT NULL CHECK (spell_level BETWEEN 0 AND 9),
+    time_days INT NOT NULL,
+    cost_money_value_id uuid REFERENCES money_value(money_value_id)
+);
+
+CREATE TABLE import_warning (
+    import_warning_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_slug TEXT,
+    entity_kind TEXT,
+    entity_slug TEXT,
+    warning_code TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_content_equipment_item_kind ON equipment_item(kind);
+CREATE INDEX idx_content_spell_level_school ON spell(level, school_id);
+CREATE INDEX idx_content_magic_item_type_rarity ON magic_item(magic_item_type_id, rarity_id);
+CREATE INDEX idx_content_background_name_ru ON background USING gin (to_tsvector('russian', name_ru));
+CREATE INDEX idx_content_equipment_name_ru ON equipment_item USING gin (to_tsvector('russian', name_ru));
+CREATE INDEX idx_content_spell_name_ru ON spell USING gin (to_tsvector('russian', name_ru));
+CREATE UNIQUE INDEX uq_class_feature_base_slug ON class_feature (class_id, slug) WHERE subclass_id IS NULL;
+CREATE UNIQUE INDEX uq_class_feature_subclass_slug ON class_feature (subclass_id, slug) WHERE subclass_id IS NOT NULL;
+]]></sql>
+        <rollback>
+            <sql>
+DROP TABLE IF EXISTS
+    import_warning, spell_scroll_crafting_rule, random_table_entry, random_table,
+    class_feature, class_progression_value, class_progression_column,
+    magic_item_allowed_equipment, magic_item, magic_item_rarity, magic_item_type,
+    species_trait_effect, species_trait, species_speed, species_size_option, species,
+    character_size, creature_type, spell_subclass, spell_class, spell_component, spell,
+    subclass, character_class, spell_school,
+    background_equipment_entry, background_equipment_option, background_equipment_choice_group,
+    background_language_proficiency, background_tool_proficiency, background_skill_proficiency,
+    background_ability_option, background_feat_option, background,
+    feat_section, feat_prerequisite, feat, feat_category,
+    armor_stat, weapon_item_property, weapon_stat, weapon_mastery, weapon_property,
+    equipment_item, equipment_category, dice_formula, damage_type, skill, ability_score,
+    money_value, currency, mod_package, source_book
+CASCADE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -16,4 +16,5 @@ public class StatTypeResponse {
     private String name;
     private String description;
     private Boolean isDefault;
+    private Boolean deleted;
 }

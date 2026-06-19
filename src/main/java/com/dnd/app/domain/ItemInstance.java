@@ -1,6 +1,5 @@
 package com.dnd.app.domain;
 
-import com.dnd.app.domain.enums.EquipmentSlot;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -47,8 +46,8 @@ public class ItemInstance {
     @Builder.Default
     private Boolean isUnique = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_id")
     private EquipmentSlot slot;
 
     @Column(columnDefinition = "text")

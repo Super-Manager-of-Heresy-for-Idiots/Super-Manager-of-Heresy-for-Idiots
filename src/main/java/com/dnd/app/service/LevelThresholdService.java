@@ -28,6 +28,19 @@ public class LevelThresholdService {
             475000   // Level 20
     };
 
+    /**
+     * Total XP required to be at the given total level. Equals the threshold to reach
+     * that level: a character with exactly this much XP is ready to level up into it but
+     * not beyond. Used when a character is created at level 1 but should be able to climb
+     * to a requested target level via the level-up mechanic.
+     */
+    public long experienceForLevel(int level) {
+        if (level < 1 || level > 20) {
+            throw new IllegalArgumentException("Level must be between 1 and 20");
+        }
+        return XP_THRESHOLDS[level - 1];
+    }
+
     public boolean isReadyToLevelUp(long experience, int currentTotalLevel) {
         if (currentTotalLevel >= 20) {
             return false;

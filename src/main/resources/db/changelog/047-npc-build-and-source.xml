@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Extend campaign_npcs so an NPC can be authored in one of two mutually
+      exclusive ways (source_type):
+
+        * CLASS_BASED   -> race_id + class_id + level (required), plus a free,
+                           progression-independent set of abilities (text) and
+                           spells (campaign_npc_spells). No "full build"
+                           validation, unlike player characters.
+        * MONSTER_BASED -> source_monster_id, restricted at the service layer to
+                           a monster owned by this campaign or by a homebrew
+                           package attached to it.
+
+      All new columns are NULLABLE so pre-existing free-form NPCs keep working
+      (source_type IS NULL => legacy free-form NPC). Postgres-only.
+    -->
+
+    <changeSet id="047-01-npc-build-and-source-columns" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE campaign_npcs
+                ADD COLUMN source_type       varchar(20) NULL,
+                ADD COLUMN race_id           uuid        NULL REFERENCES character_races(id),
+                ADD COLUMN class_id          uuid        NULL REFERENCES character_classes(id),
+                ADD COLUMN level             integer     NULL,
+                ADD COLUMN abilities         text        NULL,
+                ADD COLUMN source_monster_id uuid        NULL REFERENCES monsters(id);
+
+            CREATE INDEX idx_npc_race_id           ON campaign_npcs (race_id);
+            CREATE INDEX idx_npc_class_id          ON campaign_npcs (class_id);
+            CREATE INDEX idx_npc_source_monster_id ON campaign_npcs (source_monster_id);
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="047-02-npc-spells-join" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE campaign_npc_spells (
+                npc_id   uuid NOT NULL REFERENCES campaign_npcs(id) ON DELETE CASCADE,
+                spell_id uuid NOT NULL REFERENCES spells(id),
+                PRIMARY KEY (npc_id, spell_id)
+            );
+            CREATE INDEX idx_npc_spells_spell_id ON campaign_npc_spells (spell_id);
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

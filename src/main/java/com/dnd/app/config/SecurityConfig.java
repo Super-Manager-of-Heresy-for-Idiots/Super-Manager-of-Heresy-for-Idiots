@@ -67,7 +67,8 @@ public class SecurityConfig {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register",
+                                "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Seed the 10 bestiary dictionaries via staging tables + loadData.
+      CSV column order (per SEED_NOTES §G): code,name_rusloc,name_engloc (+book_code for sources).
+      Each changeSet: create all-text staging table, loadData, INSERT..SELECT (system rows,
+      homebrew_id NULL) with WHERE NOT EXISTS guard, drop staging.
+    -->
+
+    <changeSet id="041-seed-creature-types" author="bestiary">
+        <sql>CREATE TABLE seed_stg_creature_types (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/creature_types.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_creature_types" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO creature_types (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_creature_types s
+            WHERE NOT EXISTS (SELECT 1 FROM creature_types c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_creature_types;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-alignments" author="bestiary">
+        <sql>CREATE TABLE seed_stg_alignments (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/alignments.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_alignments" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO alignments (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_alignments s
+            WHERE NOT EXISTS (SELECT 1 FROM alignments c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_alignments;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-languages" author="bestiary">
+        <sql>CREATE TABLE seed_stg_languages (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/languages.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_languages" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO languages (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_languages s
+            WHERE NOT EXISTS (SELECT 1 FROM languages c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_languages;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-sense-types" author="bestiary">
+        <sql>CREATE TABLE seed_stg_sense_types (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/sense_types.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_sense_types" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO sense_types (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_sense_types s
+            WHERE NOT EXISTS (SELECT 1 FROM sense_types c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_sense_types;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-movement-types" author="bestiary">
+        <sql>CREATE TABLE seed_stg_movement_types (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/movement_types.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_movement_types" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO movement_types (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_movement_types s
+            WHERE NOT EXISTS (SELECT 1 FROM movement_types c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_movement_types;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-habitats" author="bestiary">
+        <sql>CREATE TABLE seed_stg_habitats (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/habitats.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_habitats" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO habitats (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_habitats s
+            WHERE NOT EXISTS (SELECT 1 FROM habitats c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_habitats;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-treasure-tags" author="bestiary">
+        <sql>CREATE TABLE seed_stg_treasure_tags (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/treasure_tags.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_treasure_tags" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO treasure_tags (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_treasure_tags s
+            WHERE NOT EXISTS (SELECT 1 FROM treasure_tags c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_treasure_tags;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-bestiary-conditions" author="bestiary">
+        <sql>CREATE TABLE seed_stg_bestiary_conditions (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/bestiary_conditions.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_bestiary_conditions" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO bestiary_conditions (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_bestiary_conditions s
+            WHERE NOT EXISTS (SELECT 1 FROM bestiary_conditions c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_bestiary_conditions;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-monster-gear-items" author="bestiary">
+        <sql>CREATE TABLE seed_stg_monster_gear_items (code text, name_rusloc text, name_engloc text);</sql>
+        <loadData file="bestiary/monster_gear_items.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_monster_gear_items" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_gear_items (code, name_rusloc, name_engloc)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, '')
+            FROM seed_stg_monster_gear_items s
+            WHERE NOT EXISTS (SELECT 1 FROM monster_gear_items c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_monster_gear_items;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="041-seed-sources" author="bestiary">
+        <sql>CREATE TABLE seed_stg_sources (code text, name_rusloc text, name_engloc text, book_code text);</sql>
+        <loadData file="bestiary/sources.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_sources" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="code" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+            <column name="book_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO sources (code, name_rusloc, name_engloc, book_code)
+            SELECT s.code, s.name_rusloc, NULLIF(s.name_engloc, ''), NULLIF(s.book_code, '')
+            FROM seed_stg_sources s
+            WHERE NOT EXISTS (SELECT 1 FROM sources c WHERE c.code = s.code AND c.homebrew_id IS NULL);
+            DROP TABLE seed_stg_sources;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

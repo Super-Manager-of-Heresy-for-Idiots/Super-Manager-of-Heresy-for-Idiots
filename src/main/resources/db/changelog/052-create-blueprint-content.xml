@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Blueprint homebrew (mirror of campaign_homebrew, composite key) -->
+    <changeSet id="052-create-blueprint-homebrew" author="dnd-app">
+        <createTable tableName="blueprint_homebrew">
+            <column name="blueprint_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_bh_blueprint"
+                             references="campaign_blueprints(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="package_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_bh_package"
+                             references="homebrew_packages(id)"/>
+            </column>
+            <column name="pinned_version" type="int"/>
+        </createTable>
+        <addPrimaryKey tableName="blueprint_homebrew" columnNames="blueprint_id, package_id"
+                       constraintName="pk_blueprint_homebrew"/>
+    </changeSet>
+
+    <!-- Blueprint NPCs (mirror of campaign_npcs) -->
+    <changeSet id="052-create-blueprint-npcs" author="dnd-app">
+        <createTable tableName="blueprint_npcs">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="blueprint_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_bnpc_blueprint"
+                             references="campaign_blueprints(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_visible_to_players" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="public_description" type="text"/>
+            <column name="private_description" type="text"/>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bnpc_created_by" references="users(id)"/>
+            </column>
+            <column name="source_type" type="varchar(20)"/>
+            <column name="race_id" type="uuid">
+                <constraints foreignKeyName="fk_bnpc_race" references="character_races(id)"/>
+            </column>
+            <column name="class_id" type="uuid">
+                <constraints foreignKeyName="fk_bnpc_class" references="character_classes(id)"/>
+            </column>
+            <column name="level" type="int"/>
+            <column name="abilities" type="text"/>
+            <column name="source_monster_id" type="uuid">
+                <constraints foreignKeyName="fk_bnpc_monster" references="monsters(id)"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="blueprint_npcs" indexName="idx_bnpc_blueprint_id">
+            <column name="blueprint_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="052-create-blueprint-npc-spells" author="dnd-app">
+        <createTable tableName="blueprint_npc_spells">
+            <column name="npc_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bnpcs_npc"
+                             references="blueprint_npcs(id)" deleteCascade="true"/>
+            </column>
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bnpcs_spell" references="spells(id)"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="blueprint_npc_spells" columnNames="npc_id, spell_id"
+                       constraintName="pk_blueprint_npc_spells"/>
+    </changeSet>
+
+    <!-- Blueprint quests (mirror of campaign_quests) -->
+    <changeSet id="052-create-blueprint-quests" author="dnd-app">
+        <createTable tableName="blueprint_quests">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="blueprint_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_bquest_blueprint"
+                             references="campaign_blueprints(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="title" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="status" type="varchar(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_visible_to_players" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bquest_created_by" references="users(id)"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="blueprint_quests" indexName="idx_bquest_blueprint_id">
+            <column name="blueprint_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="052-create-blueprint-quest-rewards" author="dnd-app">
+        <createTable tableName="blueprint_quest_rewards">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="quest_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bqr_quest"
+                             references="blueprint_quests(id)" deleteCascade="true"/>
+            </column>
+            <column name="item_template_id" type="uuid">
+                <constraints foreignKeyName="fk_bqr_item_template" references="item_templates(id)"/>
+            </column>
+            <column name="quantity" type="int" defaultValueNumeric="1"/>
+            <column name="currency_type_id" type="uuid">
+                <constraints foreignKeyName="fk_bqr_currency" references="currency_types(id)"/>
+            </column>
+            <column name="currency_amount" type="numeric(15,2)"/>
+            <column name="xp_amount" type="int"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Blueprint locations (mirror of campaign_locations) -->
+    <changeSet id="052-create-blueprint-locations" author="dnd-app">
+        <createTable tableName="blueprint_locations">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="blueprint_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_bloc_blueprint"
+                             references="campaign_blueprints(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="is_visible_to_players" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_bloc_created_by" references="users(id)"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="blueprint_locations" indexName="idx_bloc_blueprint_id">
+            <column name="blueprint_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

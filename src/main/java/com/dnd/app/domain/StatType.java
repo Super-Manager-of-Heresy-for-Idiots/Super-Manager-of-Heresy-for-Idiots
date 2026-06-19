@@ -6,7 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "stat_types")
+@Table(name = "ability_score")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,17 +16,17 @@ public class StatType {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ability_score_id")
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String name;
+    @Column(nullable = false, columnDefinition = "text")
+    private String slug;
 
-    @Column(columnDefinition = "text")
-    private String description;
+    @Column(name = "name_ru", nullable = false, columnDefinition = "text")
+    private String nameRu;
 
-    @Column(name = "is_default", nullable = false)
-    @Builder.Default
-    private Boolean isDefault = false;
+    @Column(name = "name_en", nullable = false, columnDefinition = "text")
+    private String nameEn;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")

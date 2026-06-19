@@ -3,9 +3,7 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.AdminService;
-import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
-import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,8 +25,6 @@ public class AdminController {
 
     private final AdminService adminService;
     private final HomebrewAdminService homebrewAdminService;
-    private final HomebrewAuthoringService authoringService;
-    private final RaceService raceService;
     private final Executor controllerTaskExecutor;
 
     // --- Stat Types ---
@@ -40,36 +36,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
-    @PostMapping("/stat-types")
-    public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> createStatType(
-            @Valid @RequestBody CreateStatTypeRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createStatType(request), "Характеристика создана")),
-                controllerTaskExecutor);
-    }
-
     @GetMapping("/stat-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> getStatType(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
                 ResponseEntity.ok(ApiResponse.ok(adminService.getStatType(id))),
                 controllerTaskExecutor);
-    }
-
-    @PutMapping("/stat-types/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> updateStatType(
-            @PathVariable UUID id, @Valid @RequestBody CreateStatTypeRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateStatType(id, request), "Характеристика обновлена")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/stat-types/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteStatType(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() -> {
-            adminService.deleteStatType(id);
-            return ResponseEntity.ok(ApiResponse.ok(null, "Характеристика удалена"));
-        }, controllerTaskExecutor);
     }
 
     // --- Item Types ---
@@ -113,172 +84,10 @@ public class AdminController {
         }, controllerTaskExecutor);
     }
 
-    // --- Character Classes ---
+    // Character class CRUD lives entirely in ClassAuthoringController on the new content model.
 
-    @GetMapping("/character-classes")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassResponse>>>> listClasses() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.listCharacterClasses())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/character-classes")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterClassResponse>>> createClass(
-            @Valid @RequestBody CreateCharacterClassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createCharacterClass(request), "Класс персонажа создан")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/character-classes/rich")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> createClassRich(
-            @Valid @RequestBody CreateHomebrewClassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(authoringService.createStandardCharacterClassRich(request), "Класс и награды уровней созданы")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/character-classes/import-json")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> importClassJson(
-            @Valid @RequestBody CreateHomebrewClassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(authoringService.createStandardCharacterClassRich(request), "Класс импортирован из JSON")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/character-classes/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterClassResponse>>> getClass(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.getCharacterClass(id))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/character-classes/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterClassResponse>>> updateClass(
-            @PathVariable UUID id, @Valid @RequestBody CreateCharacterClassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterClass(id, request), "Класс персонажа обновлен")),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/character-classes/{id}/rich")
-    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewClassCreationResponse>>> updateClassRich(
-            @PathVariable UUID id, @Valid @RequestBody CreateHomebrewClassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(authoringService.updateStandardCharacterClassRich(id, request), "Класс и награды уровней обновлены")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/character-classes/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteClass(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() -> {
-            adminService.deleteCharacterClass(id);
-            return ResponseEntity.ok(ApiResponse.ok(null, "Класс персонажа удален"));
-        }, controllerTaskExecutor);
-    }
-
-    // --- Character Races ---
-
-    @GetMapping("/character-races")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceResponse>>>> listRaces() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.listCharacterRaces())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/character-races")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> createRace(
-            @Valid @RequestBody CreateCharacterRaceRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createCharacterRace(request), "Раса персонажа создана")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> getRace(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.getCharacterRace(id))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> updateRace(
-            @PathVariable UUID id, @Valid @RequestBody CreateCharacterRaceRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterRace(id, request), "Раса персонажа обновлена")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> deleteRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            RaceResponse disabledRace = raceService.softDeleteSystemRace(id, auth.getName());
-            if (disabledRace != null) {
-                return ResponseEntity.ok(ApiResponse.ok(disabledRace, "Race disabled"));
-            }
-            return ResponseEntity.ok(ApiResponse.ok(null, "Раса персонажа удалена"));
-        }, controllerTaskExecutor);
-    }
-
-    @GetMapping("/races")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<RaceListItemResponse>>>> listRichRaces() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.listAdminRaces())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> createRichRace(
-            @Valid @RequestBody RaceCreateRequest request,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(raceService.createSystemRace(request, auth.getName()), "System race created")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> getRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.getRace(id, auth.getName()))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> updateRichRace(
-            @PathVariable UUID id,
-            @Valid @RequestBody RaceUpdateRequest request,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.updateSystemRace(id, request, auth.getName()), "System race updated")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races/{id}/enable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> enableRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, true, auth.getName()), "System race enabled")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races/{id}/disable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> disableRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, false, auth.getName()), "System race disabled")),
-                controllerTaskExecutor);
-    }
+    // Legacy character-race / race admin CRUD removed in S5 — species are authored on the
+    // new content model; homebrew species attach via SpeciesContentValidator ("SPECIES").
 
     // --- Skills ---
 
@@ -338,46 +147,7 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
-    // --- Subclasses ---
-
-    @GetMapping("/subclasses")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<SubclassResponse>>>> listSubclasses() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.listSubclasses())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/subclasses")
-    public CompletableFuture<ResponseEntity<ApiResponse<SubclassResponse>>> createSubclass(
-            @Valid @RequestBody CreateSubclassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createSubclass(request), "Подкласс создан")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/subclasses/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<SubclassResponse>>> getSubclass(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.getSubclass(id))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/subclasses/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<SubclassResponse>>> updateSubclass(
-            @PathVariable UUID id, @Valid @RequestBody CreateSubclassRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateSubclass(id, request), "Подкласс обновлен")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/subclasses/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteSubclass(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() -> {
-            adminService.deleteSubclass(id);
-            return ResponseEntity.ok(ApiResponse.ok(null, "Подкласс удален"));
-        }, controllerTaskExecutor);
-    }
+    // Subclass CRUD lives entirely in ClassAuthoringController on the new content model.
 
     // --- Feats ---
 
@@ -420,33 +190,8 @@ public class AdminController {
         }, controllerTaskExecutor);
     }
 
-    // --- Class Level Rewards ---
-
-    @GetMapping("/classes/{classId}/level-rewards")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<ClassLevelRewardResponse>>>> listClassLevelRewards(
-            @PathVariable UUID classId) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.listClassLevelRewards(classId))),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/classes/{classId}/level-rewards")
-    public CompletableFuture<ResponseEntity<ApiResponse<ClassLevelRewardResponse>>> createClassLevelReward(
-            @PathVariable UUID classId, @Valid @RequestBody CreateClassLevelRewardRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createClassLevelReward(classId, request), "Награда за уровень создана")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/classes/{classId}/level-rewards/{rewardEntryId}")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteClassLevelReward(
-            @PathVariable UUID classId, @PathVariable UUID rewardEntryId) {
-        return CompletableFuture.supplyAsync(() -> {
-            adminService.deleteClassLevelReward(classId, rewardEntryId);
-            return ResponseEntity.ok(ApiResponse.ok(null, "Награда за уровень удалена"));
-        }, controllerTaskExecutor);
-    }
+    // Legacy class level-rewards endpoints removed — rewards are authored on the new content
+    // model via the class-builder (ClassAuthoringController reward groups/options/grants).
 
     // --- Backgrounds ---
 

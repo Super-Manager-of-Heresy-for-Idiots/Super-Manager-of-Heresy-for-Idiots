@@ -1,0 +1,611 @@
+[
+  {
+    "slug": "trinkets-d100",
+    "source_slug": "next-dnd-su-2024-ru",
+    "name_ru": "Безделушки [Trinkets]",
+    "dice": "1d100",
+    "url": "https://next.dnd.su/inventory/trinkets",
+    "entries": [
+      {
+        "range_start": 1,
+        "range_end": 1,
+        "display_range": "01",
+        "result_text": "Мумифицированная ладонь гоблина"
+      },
+      {
+        "range_start": 2,
+        "range_end": 2,
+        "display_range": "02",
+        "result_text": "Кристалл, едва различимо светящийся в лунном свете"
+      },
+      {
+        "range_start": 3,
+        "range_end": 3,
+        "display_range": "03",
+        "result_text": "Золотая монета, отчеканенная в неведомой стране"
+      },
+      {
+        "range_start": 4,
+        "range_end": 4,
+        "display_range": "04",
+        "result_text": "Дневник, написанный на неизвестном вам языке"
+      },
+      {
+        "range_start": 5,
+        "range_end": 5,
+        "display_range": "05",
+        "result_text": "Латунное кольцо, которое никогда не тускнеет"
+      },
+      {
+        "range_start": 6,
+        "range_end": 6,
+        "display_range": "06",
+        "result_text": "Старая шахматная фигура из стекла"
+      },
+      {
+        "range_start": 7,
+        "range_end": 7,
+        "display_range": "07",
+        "result_text": "Пара игральных костей, на которых вместо шестёрок нарисованы черепа"
+      },
+      {
+        "range_start": 8,
+        "range_end": 8,
+        "display_range": "08",
+        "result_text": "Идол жуткого существа. Тому, кто спит рядом с ней, снятся кошмары"
+      },
+      {
+        "range_start": 9,
+        "range_end": 9,
+        "display_range": "09",
+        "result_text": "Локон чьих-то волос"
+      },
+      {
+        "range_start": 10,
+        "range_end": 10,
+        "display_range": "10",
+        "result_text": "Документ на земельный надел в неизвестном вам государстве"
+      },
+      {
+        "range_start": 11,
+        "range_end": 11,
+        "display_range": "11",
+        "result_text": "Брусок из неизвестного материала весом в 1 унцию"
+      },
+      {
+        "range_start": 12,
+        "range_end": 12,
+        "display_range": "12",
+        "result_text": "Тряпичная куколка, истыканная иголками"
+      },
+      {
+        "range_start": 13,
+        "range_end": 13,
+        "display_range": "13",
+        "result_text": "Зуб неизвестного зверя"
+      },
+      {
+        "range_start": 14,
+        "range_end": 14,
+        "display_range": "14",
+        "result_text": "Здоровенная чешуйка — похоже, драконья"
+      },
+      {
+        "range_start": 15,
+        "range_end": 15,
+        "display_range": "15",
+        "result_text": "Ярко-зелёное перо"
+      },
+      {
+        "range_start": 16,
+        "range_end": 16,
+        "display_range": "16",
+        "result_text": "Старая гадальная карта с картинкой, похожей на вас"
+      },
+      {
+        "range_start": 17,
+        "range_end": 17,
+        "display_range": "17",
+        "result_text": "Стеклянный шар, в котором клубится дым"
+      },
+      {
+        "range_start": 18,
+        "range_end": 18,
+        "display_range": "18",
+        "result_text": "Яйцо весом в фунт с ярко-красной скорлупой"
+      },
+      {
+        "range_start": 19,
+        "range_end": 19,
+        "display_range": "19",
+        "result_text": "Трубка, которая выдувает пузыри"
+      },
+      {
+        "range_start": 20,
+        "range_end": 20,
+        "display_range": "20",
+        "result_text": "Стеклянный сосуд, в котором заспиртован странный кусок плоти"
+      },
+      {
+        "range_start": 21,
+        "range_end": 21,
+        "display_range": "21",
+        "result_text": "Маленькая гномья шарманка, играющая песню, которая напоминает вам о детстве"
+      },
+      {
+        "range_start": 22,
+        "range_end": 22,
+        "display_range": "22",
+        "result_text": "Деревянная статуэтка самодовольного полурослика"
+      },
+      {
+        "range_start": 23,
+        "range_end": 23,
+        "display_range": "23",
+        "result_text": "Латунный шар, покрытый странными рунами"
+      },
+      {
+        "range_start": 24,
+        "range_end": 24,
+        "display_range": "24",
+        "result_text": "Разноцветный каменный диск"
+      },
+      {
+        "range_start": 25,
+        "range_end": 25,
+        "display_range": "25",
+        "result_text": "Серебряная безделушка в виде ворона"
+      },
+      {
+        "range_start": 26,
+        "range_end": 26,
+        "display_range": "26",
+        "result_text": "Мешочек с сорока семью зубами (один из них гнилой)"
+      },
+      {
+        "range_start": 27,
+        "range_end": 27,
+        "display_range": "27",
+        "result_text": "Всегда тёплый на ощупь кусок обсидиана"
+      },
+      {
+        "range_start": 28,
+        "range_end": 28,
+        "display_range": "28",
+        "result_text": "Коготь дракона на кожаном шнурке"
+      },
+      {
+        "range_start": 29,
+        "range_end": 29,
+        "display_range": "29",
+        "result_text": "Пара старых носков"
+      },
+      {
+        "range_start": 30,
+        "range_end": 30,
+        "display_range": "30",
+        "result_text": "Чистая книга, на страницах которой не получается писать ни чернилами, ни мелом, ни углём, ни иными средствами"
+      },
+      {
+        "range_start": 31,
+        "range_end": 31,
+        "display_range": "31",
+        "result_text": "Серебряный значок в форме пятиконечной звезды"
+      },
+      {
+        "range_start": 32,
+        "range_end": 32,
+        "display_range": "32",
+        "result_text": "Нож, принадлежавший родственнику"
+      },
+      {
+        "range_start": 33,
+        "range_end": 33,
+        "display_range": "33",
+        "result_text": "Стеклянный флакон, полный обрезками ногтей"
+      },
+      {
+        "range_start": 34,
+        "range_end": 34,
+        "display_range": "34",
+        "result_text": "Прямоугольный металлический предмет c двумя чашечками на одном конце. Искрит, если намочить"
+      },
+      {
+        "range_start": 35,
+        "range_end": 35,
+        "display_range": "35",
+        "result_text": "Белая, расшитая блестками перчатка на руку человека"
+      },
+      {
+        "range_start": 36,
+        "range_end": 36,
+        "display_range": "36",
+        "result_text": "Жилет с сотней крошечных карманов"
+      },
+      {
+        "range_start": 37,
+        "range_end": 37,
+        "display_range": "37",
+        "result_text": "Невесомый камень"
+      },
+      {
+        "range_start": 38,
+        "range_end": 38,
+        "display_range": "38",
+        "result_text": "Набросок портрета гоблина"
+      },
+      {
+        "range_start": 39,
+        "range_end": 39,
+        "display_range": "39",
+        "result_text": "Пустой стеклянный флакон, пахнущий духами"
+      },
+      {
+        "range_start": 40,
+        "range_end": 40,
+        "display_range": "40",
+        "result_text": "Самоцвет, который всем, кроме вас, кажется куском угля"
+      },
+      {
+        "range_start": 41,
+        "range_end": 41,
+        "display_range": "41",
+        "result_text": "Обрывок старого знамени"
+      },
+      {
+        "range_start": 42,
+        "range_end": 42,
+        "display_range": "42",
+        "result_text": "Знак отличия погибшего легионера"
+      },
+      {
+        "range_start": 43,
+        "range_end": 43,
+        "display_range": "43",
+        "result_text": "Серебряный колокольчик без язычка"
+      },
+      {
+        "range_start": 44,
+        "range_end": 44,
+        "display_range": "44",
+        "result_text": "Заводная канарейка внутри лампы"
+      },
+      {
+        "range_start": 45,
+        "range_end": 45,
+        "display_range": "45",
+        "result_text": "Миниатюрный сундук, вырезанный будто у него множество ножек на дне"
+      },
+      {
+        "range_start": 46,
+        "range_end": 46,
+        "display_range": "46",
+        "result_text": "Мертвый спрайт в прозрачной стеклянной бутылке"
+      },
+      {
+        "range_start": 47,
+        "range_end": 47,
+        "display_range": "47",
+        "result_text": "Металлическая банка без отверстий. Судя по звукам, внутри жидкость, песок, пауки или битое стекло (на ваш выбор)"
+      },
+      {
+        "range_start": 48,
+        "range_end": 48,
+        "display_range": "48",
+        "result_text": "Наполненный водой стеклянный шар, в котором плавает заводная рыбка"
+      },
+      {
+        "range_start": 49,
+        "range_end": 49,
+        "display_range": "49",
+        "result_text": "Серебряная ложка с выгравированной на ручке буквой «М»"
+      },
+      {
+        "range_start": 50,
+        "range_end": 50,
+        "display_range": "50",
+        "result_text": "Свисток из дерева золотистого цвета"
+      },
+      {
+        "range_start": 51,
+        "range_end": 51,
+        "display_range": "51",
+        "result_text": "Мертвый жук-скарабей размером с ладонь"
+      },
+      {
+        "range_start": 52,
+        "range_end": 52,
+        "display_range": "52",
+        "result_text": "Два игрушечных солдатика, один без головы"
+      },
+      {
+        "range_start": 53,
+        "range_end": 53,
+        "display_range": "53",
+        "result_text": "Коробочка с пуговицами разных размеров"
+      },
+      {
+        "range_start": 54,
+        "range_end": 54,
+        "display_range": "54",
+        "result_text": "Свеча, которая не зажигается"
+      },
+      {
+        "range_start": 55,
+        "range_end": 55,
+        "display_range": "55",
+        "result_text": "Маленькая клетка без дверей"
+      },
+      {
+        "range_start": 56,
+        "range_end": 56,
+        "display_range": "56",
+        "result_text": "Старый ключ"
+      },
+      {
+        "range_start": 57,
+        "range_end": 57,
+        "display_range": "57",
+        "result_text": "Нечитаемая карта сокровищ"
+      },
+      {
+        "range_start": 58,
+        "range_end": 58,
+        "display_range": "58",
+        "result_text": "Рукоять сломанного меча"
+      },
+      {
+        "range_start": 59,
+        "range_end": 59,
+        "display_range": "59",
+        "result_text": "Кроличья лапка"
+      },
+      {
+        "range_start": 60,
+        "range_end": 60,
+        "display_range": "60",
+        "result_text": "Стеклянный глаз"
+      },
+      {
+        "range_start": 61,
+        "range_end": 61,
+        "display_range": "61",
+        "result_text": "Камея с уродливым лицом"
+      },
+      {
+        "range_start": 62,
+        "range_end": 62,
+        "display_range": "62",
+        "result_text": "Серебряный череп размером с монету"
+      },
+      {
+        "range_start": 63,
+        "range_end": 63,
+        "display_range": "63",
+        "result_text": "Алебастровая маска"
+      },
+      {
+        "range_start": 64,
+        "range_end": 64,
+        "display_range": "64",
+        "result_text": "Пирамидка липкого чёрного дурно пахнущего благовония"
+      },
+      {
+        "range_start": 65,
+        "range_end": 65,
+        "display_range": "65",
+        "result_text": "Ночной колпак, в котором вы видите чудесные сны"
+      },
+      {
+        "range_start": 66,
+        "range_end": 66,
+        "display_range": "66",
+        "result_text": "Один костяной калтроп"
+      },
+      {
+        "range_start": 67,
+        "range_end": 67,
+        "display_range": "67",
+        "result_text": "Золотой монокль без линзы"
+      },
+      {
+        "range_start": 68,
+        "range_end": 68,
+        "display_range": "68",
+        "result_text": "Дюймовый куб, каждая грань своего цвета"
+      },
+      {
+        "range_start": 69,
+        "range_end": 69,
+        "display_range": "69",
+        "result_text": "Хрустальная дверная ручка"
+      },
+      {
+        "range_start": 70,
+        "range_end": 70,
+        "display_range": "70",
+        "result_text": "Пакетик розовой пыли"
+      },
+      {
+        "range_start": 71,
+        "range_end": 71,
+        "display_range": "71",
+        "result_text": "Два листа пергамента с фрагментом нотной записи прекрасной песни"
+      },
+      {
+        "range_start": 72,
+        "range_end": 72,
+        "display_range": "72",
+        "result_text": "Серебряная серьга-слезинка с настоящей слезинкой"
+      },
+      {
+        "range_start": 73,
+        "range_end": 73,
+        "display_range": "73",
+        "result_text": "Яичная скорлупа, расписанная жуткими сценами страдания людей"
+      },
+      {
+        "range_start": 74,
+        "range_end": 74,
+        "display_range": "74",
+        "result_text": "Веер, на экране которого изображён сонный кот"
+      },
+      {
+        "range_start": 75,
+        "range_end": 75,
+        "display_range": "75",
+        "result_text": "Набор костяных трубок"
+      },
+      {
+        "range_start": 76,
+        "range_end": 76,
+        "display_range": "76",
+        "result_text": "Четырёхлистный клевер, вложенный в книгу о манерах и этикете"
+      },
+      {
+        "range_start": 77,
+        "range_end": 77,
+        "display_range": "77",
+        "result_text": "Лист пергамента с чертежом сложного механизма"
+      },
+      {
+        "range_start": 78,
+        "range_end": 78,
+        "display_range": "78",
+        "result_text": "Изукрашенные ножны, которые не подходят ни к одному клинку"
+      },
+      {
+        "range_start": 79,
+        "range_end": 79,
+        "display_range": "79",
+        "result_text": "Приглашение на вечеринку, где произошло убийство"
+      },
+      {
+        "range_start": 80,
+        "range_end": 80,
+        "display_range": "80",
+        "result_text": "Бронзовый пентакль с выгравированной в центре крысиной головой"
+      },
+      {
+        "range_start": 81,
+        "range_end": 81,
+        "display_range": "81",
+        "result_text": "Пурпурный платок с вышитым именем архимага"
+      },
+      {
+        "range_start": 82,
+        "range_end": 82,
+        "display_range": "82",
+        "result_text": "Половина схемы храма, замка или иного здания"
+      },
+      {
+        "range_start": 83,
+        "range_end": 83,
+        "display_range": "83",
+        "result_text": "Сложенная ткань, разворачивающаяся в стильную фуражку"
+      },
+      {
+        "range_start": 84,
+        "range_end": 84,
+        "display_range": "84",
+        "result_text": "Квитанция о вкладе в банк очень далёкого города"
+      },
+      {
+        "range_start": 85,
+        "range_end": 85,
+        "display_range": "85",
+        "result_text": "Дневник с семью отсутствующими страницами"
+      },
+      {
+        "range_start": 86,
+        "range_end": 86,
+        "display_range": "86",
+        "result_text": "Пустая серебряная табакерка с надписью “Грёзы” на крышке"
+      },
+      {
+        "range_start": 87,
+        "range_end": 87,
+        "display_range": "87",
+        "result_text": "Железный священный символ неизвестного божества"
+      },
+      {
+        "range_start": 88,
+        "range_end": 88,
+        "display_range": "88",
+        "result_text": "Книга о взлёте и падении легендарного героя без последней главы"
+      },
+      {
+        "range_start": 89,
+        "range_end": 89,
+        "display_range": "89",
+        "result_text": "Пузырёк драконьей крови"
+      },
+      {
+        "range_start": 90,
+        "range_end": 90,
+        "display_range": "90",
+        "result_text": "Древняя стрела эльфийской работы"
+      },
+      {
+        "range_start": 91,
+        "range_end": 91,
+        "display_range": "91",
+        "result_text": "Негнущаяся игла"
+      },
+      {
+        "range_start": 92,
+        "range_end": 92,
+        "display_range": "92",
+        "result_text": "Изукрашенная брошь дварфийской работы"
+      },
+      {
+        "range_start": 93,
+        "range_end": 93,
+        "display_range": "93",
+        "result_text": "Пустая винная бутыль с красивой этикеткой: Винодельня Винного Волшебника, Настойка “Красный Дракон”, 331422-В."
+      },
+      {
+        "range_start": 94,
+        "range_end": 94,
+        "display_range": "94",
+        "result_text": "Мозаичная плитка с разноцветной глазурованной поверхностью"
+      },
+      {
+        "range_start": 95,
+        "range_end": 95,
+        "display_range": "95",
+        "result_text": "Окаменевшая мышь"
+      },
+      {
+        "range_start": 96,
+        "range_end": 96,
+        "display_range": "96",
+        "result_text": "Чёрный пиратский флаг с черепом и костями дракона"
+      },
+      {
+        "range_start": 97,
+        "range_end": 97,
+        "display_range": "97",
+        "result_text": "Крохотный заводной краб или паук, двигающийся, когда на него не смотрят"
+      },
+      {
+        "range_start": 98,
+        "range_end": 98,
+        "display_range": "98",
+        "result_text": "Стеклянная банка жира с этикеткой “Грифоний жир”"
+      },
+      {
+        "range_start": 99,
+        "range_end": 99,
+        "display_range": "99",
+        "result_text": "Деревянная коробка с керамическим дном, в ней живой червь с головами на обоих концах тела"
+      },
+      {
+        "range_start": 100,
+        "range_end": 100,
+        "display_range": "100",
+        "result_text": "Металлическая урна с прахом героя"
+      }
+    ]
+  }
+]

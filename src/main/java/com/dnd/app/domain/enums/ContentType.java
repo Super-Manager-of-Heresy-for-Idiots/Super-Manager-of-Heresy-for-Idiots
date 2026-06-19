@@ -7,6 +7,7 @@ public enum ContentType {
     FEAT,
     SUBCLASS,
     RACE,
+    SPECIES,
     STAT_TYPE,
     BUFF_DEBUFF,
     ENCHANTMENT_TYPE,
@@ -15,5 +16,6 @@ public enum ContentType {
     ITEM_TEMPLATE,
     BACKGROUND,
     SPELL,
-    PROFICIENCY_SKILL
+    PROFICIENCY_SKILL,
+    MONSTER
 }

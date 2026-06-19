@@ -52,8 +52,9 @@ public class PlayerCharacter {
     private Integer tempHp = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_id", nullable = false)
-    private CharacterRace race;
+    @JoinColumn(name = "race_id", nullable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private com.dnd.app.domain.content.Species race;
 
     @Column(name = "selected_lineage_id")
     private UUID selectedLineageId;
@@ -68,6 +69,12 @@ public class PlayerCharacter {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
     private Campaign campaign;
+
+    // Set when this character is a pre-built template attached to a blueprint.
+    // Invariant (enforced in service): blueprint and campaign cannot both be set.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "blueprint_id")
+    private CampaignBlueprint blueprint;
 
     @OneToMany(mappedBy = "character", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     @Builder.Default
@@ -85,11 +92,20 @@ public class PlayerCharacter {
     @Builder.Default
     private List<ItemInstance> itemInstances = new ArrayList<>();
 
+    @Column(name = "player_name", length = 100)
+    private String playerName;
+
+    @Column(name = "proficiencies", columnDefinition = "text")
+    private String proficiencies;
+
+    @Column(name = "equipment", columnDefinition = "text")
+    private String equipment;
+
     @Column(length = 40)
     private String alignment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "background_id")
+    @JoinColumn(name = "background_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Background background;
 
     @Column(name = "avatar_url", columnDefinition = "text")

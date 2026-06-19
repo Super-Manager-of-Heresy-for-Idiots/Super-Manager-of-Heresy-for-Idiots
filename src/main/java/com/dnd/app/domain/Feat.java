@@ -1,15 +1,17 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.content.FeatCategory;
+import com.dnd.app.domain.content.FeatPrerequisite;
+import com.dnd.app.domain.content.FeatSection;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "feats")
+@Table(name = "feat")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,26 +21,48 @@ public class Feat {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "feat_id")
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String name;
+    @Column(name = "mod_id")
+    private UUID modId;
+
+    @Column(name = "source_id")
+    private UUID sourceId;
+
+    @Column(nullable = false, columnDefinition = "text")
+    private String slug;
+
+    @Column(name = "name_ru", nullable = false, columnDefinition = "text")
+    private String nameRu;
+
+    @Column(name = "name_en", columnDefinition = "text")
+    private String nameEn;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private FeatCategory category;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean repeatable = false;
 
     @Column(columnDefinition = "text")
     private String description;
 
     @Column(columnDefinition = "text")
-    private String prerequisites;
+    private String url;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    @OneToMany(mappedBy = "feat", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<FeatPrerequisite> prerequisites = new ArrayList<>();
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    @OneToMany(mappedBy = "feat", fetch = FetchType.LAZY)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<FeatSection> sections = new ArrayList<>();
 }

@@ -1,18 +1,22 @@
 package com.dnd.app.service.homebrew;
 
+import com.dnd.app.domain.DamageType;
+import com.dnd.app.domain.EquipmentSlot;
 import com.dnd.app.domain.HomebrewContentItem;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.ItemType;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.ContentType;
-import com.dnd.app.domain.enums.EquipmentSlot;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.service.ContentDictionaryResolver;
 import com.dnd.app.dto.request.CreateItemTypeRequest;
 import com.dnd.app.dto.response.HomebrewDetailResponse;
 import com.dnd.app.exception.AccessDeniedException;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.repository.*;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,13 +42,14 @@ class HomebrewAuthoringServiceTest {
     @Mock private TagService tagService;
     @Mock private HomebrewContentValidatorRegistry validatorRegistry;
     @Mock private ItemTypeRepository itemTypeRepository;
-    @Mock private CharacterClassRepository classRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private FeatRepository featRepository;
+    @Mock private ContentDictionaryResolver contentDictionaryResolver;
 
     @InjectMocks private HomebrewAuthoringService service;
 
     @Test
+    @DisplayName("Мастер создаёт тип предмета в своём DRAFT-пакете")
     void gameMasterCreatesItemTypeInOwnDraftPackage() {
         UUID gmId = UUID.randomUUID();
         UUID packageId = UUID.randomUUID();
@@ -52,9 +57,13 @@ class HomebrewAuthoringServiceTest {
         User gm = user(gmId, "gm", Role.GAME_MASTER);
         HomebrewPackage pkg = homebrewPackage(packageId, gm, HomebrewStatus.DRAFT);
 
+        EquipmentSlot mainHand = EquipmentSlot.builder().code("MAIN_HAND").build();
         when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
         when(packageRepository.findById(packageId)).thenReturn(Optional.of(pkg));
         when(itemTypeRepository.existsByName("Scoped Sword")).thenReturn(false);
+        when(contentDictionaryResolver.resolveEquipmentSlot("MAIN_HAND", pkg)).thenReturn(mainHand);
+        when(contentDictionaryResolver.resolveDamageType("SLASHING", pkg))
+                .thenReturn(DamageType.builder().slug("slashing").build());
         when(itemTypeRepository.save(any(ItemType.class))).thenAnswer(invocation -> {
             ItemType itemType = invocation.getArgument(0);
             itemType.setId(itemTypeId);
@@ -81,7 +90,7 @@ class HomebrewAuthoringServiceTest {
         verify(itemTypeRepository).save(itemTypeCaptor.capture());
         ItemType savedItemType = itemTypeCaptor.getValue();
         assertSame(pkg, savedItemType.getHomebrew());
-        assertEquals(EquipmentSlot.MAIN_HAND, savedItemType.getSlot());
+        assertSame(mainHand, savedItemType.getSlot());
 
         ArgumentCaptor<HomebrewContentItem> contentItemCaptor = ArgumentCaptor.forClass(HomebrewContentItem.class);
         verify(contentItemRepository).save(contentItemCaptor.capture());
@@ -92,6 +101,7 @@ class HomebrewAuthoringServiceTest {
     }
 
     @Test
+    @DisplayName("Мастер не может создавать контент в чужом пакете")
     void gameMasterCannotCreateContentInForeignPackage() {
         User gm = user(UUID.randomUUID(), "gm", Role.GAME_MASTER);
         User other = user(UUID.randomUUID(), "other", Role.GAME_MASTER);
@@ -113,6 +123,7 @@ class HomebrewAuthoringServiceTest {
     }
 
     @Test
+    @DisplayName("Мастер не может создавать контент в опубликованном пакете")
     void gameMasterCannotCreateContentInPublishedPackage() {
         User gm = user(UUID.randomUUID(), "gm", Role.GAME_MASTER);
         UUID packageId = UUID.randomUUID();
@@ -126,7 +137,7 @@ class HomebrewAuthoringServiceTest {
                 .slot("MAIN_HAND")
                 .build();
 
-        assertThrows(DuplicateResourceException.class,
+        assertThrows(BadRequestException.class,
                 () -> service.createPackageItemType(packageId, request, "gm"));
         verify(itemTypeRepository, never()).save(any());
         verify(contentItemRepository, never()).save(any());

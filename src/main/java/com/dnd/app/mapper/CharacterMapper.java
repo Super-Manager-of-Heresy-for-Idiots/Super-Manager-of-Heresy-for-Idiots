@@ -18,6 +18,7 @@ public abstract class CharacterMapper {
     @Mapping(target = "ownerUsername", source = "owner.username")
     @Mapping(target = "campaignId", source = "campaign.id")
     @Mapping(target = "status", expression = "java(character.getStatus() != null ? character.getStatus().name() : null)")
+    @Mapping(target = "race", ignore = true)
     @Mapping(target = "raceSnapshot", ignore = true)
     @Mapping(target = "background", ignore = true)
     @Mapping(target = "savingThrowProficiencyStatNames", ignore = true)
@@ -28,13 +29,13 @@ public abstract class CharacterMapper {
     public abstract CharacterResponse toResponse(PlayerCharacter character);
 
     @Mapping(target = "classId", source = "classId")
-    @Mapping(target = "className", expression = "java(ccl.getCharacterClass() != null ? ccl.getCharacterClass().getName() : null)")
+    @Mapping(target = "className", expression = "java(ccl.getCharacterClass() != null ? ccl.getCharacterClass().getNameRu() : null)")
     public abstract ClassLevelResponse toClassLevelResponse(CharacterClassLevel ccl);
 
     public abstract List<ClassLevelResponse> toClassLevelResponseList(List<CharacterClassLevel> levels);
 
     @Mapping(target = "statTypeId", source = "statType.id")
-    @Mapping(target = "statTypeName", source = "statType.name")
+    @Mapping(target = "statTypeName", expression = "java(stat.getStatType() != null ? stat.getStatType().getNameRu() : null)")
     @Mapping(target = "effectiveValue", ignore = true)
     @Mapping(target = "activeModifiers", ignore = true)
     public abstract CharacterStatResponse toStatResponse(CharacterStat stat);

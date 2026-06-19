@@ -69,6 +69,28 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("UNPROCESSABLE_ENTITY", ex.getMessage()));
     }
 
+    @ExceptionHandler(ClassValidationException.class)
+    public ResponseEntity<ApiResponse<java.util.List<com.dnd.app.dto.content.ValidationIssue>>> handleClassValidation(
+            ClassValidationException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", ex, request,
+                "issues=" + ex.getIssues().size());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.<java.util.List<com.dnd.app.dto.content.ValidationIssue>>builder()
+                        .success(false)
+                        .error("VALIDATION_ERROR")
+                        .message(ex.getMessage())
+                        .data(ex.getIssues())
+                        .build());
+    }
+
+    @ExceptionHandler(PreconditionFailedException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePreconditionFailed(
+            PreconditionFailedException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.PRECONDITION_FAILED, "PRECONDITION_FAILED", ex, request, null);
+        return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED)
+                .body(ApiResponse.error("PRECONDITION_FAILED", ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", ex, request, "bad credentials");

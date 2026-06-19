@@ -2,53 +2,45 @@ package com.dnd.app.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.TaskDecorator;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
- * Executor used by the REST controllers to run request handling asynchronously
- * (controllers return {@link java.util.concurrent.CompletableFuture}).
+ * Async execution strategy for the application.
  *
- * <p>The {@link TaskDecorator} copies the current {@link SecurityContext} from the
- * request thread onto the worker thread so that anything relying on
- * {@link SecurityContextHolder} keeps working off the request thread.
+ * <p>The application runs on Java 21 virtual threads ({@code spring.threads.virtual.enabled=true}),
+ * so a blocking call (JDBC, etc.) parks the virtual thread and frees its carrier platform
+ * thread for other work. There is therefore no need — and it is actively harmful — to funnel
+ * requests through a fixed-size platform-thread pool: that would cap concurrency at the pool
+ * size regardless of how many virtual threads the runtime could otherwise run.
+ *
+ * <p>{@link #controllerTaskExecutor()} is consequently backed by a
+ * {@code newVirtualThreadPerTaskExecutor()}: it is unbounded, spawns one cheap virtual thread
+ * per task, and lets concurrency scale with offered load. The real back-pressure ceiling for
+ * request handling is the JDBC connection pool (see HikariCP settings in application.yml), which
+ * is the correct place to bound work — not the thread layer.
+ *
+ * <p>Scaling across pods / resources: virtual-thread carriers default to
+ * {@code Runtime.availableProcessors()}, which honours container CPU limits, so each pod
+ * automatically scales its parallelism to the CPU it was granted. Memory is the practical
+ * bound on in-flight virtual threads; size pod memory and the DB pool together.
  */
 @Configuration
+@EnableAsync
 public class AsyncConfig {
 
-    @Bean
-    public Executor controllerTaskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(8);
-        executor.setMaxPoolSize(32);
-        executor.setQueueCapacity(200);
-        executor.setThreadNamePrefix("ctrl-async-");
-        executor.setTaskDecorator(new SecurityContextTaskDecorator());
-        executor.initialize();
-        return executor;
-    }
-
     /**
-     * Propagates the SecurityContext captured at submission time (the request
-     * thread) to the worker thread, restoring the previous context afterwards.
+     * Backs the {@code CompletableFuture} offloading in the controllers. Wrapped with
+     * {@link DelegatingSecurityContextExecutorService} so the Spring Security context of the
+     * request thread propagates to the worker thread (the global exception handler and any
+     * security-aware code keep working off-request-thread).
      */
-    static final class SecurityContextTaskDecorator implements TaskDecorator {
-        @Override
-        public Runnable decorate(Runnable runnable) {
-            SecurityContext context = SecurityContextHolder.getContext();
-            return () -> {
-                SecurityContext previous = SecurityContextHolder.getContext();
-                SecurityContextHolder.setContext(context);
-                try {
-                    runnable.run();
-                } finally {
-                    SecurityContextHolder.setContext(previous);
-                }
-            };
-        }
+    @Bean(destroyMethod = "shutdown")
+    public Executor controllerTaskExecutor() {
+        return new DelegatingSecurityContextExecutorService(
+                Executors.newVirtualThreadPerTaskExecutor());
     }
 }

@@ -31,9 +31,12 @@ public class QuestReward {
     private Integer quantity = 1;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "currency_type_id")
+    @JoinColumn(name = "currency_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private CurrencyType currencyType;
 
     @Column(name = "currency_amount", precision = 15, scale = 2)
     private java.math.BigDecimal currencyAmount;
+
+    @Column(name = "xp_amount")
+    private Integer xpAmount;
 }

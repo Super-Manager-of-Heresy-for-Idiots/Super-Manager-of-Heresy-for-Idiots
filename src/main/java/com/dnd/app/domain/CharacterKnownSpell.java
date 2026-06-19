@@ -24,6 +24,6 @@ public class CharacterKnownSpell {
     private PlayerCharacter character;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "spell_id", nullable = false)
+    @JoinColumn(name = "spell_id", nullable = false, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Spell spell;
 }

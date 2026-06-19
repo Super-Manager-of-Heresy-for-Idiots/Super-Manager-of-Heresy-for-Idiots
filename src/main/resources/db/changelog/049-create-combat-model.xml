@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Battles: campaign-scoped encounters with a shared, synchronised tracker -->
+    <changeSet id="049-create-battles" author="dnd-app">
+        <createTable tableName="battles">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_battle_campaign"
+                             references="campaigns(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="name" type="varchar(120)"/>
+            <column name="status" type="varchar(20)" defaultValue="ASSEMBLING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="override_xp" type="int"/>
+            <column name="round_number" type="int" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_turn_index" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="timestamp with time zone"/>
+            <column name="ended_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="battles"
+                baseColumnNames="created_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_battle_created_by"
+                onDelete="RESTRICT"/>
+
+        <createIndex tableName="battles" indexName="idx_battle_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Combatants: one row per monster instance / joined character -->
+    <changeSet id="049-create-battle-combatants" author="dnd-app">
+        <createTable tableName="battle_combatants">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="battle_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_combatant_battle"
+                             references="battles(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="combatant_type" type="varchar(12)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="monster_id" type="uuid"/>
+            <column name="character_id" type="uuid"/>
+            <column name="display_name" type="varchar(140)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="instance_index" type="int"/>
+            <column name="initiative" type="int"/>
+            <column name="initiative_roll" type="int"/>
+            <column name="dex_tiebreak" type="int"/>
+            <column name="turn_order" type="int"/>
+            <column name="current_hp" type="int"/>
+            <column name="max_hp" type="int"/>
+            <column name="added_by" type="uuid"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Monster row: keep the encounter intact if the monster template is deleted -->
+        <addForeignKeyConstraint
+                baseTableName="battle_combatants"
+                baseColumnNames="monster_id"
+                referencedTableName="monsters"
+                referencedColumnNames="id"
+                constraintName="fk_combatant_monster"
+                onDelete="CASCADE"/>
+
+        <!-- Character row: drop the combatant if the character is deleted -->
+        <addForeignKeyConstraint
+                baseTableName="battle_combatants"
+                baseColumnNames="character_id"
+                referencedTableName="characters"
+                referencedColumnNames="id"
+                constraintName="fk_combatant_character"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="battle_combatants"
+                baseColumnNames="added_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_combatant_added_by"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="battle_combatants" indexName="idx_combatant_battle_id">
+            <column name="battle_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

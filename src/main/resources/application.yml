@@ -4,6 +4,18 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:?DB username must be set}
     password: ${SPRING_DATASOURCE_PASSWORD:?DB password must be set}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: dndapp-pool
+      # Per-pod connection ceiling. With N pods the DB sees up to N * maximum-pool-size
+      # connections, so this MUST be sized against Postgres max_connections:
+      #   maximum-pool-size <= (max_connections - reserved) / expected_pod_count
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:10000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME_MS:1800000}
+      # 0 = disabled; set to e.g. 30000 in non-prod to surface leaked connections.
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_MS:0}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -20,6 +32,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  security:
+    filter:
+      # Exclude ASYNC: CompletableFuture controllers re-dispatch through the servlet ASYNC type where
+      # the JWT filter (OncePerRequestFilter) doesn't re-run, so security would 403 the empty context.
+      dispatcher-types: request,error
 
 server:
   port: 8080
@@ -33,13 +50,40 @@ springdoc:
 app:
   jwt:
     secret: ${JWT_SECRET:?JWT_SECRET must be provided (>= 32 bytes)}
+    # Access token TTL (short). The session stays alive far longer via silent refresh.
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    # Refresh token TTL (long). Max idle window before the user must log in again. 7d default.
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+    access-cookie-name: ${JWT_ACCESS_COOKIE:access_token}
+    refresh-cookie-name: ${JWT_REFRESH_COOKIE:refresh_token}
+    cookie:
+      # Set true in production (https). Must be false for local http dev or the browser drops the cookie.
+      secure: ${JWT_COOKIE_SECURE:false}
+      # Lax works when FE and API share a site (incl. localhost different ports / dev proxy).
+      # Use None (with secure=true) only if FE and API are on different registrable domains.
+      same-site: ${JWT_COOKIE_SAMESITE:Lax}
+      access-path: ${JWT_COOKIE_ACCESS_PATH:/}
+      # Refresh cookie is scoped so it is only sent to the refresh/logout endpoints.
+      refresh-path: ${JWT_COOKIE_REFRESH_PATH:/api/auth}
+      domain: ${JWT_COOKIE_DOMAIN:}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   ratelimit:
     login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
     register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
+  websocket:
+    endpoint:
+      # true = this node terminates client /ws connections (WS role / all-in-one).
+      # false = REST/publish-only role: no /ws, only publishes events to the relay.
+      enabled: ${APP_WEBSOCKET_ENDPOINT_ENABLED:true}
+    relay:
+      # false = in-memory SimpleBroker (single pod). true = external STOMP relay (multi-pod).
+      enabled: ${APP_WEBSOCKET_RELAY_ENABLED:false}
+      host: ${APP_WEBSOCKET_RELAY_HOST:localhost}
+      port: ${APP_WEBSOCKET_RELAY_PORT:61613}
+      login: ${APP_WEBSOCKET_RELAY_LOGIN:guest}
+      passcode: ${APP_WEBSOCKET_RELAY_PASSCODE:guest}
+      virtual-host: ${APP_WEBSOCKET_RELAY_VIRTUAL_HOST:/}
 
 management:
   endpoints:

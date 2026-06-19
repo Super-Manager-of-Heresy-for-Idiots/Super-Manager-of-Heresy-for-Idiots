@@ -10,6 +10,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.repository.GmSessionNoteRepository;
 import com.dnd.app.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("GmSessionNoteService: заметки ГМ и контроль доступа")
 class GmSessionNoteServiceTest {
 
     @Mock private GmSessionNoteRepository noteRepository;
@@ -75,6 +77,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("ГМ может просматривать список заметок")
     void listNotes_gmCanList() {
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gmUser));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
@@ -90,6 +93,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может просматривать заметки ГМ")
     void listNotes_playerCannotList() {
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(playerUser));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
@@ -103,6 +107,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("ГМ может создать заметку")
     void createNote_gmCanCreate() {
         CreateGmNoteRequest request = CreateGmNoteRequest.builder()
                 .title("Session 1")
@@ -126,6 +131,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может создать заметку ГМ")
     void createNote_playerCannotCreate() {
         CreateGmNoteRequest request = CreateGmNoteRequest.builder()
                 .title("Session 1")
@@ -144,6 +150,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("Игрок не может просматривать отдельную заметку")
     void getNote_playerCannotView() {
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(playerUser));
         when(noteRepository.findById(noteId)).thenReturn(Optional.of(note));
@@ -155,6 +162,7 @@ class GmSessionNoteServiceTest {
     }
 
     @Test
+    @DisplayName("ГМ может удалить заметку")
     void deleteNote_gmCanDelete() {
         when(userRepository.findByUsername("gm1")).thenReturn(Optional.of(gmUser));
         when(noteRepository.findById(noteId)).thenReturn(Optional.of(note));

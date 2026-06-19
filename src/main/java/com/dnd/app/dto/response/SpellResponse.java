@@ -15,6 +15,7 @@ import java.util.UUID;
 public class SpellResponse {
     private UUID id;
     private String name;
+    private String nameEn;
     private Integer level;
     private String school;
     private String description;

@@ -4,12 +4,12 @@ import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LoginRequest;
 import com.dnd.app.dto.request.RegisterRequest;
-import com.dnd.app.dto.response.AuthResponse;
 import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.security.JwtTokenProvider;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("AuthService: регистрация и вход")
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
@@ -40,6 +41,7 @@ class AuthServiceTest {
     @InjectMocks private AuthService authService;
 
     @Test
+    @DisplayName("Успешная регистрация нового пользователя")
     void register_success() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("testuser").email("test@test.com").password("password123").role("PLAYER").build();
@@ -59,6 +61,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Регистрация с занятым именем пользователя выбрасывает ошибку")
     void register_duplicateUsername_throws() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("taken").email("x@x.com").password("password123").role("PLAYER").build();
@@ -69,6 +72,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Регистрация с занятым email выбрасывает ошибку")
     void register_duplicateEmail_throws() {
         RegisterRequest request = RegisterRequest.builder()
                 .username("newuser").email("taken@x.com").password("password123").role("PLAYER").build();
@@ -79,27 +83,69 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Успешный вход возвращает access и refresh токены")
     void login_success() {
         LoginRequest request = LoginRequest.builder().username("user1").password("pass123").build();
         User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
-        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("jwt-token");
-        when(tokenProvider.getExpirationMs()).thenReturn(86400000L);
+        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken("user1", "PLAYER")).thenReturn("refresh-token");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
         UserResponse userResp = UserResponse.builder().username("user1").build();
         when(userMapper.toResponse(user)).thenReturn(userResp);
 
-        AuthResponse result = authService.login(request);
+        IssuedTokens result = authService.login(request);
 
-        assertEquals("jwt-token", result.getToken());
-        assertEquals(86400000L, result.getExpiresIn());
+        assertEquals("access-token", result.accessToken());
+        assertEquals("refresh-token", result.refreshToken());
+        assertEquals(3600000L, result.accessExpiresInMs());
+        assertEquals(604800000L, result.refreshExpiresInMs());
+        assertEquals("user1", result.user().getUsername());
     }
 
     @Test
+    @DisplayName("Вход с неверным паролем выбрасывает ошибку")
     void login_wrongPassword_throws() {
         LoginRequest request = LoginRequest.builder().username("user1").password("wrong").build();
         doThrow(new BadCredentialsException("Bad credentials"))
                 .when(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
 
         assertThrows(BadCredentialsException.class, () -> authService.login(request));
+    }
+
+    @Test
+    @DisplayName("Продление по валидному refresh-токену выдаёт новую пару токенов")
+    void refresh_validToken_rotatesTokens() {
+        User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
+        when(tokenProvider.isRefreshToken("old-refresh")).thenReturn(true);
+        when(tokenProvider.getUsernameFromToken("old-refresh")).thenReturn("user1");
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("new-access");
+        when(tokenProvider.generateRefreshToken("user1", "PLAYER")).thenReturn("new-refresh");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
+        when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().username("user1").build());
+
+        IssuedTokens result = authService.refresh("old-refresh");
+
+        assertEquals("new-access", result.accessToken());
+        assertEquals("new-refresh", result.refreshToken());
+    }
+
+    @Test
+    @DisplayName("Продление с отсутствующим refresh-токеном выбрасывает ошибку")
+    void refresh_nullToken_throws() {
+        assertThrows(BadCredentialsException.class, () -> authService.refresh(null));
+        verify(userRepository, never()).findByUsername(anyString());
+    }
+
+    @Test
+    @DisplayName("Продление по access-токену вместо refresh выбрасывает ошибку")
+    void refresh_nonRefreshToken_throws() {
+        when(tokenProvider.isRefreshToken("access-token")).thenReturn(false);
+
+        assertThrows(BadCredentialsException.class, () -> authService.refresh("access-token"));
+        verify(userRepository, never()).findByUsername(anyString());
     }
 }

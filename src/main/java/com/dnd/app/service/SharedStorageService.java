@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -56,7 +57,7 @@ public class SharedStorageService {
         campaignService.enforceMembershipOrAdmin(campaign, user);
 
         return sharedStorageRepository.findByCampaignId(campaignId).stream()
-                .map(this::toResponse)
+                .map(this::toResponseWithItems)
                 .toList();
     }
 
@@ -80,7 +81,7 @@ public class SharedStorageService {
     }
 
     @Transactional
-    public void addItemToStorage(UUID storageId, UUID instanceId, String username) {
+    public void addItemToStorage(UUID storageId, UUID instanceId, Integer quantity, String username) {
         User user = getUser(username);
         SharedStorage storage = findStorage(storageId);
         campaignService.enforceMembershipOrAdmin(storage.getCampaign(), user);
@@ -95,13 +96,68 @@ public class SharedStorageService {
                 || !instance.getOwnerCharacter().getCampaign().getId().equals(storage.getCampaign().getId())) {
             throw new BadRequestException("Item's owner character is not in the same campaign as this storage");
         }
-        if (user.getRole() != Role.ADMIN
+        boolean privileged = user.getRole() == Role.ADMIN
+                || campaignService.isGmInCampaign(storage.getCampaign().getId(), user.getId());
+        if (!privileged
                 && !instance.getOwnerCharacter().getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not own the character that has this item");
         }
 
         if (instance.getSlot() != null) {
             throw new BadRequestException("Cannot store an equipped item. Unequip it first.");
+        }
+
+        int moveQty = (quantity != null) ? quantity : instance.getQuantity();
+        if (moveQty <= 0) {
+            throw new BadRequestException("Quantity must be positive");
+        }
+        if (moveQty > instance.getQuantity()) {
+            throw new BadRequestException("Not enough items in the stack");
+        }
+
+        boolean mergeable = !Boolean.TRUE.equals(instance.getIsUnique());
+
+        if (moveQty < instance.getQuantity()) {
+            // Partial deposit: split the source stack, move only moveQty into storage
+            instance.setQuantity(instance.getQuantity() - moveQty);
+            itemInstanceRepository.save(instance);
+
+            if (mergeable) {
+                Optional<ItemInstance> existing = itemInstanceRepository
+                        .findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(storageId, instance.getTemplate().getId());
+                if (existing.isPresent()) {
+                    itemInstanceRepository.incrementQuantity(existing.get().getId(), moveQty);
+                    log.info("Item partially deposited (merged): instanceId={}, storageId={}, qty={}, by={}",
+                            instanceId, storageId, moveQty, username);
+                    return;
+                }
+            }
+
+            ItemInstance moved = ItemInstance.builder()
+                    .template(instance.getTemplate())
+                    .sharedStorage(storage)
+                    .quantity(moveQty)
+                    .customName(instance.getCustomName())
+                    .isUnique(instance.getIsUnique())
+                    .notes(instance.getNotes())
+                    .build();
+            itemInstanceRepository.save(moved);
+            log.info("Item partially deposited (split): instanceId={}, storageId={}, qty={}, by={}",
+                    instanceId, storageId, moveQty, username);
+            return;
+        }
+
+        // Whole stack: merge into an existing storage stack if possible, else move the instance
+        if (mergeable) {
+            Optional<ItemInstance> existing = itemInstanceRepository
+                    .findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(storageId, instance.getTemplate().getId());
+            if (existing.isPresent()) {
+                itemInstanceRepository.incrementQuantity(existing.get().getId(), instance.getQuantity());
+                itemInstanceRepository.delete(instance);
+                log.info("Item deposited (merged whole stack): instanceId={}, storageId={}, qty={}, by={}",
+                        instanceId, storageId, instance.getQuantity(), username);
+                return;
+            }
         }
 
         instance.setOwnerCharacter(null);
@@ -112,7 +168,7 @@ public class SharedStorageService {
     }
 
     @Transactional
-    public void takeItemFromStorage(UUID storageId, UUID instanceId, UUID characterId, String username) {
+    public void takeItemFromStorage(UUID storageId, UUID instanceId, UUID characterId, Integer quantity, String username) {
         User user = getUser(username);
         SharedStorage storage = findStorage(storageId);
         campaignService.enforceMembershipOrAdmin(storage.getCampaign(), user);
@@ -131,9 +187,64 @@ public class SharedStorageService {
             throw new BadRequestException("Target character is not in the same campaign as this storage");
         }
 
-        if (user.getRole() != Role.ADMIN
+        boolean privileged = user.getRole() == Role.ADMIN
+                || campaignService.isGmInCampaign(storage.getCampaign().getId(), user.getId());
+        if (!privileged
                 && !character.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not own this character");
+        }
+
+        int moveQty = (quantity != null) ? quantity : instance.getQuantity();
+        if (moveQty <= 0) {
+            throw new BadRequestException("Quantity must be positive");
+        }
+        if (moveQty > instance.getQuantity()) {
+            throw new BadRequestException("Not enough items in the stack");
+        }
+
+        boolean mergeable = !Boolean.TRUE.equals(instance.getIsUnique());
+
+        if (moveQty < instance.getQuantity()) {
+            // Partial take: split the storage stack, move only moveQty to the character
+            instance.setQuantity(instance.getQuantity() - moveQty);
+            itemInstanceRepository.save(instance);
+
+            if (mergeable) {
+                Optional<ItemInstance> existing = itemInstanceRepository
+                        .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, instance.getTemplate().getId());
+                if (existing.isPresent()) {
+                    itemInstanceRepository.incrementQuantity(existing.get().getId(), moveQty);
+                    log.info("Item partially taken (merged): instanceId={}, storageId={}, toCharacterId={}, qty={}, by={}",
+                            instanceId, storageId, characterId, moveQty, username);
+                    return;
+                }
+            }
+
+            ItemInstance moved = ItemInstance.builder()
+                    .template(instance.getTemplate())
+                    .ownerCharacter(character)
+                    .quantity(moveQty)
+                    .customName(instance.getCustomName())
+                    .isUnique(instance.getIsUnique())
+                    .notes(instance.getNotes())
+                    .build();
+            itemInstanceRepository.save(moved);
+            log.info("Item partially taken (split): instanceId={}, storageId={}, toCharacterId={}, qty={}, by={}",
+                    instanceId, storageId, characterId, moveQty, username);
+            return;
+        }
+
+        // Whole stack: merge into the character's existing stack if possible, else move the instance
+        if (mergeable) {
+            Optional<ItemInstance> existing = itemInstanceRepository
+                    .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, instance.getTemplate().getId());
+            if (existing.isPresent()) {
+                itemInstanceRepository.incrementQuantity(existing.get().getId(), instance.getQuantity());
+                itemInstanceRepository.delete(instance);
+                log.info("Item taken (merged whole stack): instanceId={}, storageId={}, toCharacterId={}, qty={}, by={}",
+                        instanceId, storageId, characterId, instance.getQuantity(), username);
+                return;
+            }
         }
 
         instance.setSharedStorage(null);
@@ -193,9 +304,9 @@ public class SharedStorageService {
                 .customName(instance.getCustomName())
                 .quantity(instance.getQuantity())
                 .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().name() : null)
+                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
                 .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().name() : null)
+                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getSlug() : null)
                 .build();
     }
 }

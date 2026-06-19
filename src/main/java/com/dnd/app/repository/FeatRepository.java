@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface FeatRepository extends JpaRepository<Feat, UUID> {
-    boolean existsByName(String name);
+    boolean existsByNameRu(String nameRu);
 
     List<Feat> findAllByHomebrewIsNull();
 

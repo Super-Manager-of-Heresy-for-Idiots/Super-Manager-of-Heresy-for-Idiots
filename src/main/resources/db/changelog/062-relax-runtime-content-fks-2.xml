@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Phase 10 (roadmap R6) continuation of 060. The remaining runtime FK columns
+      still physically reference the legacy plural tables (stat_types / currency_types
+      / spells / backgrounds). The runtime-data migration remaps these ids to the new
+      content tables (ability_score / currency / spell / background); a physical FK to
+      the legacy table would reject that UPDATE. Relax to NO_CONSTRAINT semantics now;
+      Phase 12 re-adds real FKs to the new model. Idempotent: drops only if present.
+      Bestiary is untouched.
+    -->
+    <changeSet id="062-01-relax-runtime-content-fks-2" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE character_stats
+    DROP CONSTRAINT IF EXISTS fk_cstat_type;
+
+ALTER TABLE character_wallets
+    DROP CONSTRAINT IF EXISTS fk_wallet_currency;
+
+ALTER TABLE wallet_transactions
+    DROP CONSTRAINT IF EXISTS fk_wallet_tx_currency;
+
+ALTER TABLE character_known_spells
+    DROP CONSTRAINT IF EXISTS fk_cks_spell;
+
+ALTER TABLE characters
+    DROP CONSTRAINT IF EXISTS fk_char_background;
+]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE character_stats
+    ADD CONSTRAINT fk_cstat_type FOREIGN KEY (stat_type_id) REFERENCES stat_types(id);
+
+ALTER TABLE character_wallets
+    ADD CONSTRAINT fk_wallet_currency FOREIGN KEY (currency_type_id) REFERENCES currency_types(id);
+
+ALTER TABLE wallet_transactions
+    ADD CONSTRAINT fk_wallet_tx_currency FOREIGN KEY (currency_type_id) REFERENCES currency_types(id);
+
+ALTER TABLE character_known_spells
+    ADD CONSTRAINT fk_cks_spell FOREIGN KEY (spell_id) REFERENCES spells(id);
+
+ALTER TABLE characters
+    ADD CONSTRAINT fk_char_background FOREIGN KEY (background_id) REFERENCES backgrounds(id);
+]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

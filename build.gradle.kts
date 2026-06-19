@@ -42,6 +42,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
+    // TCP client used by Spring's STOMP broker relay (multi-pod WebSocket)
+    implementation("io.projectreactor.netty:reactor-netty")
 
     implementation("org.liquibase:liquibase-core")
 
@@ -62,6 +67,8 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -69,4 +76,21 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Default `test` (and therefore check/build/bootJar) runs only fast tests, never the
+// Testcontainers integration suite. The IT classes are named *IT and excluded here.
+tasks.test {
+    filter { excludeTestsMatching("*IT") }
+}
+
+// On-demand integration tests against real infra (Postgres via Testcontainers, needs Docker).
+// Run explicitly with `gradlew integrationTest`; not wired into check/build/bootJar.
+tasks.register<Test>("integrationTest") {
+    description = "Integration tests against real infra via Testcontainers (requires Docker)."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter { includeTestsMatching("*IT") }
+    shouldRunAfter(tasks.test)
 }

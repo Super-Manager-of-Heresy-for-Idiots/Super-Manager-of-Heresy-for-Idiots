@@ -25,7 +25,7 @@ public class CharacterWallet {
     private PlayerCharacter character;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "currency_type_id", nullable = false)
+    @JoinColumn(name = "currency_type_id", nullable = false, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private CurrencyType currencyType;
 
     @Column(nullable = false, precision = 15, scale = 2)

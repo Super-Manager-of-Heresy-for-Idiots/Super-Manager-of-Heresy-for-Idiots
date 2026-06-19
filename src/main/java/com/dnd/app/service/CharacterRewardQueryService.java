@@ -1,20 +1,36 @@
 package com.dnd.app.service;
 
-import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.CharacterClassLevel;
+import com.dnd.app.domain.PlayerCharacter;
+import com.dnd.app.domain.User;
+import com.dnd.app.domain.content.CharacterRewardSelection;
+import com.dnd.app.domain.content.ClassLevelRewardGrant;
+import com.dnd.app.domain.content.ClassLevelRewardGroup;
+import com.dnd.app.domain.content.ClassLevelRewardOption;
+import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.dto.response.CharacterRewardsResponse;
-import com.dnd.app.dto.response.RewardDetailDto;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ResourceNotFoundException;
-import com.dnd.app.repository.*;
-import com.dnd.app.service.reward.RewardResolverRegistry;
+import com.dnd.app.repository.CharacterClassLevelRepository;
+import com.dnd.app.repository.CharacterRewardSelectionRepository;
+import com.dnd.app.repository.ContentCharacterClassRepository;
+import com.dnd.app.repository.PlayerCharacterRepository;
+import com.dnd.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
+/**
+ * Reads a character's acquired rewards from the new content reward-selection model
+ * ({@code character_reward_selection}). Only CHOICE selections are recorded; AUTO grants
+ * are applied deterministically at level-up and are not part of this view.
+ */
 @Service
 @RequiredArgsConstructor
 public class CharacterRewardQueryService {
@@ -22,8 +38,8 @@ public class CharacterRewardQueryService {
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
     private final CharacterClassLevelRepository classLevelRepository;
-    private final CharacterAcquiredRewardRepository acquiredRewardRepository;
-    private final RewardResolverRegistry rewardResolverRegistry;
+    private final CharacterRewardSelectionRepository selectionRepository;
+    private final ContentCharacterClassRepository contentClassRepository;
 
     @Transactional(readOnly = true)
     public CharacterRewardsResponse getCharacterRewards(UUID characterId, String username) {
@@ -32,43 +48,66 @@ public class CharacterRewardQueryService {
         enforceReadAccess(character, username);
 
         List<CharacterClassLevel> classLevels = classLevelRepository.findAllByCharacterId(characterId);
-        List<CharacterAcquiredReward> acquiredRewards = acquiredRewardRepository.findAllByCharacterId(characterId);
+        List<CharacterRewardSelection> selections = selectionRepository.findAllByCharacterId(characterId);
 
-        Map<UUID, List<CharacterAcquiredReward>> rewardsByClass = acquiredRewards.stream()
-                .collect(Collectors.groupingBy(ar -> ar.getClassLevelReward().getCharacterClass().getId()));
+        // Seed a breakdown per class the character has levels in.
+        Map<UUID, CharacterRewardsResponse.ClassBreakdown.ClassBreakdownBuilder> byClass = new LinkedHashMap<>();
+        Map<UUID, Map<String, List<CharacterRewardsResponse.AcquiredReward>>> rewardsByClass = new LinkedHashMap<>();
+        Map<UUID, CharacterRewardsResponse.SubclassInfo> subclassByClass = new LinkedHashMap<>();
+
+        for (CharacterClassLevel ccl : classLevels) {
+            UUID classId = ccl.getClassId();
+            byClass.computeIfAbsent(classId, id -> CharacterRewardsResponse.ClassBreakdown.builder()
+                    .classId(id)
+                    .className(resolveClassName(id))
+                    .classLevel(ccl.getClassLevel()));
+            rewardsByClass.computeIfAbsent(classId, id -> new LinkedHashMap<>());
+        }
+
+        for (CharacterRewardSelection sel : selections) {
+            ClassLevelRewardGroup group = sel.getRewardGroup();
+            ClassLevelRewardOption option = sel.getRewardOption();
+            if (group == null || option == null || group.getCharacterClass() == null) {
+                continue;
+            }
+            ContentCharacterClass clazz = group.getCharacterClass();
+            UUID classId = clazz.getId();
+
+            byClass.computeIfAbsent(classId, id -> CharacterRewardsResponse.ClassBreakdown.builder()
+                    .classId(id)
+                    .className(localized(clazz.getNameRu(), clazz.getNameEn()))
+                    .classLevel(null));
+            Map<String, List<CharacterRewardsResponse.AcquiredReward>> rewardsByType =
+                    rewardsByClass.computeIfAbsent(classId, id -> new LinkedHashMap<>());
+
+            String optionName = localized(option.getLabelRu(), option.getLabelEn());
+            CharacterRewardsResponse.AcquiredReward acquired = CharacterRewardsResponse.AcquiredReward.builder()
+                    .name(optionName)
+                    .acquiredAt(sel.getSelectedAt())
+                    .build();
+
+            List<ClassLevelRewardGrant> grants = option.getGrants();
+            if (grants == null || grants.isEmpty()) {
+                rewardsByType.computeIfAbsent("CHOICE", k -> new ArrayList<>()).add(acquired);
+            } else {
+                for (ClassLevelRewardGrant grant : grants) {
+                    String type = grant.getGrantType() != null ? grant.getGrantType() : "CHOICE";
+                    rewardsByType.computeIfAbsent(type, k -> new ArrayList<>()).add(acquired);
+                    if ("SUBCLASS".equalsIgnoreCase(type)) {
+                        subclassByClass.putIfAbsent(classId, CharacterRewardsResponse.SubclassInfo.builder()
+                                .name(optionName)
+                                .description(option.getDescription())
+                                .build());
+                    }
+                }
+            }
+        }
 
         List<CharacterRewardsResponse.ClassBreakdown> breakdown = new ArrayList<>();
-        for (CharacterClassLevel ccl : classLevels) {
-            CharacterClass cc = ccl.getCharacterClass();
-            List<CharacterAcquiredReward> classRewards = rewardsByClass.getOrDefault(cc.getId(), List.of());
-
-            CharacterRewardsResponse.SubclassInfo subclassInfo = null;
-            Map<String, List<CharacterRewardsResponse.AcquiredReward>> rewardsByType = new LinkedHashMap<>();
-
-            for (CharacterAcquiredReward ar : classRewards) {
-                ClassLevelReward clr = ar.getClassLevelReward();
-                RewardDetailDto detail = rewardResolverRegistry.resolve(clr.getRewardType(), clr.getRewardId());
-
-                if ("SUBCLASS".equals(clr.getRewardType())) {
-                    subclassInfo = CharacterRewardsResponse.SubclassInfo.builder()
-                            .name(detail.getName())
-                            .description(detail.getDescription())
-                            .build();
-                }
-
-                rewardsByType.computeIfAbsent(clr.getRewardType(), k -> new ArrayList<>())
-                        .add(CharacterRewardsResponse.AcquiredReward.builder()
-                                .name(detail.getName())
-                                .acquiredAt(ar.getAcquiredAt())
-                                .build());
-            }
-
-            breakdown.add(CharacterRewardsResponse.ClassBreakdown.builder()
-                    .classId(cc.getId())
-                    .className(cc.getName())
-                    .classLevel(ccl.getClassLevel())
-                    .subclass(subclassInfo)
-                    .rewardsByType(rewardsByType)
+        for (Map.Entry<UUID, CharacterRewardsResponse.ClassBreakdown.ClassBreakdownBuilder> entry : byClass.entrySet()) {
+            breakdown.add(entry.getValue()
+                    .subclass(subclassByClass.get(entry.getKey()))
+                    .rewardsByType(rewardsByClass.getOrDefault(entry.getKey(), Map.of()))
                     .build());
         }
 
@@ -77,6 +116,19 @@ public class CharacterRewardQueryService {
                 .totalLevel(character.getTotalLevel())
                 .classBreakdown(breakdown)
                 .build();
+    }
+
+    private String resolveClassName(UUID classId) {
+        return contentClassRepository.findById(classId)
+                .map(c -> localized(c.getNameRu(), c.getNameEn()))
+                .orElse(null);
+    }
+
+    private String localized(String ru, String en) {
+        if (ru != null && !ru.isBlank()) {
+            return ru;
+        }
+        return en;
     }
 
     private void enforceReadAccess(PlayerCharacter character, String username) {

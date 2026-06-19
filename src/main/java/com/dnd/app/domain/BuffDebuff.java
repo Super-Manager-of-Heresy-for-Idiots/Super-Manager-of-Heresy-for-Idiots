@@ -31,7 +31,7 @@ public class BuffDebuff {
     private String effectType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_stat_id")
+    @JoinColumn(name = "target_stat_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private StatType targetStat;
 
     @Column(name = "modifier_value")
@@ -54,4 +54,8 @@ public class BuffDebuff {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deprecated = false;
 }

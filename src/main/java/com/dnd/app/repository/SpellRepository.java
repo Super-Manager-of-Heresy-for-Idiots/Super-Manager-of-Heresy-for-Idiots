@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface SpellRepository extends JpaRepository<Spell, UUID> {
 
-    boolean existsByName(String name);
+    boolean existsByNameRu(String nameRu);
 
     List<Spell> findAllByHomebrewIsNull();
 
@@ -21,7 +21,7 @@ public interface SpellRepository extends JpaRepository<Spell, UUID> {
             SELECT s FROM Spell s
             WHERE (s.homebrew IS NULL OR s.homebrew.id IN :packageIds)
             AND (:level IS NULL OR s.level = :level)
-            AND (:school IS NULL OR s.school = :school)
+            AND (:school IS NULL OR s.school.slug = :school)
             """)
     List<Spell> findFiltered(@Param("packageIds") Set<UUID> packageIds,
                              @Param("level") Integer level,
@@ -31,7 +31,7 @@ public interface SpellRepository extends JpaRepository<Spell, UUID> {
             SELECT s FROM Spell s
             WHERE s.homebrew IS NULL
             AND (:level IS NULL OR s.level = :level)
-            AND (:school IS NULL OR s.school = :school)
+            AND (:school IS NULL OR s.school.slug = :school)
             """)
     List<Spell> findFilteredSystemOnly(@Param("level") Integer level,
                                        @Param("school") String school);

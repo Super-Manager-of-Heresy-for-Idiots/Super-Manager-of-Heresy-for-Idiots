@@ -25,26 +25,11 @@ import java.util.concurrent.Executor;
 public class CampaignCharacterController {
 
     private final CharacterService characterService;
-    private final CharacterWizardService characterWizardService;
     private final ItemInstanceService itemInstanceService;
     private final CharacterEffectService characterEffectService;
     private final WalletService walletService;
     private final CharacterResourceService characterResourceService;
     private final Executor controllerTaskExecutor;
-
-    // --- Full character creation (wizard) ---
-
-    @PostMapping("/full")
-    @Operation(summary = "Create a full 5e character via wizard")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> createFullCharacter(
-            @PathVariable UUID campaignId,
-            @Valid @RequestBody CreateFullCharacterRequest request, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            CharacterResponse character = characterWizardService.createFullCharacter(campaignId, request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(character, "Персонаж создан"));
-        }, controllerTaskExecutor);
-    }
 
     // --- Clone from template ---
 

@@ -74,9 +74,10 @@ public class SharedStorageController {
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> depositItem(
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId,
-            @PathVariable UUID instanceId, Authentication auth) {
+            @PathVariable UUID instanceId,
+            @RequestParam(required = false) Integer quantity, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            sharedStorageService.addItemToStorage(storageId, instanceId, auth.getName());
+            sharedStorageService.addItemToStorage(storageId, instanceId, quantity, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(null, "Item deposited"));
         }, controllerTaskExecutor);
     }
@@ -87,9 +88,10 @@ public class SharedStorageController {
             @PathVariable UUID campaignId,
             @PathVariable UUID storageId,
             @PathVariable UUID instanceId,
-            @PathVariable UUID characterId, Authentication auth) {
+            @PathVariable UUID characterId,
+            @RequestParam(required = false) Integer quantity, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            sharedStorageService.takeItemFromStorage(storageId, instanceId, characterId, auth.getName());
+            sharedStorageService.takeItemFromStorage(storageId, instanceId, characterId, quantity, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(null, "Item taken"));
         }, controllerTaskExecutor);
     }

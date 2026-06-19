@@ -3,6 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.ApplyEffectRequest;
 import com.dnd.app.dto.response.AbilityCheckResponse;
 import com.dnd.app.dto.response.CharacterActiveEffectResponse;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -28,6 +30,7 @@ public class CharacterEffectService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final CampaignMemberRepository campaignMemberRepository;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public CharacterActiveEffectResponse applyEffect(UUID campaignId, UUID characterId,
@@ -53,7 +56,10 @@ public class CharacterEffectService {
 
         log.info("Effect applied: effectId={}, characterId={}, buffDebuffId={}, by={}",
                 effect.getId(), characterId, request.getBuffDebuffId(), username);
-        return toResponse(effect);
+        CharacterActiveEffectResponse response = toResponse(effect);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BUFF_APPLIED, campaignId,
+                characterId, response, user.getId());
+        return response;
     }
 
     @Transactional
@@ -75,6 +81,8 @@ public class CharacterEffectService {
 
         characterActiveEffectRepository.delete(effect);
         log.info("Effect removed: effectId={}, characterId={}, by={}", effectId, characterId, username);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BUFF_REMOVED, campaignId,
+                characterId, Map.of("effectId", effectId), user.getId());
     }
 
     @Transactional(readOnly = true)
@@ -145,7 +153,7 @@ public class CharacterEffectService {
         String statName = character.getStats().stream()
                 .filter(s -> s.getStatType().getId().equals(statTypeId))
                 .findFirst()
-                .map(s -> s.getStatType().getName())
+                .map(s -> s.getStatType().getNameRu())
                 .orElse("Unknown");
 
         return AbilityCheckResponse.builder()
@@ -197,7 +205,7 @@ public class CharacterEffectService {
                 .isBuff(effect.getBuffDebuff().getIsBuff())
                 .modifierValue(effect.getBuffDebuff().getModifierValue())
                 .targetStatName(effect.getBuffDebuff().getTargetStat() != null
-                        ? effect.getBuffDebuff().getTargetStat().getName() : null)
+                        ? effect.getBuffDebuff().getTargetStat().getNameRu() : null)
                 .remainingRounds(effect.getRemainingRounds())
                 .appliedByUsername(effect.getAppliedBy().getUsername())
                 .appliedAt(effect.getAppliedAt())

@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Seed 601 monsters + 14 junctions + features/damages via staging tables + loadData.
+      Monster natural key = source_external_id (bigint). Dictionaries resolved by code.
+      Skills resolved by proficiency_skills.name (English). feature_damages resolved via a
+      temporary monster_features.seed_feature_key column (dropped at the end).
+      All NULLIF/::cast because staging columns are raw all-text.
+    -->
+
+    <!-- ============================== monsters ============================== -->
+    <changeSet id="042-seed-monsters" author="bestiary">
+        <sql><![CDATA[
+            CREATE TABLE seed_stg_monsters (
+                source_external_id text, slug text, name_rusloc text, name_engloc text,
+                alignment_code text, size text, size_secondary text, is_swarm text, swarm_size text,
+                armor_class text, armor_class_text text, initiative_bonus text, initiative_score text,
+                hp_average text, hp_dice_count text, hp_dice_sides text, hp_dice_modifier text, hp_formula text,
+                str_score text, dex_score text, con_score text, int_score text, wis_score text, cha_score text,
+                passive_perception text, telepathy_ft text, cr_rating text, cr_value text,
+                xp_base text, xp_lair text, proficiency_bonus text,
+                legendary_uses_base text, legendary_uses_lair text, legendary_text text, lore_text text,
+                campaign_id text, homebrew_id text
+            );
+        ]]></sql>
+        <loadData file="bestiary/monsters.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_monsters" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="source_external_id" type="STRING"/>
+            <column name="slug" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+            <column name="alignment_code" type="STRING"/>
+            <column name="size" type="STRING"/>
+            <column name="size_secondary" type="STRING"/>
+            <column name="is_swarm" type="STRING"/>
+            <column name="swarm_size" type="STRING"/>
+            <column name="armor_class" type="STRING"/>
+            <column name="armor_class_text" type="STRING"/>
+            <column name="initiative_bonus" type="STRING"/>
+            <column name="initiative_score" type="STRING"/>
+            <column name="hp_average" type="STRING"/>
+            <column name="hp_dice_count" type="STRING"/>
+            <column name="hp_dice_sides" type="STRING"/>
+            <column name="hp_dice_modifier" type="STRING"/>
+            <column name="hp_formula" type="STRING"/>
+            <column name="str_score" type="STRING"/>
+            <column name="dex_score" type="STRING"/>
+            <column name="con_score" type="STRING"/>
+            <column name="int_score" type="STRING"/>
+            <column name="wis_score" type="STRING"/>
+            <column name="cha_score" type="STRING"/>
+            <column name="passive_perception" type="STRING"/>
+            <column name="telepathy_ft" type="STRING"/>
+            <column name="cr_rating" type="STRING"/>
+            <column name="cr_value" type="STRING"/>
+            <column name="xp_base" type="STRING"/>
+            <column name="xp_lair" type="STRING"/>
+            <column name="proficiency_bonus" type="STRING"/>
+            <column name="legendary_uses_base" type="STRING"/>
+            <column name="legendary_uses_lair" type="STRING"/>
+            <column name="legendary_text" type="STRING"/>
+            <column name="lore_text" type="STRING"/>
+            <column name="campaign_id" type="STRING"/>
+            <column name="homebrew_id" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monsters (
+                source_external_id, slug, name_rusloc, name_engloc, alignment_id,
+                size, size_secondary, is_swarm, swarm_size,
+                armor_class, armor_class_text, initiative_bonus, initiative_score,
+                hp_average, hp_dice_count, hp_dice_sides, hp_dice_modifier, hp_formula,
+                str_score, dex_score, con_score, int_score, wis_score, cha_score,
+                passive_perception, telepathy_ft, cr_rating, cr_value,
+                xp_base, xp_lair, proficiency_bonus,
+                legendary_uses_base, legendary_uses_lair, legendary_text, lore_text,
+                campaign_id, homebrew_id
+            )
+            SELECT
+                NULLIF(s.source_external_id, '')::bigint,
+                s.slug,
+                s.name_rusloc,
+                NULLIF(s.name_engloc, ''),
+                (SELECT a.id FROM alignments a WHERE a.code = NULLIF(s.alignment_code, '') AND a.homebrew_id IS NULL),
+                s.size,
+                NULLIF(s.size_secondary, ''),
+                NULLIF(s.is_swarm, '')::boolean,
+                NULLIF(s.swarm_size, ''),
+                s.armor_class::smallint,
+                NULLIF(s.armor_class_text, ''),
+                NULLIF(s.initiative_bonus, '')::smallint,
+                NULLIF(s.initiative_score, '')::smallint,
+                NULLIF(s.hp_average, '')::int,
+                NULLIF(s.hp_dice_count, '')::smallint,
+                NULLIF(s.hp_dice_sides, '')::smallint,
+                NULLIF(s.hp_dice_modifier, '')::int,
+                NULLIF(s.hp_formula, ''),
+                s.str_score::smallint,
+                s.dex_score::smallint,
+                s.con_score::smallint,
+                s.int_score::smallint,
+                s.wis_score::smallint,
+                s.cha_score::smallint,
+                NULLIF(s.passive_perception, '')::smallint,
+                NULLIF(s.telepathy_ft, '')::int,
+                s.cr_rating,
+                s.cr_value::numeric(5,3),
+                NULLIF(s.xp_base, '')::int,
+                NULLIF(s.xp_lair, '')::int,
+                NULLIF(s.proficiency_bonus, '')::smallint,
+                NULLIF(s.legendary_uses_base, '')::smallint,
+                NULLIF(s.legendary_uses_lair, '')::smallint,
+                NULLIF(s.legendary_text, ''),
+                NULLIF(s.lore_text, ''),
+                NULLIF(s.campaign_id, '')::uuid,
+                NULLIF(s.homebrew_id, '')::uuid
+            FROM seed_stg_monsters s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monsters m WHERE m.source_external_id = NULLIF(s.source_external_id, '')::bigint
+            );
+            DROP TABLE seed_stg_monsters;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ========================= monster_creature_types ========================= -->
+    <changeSet id="042-seed-monster-creature-types" author="bestiary">
+        <sql>CREATE TABLE seed_stg_mct (monster_external_id text, creature_type_code text);</sql>
+        <loadData file="bestiary/monster_creature_types.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_mct" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="creature_type_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_creature_types (monster_id, creature_type_id)
+            SELECT m.id, ct.id
+            FROM seed_stg_mct s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN creature_types ct ON ct.code = s.creature_type_code AND ct.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_creature_types j WHERE j.monster_id = m.id AND j.creature_type_id = ct.id
+            );
+            DROP TABLE seed_stg_mct;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================== monster_speeds ============================== -->
+    <changeSet id="042-seed-monster-speeds" author="bestiary">
+        <sql>CREATE TABLE seed_stg_speeds (monster_external_id text, movement_type_code text, ft text, hover text);</sql>
+        <loadData file="bestiary/monster_speeds.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_speeds" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="movement_type_code" type="STRING"/>
+            <column name="ft" type="STRING"/>
+            <column name="hover" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_speeds (monster_id, movement_type_id, ft, hover)
+            SELECT m.id, mt.id, s.ft::int, NULLIF(s.hover, '')::boolean
+            FROM seed_stg_speeds s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN movement_types mt ON mt.code = s.movement_type_code AND mt.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_speeds j WHERE j.monster_id = m.id AND j.movement_type_id = mt.id
+            );
+            DROP TABLE seed_stg_speeds;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================== monster_senses ============================== -->
+    <changeSet id="042-seed-monster-senses" author="bestiary">
+        <sql>CREATE TABLE seed_stg_senses (monster_external_id text, sense_type_code text, ft text);</sql>
+        <loadData file="bestiary/monster_senses.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_senses" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="sense_type_code" type="STRING"/>
+            <column name="ft" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_senses (monster_id, sense_type_id, ft)
+            SELECT m.id, st.id, s.ft::int
+            FROM seed_stg_senses s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN sense_types st ON st.code = s.sense_type_code AND st.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_senses j WHERE j.monster_id = m.id AND j.sense_type_id = st.id
+            );
+            DROP TABLE seed_stg_senses;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================ monster_languages ============================ -->
+    <changeSet id="042-seed-monster-languages" author="bestiary">
+        <sql>CREATE TABLE seed_stg_langs (monster_external_id text, language_code text);</sql>
+        <loadData file="bestiary/monster_languages.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_langs" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="language_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_languages (monster_id, language_id)
+            SELECT m.id, l.id
+            FROM seed_stg_langs s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN languages l ON l.code = s.language_code AND l.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_languages j WHERE j.monster_id = m.id AND j.language_id = l.id
+            );
+            DROP TABLE seed_stg_langs;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ========================== monster_saving_throws ========================== -->
+    <changeSet id="042-seed-monster-saving-throws" author="bestiary">
+        <sql>CREATE TABLE seed_stg_saves (monster_external_id text, ability text, bonus text);</sql>
+        <loadData file="bestiary/monster_saving_throws.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_saves" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="ability" type="STRING"/>
+            <column name="bonus" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_saving_throws (monster_id, ability, bonus)
+            SELECT m.id, s.ability, s.bonus::smallint
+            FROM seed_stg_saves s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_saving_throws j WHERE j.monster_id = m.id AND j.ability = s.ability
+            );
+            DROP TABLE seed_stg_saves;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ======================= monster_skill_proficiencies ======================= -->
+    <changeSet id="042-seed-monster-skill-proficiencies" author="bestiary">
+        <sql>CREATE TABLE seed_stg_skills (monster_external_id text, skill_name text, bonus text);</sql>
+        <loadData file="bestiary/monster_skill_proficiencies.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_skills" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="skill_name" type="STRING"/>
+            <column name="bonus" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_skill_proficiencies (monster_id, proficiency_skill_id, bonus)
+            SELECT m.id, ps.id, s.bonus::smallint
+            FROM seed_stg_skills s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN proficiency_skills ps ON ps.name = s.skill_name
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_skill_proficiencies j WHERE j.monster_id = m.id AND j.proficiency_skill_id = ps.id
+            );
+            DROP TABLE seed_stg_skills;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ======================== monster_damage_resistances ======================== -->
+    <changeSet id="042-seed-monster-damage-resistances" author="bestiary">
+        <sql>CREATE TABLE seed_stg_dres (monster_external_id text, damage_type text, note text);</sql>
+        <loadData file="bestiary/monster_damage_resistances.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_dres" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="damage_type" type="STRING"/>
+            <column name="note" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_damage_resistances (monster_id, damage_type, note)
+            SELECT m.id, NULLIF(s.damage_type, ''), NULLIF(s.note, '')
+            FROM seed_stg_dres s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_damage_resistances j
+                WHERE j.monster_id = m.id AND j.damage_type IS NOT DISTINCT FROM NULLIF(s.damage_type, '')
+            );
+            DROP TABLE seed_stg_dres;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ========================= monster_damage_immunities ========================= -->
+    <changeSet id="042-seed-monster-damage-immunities" author="bestiary">
+        <sql>CREATE TABLE seed_stg_dimm (monster_external_id text, damage_type text, note text);</sql>
+        <loadData file="bestiary/monster_damage_immunities.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_dimm" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="damage_type" type="STRING"/>
+            <column name="note" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_damage_immunities (monster_id, damage_type, note)
+            SELECT m.id, NULLIF(s.damage_type, ''), NULLIF(s.note, '')
+            FROM seed_stg_dimm s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_damage_immunities j
+                WHERE j.monster_id = m.id AND j.damage_type IS NOT DISTINCT FROM NULLIF(s.damage_type, '')
+            );
+            DROP TABLE seed_stg_dimm;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ====================== monster_damage_vulnerabilities ====================== -->
+    <changeSet id="042-seed-monster-damage-vulnerabilities" author="bestiary">
+        <sql>CREATE TABLE seed_stg_dvul (monster_external_id text, damage_type text, note text);</sql>
+        <loadData file="bestiary/monster_damage_vulnerabilities.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_dvul" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="damage_type" type="STRING"/>
+            <column name="note" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_damage_vulnerabilities (monster_id, damage_type, note)
+            SELECT m.id, NULLIF(s.damage_type, ''), NULLIF(s.note, '')
+            FROM seed_stg_dvul s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_damage_vulnerabilities j
+                WHERE j.monster_id = m.id AND j.damage_type IS NOT DISTINCT FROM NULLIF(s.damage_type, '')
+            );
+            DROP TABLE seed_stg_dvul;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ======================= monster_condition_immunities ======================= -->
+    <changeSet id="042-seed-monster-condition-immunities" author="bestiary">
+        <sql>CREATE TABLE seed_stg_cond (monster_external_id text, condition_code text);</sql>
+        <loadData file="bestiary/monster_condition_immunities.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_cond" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="condition_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_condition_immunities (monster_id, condition_id)
+            SELECT m.id, c.id
+            FROM seed_stg_cond s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN bestiary_conditions c ON c.code = s.condition_code AND c.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_condition_immunities j WHERE j.monster_id = m.id AND j.condition_id = c.id
+            );
+            DROP TABLE seed_stg_cond;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================= monster_habitats ============================= -->
+    <changeSet id="042-seed-monster-habitats" author="bestiary">
+        <sql>CREATE TABLE seed_stg_hab (monster_external_id text, habitat_code text);</sql>
+        <loadData file="bestiary/monster_habitats.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_hab" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="habitat_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_habitats (monster_id, habitat_id)
+            SELECT m.id, h.id
+            FROM seed_stg_hab s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN habitats h ON h.code = s.habitat_code AND h.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_habitats j WHERE j.monster_id = m.id AND j.habitat_id = h.id
+            );
+            DROP TABLE seed_stg_hab;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================ monster_treasures ============================ -->
+    <changeSet id="042-seed-monster-treasures" author="bestiary">
+        <sql>CREATE TABLE seed_stg_treas (monster_external_id text, treasure_tag_code text);</sql>
+        <loadData file="bestiary/monster_treasures.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_treas" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="treasure_tag_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_treasures (monster_id, treasure_tag_id)
+            SELECT m.id, t.id
+            FROM seed_stg_treas s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN treasure_tags t ON t.code = s.treasure_tag_code AND t.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_treasures j WHERE j.monster_id = m.id AND j.treasure_tag_id = t.id
+            );
+            DROP TABLE seed_stg_treas;
+        ]]></sql>
+    </changeSet>
+
+    <!-- ============================= monster_sources ============================= -->
+    <changeSet id="042-seed-monster-sources" author="bestiary">
+        <sql>CREATE TABLE seed_stg_msrc (monster_external_id text, source_code text);</sql>
+        <loadData file="bestiary/monster_sources.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_msrc" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="source_code" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_sources (monster_id, source_id)
+            SELECT m.id, src.id
+            FROM seed_stg_msrc s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN sources src ON src.code = s.source_code AND src.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_sources j WHERE j.monster_id = m.id AND j.source_id = src.id
+            );
+            DROP TABLE seed_stg_msrc;
+        ]]></sql>
+    </changeSet>
+
+    <!-- =============================== monster_gear =============================== -->
+    <changeSet id="042-seed-monster-gear" author="bestiary">
+        <sql>CREATE TABLE seed_stg_gear (monster_external_id text, gear_code text, qty text);</sql>
+        <loadData file="bestiary/monster_gear.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_gear" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="gear_code" type="STRING"/>
+            <column name="qty" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_gear (monster_id, item_id, qty)
+            SELECT m.id, gi.id, COALESCE(NULLIF(s.qty, '')::smallint, 1)
+            FROM seed_stg_gear s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            JOIN monster_gear_items gi ON gi.code = s.gear_code AND gi.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM monster_gear j WHERE j.monster_id = m.id AND j.item_id = gi.id
+            );
+            DROP TABLE seed_stg_gear;
+        ]]></sql>
+    </changeSet>
+
+    <!-- =================== monster_features + feature_damages =================== -->
+    <changeSet id="042-seed-monster-features" author="bestiary">
+        <sql>
+            ALTER TABLE monster_features ADD COLUMN IF NOT EXISTS seed_feature_key text;
+            CREATE TABLE seed_stg_features (
+                monster_external_id text, section text, sort_order text,
+                name_rusloc text, name_engloc text, kind text,
+                recharge_min text, recharge_max text,
+                description_rusloc text, description_engloc text,
+                attack_type text, attack_bonus text,
+                reach_ft text, range_ft text, range_long_ft text,
+                save_ability text, save_dc text, feature_key text
+            );
+        </sql>
+        <loadData file="bestiary/monster_features.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_features" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="monster_external_id" type="STRING"/>
+            <column name="section" type="STRING"/>
+            <column name="sort_order" type="STRING"/>
+            <column name="name_rusloc" type="STRING"/>
+            <column name="name_engloc" type="STRING"/>
+            <column name="kind" type="STRING"/>
+            <column name="recharge_min" type="STRING"/>
+            <column name="recharge_max" type="STRING"/>
+            <column name="description_rusloc" type="STRING"/>
+            <column name="description_engloc" type="STRING"/>
+            <column name="attack_type" type="STRING"/>
+            <column name="attack_bonus" type="STRING"/>
+            <column name="reach_ft" type="STRING"/>
+            <column name="range_ft" type="STRING"/>
+            <column name="range_long_ft" type="STRING"/>
+            <column name="save_ability" type="STRING"/>
+            <column name="save_dc" type="STRING"/>
+            <column name="feature_key" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO monster_features (
+                monster_id, section, sort_order, name_rusloc, name_engloc, kind,
+                recharge_min, recharge_max, description_rusloc, description_engloc,
+                attack_type, attack_bonus, reach_ft, range_ft, range_long_ft,
+                save_ability, save_dc, seed_feature_key
+            )
+            SELECT
+                m.id, s.section, s.sort_order::int,
+                NULLIF(s.name_rusloc, ''), NULLIF(s.name_engloc, ''), s.kind,
+                NULLIF(s.recharge_min, '')::smallint, NULLIF(s.recharge_max, '')::smallint,
+                s.description_rusloc, NULLIF(s.description_engloc, ''),
+                NULLIF(s.attack_type, ''), NULLIF(s.attack_bonus, '')::smallint,
+                NULLIF(s.reach_ft, '')::smallint, NULLIF(s.range_ft, '')::smallint, NULLIF(s.range_long_ft, '')::smallint,
+                NULLIF(s.save_ability, ''), NULLIF(s.save_dc, '')::smallint,
+                s.feature_key
+            FROM seed_stg_features s
+            JOIN monsters m ON m.source_external_id = s.monster_external_id::bigint
+            WHERE NULLIF(s.description_rusloc, '') IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM monster_features f WHERE f.seed_feature_key = s.feature_key
+            );
+            DROP TABLE seed_stg_features;
+
+            CREATE TABLE seed_stg_feature_damages (
+                feature_key text, sort_order text, average text, dice text, damage_type text, note text
+            );
+        ]]></sql>
+        <loadData file="bestiary/feature_damages.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_feature_damages" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="feature_key" type="STRING"/>
+            <column name="sort_order" type="STRING"/>
+            <column name="average" type="STRING"/>
+            <column name="dice" type="STRING"/>
+            <column name="damage_type" type="STRING"/>
+            <column name="note" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO feature_damages (feature_id, sort_order, average, dice, damage_type, note)
+            SELECT f.id, s.sort_order::int, NULLIF(s.average, '')::smallint,
+                   NULLIF(s.dice, ''), NULLIF(s.damage_type, ''), NULLIF(s.note, '')
+            FROM seed_stg_feature_damages s
+            JOIN monster_features f ON f.seed_feature_key = s.feature_key
+            WHERE NOT EXISTS (
+                SELECT 1 FROM feature_damages fd WHERE fd.feature_id = f.id AND fd.sort_order = s.sort_order::int
+            );
+            DROP TABLE seed_stg_feature_damages;
+            ALTER TABLE monster_features DROP COLUMN IF EXISTS seed_feature_key;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

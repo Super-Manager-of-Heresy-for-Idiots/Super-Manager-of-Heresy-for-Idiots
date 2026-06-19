@@ -1,5 +1,6 @@
 package com.dnd.app.dto.response;
 
+import com.dnd.app.domain.enums.NpcSourceType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +22,29 @@ public class NpcResponse {
     private String publicDescription;
     private String privateDescription;
     private Boolean isVisibleToPlayers;
+
+    private NpcSourceType sourceType;
+
+    // CLASS_BASED
+    private Ref race;
+    private Ref characterClass;
+    private Integer level;
+    private String abilities;
+    private List<Ref> spells;
+
+    // MONSTER_BASED
+    private Ref sourceMonster;
+
     private List<NoteResponse> notes;
     private Instant createdAt;
     private Instant updatedAt;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Ref {
+        private UUID id;
+        private String name;
+    }
 }

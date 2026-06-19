@@ -1,8 +1,6 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.DamageType;
-import com.dnd.app.domain.enums.Rarity;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.CreateItemTemplateRequest;
 import com.dnd.app.dto.response.ItemTemplateResponse;
@@ -26,6 +24,7 @@ public class ItemTemplateService {
     private final ItemTemplateRepository itemTemplateRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final ContentDictionaryResolver contentDictionaryResolver;
 
     @Transactional
     public ItemTemplateResponse createTemplate(CreateItemTemplateRequest request, String username) {
@@ -34,8 +33,8 @@ public class ItemTemplateService {
             throw new AccessDeniedException("Only ADMIN or GM can create item templates");
         }
 
-        Rarity rarity = request.getRarity() != null ? Rarity.valueOf(request.getRarity().toUpperCase()) : null;
-        DamageType damageType = request.getDamageType() != null ? DamageType.valueOf(request.getDamageType().toUpperCase()) : null;
+        Rarity rarity = contentDictionaryResolver.resolveRarity(request.getRarity(), null);
+        DamageType damageType = contentDictionaryResolver.resolveDamageType(request.getDamageType(), null);
 
         ItemTemplate template = ItemTemplate.builder()
                 .name(request.getName())
@@ -105,10 +104,10 @@ public class ItemTemplateService {
 
         if (request.getName() != null) template.setName(request.getName());
         if (request.getDescription() != null) template.setDescription(request.getDescription());
-        if (request.getRarity() != null) template.setRarity(Rarity.valueOf(request.getRarity().toUpperCase()));
+        if (request.getRarity() != null) template.setRarity(contentDictionaryResolver.resolveRarity(request.getRarity(), template.getHomebrew()));
         if (request.getDamageDice() != null) template.setDamageDice(request.getDamageDice());
         if (request.getDamageBonus() != null) template.setDamageBonus(request.getDamageBonus());
-        if (request.getDamageType() != null) template.setDamageType(DamageType.valueOf(request.getDamageType().toUpperCase()));
+        if (request.getDamageType() != null) template.setDamageType(contentDictionaryResolver.resolveDamageType(request.getDamageType(), template.getHomebrew()));
         if (request.getIsStackable() != null) template.setIsStackable(request.getIsStackable());
 
         template = itemTemplateRepository.save(template);
@@ -146,10 +145,10 @@ public class ItemTemplateService {
                 .id(template.getId())
                 .name(template.getName())
                 .description(template.getDescription())
-                .rarity(template.getRarity() != null ? template.getRarity().name() : null)
+                .rarity(template.getRarity() != null ? template.getRarity().getSlug() : null)
                 .damageDice(template.getDamageDice())
                 .damageBonus(template.getDamageBonus())
-                .damageType(template.getDamageType() != null ? template.getDamageType().name() : null)
+                .damageType(template.getDamageType() != null ? template.getDamageType().getSlug() : null)
                 .isStackable(template.getIsStackable())
                 .sourceHomebrewTitle(template.getHomebrew() != null ? template.getHomebrew().getTitle() : null)
                 .build();
