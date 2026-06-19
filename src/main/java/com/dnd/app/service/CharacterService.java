@@ -339,6 +339,18 @@ public class CharacterService {
         if (request.getEquipment() != null) {
             character.setEquipment(request.getEquipment());
         }
+        if (request.getFeatures() != null) {
+            character.setFeatures(request.getFeatures());
+        }
+        if (request.getAlignment() != null) {
+            character.setAlignment(request.getAlignment());
+        }
+        if (request.getBiography() != null) {
+            character.setBiographyJson(serializeCharacterPayload(request.getBiography()));
+        }
+        if (request.getAttacks() != null) {
+            character.setAttacksJson(serializeCharacterPayload(request.getAttacks()));
+        }
         if (request.getRaceId() != null) {
             if (character.getCampaign() == null) {
                 throw new BadRequestException("Cannot change race for character without campaign");
@@ -554,6 +566,17 @@ public class CharacterService {
         }
 
         return response;
+    }
+
+    private String serializeCharacterPayload(Object value) {
+        if (value instanceof List<?> list && list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to serialize character payload");
+        }
     }
 
     private void enforceWriteAccess(PlayerCharacter character, User user) {

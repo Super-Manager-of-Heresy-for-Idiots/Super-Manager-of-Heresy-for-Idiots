@@ -24,7 +24,38 @@ public class UpdateCharacterRequest {
 
     private String equipment;
 
+    private String features;
+
+    @Size(max = 40, message = "Мировоззрение не должно превышать 40 символов")
+    private String alignment;
+
+    private BiographyEntry biography;
+
+    private java.util.List<AttackEntry> attacks;
+
     private UUID raceId;
 
     private UUID selectedLineageId;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BiographyEntry {
+        private String personalityTraits;
+        private String ideals;
+        private String bonds;
+        private String flaws;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttackEntry {
+        private String name;
+        private String attackBonus;
+        private String damage;
+        private String damageType;
+    }
 }

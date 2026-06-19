@@ -79,7 +79,10 @@ class ContentCharacterCreationServiceTest {
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
     @Mock private SpeciesService speciesService;
     @Mock private LevelUpCommandService levelUpCommandService;
+    @Mock private LevelThresholdService levelThresholdService;
     @Mock private EntityManager entityManager;
+    @org.mockito.Spy private com.fasterxml.jackson.databind.ObjectMapper objectMapper =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     @InjectMocks private ContentCharacterCreationService service;
 
@@ -129,6 +132,8 @@ class ContentCharacterCreationServiceTest {
                 .thenReturn(mock(ProficiencySkill.class));
         lenient().when(levelUpCommandService.applyInitialRewardSelections(any(), any(), any(), any()))
                 .thenReturn(LevelUpResultResponse.builder().build());
+        lenient().when(levelThresholdService.experienceForLevel(org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(0L);
     }
 
     private StatType stat(String slug, String nameEn) {
@@ -176,6 +181,91 @@ class ContentCharacterCreationServiceTest {
         assertEquals(1, result.getTotalLevel());
         assertEquals(2, result.getSkillProficiencyIds().size());
         assertEquals(campaignId, result.getCampaignId());
+    }
+
+    @Test
+    @DisplayName("Запрос уровня выше 1: персонаж создаётся 1 уровня с XP целевого уровня")
+    void createWithTargetLevel_createsLevel1WithExperienceForTarget() {
+        ContentSkill athletics = skill("athletics");
+        ContentSkill intimidation = skill("intimidation");
+        ContentCharacterClass fighter = ContentCharacterClass.builder()
+                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Воин")
+                .hitDie(10).spellcaster(false).skillChoiceCount(2).skillChoiceAny(false)
+                .skillOptions(Set.of(athletics, intimidation)).build();
+        when(contentClassRepository.findById(fighter.getId())).thenReturn(Optional.of(fighter));
+        when(levelThresholdService.experienceForLevel(5)).thenReturn(6500L);
+
+        org.mockito.ArgumentCaptor<PlayerCharacter> captor =
+                org.mockito.ArgumentCaptor.forClass(PlayerCharacter.class);
+
+        CreateContentCharacterRequest req = baseRequest(fighter.getId())
+                .level(5)
+                .chosenSkillIds(List.of(athletics.getId(), intimidation.getId())).build();
+
+        ContentCharacterCreationResponse result = service.createCampaignCharacter(campaignId, req, "player1");
+
+        verify(characterRepository).saveAndFlush(captor.capture());
+        PlayerCharacter saved = captor.getValue();
+        assertEquals(1, saved.getTotalLevel());
+        assertEquals(6500L, saved.getExperience());
+        assertEquals("1d10", saved.getHitDiceTotal());
+        assertEquals(1, result.getTotalLevel());
+    }
+
+    @Test
+    @DisplayName("Биография/черты/удары/снаряжение сохраняются при создании")
+    void createWithBiographyFeaturesAttacks_persisted() throws Exception {
+        ContentCharacterClass fighter = ContentCharacterClass.builder()
+                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Воин")
+                .hitDie(10).spellcaster(false).skillChoiceCount(0).skillChoiceAny(false)
+                .skillOptions(Set.of()).build();
+        when(contentClassRepository.findById(fighter.getId())).thenReturn(Optional.of(fighter));
+
+        org.mockito.ArgumentCaptor<PlayerCharacter> captor =
+                org.mockito.ArgumentCaptor.forClass(PlayerCharacter.class);
+
+        CreateContentCharacterRequest req = baseRequest(fighter.getId())
+                .proficiencies("Common, Elvish")
+                .equipment("Longsword, Shield")
+                .features("Brave veteran of the northern wars")
+                .alignment("Lawful Good")
+                .biography(CreateContentCharacterRequest.BiographyEntry.builder()
+                        .personalityTraits("Stoic").ideals("Honor").bonds("My squad").flaws("Stubborn").build())
+                .attacks(List.of(CreateContentCharacterRequest.AttackEntry.builder()
+                        .name("Longsword").attackBonus("+5").damage("1d8+3").damageType("slashing").build()))
+                .build();
+
+        service.createCampaignCharacter(campaignId, req, "player1");
+
+        verify(characterRepository).saveAndFlush(captor.capture());
+        PlayerCharacter saved = captor.getValue();
+        assertEquals("Common, Elvish", saved.getProficiencies());
+        assertEquals("Longsword, Shield", saved.getEquipment());
+        assertEquals("Brave veteran of the northern wars", saved.getFeatures());
+        assertEquals("Lawful Good", saved.getAlignment());
+        org.junit.jupiter.api.Assertions.assertTrue(saved.getBiographyJson().contains("Honor"));
+        org.junit.jupiter.api.Assertions.assertTrue(saved.getAttacksJson().contains("Longsword"));
+    }
+
+    @Test
+    @DisplayName("Класс-уровень записывается как 1 при запросе уровня выше 1")
+    void createWithTargetLevel_classLevelIsOne() {
+        ContentCharacterClass fighter = ContentCharacterClass.builder()
+                .id(UUID.randomUUID()).slug("fighter").nameEn("Fighter").nameRu("Воин")
+                .hitDie(10).spellcaster(false).skillChoiceCount(0).skillChoiceAny(false)
+                .skillOptions(Set.of()).build();
+        when(contentClassRepository.findById(fighter.getId())).thenReturn(Optional.of(fighter));
+        when(levelThresholdService.experienceForLevel(5)).thenReturn(6500L);
+
+        org.mockito.ArgumentCaptor<com.dnd.app.domain.CharacterClassLevel> captor =
+                org.mockito.ArgumentCaptor.forClass(com.dnd.app.domain.CharacterClassLevel.class);
+
+        CreateContentCharacterRequest req = baseRequest(fighter.getId()).level(5).build();
+
+        service.createCampaignCharacter(campaignId, req, "player1");
+
+        verify(classLevelRepository).saveAndFlush(captor.capture());
+        assertEquals(1, captor.getValue().getClassLevel());
     }
 
     @Test

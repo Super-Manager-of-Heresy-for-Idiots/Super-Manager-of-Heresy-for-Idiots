@@ -37,6 +37,7 @@ import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +87,8 @@ public class ContentCharacterCreationService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final SpeciesService speciesService;
     private final LevelUpCommandService levelUpCommandService;
+    private final LevelThresholdService levelThresholdService;
+    private final ObjectMapper objectMapper;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -131,15 +134,21 @@ public class ContentCharacterCreationService {
             throw new BadRequestException("Homebrew backgrounds cannot be used in vanilla characters");
         }
 
-        int level = req.getLevel();
-        if (level < 1 || level > 20) {
+        int targetLevel = req.getLevel();
+        if (targetLevel < 1 || targetLevel > 20) {
             throw new BadRequestException("Level must be between 1 and 20");
         }
+
+        // The character is always created at level 1. When a higher target level is
+        // requested, we instead grant enough XP so the player can climb to that level
+        // through the normal level-up mechanic (choosing features/ASIs/spells each step).
+        int creationLevel = 1;
+        long startingExperience = levelThresholdService.experienceForLevel(targetLevel);
 
         ScoreMethod scoreMethod = parseScoreMethod(req.getScoreMethod());
         validateAbilityScores(req.getAbilityScores(), scoreMethod);
         List<UUID> chosenSkills = validateSkillChoices(req.getChosenSkillIds(), charClass);
-        validateSpells(req.getCantripIds(), req.getSpellIds(), charClass, level, campaign == null);
+        validateSpells(req.getCantripIds(), req.getSpellIds(), charClass, creationLevel, campaign == null);
 
         // ability scores
         List<StatType> allStatTypes = statTypeRepository.findAll();
@@ -159,14 +168,14 @@ public class ContentCharacterCreationService {
         int hitDie = charClass.getHitDie() != null ? charClass.getHitDie() : 8;
         int conModifier = abilityModifier(finalScore(baseScores, statByName, "Constitution"));
         int dexModifier = abilityModifier(finalScore(baseScores, statByName, "Dexterity"));
-        int maxHp = calculateMaxHp(hitDie, level, conModifier);
+        int maxHp = calculateMaxHp(hitDie, creationLevel, conModifier);
         int armorClass = 10 + dexModifier;
         int walkSpeed = 30;
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(req.getName())
-                .totalLevel(level)
-                .experience(0L)
+                .totalLevel(creationLevel)
+                .experience(startingExperience)
                 .race(species)
                 .selectedLineageId(null)
                 .raceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species))
@@ -179,8 +188,14 @@ public class ContentCharacterCreationService {
                 .maxHp(maxHp)
                 .currentHp(maxHp)
                 .hitDiceType("d" + hitDie)
-                .hitDiceTotal(level + "d" + hitDie)
+                .hitDiceTotal(creationLevel + "d" + hitDie)
                 .scoreMethod(scoreMethod)
+                .proficiencies(req.getProficiencies())
+                .equipment(req.getEquipment())
+                .features(req.getFeatures())
+                .alignment(req.getAlignment())
+                .biographyJson(serializeOrNull(req.getBiography()))
+                .attacksJson(serializeOrNull(req.getAttacks()))
                 .build();
         character = characterRepository.saveAndFlush(character);
 
@@ -188,7 +203,7 @@ public class ContentCharacterCreationService {
         CharacterClassLevel ccl = CharacterClassLevel.builder()
                 .characterId(character.getId())
                 .classId(charClass.getId())
-                .classLevel(level)
+                .classLevel(creationLevel)
                 .build();
         classLevelRepository.saveAndFlush(ccl);
         character.getClassLevels().add(ccl);
@@ -238,15 +253,16 @@ public class ContentCharacterCreationService {
         levelUpCommandService.applyInitialRewardSelections(
                 character, charClass, req.getInitialRewardSelections(), "ru");
 
-        log.info("Content character created: id={}, name='{}', classId={}, level={}, owner={}, campaign={}",
-                character.getId(), character.getName(), charClass.getId(), level, owner.getUsername(),
-                campaign != null ? campaign.getId() : null);
+        log.info("Content character created: id={}, name='{}', classId={}, createdLevel={}, targetLevel={}, "
+                        + "experience={}, owner={}, campaign={}",
+                character.getId(), character.getName(), charClass.getId(), creationLevel, targetLevel,
+                startingExperience, owner.getUsername(), campaign != null ? campaign.getId() : null);
 
         return ContentCharacterCreationResponse.builder()
                 .id(character.getId())
                 .name(character.getName())
                 .classId(charClass.getId())
-                .totalLevel(level)
+                .totalLevel(creationLevel)
                 .campaignId(campaign != null ? campaign.getId() : null)
                 .skillProficiencyIds(chosenSkills)
                 .knownSpellIds(knownSpellIds)
@@ -270,6 +286,21 @@ public class ContentCharacterCreationService {
             saved.add(spellId);
         }
         return saved;
+    }
+
+    /** Serializes a biography/attacks payload to JSON text, or null when absent/empty. */
+    private String serializeOrNull(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List<?> list && list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to serialize character payload");
+        }
     }
 
     // --- visibility ---

@@ -79,6 +79,51 @@ public class CreateContentCharacterRequest {
     @Schema(description = "Initial level-1 reward-group selections")
     private List<LevelUpRequest.GroupSelection> initialRewardSelections;
 
+    @Schema(description = "Free-form proficiencies & languages text")
+    private String proficiencies;
+
+    @Schema(description = "Free-form equipment / inventory text")
+    private String equipment;
+
+    @Schema(description = "Free-form features & traits text (description, backstory, class/species features)")
+    private String features;
+
+    @Size(max = 40)
+    @Schema(description = "Alignment, e.g. 'Lawful Good'")
+    private String alignment;
+
+    @Valid
+    @Schema(description = "Personality traits, ideals, bonds, flaws")
+    private BiographyEntry biography;
+
+    @Valid
+    @Schema(description = "Weapon / spell attacks")
+    private List<AttackEntry> attacks;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "ContentBiographyEntry")
+    public static class BiographyEntry {
+        private String personalityTraits;
+        private String ideals;
+        private String bonds;
+        private String flaws;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "ContentAttackEntry")
+    public static class AttackEntry {
+        private String name;
+        private String attackBonus;
+        private String damage;
+        private String damageType;
+    }
+
     @Data
     @Builder
     @NoArgsConstructor
