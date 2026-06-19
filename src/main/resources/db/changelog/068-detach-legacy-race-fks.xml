@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      S5 (race -> species, D&D 2024): detach the legacy character_races table from the
+      rest of the DB so it sits orphaned (no inbound FKs) and can later be dropped after
+      the app is verified to run without it. NPC builds (campaign_npcs / blueprint_npcs)
+      now store a NEW content-model species id in race_id; the entity FK is relaxed to
+      NO_CONSTRAINT semantics (mirroring characters.fk_char_race in 067). The
+      character_races table itself is intentionally NOT dropped here. Idempotent.
+    -->
+
+    <changeSet id="068-01-drop-campaign-npc-race-fk" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE campaign_npcs
+    DROP CONSTRAINT IF EXISTS campaign_npcs_race_id_fkey;
+]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE campaign_npcs
+    ADD CONSTRAINT campaign_npcs_race_id_fkey FOREIGN KEY (race_id) REFERENCES character_races(id);
+]]></sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="068-02-drop-blueprint-npc-race-fk" author="content">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE blueprint_npcs
+    DROP CONSTRAINT IF EXISTS fk_bnpc_race;
+]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+ALTER TABLE blueprint_npcs
+    ADD CONSTRAINT fk_bnpc_race FOREIGN KEY (race_id) REFERENCES character_races(id);
+]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

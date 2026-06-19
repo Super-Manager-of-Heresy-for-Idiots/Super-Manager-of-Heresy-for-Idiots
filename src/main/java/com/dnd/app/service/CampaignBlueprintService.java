@@ -57,7 +57,7 @@ public class CampaignBlueprintService {
     private final HomebrewPackageRepository homebrewPackageRepository;
     private final UserRepository userRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
-    private final CharacterRaceRepository raceRepository;
+    private final SpeciesRepository speciesRepository;
     private final ContentCharacterClassRepository classRepository;
     private final SpellRepository spellRepository;
     private final MonsterRepository monsterRepository;
@@ -652,9 +652,9 @@ public class CampaignBlueprintService {
         }
     }
 
-    private CharacterRace resolveRace(UUID raceId) {
-        return raceRepository.findById(raceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Раса не найдена"));
+    private com.dnd.app.domain.content.Species resolveRace(UUID raceId) {
+        return speciesRepository.findById(raceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Вид не найден"));
     }
 
     private ContentCharacterClass resolveClass(UUID classId) {
@@ -809,7 +809,8 @@ public class CampaignBlueprintService {
                 .privateDescription(npc.getPrivateDescription())
                 .isVisibleToPlayers(npc.getIsVisibleToPlayers())
                 .sourceType(npc.getSourceType())
-                .race(npc.getRace() == null ? null : ref(npc.getRace().getId(), npc.getRace().getName()))
+                .race(npc.getRace() == null ? null : ref(npc.getRace().getId(),
+                        npc.getRace().getNameEn() != null ? npc.getRace().getNameEn() : npc.getRace().getNameRu()))
                 .characterClass(npc.getCharacterClass() == null ? null
                         : ref(npc.getCharacterClass().getId(), npc.getCharacterClass().getNameRu()))
                 .level(npc.getLevel())

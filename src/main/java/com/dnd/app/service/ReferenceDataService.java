@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.dto.content.ContentLabelDto;
 import com.dnd.app.dto.content.FeatOptionDto;
@@ -27,9 +28,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReferenceDataService {
 
-    private final CharacterRaceRepository raceRepository;
     private final BackgroundRepository backgroundRepository;
-    private final ProficiencySkillRepository proficiencySkillRepository;
+    private final ContentSkillRepository contentSkillRepository;
     private final StatTypeRepository statTypeRepository;
     private final CurrencyTypeRepository currencyTypeRepository;
     private final SpellRepository spellRepository;
@@ -45,20 +45,7 @@ public class ReferenceDataService {
 
     // getClasses(...) removed in Phase 12 — class reference now served by ContentReferenceService.
 
-    @Transactional(readOnly = true)
-    public List<CharacterRaceDetailResponse> getRaces(UUID campaignId, String username, String lang) {
-        enforceAccess(campaignId, username);
-        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
-
-        List<CharacterRace> races;
-        if (pkgIds.isEmpty()) {
-            races = raceRepository.findAvailableActiveSystemOnly();
-        } else {
-            races = raceRepository.findAvailableActive(pkgIds);
-        }
-
-        return races.stream().map(r -> mapRaceDetail(r, lang)).toList();
-    }
+    // getRaces(...) removed in S5 — species reference now served by ContentReferenceService.
 
     @Transactional(readOnly = true)
     public List<BackgroundResponse> getBackgrounds(UUID campaignId, String username, String lang) {
@@ -76,9 +63,14 @@ public class ReferenceDataService {
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> getSkills(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
-        return proficiencySkillRepository.findAll().stream()
-                .map(s -> mapProficiencySkill(s, lang))
-                .toList();
+        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+
+        List<ContentSkill> skills = new ArrayList<>(contentSkillRepository.findAllByHomebrewIsNull());
+        if (!pkgIds.isEmpty()) {
+            skills.addAll(contentSkillRepository.findAllByHomebrewIdIn(pkgIds));
+        }
+
+        return skills.stream().map(s -> mapContentSkill(s, lang)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -127,12 +119,7 @@ public class ReferenceDataService {
 
     // getVanillaClasses(...) removed in Phase 12 — class reference now served by ContentReferenceService.
 
-    @Cacheable(value = CacheConfig.VANILLA_RACES, key = "#lang")
-    @Transactional(readOnly = true)
-    public List<CharacterRaceDetailResponse> getVanillaRaces(String lang) {
-        return raceRepository.findAvailableActiveSystemOnly().stream()
-                .map(r -> mapRaceDetail(r, lang)).toList();
-    }
+    // getVanillaRaces(...) removed in S5 — species reference now served by ContentReferenceService.
 
     @Cacheable(value = CacheConfig.VANILLA_BACKGROUNDS, key = "#lang")
     @Transactional(readOnly = true)
@@ -144,8 +131,8 @@ public class ReferenceDataService {
     @Cacheable(value = CacheConfig.VANILLA_SKILLS, key = "#lang")
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> getVanillaSkills(String lang) {
-        return proficiencySkillRepository.findAll().stream()
-                .map(s -> mapProficiencySkill(s, lang))
+        return contentSkillRepository.findAllByHomebrewIsNull().stream()
+                .map(s -> mapContentSkill(s, lang))
                 .toList();
     }
 
@@ -261,87 +248,7 @@ public class ReferenceDataService {
 
     // mapClassDetail(...) removed in Phase 12 along with the legacy class reference endpoints.
 
-    private CharacterRaceDetailResponse mapRaceDetail(CharacterRace r, String lang) {
-        Integer walkSpeed = null;
-        if (r.getSpeedJson() != null) {
-            try {
-                var speedMap = objectMapper.readValue(r.getSpeedJson(), new TypeReference<Map<String, Integer>>() {});
-                walkSpeed = speedMap.getOrDefault("walk", 30);
-            } catch (Exception e) {
-                walkSpeed = 30;
-            }
-        }
-
-        List<CharacterRaceDetailResponse.AbilityScoreIncrease> asis = new ArrayList<>();
-        if (r.getAbilityScoreBonusesJson() != null) {
-            try {
-                var bonuses = objectMapper.readValue(r.getAbilityScoreBonusesJson(),
-                        new TypeReference<List<Map<String, Object>>>() {});
-                for (var b : bonuses) {
-                    asis.add(CharacterRaceDetailResponse.AbilityScoreIncrease.builder()
-                            .statName((String) b.get("ability"))
-                            .bonus(((Number) b.get("value")).intValue())
-                            .build());
-                }
-            } catch (Exception ignored) {}
-        }
-
-        List<String> traits = new ArrayList<>();
-        if (r.getTraitsJson() != null) {
-            try {
-                var traitList = objectMapper.readValue(r.getTraitsJson(),
-                        new TypeReference<List<Map<String, Object>>>() {});
-                for (var t : traitList) {
-                    if (t.containsKey("name")) {
-                        traits.add(Localization.pick(lang,
-                                (String) t.get("nameRusloc"),
-                                (String) t.get("nameEngloc"),
-                                (String) t.get("name")));
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-
-        List<CharacterRaceDetailResponse.SubraceInfo> subraces = new ArrayList<>();
-        if (r.getLineagesJson() != null) {
-            try {
-                var lineages = objectMapper.readValue(r.getLineagesJson(),
-                        new TypeReference<List<Map<String, Object>>>() {});
-                for (var lin : lineages) {
-                    String id = lin.get("id") != null ? lin.get("id").toString() : null;
-                    String linName = Localization.pick(lang,
-                            (String) lin.get("nameRusloc"),
-                            (String) lin.get("nameEngloc"),
-                            (String) lin.get("name"));
-                    String linDesc = Localization.pick(lang,
-                            (String) lin.get("descriptionRusloc"),
-                            (String) lin.get("descriptionEngloc"),
-                            (String) lin.get("description"));
-
-                    List<CharacterRaceDetailResponse.AbilityScoreIncrease> subAsis = new ArrayList<>();
-                    List<String> subTraits = new ArrayList<>();
-
-                    subraces.add(CharacterRaceDetailResponse.SubraceInfo.builder()
-                            .id(id != null ? UUID.fromString(id) : null)
-                            .name(linName)
-                            .description(linDesc)
-                            .abilityScoreIncreases(subAsis)
-                            .traits(subTraits)
-                            .build());
-                }
-            } catch (Exception ignored) {}
-        }
-
-        return CharacterRaceDetailResponse.builder()
-                .id(r.getId())
-                .name(Localization.pick(lang, r.getNameRusloc(), r.getNameEngloc(), r.getName()))
-                .description(Localization.pick(lang, r.getDescriptionRusloc(), r.getDescriptionEngloc(), r.getDescription()))
-                .speed(walkSpeed)
-                .abilityScoreIncreases(asis)
-                .traits(traits)
-                .subraces(subraces)
-                .build();
-    }
+    // mapRaceDetail(...) removed in S5 along with the legacy race reference endpoints.
 
     /** Canonical (English) mapping for callers without a UI-language context. */
     public BackgroundResponse mapBackground(Background bg) {
@@ -357,12 +264,13 @@ public class ReferenceDataService {
                 .build();
     }
 
-    private ProficiencySkillResponse mapProficiencySkill(ProficiencySkill s, String lang) {
+    private ProficiencySkillResponse mapContentSkill(ContentSkill s, String lang) {
+        StatType ability = s.getAbilityScore();
         return ProficiencySkillResponse.builder()
                 .id(s.getId())
-                .name(Localization.pick(lang, s.getNameRusloc(), s.getNameEngloc(), s.getName()))
-                .governingStatId(s.getGoverningStat().getId())
-                .governingStatName(s.getGoverningStat().getNameRu())
+                .name(Localization.pick(lang, s.getNameRu(), s.getNameEn(), s.getNameRu()))
+                .governingStatId(ability == null ? null : ability.getId())
+                .governingStatName(ability == null ? null : ability.getNameRu())
                 .build();
     }
 

@@ -7,6 +7,7 @@ public enum ContentType {
     FEAT,
     SUBCLASS,
     RACE,
+    SPECIES,
     STAT_TYPE,
     BUFF_DEBUFF,
     ENCHANTMENT_TYPE,

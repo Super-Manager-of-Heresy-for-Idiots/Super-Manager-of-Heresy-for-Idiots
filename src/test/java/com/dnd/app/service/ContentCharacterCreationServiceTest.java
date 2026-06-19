@@ -2,7 +2,6 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.Background;
 import com.dnd.app.domain.Campaign;
-import com.dnd.app.domain.CharacterRace;
 import com.dnd.app.domain.ProficiencySkill;
 import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
@@ -78,7 +77,7 @@ class ContentCharacterCreationServiceTest {
     @Mock private CampaignRepository campaignRepository;
     @Mock private CampaignMemberRepository campaignMemberRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
-    @Mock private RaceService raceService;
+    @Mock private SpeciesService speciesService;
     @Mock private LevelUpCommandService levelUpCommandService;
     @Mock private EntityManager entityManager;
 
@@ -110,10 +109,11 @@ class ContentCharacterCreationServiceTest {
         lenient().when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         lenient().when(campaignMemberRepository
                 .existsByCampaignIdAndUserIdAndKickedFalse(eq(campaignId), eq(owner.getId()))).thenReturn(true);
-        lenient().when(raceService.getSelectableRace(eq(campaignId), eq(raceId)))
-                .thenReturn(CharacterRace.builder().id(raceId).lineageRequired(false).build());
-        lenient().when(raceService.getSelectableVanillaRace(eq(raceId)))
-                .thenReturn(CharacterRace.builder().id(raceId).lineageRequired(false).build());
+        com.dnd.app.domain.content.Species species =
+                com.dnd.app.domain.content.Species.builder().id(raceId).build();
+        lenient().when(speciesService.getSelectableSpecies(eq(campaignId), eq(raceId))).thenReturn(species);
+        lenient().when(speciesService.getSelectableVanillaSpecies(eq(raceId))).thenReturn(species);
+        lenient().when(speciesService.buildSpeciesSnapshotJson(any())).thenReturn("{}");
         lenient().when(backgroundRepository.findById(backgroundId)).thenReturn(Optional.of(mock(Background.class)));
         lenient().when(statTypeRepository.findAll()).thenReturn(sixStats);
         lenient().when(contentSkillRepository.existsById(any())).thenReturn(true);

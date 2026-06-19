@@ -26,17 +26,8 @@ public class ReferenceController {
     // Legacy class reference endpoint removed in Phase 12 — superseded by
     // GET /api/campaigns/{campaignId}/reference/content/classes (ContentReferenceController).
 
-    @GetMapping("/races")
-    @Operation(summary = "Get available races with subraces")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces(
-            @PathVariable UUID campaignId,
-            @RequestParam(defaultValue = "en") String lang,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(
-                        referenceDataService.getRaces(campaignId, auth.getName(), lang))),
-                controllerTaskExecutor);
-    }
+    // Legacy race reference endpoint removed in S5 — superseded by
+    // GET /api/campaigns/{campaignId}/reference/content/species (ContentReferenceController).
 
     @GetMapping("/backgrounds")
     @Operation(summary = "Get available backgrounds")

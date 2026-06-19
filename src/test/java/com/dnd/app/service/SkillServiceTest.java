@@ -31,7 +31,6 @@ class SkillServiceTest {
 
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private ItemTypeRepository itemTypeRepository;
-    @Mock private CharacterRaceRepository raceRepository;
     @Mock private UserRepository userRepository;
     @Mock private SkillRepository skillRepository;
     @Mock private FeatRepository featRepository;

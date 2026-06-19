@@ -4,7 +4,6 @@ import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.CampaignContentService;
 import com.dnd.app.service.CampaignService;
-import com.dnd.app.service.RaceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,7 +28,6 @@ public class CampaignController {
 
     private final CampaignService campaignService;
     private final CampaignContentService campaignContentService;
-    private final RaceService raceService;
     private final Executor controllerTaskExecutor;
 
     @PostMapping
@@ -216,21 +214,6 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
-    @GetMapping("/{id}/races")
-    @Operation(summary = "List races available for character creation in campaign")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<RaceListItemResponse>>>> listAvailableRaces(
-            @PathVariable UUID id, Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.listAvailableForCampaign(id, auth.getName()))),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/{id}/races/{raceId}")
-    @Operation(summary = "Get race details available in campaign")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> getAvailableRace(
-            @PathVariable UUID id, @PathVariable UUID raceId, Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.getAvailableRace(id, raceId, auth.getName()))),
-                controllerTaskExecutor);
-    }
+    // Legacy campaign race-selection endpoints removed in S5 — species available for
+    // character creation are served by ContentReferenceController (campaign-scoped /content/species).
 }

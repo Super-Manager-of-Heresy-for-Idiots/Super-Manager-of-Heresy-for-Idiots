@@ -32,7 +32,6 @@ class CharacterServiceTest {
     @Mock private PlayerCharacterRepository characterRepository;
     @Mock private UserRepository userRepository;
     @Mock private ContentCharacterClassRepository classRepository;
-    @Mock private CharacterRaceRepository raceRepository;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private CharacterStatRepository characterStatRepository;
     @Mock private CharacterClassLevelRepository classLevelRepository;
@@ -41,7 +40,7 @@ class CharacterServiceTest {
     @Mock private CampaignContentService campaignContentService;
     @Mock private CampaignService campaignService;
     @Mock private CharacterMapper characterMapper;
-    @Mock private RaceService raceService;
+    @Mock private SpeciesService speciesService;
     @Mock private ReferenceDataService referenceDataService;
 
     @InjectMocks private CharacterService characterService;
@@ -62,21 +61,22 @@ class CharacterServiceTest {
         User player = makePlayer(playerId, "player1");
         Campaign campaign = Campaign.builder().id(campaignId).name("Campaign").build();
         ContentCharacterClass cc = ContentCharacterClass.builder().id(UUID.randomUUID()).nameRu("Fighter").build();
-        CharacterRace race = CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
+        com.dnd.app.domain.content.Species species =
+                com.dnd.app.domain.content.Species.builder().id(UUID.randomUUID()).nameEn("Human").build();
         CreateCharacterRequest req = CreateCharacterRequest.builder()
-                .name("Hero").classId(cc.getId()).raceId(race.getId()).campaignId(campaignId).build();
+                .name("Hero").classId(cc.getId()).raceId(species.getId()).campaignId(campaignId).build();
 
         when(userRepository.findByUsername("player1")).thenReturn(Optional.of(player));
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
         when(campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaignId, playerId)).thenReturn(true);
         when(campaignContentService.isClassAvailableInCampaign(campaignId, cc.getId())).thenReturn(true);
         when(classRepository.findById(cc.getId())).thenReturn(Optional.of(cc));
-        when(raceService.getSelectableRace(campaignId, race.getId())).thenReturn(race);
-        when(raceService.buildRaceSnapshotJson(race, null)).thenReturn("{}");
+        when(speciesService.getSelectableSpecies(campaignId, species.getId())).thenReturn(species);
+        when(speciesService.buildSpeciesSnapshotJson(species)).thenReturn("{}");
         when(statTypeRepository.findAll()).thenReturn(Collections.emptyList());
         PlayerCharacter saved = PlayerCharacter.builder()
                 .id(UUID.randomUUID()).name("Hero").totalLevel(1)
-                .race(race).owner(player).campaign(campaign).build();
+                .race(species).owner(player).campaign(campaign).build();
         when(characterRepository.saveAndFlush(any(PlayerCharacter.class))).thenReturn(saved);
         when(classLevelRepository.saveAndFlush(any(CharacterClassLevel.class))).thenAnswer(inv -> inv.getArgument(0));
         CharacterResponse expected = CharacterResponse.builder().name("Hero").build();

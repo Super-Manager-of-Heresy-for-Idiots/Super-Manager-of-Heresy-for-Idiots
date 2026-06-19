@@ -52,8 +52,9 @@ public class PlayerCharacter {
     private Integer tempHp = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_id", nullable = false)
-    private CharacterRace race;
+    @JoinColumn(name = "race_id", nullable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private com.dnd.app.domain.content.Species race;
 
     @Column(name = "selected_lineage_id")
     private UUID selectedLineageId;

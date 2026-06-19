@@ -1,6 +1,7 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.content.ContentClassDetailResponse;
+import com.dnd.app.dto.content.SpeciesDetailResponse;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.service.ContentReferenceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,58 @@ public class ContentReferenceController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 contentReferenceService.getCampaignClass(campaignId, classId, auth.getName(), lang))),
+                controllerTaskExecutor);
+    }
+
+    // --- species (D&D 2024 race replacement) ---
+
+    @GetMapping({"/api/reference/species", "/api/reference/content/species"})
+    @Operation(summary = "Get core (vanilla) species from the new content model")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<SpeciesDetailResponse>>>> getVanillaSpecies(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(contentReferenceService.getVanillaSpecies(lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping({"/api/reference/species/{speciesId}", "/api/reference/content/species/{speciesId}"})
+    @Operation(summary = "Get a single core (vanilla) species from the new content model")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpeciesDetailResponse>>> getVanillaSpeciesById(
+            @PathVariable UUID speciesId,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(contentReferenceService.getVanillaSpeciesById(speciesId, lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/species",
+            "/api/campaigns/{campaignId}/reference/content/species"
+    })
+    @Operation(summary = "Get campaign-visible species (core + active homebrew) from the new content model")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<SpeciesDetailResponse>>>> getCampaignSpecies(
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                contentReferenceService.getCampaignSpecies(campaignId, auth.getName(), lang))),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/species/{speciesId}",
+            "/api/campaigns/{campaignId}/reference/content/species/{speciesId}"
+    })
+    @Operation(summary = "Get a single campaign-visible species from the new content model")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpeciesDetailResponse>>> getCampaignSpeciesById(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID speciesId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                contentReferenceService.getCampaignSpeciesById(campaignId, speciesId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 }

@@ -29,7 +29,7 @@ public class CampaignContentService {
     private final HomebrewPackageRepository homebrewPackageRepository;
     private final HomebrewContentItemRepository contentItemRepository;
     private final ContentCharacterClassRepository classRepository;
-    private final CharacterRaceRepository raceRepository;
+    private final SpeciesRepository speciesRepository;
     private final ItemTypeRepository itemTypeRepository;
     private final SkillRepository skillRepository;
     private final FeatRepository featRepository;
@@ -138,15 +138,20 @@ public class CampaignContentService {
                             .build()));
         }
 
+        // "races" bucket now lists new content-model species (D&D 2024); legacy races detached in S5.
         List<AvailableContentItem> races = new ArrayList<>();
-        raceRepository.findAllByHomebrewIsNullAndActiveTrue().forEach(r ->
+        speciesRepository.findAllByHomebrewIsNull().forEach(sp ->
                 races.add(AvailableContentItem.builder()
-                        .id(r.getId()).name(r.getName()).source("GLOBAL").build()));
+                        .id(sp.getId())
+                        .name(sp.getNameRu() != null ? sp.getNameRu() : sp.getNameEn())
+                        .source("GLOBAL").build()));
         if (!activePackageIds.isEmpty()) {
-            raceRepository.findAllByHomebrewIdInAndActiveTrue(activePackageIds).forEach(r ->
+            speciesRepository.findAllByHomebrewIdIn(activePackageIds).forEach(sp ->
                     races.add(AvailableContentItem.builder()
-                            .id(r.getId()).name(r.getName()).source("HOMEBREW")
-                            .homebrewTitle(r.getHomebrew() != null ? r.getHomebrew().getTitle() : null)
+                            .id(sp.getId())
+                            .name(sp.getNameRu() != null ? sp.getNameRu() : sp.getNameEn())
+                            .source("HOMEBREW")
+                            .homebrewTitle(sp.getHomebrew() != null ? sp.getHomebrew().getTitle() : null)
                             .build()));
         }
 
@@ -197,14 +202,6 @@ public class CampaignContentService {
         if (cc.getHomebrew() == null) return true;
         Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
         return activePackageIds.contains(cc.getHomebrew().getId());
-    }
-
-    public boolean isRaceAvailableInCampaign(UUID campaignId, UUID raceId) {
-        CharacterRace race = raceRepository.findById(raceId).orElse(null);
-        if (race == null || !Boolean.TRUE.equals(race.getActive())) return false;
-        if (race.getHomebrew() == null) return true;
-        Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
-        return activePackageIds.contains(race.getHomebrew().getId());
     }
 
     private CampaignHomebrewResponse buildResponse(HomebrewPackage pkg, Integer pinnedVersion) {

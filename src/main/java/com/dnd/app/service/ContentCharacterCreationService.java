@@ -3,7 +3,6 @@ package com.dnd.app.service;
 import com.dnd.app.domain.Background;
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.CharacterKnownSpell;
-import com.dnd.app.domain.CharacterRace;
 import com.dnd.app.domain.CharacterSkillProficiency;
 import com.dnd.app.domain.CharacterStat;
 import com.dnd.app.domain.CharacterClassLevel;
@@ -15,6 +14,7 @@ import com.dnd.app.domain.StatType;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSkill;
+import com.dnd.app.domain.content.Species;
 import com.dnd.app.domain.enums.ScoreMethod;
 import com.dnd.app.domain.enums.SkillProficiencySource;
 import com.dnd.app.dto.content.ContentCharacterCreationResponse;
@@ -84,7 +84,7 @@ public class ContentCharacterCreationService {
     private final CampaignRepository campaignRepository;
     private final CampaignMemberRepository campaignMemberRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
-    private final RaceService raceService;
+    private final SpeciesService speciesService;
     private final LevelUpCommandService levelUpCommandService;
 
     @PersistenceContext
@@ -101,8 +101,8 @@ public class ContentCharacterCreationService {
         }
 
         ContentCharacterClass charClass = loadClassVisibleInCampaign(req.getClassId(), campaignId);
-        CharacterRace race = raceService.getSelectableRace(campaignId, req.getRaceId());
-        return create(campaign, charClass, race, req, owner);
+        Species species = speciesService.getSelectableSpecies(campaignId, req.getRaceId());
+        return create(campaign, charClass, species, req, owner);
     }
 
     @Transactional
@@ -114,19 +114,16 @@ public class ContentCharacterCreationService {
         if (charClass.getHomebrew() != null) {
             throw new BadRequestException("Homebrew classes cannot be used in vanilla characters");
         }
-        CharacterRace race = raceService.getSelectableVanillaRace(req.getRaceId());
-        return create(null, charClass, race, req, owner);
+        Species species = speciesService.getSelectableVanillaSpecies(req.getRaceId());
+        return create(null, charClass, species, req, owner);
     }
 
     // --- core ---
 
     private ContentCharacterCreationResponse create(Campaign campaign, ContentCharacterClass charClass,
-                                                    CharacterRace race, CreateContentCharacterRequest req, User owner) {
-        if (req.getSelectedLineageId() != null) {
-            raceService.validateLineageSelection(race, req.getSelectedLineageId());
-        } else if (Boolean.TRUE.equals(race.getLineageRequired())) {
-            throw new BadRequestException("This race requires a subrace/lineage selection");
-        }
+                                                    Species species, CreateContentCharacterRequest req, User owner) {
+        // D&D 2024: no lineages/subraces — species carries size/speed/traits; ASI,
+        // proficiencies and languages come from the Background below.
 
         Background background = backgroundRepository.findById(req.getBackgroundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Background not found"));
@@ -170,9 +167,9 @@ public class ContentCharacterCreationService {
                 .name(req.getName())
                 .totalLevel(level)
                 .experience(0L)
-                .race(race)
-                .selectedLineageId(req.getSelectedLineageId())
-                .raceSnapshotJson(raceService.buildRaceSnapshotJson(race, req.getSelectedLineageId()))
+                .race(species)
+                .selectedLineageId(null)
+                .raceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species))
                 .owner(owner)
                 .campaign(campaign)
                 .playerName(req.getPlayerName())

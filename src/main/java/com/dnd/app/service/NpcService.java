@@ -17,7 +17,7 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CampaignNpcRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
-import com.dnd.app.repository.CharacterRaceRepository;
+import com.dnd.app.repository.SpeciesRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
 import com.dnd.app.repository.SpellRepository;
@@ -43,7 +43,7 @@ public class NpcService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
-    private final CharacterRaceRepository raceRepository;
+    private final SpeciesRepository speciesRepository;
     private final ContentCharacterClassRepository classRepository;
     private final SpellRepository spellRepository;
     private final MonsterRepository monsterRepository;
@@ -243,7 +243,7 @@ public class NpcService {
                 .isVisibleToPlayers(npc.getIsVisibleToPlayers())
                 .sourceType(npc.getSourceType())
                 .race(npc.getRace() == null ? null
-                        : ref(npc.getRace().getId(), displayName(npc.getRace().getNameRusloc(), npc.getRace().getName())))
+                        : ref(npc.getRace().getId(), displayName(npc.getRace().getNameRu(), npc.getRace().getNameEn())))
                 .characterClass(npc.getCharacterClass() == null ? null
                         : ref(npc.getCharacterClass().getId(),
                               displayName(npc.getCharacterClass().getNameRu(), npc.getCharacterClass().getNameEn())))
@@ -327,9 +327,9 @@ public class NpcService {
         // targetType == null => legacy free-form NPC, nothing to update.
     }
 
-    private CharacterRace resolveRace(UUID raceId) {
-        return raceRepository.findById(raceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Race not found"));
+    private com.dnd.app.domain.content.Species resolveRace(UUID raceId) {
+        return speciesRepository.findById(raceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Species not found"));
     }
 
     private ContentCharacterClass resolveClass(UUID classId) {

@@ -56,8 +56,9 @@ public class CampaignNpc {
     // --- CLASS_BASED build (all optional except race/class/level, enforced in service) ---
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_id")
-    private CharacterRace race;
+    @JoinColumn(name = "race_id",
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private com.dnd.app.domain.content.Species race;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id")

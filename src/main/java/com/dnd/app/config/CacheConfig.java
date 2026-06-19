@@ -34,7 +34,6 @@ import java.time.Duration;
 public class CacheConfig {
 
     public static final String VANILLA_CLASSES = "vanillaClasses";
-    public static final String VANILLA_RACES = "vanillaRaces";
     public static final String VANILLA_BACKGROUNDS = "vanillaBackgrounds";
     public static final String VANILLA_SKILLS = "vanillaSkills";
     public static final String VANILLA_STAT_TYPES = "vanillaStatTypes";
@@ -52,7 +51,7 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager(
-                VANILLA_CLASSES, VANILLA_RACES, VANILLA_BACKGROUNDS, VANILLA_SKILLS,
+                VANILLA_CLASSES, VANILLA_BACKGROUNDS, VANILLA_SKILLS,
                 VANILLA_STAT_TYPES, VANILLA_CURRENCIES, VANILLA_SPELLS, CONTENT_VANILLA_CLASSES);
         manager.setCaffeine(Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofMinutes(referenceTtlMinutes))

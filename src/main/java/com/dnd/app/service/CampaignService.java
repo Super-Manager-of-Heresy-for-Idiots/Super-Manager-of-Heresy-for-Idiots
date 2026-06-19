@@ -33,6 +33,8 @@ public class CampaignService {
     private final ItemInstanceRepository itemInstanceRepository;
     private final CharacterWalletRepository characterWalletRepository;
     private final CharacterResourceRepository characterResourceRepository;
+    private final MonsterRepository monsterRepository;
+    private final CampaignNpcRepository campaignNpcRepository;
     private final com.dnd.app.mapper.CharacterMapper characterMapper;
     private final WebSocketEventService webSocketEventService;
 
@@ -128,6 +130,13 @@ public class CampaignService {
         Campaign campaign = findCampaign(id);
         User user = getUser(username);
         enforceCreatorOrAdmin(campaign, user);
+
+        // Campaign-scoped monsters (campaign_id set) are owned by this campaign and die with it.
+        // System/homebrew monsters are untouched. monsters.campaign_id has no ON DELETE, so the
+        // campaign cannot be removed while they exist; clear NPC references, then drop the monsters.
+        campaignNpcRepository.clearSourceMonsterByCampaignId(id);
+        monsterRepository.deleteByCampaignId(id);
+
         log.info("Campaign deleted: id={}, name='{}', by={}", id, campaign.getName(), username);
         campaignRepository.delete(campaign);
     }

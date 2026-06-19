@@ -3,7 +3,6 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.AdminService;
-import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,6 @@ public class AdminController {
 
     private final AdminService adminService;
     private final HomebrewAdminService homebrewAdminService;
-    private final RaceService raceService;
     private final Executor controllerTaskExecutor;
 
     // --- Stat Types ---
@@ -88,105 +86,8 @@ public class AdminController {
 
     // Character class CRUD lives entirely in ClassAuthoringController on the new content model.
 
-    // --- Character Races ---
-
-    @GetMapping("/character-races")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceResponse>>>> listRaces() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.listCharacterRaces())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/character-races")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> createRace(
-            @Valid @RequestBody CreateCharacterRaceRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(adminService.createCharacterRace(request), "Раса персонажа создана")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> getRace(@PathVariable UUID id) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.getCharacterRace(id))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<CharacterRaceResponse>>> updateRace(
-            @PathVariable UUID id, @Valid @RequestBody CreateCharacterRaceRequest request) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(adminService.updateCharacterRace(id, request), "Раса персонажа обновлена")),
-                controllerTaskExecutor);
-    }
-
-    @DeleteMapping("/character-races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> deleteRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            RaceResponse disabledRace = raceService.softDeleteSystemRace(id, auth.getName());
-            if (disabledRace != null) {
-                return ResponseEntity.ok(ApiResponse.ok(disabledRace, "Race disabled"));
-            }
-            return ResponseEntity.ok(ApiResponse.ok(null, "Раса персонажа удалена"));
-        }, controllerTaskExecutor);
-    }
-
-    @GetMapping("/races")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<RaceListItemResponse>>>> listRichRaces() {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.listAdminRaces())),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> createRichRace(
-            @Valid @RequestBody RaceCreateRequest request,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(ApiResponse.ok(raceService.createSystemRace(request, auth.getName()), "System race created")),
-                controllerTaskExecutor);
-    }
-
-    @GetMapping("/races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> getRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.getRace(id, auth.getName()))),
-                controllerTaskExecutor);
-    }
-
-    @PutMapping("/races/{id}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> updateRichRace(
-            @PathVariable UUID id,
-            @Valid @RequestBody RaceUpdateRequest request,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.updateSystemRace(id, request, auth.getName()), "System race updated")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races/{id}/enable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> enableRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, true, auth.getName()), "System race enabled")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/races/{id}/disable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> disableRichRace(
-            @PathVariable UUID id,
-            org.springframework.security.core.Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setSystemRaceActive(id, false, auth.getName()), "System race disabled")),
-                controllerTaskExecutor);
-    }
+    // Legacy character-race / race admin CRUD removed in S5 — species are authored on the
+    // new content model; homebrew species attach via SpeciesContentValidator ("SPECIES").
 
     // --- Skills ---
 

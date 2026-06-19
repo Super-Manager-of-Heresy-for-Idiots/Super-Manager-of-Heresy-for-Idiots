@@ -3,7 +3,7 @@ package com.dnd.app.service;
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.CampaignNpc;
 import com.dnd.app.domain.content.ContentCharacterClass;
-import com.dnd.app.domain.CharacterRace;
+import com.dnd.app.domain.content.Species;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.Monster;
 import com.dnd.app.domain.User;
@@ -17,7 +17,7 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CampaignNpcRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
-import com.dnd.app.repository.CharacterRaceRepository;
+import com.dnd.app.repository.SpeciesRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
 import com.dnd.app.repository.SpellRepository;
@@ -47,7 +47,7 @@ class NpcServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private CampaignService campaignService;
     @Mock private WebSocketEventService webSocketEventService;
-    @Mock private CharacterRaceRepository raceRepository;
+    @Mock private SpeciesRepository speciesRepository;
     @Mock private ContentCharacterClassRepository classRepository;
     @Mock private SpellRepository spellRepository;
     @Mock private MonsterRepository monsterRepository;
@@ -221,8 +221,8 @@ class NpcServiceTest {
 
     // --- Source-based creation ---
 
-    private CharacterRace buildRace() {
-        return CharacterRace.builder().id(UUID.randomUUID()).name("Human").build();
+    private Species buildRace() {
+        return Species.builder().id(UUID.randomUUID()).nameEn("Human").build();
     }
 
     private ContentCharacterClass buildClass() {
@@ -248,11 +248,11 @@ class NpcServiceTest {
     void createNpc_classBased_abilitiesAndSpellsOptional() {
         User gm = buildGm();
         Campaign campaign = buildCampaign();
-        CharacterRace race = buildRace();
+        Species race = buildRace();
         ContentCharacterClass clazz = buildClass();
 
         stubGmCreate(gm, campaign);
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(speciesRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(classRepository.findById(clazz.getId())).thenReturn(Optional.of(clazz));
 
         // Level-20 NPC with no spells and no abilities — must be accepted as-is.

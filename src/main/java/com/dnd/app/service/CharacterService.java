@@ -43,7 +43,7 @@ public class CharacterService {
     private final CampaignContentService campaignContentService;
     private final CampaignService campaignService;
     private final CharacterMapper characterMapper;
-    private final RaceService raceService;
+    private final SpeciesService speciesService;
     private final ReferenceDataService referenceDataService;
     private final CharacterSkillProficiencyRepository skillProficiencyRepository;
     private final CharacterKnownSpellRepository knownSpellRepository;
@@ -231,23 +231,23 @@ public class CharacterService {
 
         ContentCharacterClass charClass = classRepository.findById(request.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Character class not found"));
-        CharacterRace race = raceService.getSelectableRace(campaign.getId(), request.getRaceId());
-        raceService.validateLineageSelection(race, request.getSelectedLineageId());
+        com.dnd.app.domain.content.Species species =
+                speciesService.getSelectableSpecies(campaign.getId(), request.getRaceId());
 
         PlayerCharacter character = PlayerCharacter.builder()
                 .name(request.getName())
                 .totalLevel(1)
                 .experience(0L)
-                .race(race)
-                .selectedLineageId(request.getSelectedLineageId())
-                .raceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()))
+                .race(species)
+                .selectedLineageId(null)
+                .raceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species))
                 .owner(owner)
                 .campaign(campaign)
                 .build();
         character = characterRepository.saveAndFlush(character);
-        log.info("Character created: id={}, name='{}', class='{}', race='{}', lineageId={}, owner={}, campaignId={}",
-                character.getId(), character.getName(), charClass.getNameRu(), race.getName(),
-                request.getSelectedLineageId(), username, campaign.getId());
+        log.info("Character created: id={}, name='{}', class='{}', speciesId={}, owner={}, campaignId={}",
+                character.getId(), character.getName(), charClass.getNameRu(), species.getId(),
+                username, campaign.getId());
 
         addOrUpdateClassLevel(character, charClass.getId(), 1);
 
@@ -343,15 +343,11 @@ public class CharacterService {
             if (character.getCampaign() == null) {
                 throw new BadRequestException("Cannot change race for character without campaign");
             }
-            CharacterRace race = raceService.getSelectableRace(character.getCampaign().getId(), request.getRaceId());
-            raceService.validateLineageSelection(race, request.getSelectedLineageId());
-            character.setRace(race);
-            character.setSelectedLineageId(request.getSelectedLineageId());
-            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(race, request.getSelectedLineageId()));
-        } else if (request.getSelectedLineageId() != null) {
-            raceService.validateLineageSelection(character.getRace(), request.getSelectedLineageId());
-            character.setSelectedLineageId(request.getSelectedLineageId());
-            character.setRaceSnapshotJson(raceService.buildRaceSnapshotJson(character.getRace(), request.getSelectedLineageId()));
+            com.dnd.app.domain.content.Species species =
+                    speciesService.getSelectableSpecies(character.getCampaign().getId(), request.getRaceId());
+            character.setRace(species);
+            character.setSelectedLineageId(null);
+            character.setRaceSnapshotJson(speciesService.buildSpeciesSnapshotJson(species));
         }
 
         character = characterRepository.save(character);
@@ -488,7 +484,15 @@ public class CharacterService {
 
     private CharacterResponse toResponse(PlayerCharacter character) {
         CharacterResponse response = characterMapper.toResponse(character);
-        response.setRaceSnapshot(raceService.parseSnapshot(character.getRaceSnapshotJson()));
+        if (character.getRace() != null) {
+            com.dnd.app.domain.content.Species sp = character.getRace();
+            response.setRace(com.dnd.app.dto.response.CharacterRaceResponse.builder()
+                    .id(sp.getId())
+                    .name(sp.getNameEn() != null ? sp.getNameEn() : sp.getNameRu())
+                    .description(sp.getDescription())
+                    .build());
+        }
+        response.setRaceSnapshot(speciesService.parseSnapshot(character.getRaceSnapshotJson()));
         response.setCurrentHp(character.getCurrentHp());
         response.setMaxHp(character.getMaxHp());
         response.setTempHp(character.getTempHp());

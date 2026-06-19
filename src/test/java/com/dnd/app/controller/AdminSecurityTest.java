@@ -3,7 +3,6 @@ package com.dnd.app.controller;
 import com.dnd.app.config.SecurityConfig;
 import com.dnd.app.security.JwtTokenProvider;
 import com.dnd.app.service.AdminService;
-import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
 import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +32,6 @@ class AdminSecurityTest {
     @MockitoBean private AdminService adminService;
     @MockitoBean private HomebrewAdminService homebrewAdminService;
     @MockitoBean private HomebrewAuthoringService authoringService;
-    @MockitoBean private RaceService raceService;
     @MockitoBean(name = "controllerTaskExecutor") private Executor controllerTaskExecutor;
     @MockitoBean private JwtTokenProvider jwtTokenProvider;
     @MockitoBean private UserDetailsService userDetailsService;

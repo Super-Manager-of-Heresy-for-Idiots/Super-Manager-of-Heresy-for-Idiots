@@ -3,7 +3,6 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.service.HomebrewLibraryService;
-import com.dnd.app.service.RaceService;
 import com.dnd.app.service.homebrew.HomebrewAuthoringService;
 import com.dnd.app.service.homebrew.HomebrewMarketplaceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +32,6 @@ public class HomebrewController {
     private final HomebrewAuthoringService authoringService;
     private final HomebrewMarketplaceService marketplaceService;
     private final HomebrewLibraryService libraryService;
-    private final RaceService raceService;
     private final Executor controllerTaskExecutor;
 
     // === Authoring (own packages) ===
@@ -130,58 +128,8 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
-    @PostMapping("/my/{packageId}/content/races")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> createPackageRace(
-            @PathVariable UUID packageId, @Valid @RequestBody RaceCreateRequest request, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            RaceResponse data = raceService.createHomebrewRace(packageId, request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(data, "Homebrew race created"));
-        }, controllerTaskExecutor);
-    }
-
-    @PutMapping("/my/{packageId}/content/races/{raceId}")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> updatePackageRace(
-            @PathVariable UUID packageId,
-            @PathVariable UUID raceId,
-            @Valid @RequestBody RaceUpdateRequest request,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.updateHomebrewRace(packageId, raceId, request, auth.getName()), "Homebrew race updated")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/my/{packageId}/content/races/{raceId}/enable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> enablePackageRace(
-            @PathVariable UUID packageId,
-            @PathVariable UUID raceId,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, true, auth.getName()), "Homebrew race enabled")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/my/{packageId}/content/races/{raceId}/disable")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> disablePackageRace(
-            @PathVariable UUID packageId,
-            @PathVariable UUID raceId,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(raceService.setHomebrewRaceActive(packageId, raceId, false, auth.getName()), "Homebrew race disabled")),
-                controllerTaskExecutor);
-    }
-
-    @PostMapping("/my/{packageId}/content/races/{raceId}/duplicate")
-    public CompletableFuture<ResponseEntity<ApiResponse<RaceResponse>>> duplicateSystemRaceIntoPackage(
-            @PathVariable UUID packageId,
-            @PathVariable UUID raceId,
-            Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            RaceResponse data = raceService.duplicateSystemRaceIntoHomebrew(packageId, raceId, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(data, "System race duplicated into homebrew"));
-        }, controllerTaskExecutor);
-    }
+    // Legacy homebrew race authoring endpoints removed in S5 — homebrew species attach to a
+    // package via the reference system (SpeciesContentValidator, content type "SPECIES").
 
     @DeleteMapping("/my/{id}/content/{contentItemId}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeContent(

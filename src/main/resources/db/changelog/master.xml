@@ -72,5 +72,9 @@
     <include file="db/changelog/064-drop-legacy-reward-tables.xml"/>
     <include file="db/changelog/065-drop-legacy-class-subclass-tables.xml"/>
     <include file="db/changelog/066-drop-legacy-phb-tables.xml"/>
+    <include file="db/changelog/067-relax-character-race-fk.xml"/>
+    <include file="db/changelog/068-detach-legacy-race-fks.xml"/>
+    <include file="db/changelog/069-detach-custom-resource-class.xml"/>
+    <include file="db/changelog/070-cascade-delete-campaign-characters.xml"/>
 
 </databaseChangeLog>

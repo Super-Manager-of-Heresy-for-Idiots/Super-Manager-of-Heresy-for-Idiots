@@ -2,6 +2,9 @@ package com.dnd.app.repository;
 
 import com.dnd.app.domain.Monster;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,4 +33,10 @@ public interface MonsterRepository extends JpaRepository<Monster, UUID> {
     List<Monster> findAllByCampaignId(UUID campaignId);
 
     List<Monster> findAllByCampaignIdAndIsVisibleToPlayersTrue(UUID campaignId);
+
+    // Removes a campaign's own monsters (NOT system/homebrew); monster_* children and
+    // battle_combatants drop via DB ON DELETE CASCADE. Used when deleting the campaign.
+    @Modifying
+    @Query("delete from Monster m where m.campaign.id = :campaignId")
+    void deleteByCampaignId(@Param("campaignId") UUID campaignId);
 }

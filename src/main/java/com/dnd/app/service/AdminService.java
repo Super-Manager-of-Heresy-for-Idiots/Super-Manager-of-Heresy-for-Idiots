@@ -28,7 +28,6 @@ public class AdminService {
 
     private final StatTypeRepository statTypeRepository;
     private final ItemTypeRepository itemTypeRepository;
-    private final CharacterRaceRepository raceRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
     private final FeatRepository featRepository;
@@ -133,53 +132,7 @@ public class AdminService {
         itemTypeRepository.deleteById(id);
     }
 
-    // --- Character Races ---
-
-    @Transactional(readOnly = true)
-    public List<CharacterRaceResponse> listCharacterRaces() {
-        return raceRepository.findAll().stream().map(refMapper::toCharacterRaceResponse).toList();
-    }
-
-    @Transactional
-    public CharacterRaceResponse createCharacterRace(CreateCharacterRaceRequest request) {
-        if (raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
-        }
-        CharacterRace cr = CharacterRace.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
-        CharacterRace saved = raceRepository.save(cr);
-        log.info("Admin: character race created — name='{}', id={}", saved.getName(), saved.getId());
-        return refMapper.toCharacterRaceResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public CharacterRaceResponse getCharacterRace(UUID id) {
-        return refMapper.toCharacterRaceResponse(raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена")));
-    }
-
-    @Transactional
-    public CharacterRaceResponse updateCharacterRace(UUID id, CreateCharacterRaceRequest request) {
-        CharacterRace cr = raceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Раса персонажа не найдена"));
-        if (!cr.getName().equals(request.getName()) && raceRepository.existsByName(request.getName())) {
-            throw new DuplicateResourceException("Раса персонажа с таким названием уже существует");
-        }
-        cr.setName(request.getName());
-        cr.setDescription(request.getDescription());
-        return refMapper.toCharacterRaceResponse(raceRepository.save(cr));
-    }
-
-    @Transactional
-    public void deleteCharacterRace(UUID id) {
-        if (!raceRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Раса персонажа не найдена");
-        }
-        log.info("Admin: character race deleted — id={}", id);
-        raceRepository.deleteById(id);
-    }
+    // Legacy character-race admin CRUD removed in S5 — species are authored on the new content model.
 
     // --- Skills ---
 

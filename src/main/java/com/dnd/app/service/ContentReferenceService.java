@@ -3,11 +3,15 @@ package com.dnd.app.service;
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.content.ContentCharacterClass;
+import com.dnd.app.domain.content.Species;
 import com.dnd.app.dto.content.ContentClassDetailResponse;
+import com.dnd.app.dto.content.SpeciesDetailResponse;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.mapper.ContentClassMapper;
+import com.dnd.app.mapper.SpeciesMapper;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
+import com.dnd.app.repository.SpeciesRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +39,12 @@ import java.util.UUID;
 public class ContentReferenceService {
 
     private final ContentCharacterClassRepository classRepository;
+    private final SpeciesRepository speciesRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
     private final ContentClassMapper classMapper;
+    private final SpeciesMapper speciesMapper;
 
     // --- campaign-aware ---
 
@@ -89,7 +95,64 @@ public class ContentReferenceService {
         return classMapper.toDetail(clazz, resolvedLang);
     }
 
+    // --- species: campaign-aware ---
+
+    @Transactional(readOnly = true)
+    public List<SpeciesDetailResponse> getCampaignSpecies(UUID campaignId, String username, String lang) {
+        enforceAccess(campaignId, username);
+        String resolvedLang = Localization.normalize(lang);
+
+        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        List<Species> species = new ArrayList<>(speciesRepository.findAllByHomebrewIsNull());
+        if (!pkgIds.isEmpty()) {
+            species.addAll(speciesRepository.findAllByHomebrewIdIn(pkgIds));
+        }
+        return species.stream().map(s -> speciesMapper.toDetail(s, resolvedLang)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SpeciesDetailResponse getCampaignSpeciesById(UUID campaignId, UUID speciesId, String username, String lang) {
+        enforceAccess(campaignId, username);
+        String resolvedLang = Localization.normalize(lang);
+
+        Species species = speciesRepository.findById(speciesId)
+                .orElseThrow(() -> new ResourceNotFoundException("Species not found"));
+        enforceSpeciesVisibleInCampaign(campaignId, species);
+        return speciesMapper.toDetail(species, resolvedLang);
+    }
+
+    // --- species: vanilla / core only ---
+
+    @Transactional(readOnly = true)
+    public List<SpeciesDetailResponse> getVanillaSpecies(String lang) {
+        String resolvedLang = Localization.normalize(lang);
+        return speciesRepository.findAllByHomebrewIsNull().stream()
+                .map(s -> speciesMapper.toDetail(s, resolvedLang))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SpeciesDetailResponse getVanillaSpeciesById(UUID speciesId, String lang) {
+        String resolvedLang = Localization.normalize(lang);
+        Species species = speciesRepository.findById(speciesId)
+                .orElseThrow(() -> new ResourceNotFoundException("Species not found"));
+        if (species.getHomebrew() != null) {
+            throw new ResourceNotFoundException("Species not found");
+        }
+        return speciesMapper.toDetail(species, resolvedLang);
+    }
+
     // --- access helpers ---
+
+    private void enforceSpeciesVisibleInCampaign(UUID campaignId, Species species) {
+        if (species.getHomebrew() == null) {
+            return; // core content always visible
+        }
+        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        if (!pkgIds.contains(species.getHomebrew().getId())) {
+            throw new ResourceNotFoundException("Species not found");
+        }
+    }
 
     private void enforceAccess(UUID campaignId, String username) {
         User user = userRepository.findByUsername(username)

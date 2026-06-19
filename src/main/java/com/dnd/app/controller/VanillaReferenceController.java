@@ -28,14 +28,8 @@ public class VanillaReferenceController {
     // Legacy vanilla class reference endpoint removed in Phase 12 — superseded by
     // GET /api/reference/content/classes (ContentReferenceController).
 
-    @GetMapping("/races")
-    @Operation(summary = "Get vanilla (system) races for character templates")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterRaceDetailResponse>>>> getRaces(
-            @RequestParam(defaultValue = "en") String lang) {
-        return CompletableFuture.supplyAsync(() ->
-                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getVanillaRaces(lang))),
-                controllerTaskExecutor);
-    }
+    // Legacy vanilla race reference endpoint removed in S5 — superseded by
+    // GET /api/reference/content/species (ContentReferenceController).
 
     @GetMapping("/backgrounds")
     @Operation(summary = "Get vanilla (system) backgrounds for character templates")
