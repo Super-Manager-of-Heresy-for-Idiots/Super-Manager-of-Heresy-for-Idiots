@@ -561,10 +561,17 @@ public class BattleService {
             int bonus = feature.getAttackBonus() != null ? feature.getAttackBonus() : 0;
             Optional<FeatureDamage> primary = feature.getDamages().stream()
                     .min(Comparator.comparing(FeatureDamage::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder())));
-            String dice = primary.map(FeatureDamage::getDice).orElse(null);
+            String dice = primary.map(FeatureDamage::getDice)
+                    .filter(d -> d != null && !d.isBlank())
+                    .orElse(null);
             String damageType = primary
                     .map(d -> d.getDamageType() != null ? d.getDamageType().getNameRusloc() : null)
                     .orElse(null);
+            // Weapon attacks store their damage inline in the description, not in structured
+            // feature_damages rows — fall back to parsing the dice out of the text.
+            if (dice == null) {
+                dice = AttackResolver.extractDamageExpression(feature.getDescriptionRusloc());
+            }
             return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType);
         }
 
