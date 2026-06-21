@@ -86,6 +86,7 @@ public class ContentCharacterCreationService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final SpeciesService speciesService;
     private final LevelUpCommandService levelUpCommandService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -181,6 +182,13 @@ public class ContentCharacterCreationService {
                 .hitDiceType("d" + hitDie)
                 .hitDiceTotal(level + "d" + hitDie)
                 .scoreMethod(scoreMethod)
+                .alignment(blankToNull(req.getAlignment()))
+                .avatarUrl(blankToNull(req.getAvatarUrl()))
+                .proficiencies(blankToNull(req.getProficiencies()))
+                .equipment(blankToNull(req.getEquipment()))
+                .features(blankToNull(req.getFeatures()))
+                .biographyJson(serializeBiography(req.getBiography()))
+                .attacksJson(serializeAttacks(req.getAttacks()))
                 .build();
         character = characterRepository.saveAndFlush(character);
 
@@ -270,6 +278,56 @@ public class ContentCharacterCreationService {
             saved.add(spellId);
         }
         return saved;
+    }
+
+    // --- sheet field serialization ---
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /** Serializes biography to the JSON shape read back by CharacterService.toResponse (BiographyResponse). */
+    private String serializeBiography(CreateContentCharacterRequest.Biography bio) {
+        if (bio == null) {
+            return null;
+        }
+        boolean empty = blankToNull(bio.getPersonalityTraits()) == null
+                && blankToNull(bio.getIdeals()) == null
+                && blankToNull(bio.getBonds()) == null
+                && blankToNull(bio.getFlaws()) == null;
+        if (empty) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(bio);
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid biography payload");
+        }
+    }
+
+    /** Serializes attacks to the JSON shape read back by CharacterService.toResponse (List<CharacterAttackResponse>). */
+    private String serializeAttacks(List<CreateContentCharacterRequest.Attack> attacks) {
+        if (attacks == null || attacks.isEmpty()) {
+            return null;
+        }
+        List<CreateContentCharacterRequest.Attack> cleaned = attacks.stream()
+                .filter(a -> a != null && (blankToNull(a.getName()) != null
+                        || blankToNull(a.getAttackBonus()) != null
+                        || blankToNull(a.getDamage()) != null
+                        || blankToNull(a.getDamageType()) != null))
+                .toList();
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(cleaned);
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid attacks payload");
+        }
     }
 
     // --- visibility ---

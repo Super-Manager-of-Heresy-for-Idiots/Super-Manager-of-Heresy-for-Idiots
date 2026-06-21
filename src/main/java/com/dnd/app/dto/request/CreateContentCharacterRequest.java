@@ -79,6 +79,64 @@ public class CreateContentCharacterRequest {
     @Schema(description = "Initial level-1 reward-group selections")
     private List<LevelUpRequest.GroupSelection> initialRewardSelections;
 
+    // --- character-sheet narrative / combat fields (persisted on the character) ---
+
+    @Size(max = 40)
+    @Schema(description = "Moral alignment, e.g. \"Lawful Good\"")
+    private String alignment;
+
+    @Schema(description = "Portrait reference (URL or data URI)")
+    private String avatarUrl;
+
+    @Schema(description = "Free-form proficiencies & languages text")
+    private String proficiencies;
+
+    @Schema(description = "Free-form equipment text")
+    private String equipment;
+
+    @Schema(description = "Free-form features & traits text")
+    private String features;
+
+    @Valid
+    @Schema(description = "Personality traits, ideals, bonds and flaws")
+    private Biography biography;
+
+    @Valid
+    @Schema(description = "Custom attacks / strikes")
+    private List<Attack> attacks;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "ContentBiography")
+    public static class Biography {
+        @Size(max = 2000)
+        private String personalityTraits;
+        @Size(max = 2000)
+        private String ideals;
+        @Size(max = 2000)
+        private String bonds;
+        @Size(max = 2000)
+        private String flaws;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "ContentAttack")
+    public static class Attack {
+        @Size(max = 100)
+        private String name;
+        @Size(max = 20)
+        private String attackBonus;
+        @Size(max = 50)
+        private String damage;
+        @Size(max = 50)
+        private String damageType;
+    }
+
     @Data
     @Builder
     @NoArgsConstructor
