@@ -76,5 +76,6 @@
     <include file="db/changelog/068-detach-legacy-race-fks.xml"/>
     <include file="db/changelog/069-detach-custom-resource-class.xml"/>
     <include file="db/changelog/070-cascade-delete-campaign-characters.xml"/>
+    <include file="db/changelog/071-lucky-feat-resource.xml"/>
 
 </databaseChangeLog>
