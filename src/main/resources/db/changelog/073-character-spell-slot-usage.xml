@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Per-character spell slot consumption.
+
+      The MAXIMUM number of slots a character has at each spell level is derived from the
+      class progression tables (class_progression_value) and is never stored. This table
+      tracks only what the character has SPENT: expended_count slots at spell_level. The
+      available slots shown to the player are max(derived) - expended_count.
+
+      One row per (character, spell_level). Rows are created lazily when a slot is first
+      expended. Long rest restores all (expended_count -> 0); a half rest restores half.
+    -->
+    <changeSet id="073-01-create-character-spell-slot-usage" author="content">
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+CREATE TABLE character_spell_slot_usage (
+    character_id uuid NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    spell_level INT NOT NULL CHECK (spell_level BETWEEN 1 AND 9),
+    expended_count INT NOT NULL DEFAULT 0 CHECK (expended_count >= 0),
+    PRIMARY KEY (character_id, spell_level)
+)
+]]></sql>
+        <rollback>
+            <sql>DROP TABLE IF EXISTS character_spell_slot_usage</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

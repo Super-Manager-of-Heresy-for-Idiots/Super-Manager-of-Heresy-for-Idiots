@@ -266,14 +266,17 @@ public class ContentClassMapper {
                     yield customFallback(grant);
                 }
                 if (Boolean.TRUE.equals(d.getAnySkill())) {
-                    yield SkillProficiencyGrantPayload.builder().mode("ANY").chooseCount(d.getChooseCount()).build();
+                    yield SkillProficiencyGrantPayload.builder().mode("ANY").chooseCount(d.getChooseCount())
+                            .grantsExpertise(d.getGrantsExpertise()).build();
                 }
                 if (d.getSkillOptions() != null && !d.getSkillOptions().isEmpty()) {
                     yield SkillProficiencyGrantPayload.builder().mode("CHOICE").chooseCount(d.getChooseCount())
-                            .skillOptionIds(d.getSkillOptions().stream().map(ContentSkill::getId).toList()).build();
+                            .skillOptionIds(d.getSkillOptions().stream().map(ContentSkill::getId).toList())
+                            .grantsExpertise(d.getGrantsExpertise()).build();
                 }
                 yield SkillProficiencyGrantPayload.builder().mode("FIXED")
-                        .skillIds(d.getSkill() != null ? List.of(d.getSkill().getId()) : List.of()).build();
+                        .skillIds(d.getSkill() != null ? List.of(d.getSkill().getId()) : List.of())
+                        .grantsExpertise(d.getGrantsExpertise()).build();
             }
             case ABILITY_SCORE -> {
                 ClassLevelRewardGrantAbilityScore d = cache.abilities.get(id);
