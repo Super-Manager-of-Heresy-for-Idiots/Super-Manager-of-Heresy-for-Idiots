@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="071-01-add-lucky-resource" author="content">
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+INSERT INTO custom_resource_types (
+    id,
+    name,
+    description,
+    max_value,
+    class_bound_id,
+    homebrew_id,
+    name_engloc,
+    name_rusloc,
+    description_engloc,
+    description_rusloc
+)
+SELECT gen_random_uuid(),
+       'Luck Points',
+       'Luck points from the Lucky origin feat. The maximum equals the character proficiency bonus and refreshes on a long rest.',
+       NULL,
+       NULL,
+       NULL,
+       'Luck Points',
+       'Очки везения',
+       'Luck points from the Lucky origin feat. The maximum equals the character proficiency bonus and refreshes on a long rest.',
+       'Очки везения от черты происхождения Везучий. Максимум равен бонусу владения персонажа и восстанавливается после долгого отдыха.'
+WHERE NOT EXISTS (
+    SELECT 1
+      FROM custom_resource_types
+     WHERE name = 'Luck Points'
+        OR name_rusloc = 'Очки везения'
+)
+]]></sql>
+        <rollback>
+            <sql>DELETE FROM custom_resource_types WHERE name = 'Luck Points' AND name_rusloc = 'Очки везения'</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="071-02-update-lucky-feat-text" author="content">
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+UPDATE feats
+   SET name_rusloc = 'Везучий',
+       description = 'You gain Luck Points equal to your Proficiency Bonus. You can spend 1 Luck Point to give yourself Advantage on a D20 Test, or to give Disadvantage to an attack roll against you. You regain expended Luck Points when you finish a Long Rest.',
+       description_engloc = 'You gain Luck Points equal to your Proficiency Bonus. You can spend 1 Luck Point to give yourself Advantage on a D20 Test, or to give Disadvantage to an attack roll against you. You regain expended Luck Points when you finish a Long Rest.',
+       description_rusloc = 'Вы получаете следующие преимущества:
+Очки везения.
+У вас есть Очки везения, которые вы можете потратить на преимущества, указанные ниже. Количество ваших Очков везения равно вашему Бонусу владения. Вы восстанавливаете потраченные Очки везения по завершению Долгого отдыха.
+Преимущество.
+Когда вы совершаете Тест К20, можете потратить 1 Очко везения, чтобы применить на этот бросок Преимущество.
+Помеха.
+Когда существо совершает бросок атаки по вам, вы можете потратить 1 Очко везения, чтобы применить на этот бросок Помеху.',
+       prerequisites = NULL,
+       prerequisites_engloc = NULL,
+       prerequisites_rusloc = NULL
+ WHERE name = 'Lucky'
+    OR name_rusloc IN ('Удачливый', 'Везучий')
+]]></sql>
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+UPDATE feat
+   SET name_ru = 'Везучий',
+       description = 'Вы получаете следующие преимущества:
+Очки везения.
+У вас есть Очки везения, которые вы можете потратить на преимущества, указанные ниже. Количество ваших Очков везения равно вашему Бонусу владения. Вы восстанавливаете потраченные Очки везения по завершению Долгого отдыха.
+Преимущество.
+Когда вы совершаете Тест К20, можете потратить 1 Очко везения, чтобы применить на этот бросок Преимущество.
+Помеха.
+Когда существо совершает бросок атаки по вам, вы можете потратить 1 Очко везения, чтобы применить на этот бросок Помеху.'
+ WHERE slug = 'lucky'
+    OR lower(name_en) = 'lucky'
+]]></sql>
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>
