@@ -19,7 +19,7 @@ env:
   # Имя образа внутри Kustomize (поле images[].name в kustomization.yaml GitOps-репо).
   KUSTOMIZE_IMAGE_NAME: dnd-backend
   # Путь к kustomization.yaml в GitOps-репозитории, где лежит блок images:.
-  GITOPS_KUSTOMIZATION_PATH: apps/dnd/overlays/prod/kustomization.yaml
+  GITOPS_KUSTOMIZATION_PATH: apps/dnd/base/kustomization.yaml
 
 jobs:
   # ---------------------------------------------------------------------------
