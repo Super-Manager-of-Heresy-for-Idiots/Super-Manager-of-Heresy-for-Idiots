@@ -8,6 +8,7 @@ import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.response.BattleActionResultResponse;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.combat.DiceRoller;
+import com.dnd.app.service.combat.WeaponAttackService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class BattleServiceAttackTest {
     @Mock private CharacterEffectService characterEffectService;
     @Mock private WebSocketEventService webSocketEventService;
     @Mock private DiceRoller diceRoller;
+    @Mock private WeaponAttackService weaponAttackService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -51,7 +53,7 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, objectMapper);
+                diceRoller, weaponAttackService, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -117,7 +119,7 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, objectMapper);
+                diceRoller, weaponAttackService, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

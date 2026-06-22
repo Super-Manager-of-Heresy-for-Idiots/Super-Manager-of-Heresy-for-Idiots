@@ -79,5 +79,6 @@
     <include file="db/changelog/071-lucky-feat-resource.xml"/>
     <include file="db/changelog/072-skill-expertise.xml"/>
     <include file="db/changelog/073-character-spell-slot-usage.xml"/>
+    <include file="db/changelog/074-item-instances-content-fk.xml"/>
 
 </databaseChangeLog>

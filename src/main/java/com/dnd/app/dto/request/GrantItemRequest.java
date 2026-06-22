@@ -15,8 +15,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GrantItemRequest {
 
-    @NotNull(message = "Template ID is required")
-    private UUID templateId;
+    /** Id of the catalog item to grant (equipment_item, magic_item, or legacy item_template). */
+    @NotNull(message = "Item ID is required")
+    private UUID itemId;
+
+    /** Which catalog table {@link #itemId} refers to: EQUIPMENT (default), MAGIC, or TEMPLATE (legacy). */
+    private String itemKind;
 
     @Min(value = 1, message = "Quantity must be at least 1")
     @Builder.Default

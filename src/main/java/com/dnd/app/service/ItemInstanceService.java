@@ -1,6 +1,8 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.EquipmentItem;
+import com.dnd.app.domain.content.MagicItem;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
@@ -9,6 +11,7 @@ import com.dnd.app.dto.request.GrantItemRequest;
 import com.dnd.app.dto.request.RenameItemRequest;
 import com.dnd.app.dto.request.TransferItemRequest;
 import com.dnd.app.dto.response.ItemInstanceResponse;
+import com.dnd.app.mapper.ItemInstanceMapper;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
@@ -30,6 +33,8 @@ public class ItemInstanceService {
 
     private final ItemInstanceRepository itemInstanceRepository;
     private final ItemTemplateRepository itemTemplateRepository;
+    private final EquipmentItemRepository equipmentItemRepository;
+    private final MagicItemRepository magicItemRepository;
     private final ItemTemplateBuffRepository itemTemplateBuffRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
     private final CharacterActiveEffectRepository characterActiveEffectRepository;
@@ -47,15 +52,42 @@ public class ItemInstanceService {
         campaignService.enforceGmOrAdmin(campaign, user);
 
         PlayerCharacter character = findCharacter(characterId);
-        ItemTemplate template = itemTemplateRepository.findById(request.getTemplateId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item template not found"));
+
+        // Resolve the catalog item from the new content model (equipment / magic) or the
+        // legacy template table, depending on the request's itemKind.
+        String kind = request.getItemKind() != null ? request.getItemKind().trim().toUpperCase() : "EQUIPMENT";
+        ItemTemplate template = null;
+        EquipmentItem equipmentItem = null;
+        MagicItem magicItem = null;
+        boolean stackable;
+        switch (kind) {
+            case "MAGIC" -> {
+                magicItem = magicItemRepository.findById(request.getItemId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Magic item not found"));
+                stackable = false;
+            }
+            case "TEMPLATE" -> {
+                template = itemTemplateRepository.findById(request.getItemId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Item template not found"));
+                stackable = Boolean.TRUE.equals(template.getIsStackable());
+            }
+            default -> {
+                equipmentItem = equipmentItemRepository.findById(request.getItemId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Equipment item not found"));
+                stackable = isEquipmentStackable(equipmentItem);
+            }
+        }
 
         int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
+        boolean unique = Boolean.TRUE.equals(request.getIsUnique()) || request.getCustomName() != null;
 
         // Handle stacking: atomic increment to avoid lost updates under concurrent grants
-        if (Boolean.TRUE.equals(template.getIsStackable())) {
-            Optional<ItemInstance> existing = itemInstanceRepository
-                    .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, template.getId());
+        if (stackable && !unique) {
+            Optional<ItemInstance> existing = itemInstanceRepository.findStackableForCharacter(
+                    characterId,
+                    template != null ? template.getId() : null,
+                    equipmentItem != null ? equipmentItem.getId() : null,
+                    magicItem != null ? magicItem.getId() : null);
             if (existing.isPresent()) {
                 UUID instanceId = existing.get().getId();
                 itemInstanceRepository.incrementQuantity(instanceId, quantity);
@@ -72,15 +104,17 @@ public class ItemInstanceService {
 
         ItemInstance instance = ItemInstance.builder()
                 .template(template)
+                .equipmentItem(equipmentItem)
+                .magicItem(magicItem)
                 .ownerCharacter(character)
                 .quantity(quantity)
                 .customName(request.getCustomName())
-                .isUnique(request.getCustomName() != null)
+                .isUnique(unique)
                 .build();
         instance = itemInstanceRepository.save(instance);
 
-        log.info("Item granted: instanceId={}, templateId={}, characterId={}, by={}",
-                instance.getId(), template.getId(), characterId, username);
+        log.info("Item granted: instanceId={}, itemId={}, kind={}, characterId={}, by={}",
+                instance.getId(), request.getItemId(), kind, characterId, username);
         ItemInstanceResponse response = toResponse(instance);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
                 characterId, response, user.getId());
@@ -144,8 +178,10 @@ public class ItemInstanceService {
         instance.setSlot(slot);
         instance = itemInstanceRepository.save(instance);
 
-        // Auto-apply template buffs as active effects
-        applyTemplateBuffs(character, instance.getTemplate(), user);
+        // Auto-apply template buffs as active effects (legacy template-backed items only)
+        if (instance.getTemplate() != null) {
+            applyTemplateBuffs(character, instance.getTemplate(), user);
+        }
 
         log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot.getCode(), characterId);
         return toResponse(instance);
@@ -162,8 +198,10 @@ public class ItemInstanceService {
             throw new BadRequestException("Item does not belong to this character");
         }
 
-        // Auto-remove template buffs
-        removeTemplateBuffs(character, instance.getTemplate());
+        // Auto-remove template buffs (legacy template-backed items only)
+        if (instance.getTemplate() != null) {
+            removeTemplateBuffs(character, instance.getTemplate());
+        }
 
         instance.setSlot(null);
         instance = itemInstanceRepository.save(instance);
@@ -185,8 +223,10 @@ public class ItemInstanceService {
 
         // If equipped, unequip first
         if (instance.getSlot() != null) {
-            PlayerCharacter character = findCharacter(characterId);
-            removeTemplateBuffs(character, instance.getTemplate());
+            if (instance.getTemplate() != null) {
+                PlayerCharacter character = findCharacter(characterId);
+                removeTemplateBuffs(character, instance.getTemplate());
+            }
             instance.setSlot(null);
         }
 
@@ -266,6 +306,8 @@ public class ItemInstanceService {
 
             ItemInstance newInstance = ItemInstance.builder()
                     .template(instance.getTemplate())
+                    .equipmentItem(instance.getEquipmentItem())
+                    .magicItem(instance.getMagicItem())
                     .ownerCharacter(character)
                     .customName(request.getCustomName())
                     .quantity(1)
@@ -348,17 +390,12 @@ public class ItemInstanceService {
     }
 
     private ItemInstanceResponse toResponse(ItemInstance instance) {
-        return ItemInstanceResponse.builder()
-                .id(instance.getId())
-                .templateId(instance.getTemplate().getId())
-                .templateName(instance.getTemplate().getName())
-                .displayName(instance.getDisplayName())
-                .customName(instance.getCustomName())
-                .quantity(instance.getQuantity())
-                .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
-                .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getSlug() : null)
-                .build();
+        return ItemInstanceMapper.toResponse(instance);
+    }
+
+    /** Equipment is stackable unless it is a weapon or armor (gear/tools/ammo stack). */
+    private boolean isEquipmentStackable(EquipmentItem item) {
+        String kind = item.getKind() != null ? item.getKind().toLowerCase() : "";
+        return !kind.equals("weapon") && !kind.equals("armor");
     }
 }

@@ -19,6 +19,7 @@ import com.dnd.app.repository.*;
 import com.dnd.app.service.combat.AttackResolver;
 import com.dnd.app.service.combat.CombatCalculator;
 import com.dnd.app.service.combat.DiceRoller;
+import com.dnd.app.service.combat.WeaponAttackService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,7 @@ public class BattleService {
     private final CharacterEffectService characterEffectService;
     private final WebSocketEventService webSocketEventService;
     private final DiceRoller diceRoller;
+    private final WeaponAttackService weaponAttackService;
     private final ObjectMapper objectMapper;
 
     // ================================ Lifecycle ================================
@@ -397,7 +399,18 @@ public class BattleService {
 
         if (current.getType() == CombatantType.CHARACTER && current.getCharacter() != null) {
             UUID characterId = current.getCharacter().getId();
-            builder.character(characterService.getCharacterById(characterId, username))
+            CharacterResponse characterResponse = characterService.getCharacterById(characterId, username);
+            // Surface weapon-driven attacks (derived from equipped weapons + proficiency) alongside
+            // any manually-authored attacks so the combat UI lists actionable strikes/throws.
+            List<CharacterAttackResponse> weaponAttacks = weaponAttackService.computeAttacks(current.getCharacter());
+            if (!weaponAttacks.isEmpty()) {
+                List<CharacterAttackResponse> combined = new ArrayList<>(weaponAttacks);
+                if (characterResponse.getAttacks() != null) {
+                    combined.addAll(characterResponse.getAttacks());
+                }
+                characterResponse.setAttacks(combined);
+            }
+            builder.character(characterResponse)
                     .resources(characterResourceService.getResources(characterId, username))
                     .activeEffects(characterEffectService.getActiveEffects(characterId, username));
         } else if (current.getType() == CombatantType.MONSTER && current.getMonster() != null) {
@@ -528,28 +541,34 @@ public class BattleService {
     private record AttackOption(String name, int attackBonus, String damage, String damageType) {
     }
 
-    /** Finds the named attack on the active combatant — character {@code attacksJson} or monster features. */
+    /** A character's full attack list: weapon-driven attacks plus any manually-authored ones. */
+    private List<CharacterAttackResponse> characterAttackList(PlayerCharacter character) {
+        List<CharacterAttackResponse> list = new ArrayList<>(weaponAttackService.computeAttacks(character));
+        String json = character.getAttacksJson();
+        if (json != null && !json.isBlank()) {
+            try {
+                list.addAll(objectMapper.readValue(json, new TypeReference<List<CharacterAttackResponse>>() {}));
+            } catch (Exception e) {
+                throw new BadRequestException("Could not read this character's attacks");
+            }
+        }
+        return list;
+    }
+
+    /** Finds the named attack on the active combatant — character weapon/json attacks or monster features. */
     private AttackOption resolveAttack(BattleCombatant attacker, String attackName) {
         if (attacker.getType() == CombatantType.CHARACTER && attacker.getCharacter() != null) {
-            String json = attacker.getCharacter().getAttacksJson();
-            if (json != null && !json.isBlank()) {
-                try {
-                    List<CharacterAttackResponse> attacks = objectMapper.readValue(
-                            json, new TypeReference<List<CharacterAttackResponse>>() {});
-                    return attacks.stream()
-                            .filter(a -> a.getName() != null && a.getName().equalsIgnoreCase(attackName))
-                            .findFirst()
-                            .map(a -> new AttackOption(a.getName(),
-                                    AttackResolver.parseAttackBonus(a.getAttackBonus()),
-                                    a.getDamage(), a.getDamageType()))
-                            .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
-                } catch (BadRequestException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new BadRequestException("Could not read this character's attacks");
-                }
+            List<CharacterAttackResponse> attacks = characterAttackList(attacker.getCharacter());
+            if (attacks.isEmpty()) {
+                throw new BadRequestException("This character has no attacks");
             }
-            throw new BadRequestException("This character has no attacks");
+            return attacks.stream()
+                    .filter(a -> a.getName() != null && a.getName().equalsIgnoreCase(attackName))
+                    .findFirst()
+                    .map(a -> new AttackOption(a.getName(),
+                            AttackResolver.parseAttackBonus(a.getAttackBonus()),
+                            a.getDamage(), a.getDamageType()))
+                    .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
 
         if (attacker.getType() == CombatantType.MONSTER && attacker.getMonster() != null) {

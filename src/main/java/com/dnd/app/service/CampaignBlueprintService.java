@@ -557,6 +557,8 @@ public class CampaignBlueprintService {
         for (ItemInstance item : itemInstanceRepository.findByOwnerCharacterId(original.getId())) {
             ItemInstance newItem = ItemInstance.builder()
                     .template(item.getTemplate())
+                    .equipmentItem(item.getEquipmentItem())
+                    .magicItem(item.getMagicItem())
                     .ownerCharacter(copy)
                     .customName(item.getCustomName())
                     .quantity(item.getQuantity())

@@ -25,5 +25,8 @@ public class ItemInstanceResponse {
     private String slot;
     private String notes;
     private String rarity;
+    private String itemTypeName;
+    private String damageDice;
+    private String damageType;
     private List<EnchantmentResponse> enchantments;
 }
