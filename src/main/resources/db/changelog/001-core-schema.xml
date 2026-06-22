@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Consolidated core schema. Generated from the production-shape ("etalon") database
+      via pg_dump (schema only), excluding the bestiary tables (created by 040-044) and
+      legacy orphan tables. The 3 core to monsters FKs are deferred to 045 so this runs
+      before the bestiary changelogs.
+    -->
+    <changeSet id="001-core-schema" author="squash" runOnChange="false">
+        <sqlFile path="sql/001-core-schema.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 stripComments="true"
+                 endDelimiter=";"/>
+    </changeSet>
+
+</databaseChangeLog>

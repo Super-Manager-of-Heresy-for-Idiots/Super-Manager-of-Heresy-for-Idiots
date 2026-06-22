@@ -182,14 +182,11 @@
         ]]></sql>
     </changeSet>
 
-    <!-- ===================== 7. homebrew_id on dictionary child/detail tables ===================== -->
-    <changeSet id="044-07-homebrew-on-dict-children" author="bestiary">
-        <sql splitStatements="true" stripComments="false"><![CDATA[
-            ALTER TABLE proficiency_skills   ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
-            ALTER TABLE skill_effects        ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
-            ALTER TABLE class_level_rewards  ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
-            ALTER TABLE item_template_buffs  ADD COLUMN homebrew_id uuid NULL REFERENCES homebrew_packages(id);
-        ]]></sql>
-    </changeSet>
+    <!--
+      NOTE: the former changeset 044-07 added homebrew_id to core dictionary child tables
+      (proficiency_skills, skill_effects, class_level_rewards, item_template_buffs). Those
+      columns are now part of the consolidated core schema (001-core-schema), so the changeset
+      was removed during the migration squash. It touched no bestiary/monster tables.
+    -->
 
 </databaseChangeLog>

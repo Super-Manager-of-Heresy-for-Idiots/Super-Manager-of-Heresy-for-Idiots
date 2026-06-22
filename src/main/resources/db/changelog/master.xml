@@ -5,80 +5,18 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <include file="db/changelog/001-create-schema.xml"/>
-    <include file="db/changelog/002-seed-data.xml"/>
-    <include file="db/changelog/003-artifacts-conditions.xml"/>
-    <include file="db/changelog/004-multiclass-levelup.xml"/>
-    <include file="db/changelog/005-homebrew-marketplace.xml"/>
-    <include file="db/changelog/006-localize-seed-data.xml"/>
-    <include file="db/changelog/007-restore-system-enums.xml"/>
-    <include file="db/changelog/008-create-buffs-debuffs.xml"/>
-    <include file="db/changelog/009-seed-buffs-debuffs.xml"/>
-    <include file="db/changelog/010-add-damage-to-item-types.xml"/>
-    <include file="db/changelog/011-add-damage-to-skills.xml"/>
-    <include file="db/changelog/012-create-skill-effects.xml"/>
-    <include file="db/changelog/013-create-enchantment-types.xml"/>
-    <include file="db/changelog/014-seed-enchantment-types.xml"/>
-    <include file="db/changelog/015-create-inventory-enchantments.xml"/>
-    <include file="db/changelog/016-role-model-rework.xml"/>
-    <include file="db/changelog/017-create-campaign-model.xml"/>
-    <include file="db/changelog/018-migrate-team-to-campaign.xml"/>
-    <include file="db/changelog/019-create-item-template-instance.xml"/>
-    <include file="db/changelog/020-create-item-enchantments.xml"/>
-    <include file="db/changelog/021-character-active-effects.xml"/>
-    <include file="db/changelog/022-character-wallet-resources.xml"/>
-    <include file="db/changelog/023-add-character-status-hp.xml"/>
-    <include file="db/changelog/024-npcs-quests-locations.xml"/>
-    <include file="db/changelog/025-homebrew-evolution.xml"/>
-    <include file="db/changelog/026-seed-target-data.xml"/>
-    <include file="db/changelog/027-align-schema-with-spec.xml"/>
-    <include file="db/changelog/028-race-species-evolution.xml"/>
-    <include file="db/changelog/029-character-wizard.xml"/>
-    <include file="db/changelog/030-seed-wizard-data.xml"/>
-    <include file="db/changelog/031-fix-seed-language.xml"/>
-    <include file="db/changelog/032-schema-integrity.xml"/>
-    <include file="db/changelog/033-cascade-deletes.xml"/>
-    <include file="db/changelog/034-add-user-role-index.xml"/>
-    <include file="db/changelog/035-add-temp-hp.xml"/>
-    <include file="db/changelog/036-wallet-transactions.xml"/>
-    <include file="db/changelog/037-add-character-sheet-text-fields.xml"/>
-    <include file="db/changelog/038-seed-phb-full.xml"/>
-    <include file="db/changelog/039-asi-reward-id-nullable.xml"/>
+    <!-- Core schema + reference data (consolidated from the etalon DB). -->
+    <include file="db/changelog/001-core-schema.xml"/>
+    <include file="db/changelog/002-core-reference-data.xml"/>
+
+    <!-- Bestiary (kept verbatim): schema, dictionaries, monsters, authoring, enum dicts. -->
     <include file="db/changelog/040-create-bestiary-schema.xml"/>
     <include file="db/changelog/041-seed-bestiary-dictionaries.xml"/>
     <include file="db/changelog/042-seed-bestiary-monsters.xml"/>
     <include file="db/changelog/043-bestiary-monster-authoring.xml"/>
     <include file="db/changelog/044-bestiary-enum-dicts-and-homebrew.xml"/>
-    <include file="db/changelog/045-content-enum-dicts-and-homebrew.xml"/>
-    <include file="db/changelog/046-stat-type-soft-delete.xml"/>
-    <include file="db/changelog/047-npc-build-and-source.xml"/>
-    <include file="db/changelog/048-add-quest-reward-xp.xml"/>
-    <include file="db/changelog/049-create-combat-model.xml"/>
-    <include file="db/changelog/050-create-universes.xml"/>
-    <include file="db/changelog/051-create-campaign-blueprints.xml"/>
-    <include file="db/changelog/052-create-blueprint-content.xml"/>
-    <include file="db/changelog/053-add-blueprint-id-to-characters.xml"/>
-    <include file="db/changelog/054-create-dnd-content-schema.xml"/>
-    <include file="db/changelog/055-add-homebrew-ownership-to-content.xml"/>
-    <include file="db/changelog/056-drop-content-raw-json.xml"/>
-    <include file="db/changelog/057-class-mechanics.xml"/>
-    <include file="db/changelog/058-class-reward-choices.xml"/>
-    <include file="db/changelog/059-content-homebrew-flexibility-fixes.xml"/>
-    <include file="db/changelog/060-relax-runtime-content-fks.xml"/>
-    <include file="db/changelog/061-class-authoring-idempotency.xml"/>
-    <include file="db/changelog/062-relax-runtime-content-fks-2.xml"/>
-    <include file="db/changelog/063a-cleanup-orphan-runtime-rows.xml"/>
-    <include file="db/changelog/063-runtime-content-real-fks.xml"/>
-    <include file="db/changelog/064-drop-legacy-reward-tables.xml"/>
-    <include file="db/changelog/065-drop-legacy-class-subclass-tables.xml"/>
-    <include file="db/changelog/066-drop-legacy-phb-tables.xml"/>
-    <include file="db/changelog/067-relax-character-race-fk.xml"/>
-    <include file="db/changelog/068-detach-legacy-race-fks.xml"/>
-    <include file="db/changelog/069-detach-custom-resource-class.xml"/>
-    <include file="db/changelog/070-cascade-delete-campaign-characters.xml"/>
-    <include file="db/changelog/071-lucky-feat-resource.xml"/>
-    <include file="db/changelog/072-skill-expertise.xml"/>
-    <include file="db/changelog/073-character-spell-slot-usage.xml"/>
-    <include file="db/changelog/074-item-instances-content-fk.xml"/>
+
+    <!-- Core <-> bestiary FK links (deferred from 001). -->
+    <include file="db/changelog/045-link-core-bestiary-fks.xml"/>
 
 </databaseChangeLog>
