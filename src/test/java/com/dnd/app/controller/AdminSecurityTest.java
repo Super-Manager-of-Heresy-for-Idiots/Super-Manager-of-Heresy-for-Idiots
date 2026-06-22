@@ -1,6 +1,9 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.config.SecurityConfig;
+import com.dnd.app.security.AuthCookieService;
+import com.dnd.app.security.AuthRateLimitFilter;
+import com.dnd.app.security.JwtAuthenticationFilter;
 import com.dnd.app.security.JwtTokenProvider;
 import com.dnd.app.service.AdminService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
@@ -23,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, AuthRateLimitFilter.class})
 @DisplayName("AdminController: эндпоинты типов предметов только для администратора")
 class AdminSecurityTest {
 
@@ -35,6 +38,7 @@ class AdminSecurityTest {
     @MockitoBean(name = "controllerTaskExecutor") private Executor controllerTaskExecutor;
     @MockitoBean private JwtTokenProvider jwtTokenProvider;
     @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private AuthCookieService authCookieService;
 
     @Test
     @WithMockUser(roles = "GAME_MASTER")
