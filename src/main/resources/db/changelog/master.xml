@@ -19,6 +19,10 @@
     <!-- Core <-> bestiary FK links (deferred from 001). -->
     <include file="db/changelog/045-link-core-bestiary-fks.xml"/>
 
+    <!-- Item source-of-truth unification: content FKs on item_instances (was never wired into
+         master, so the schema lacked equipment_item_id/magic_item_id and validate failed). -->
+    <include file="db/changelog/074-item-instances-content-fk.xml"/>
+
     <!-- NPC roles (merchant, quest giver, …) and merchant trading. -->
     <include file="db/changelog/050-npc-roles-and-trading.xml"/>
 
