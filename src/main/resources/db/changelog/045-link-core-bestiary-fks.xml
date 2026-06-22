@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      The 3 FKs from core tables to bestiary.monsters. Deferred out of 001 so the core
+      schema can be created before the bestiary tables (040-044). Runs last.
+    -->
+    <changeSet id="045-link-core-bestiary-fks" author="squash">
+        <sql>
+            ALTER TABLE ONLY public.campaign_npcs
+                ADD CONSTRAINT campaign_npcs_source_monster_id_fkey
+                FOREIGN KEY (source_monster_id) REFERENCES public.monsters(id);
+
+            ALTER TABLE ONLY public.blueprint_npcs
+                ADD CONSTRAINT fk_bnpc_monster
+                FOREIGN KEY (source_monster_id) REFERENCES public.monsters(id);
+
+            ALTER TABLE ONLY public.battle_combatants
+                ADD CONSTRAINT fk_combatant_monster
+                FOREIGN KEY (monster_id) REFERENCES public.monsters(id) ON DELETE CASCADE;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      System/reference dictionary rows (homebrew_id IS NULL), exported from the etalon DB
+      with UUIDs preserved so existing references resolve. Content tables (PHB classes,
+      spells, species, feats, magic items, ...) are intentionally NOT seeded here: they are
+      loaded at startup by DndContentLoader / ClassRewardSeedService from dnd_import/*.json.
+    -->
+    <changeSet id="002-core-reference-data" author="squash" runOnChange="false">
+        <sqlFile path="sql/002-core-reference-data.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="true"
+                 stripComments="true"
+                 endDelimiter=";"/>
+    </changeSet>
+
+</databaseChangeLog>
