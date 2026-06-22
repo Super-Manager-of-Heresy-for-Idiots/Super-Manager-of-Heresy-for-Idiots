@@ -20,7 +20,7 @@ env:
   KUSTOMIZE_IMAGE_NAME: dnd-backend
   # Путь к kustomization.yaml в GitOps-репозитории, где лежит блок images:.
   # Блок images: лежит в оверлее prod, НЕ в base.
-  GITOPS_KUSTOMIZATION_PATH: apps/dnd/overlays/prod/kustomization.yaml
+  GITOPS_KUSTOMIZATION_PATH: apps/dnd-backend/overlays/prod/kustomization.yaml
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ jobs:
       cancel-in-progress: false
     steps:
       # Если GITOPS_REPO_SLUG пуст, actions/checkout молча выкачает ТЕКУЩИЙ
-      # (app) репозиторий — отсюда "no such file" на apps/dnd/...
+      # (app) репозиторий — отсюда "no such file" на GitOps kustomization path.
       - name: Validate GitOps repo slug
         run: |
           if [ -z "${{ vars.GITOPS_REPO_SLUG }}" ]; then
