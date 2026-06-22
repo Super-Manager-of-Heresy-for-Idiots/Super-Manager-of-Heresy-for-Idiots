@@ -533,6 +533,8 @@ public class CharacterService {
                                     .skillId(sp.getSkill().getId())
                                     .skillName(sp.getSkill().getNameRu())
                                     .source(sp.getSource().name())
+                                    .proficiencyLevel(sp.getProficiencyLevel() != null
+                                            ? sp.getProficiencyLevel().name() : "PROFICIENT")
                                     .build())
                             .toList()
             );

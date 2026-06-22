@@ -37,6 +37,10 @@ public class ClassLevelRewardGrantSkillProficiency {
     @Builder.Default
     private Boolean anySkill = false;
 
+    @Column(name = "grants_expertise", nullable = false)
+    @Builder.Default
+    private Boolean grantsExpertise = false;
+
     @Column(name = "raw_filter_text", columnDefinition = "text")
     private String rawFilterText;
 

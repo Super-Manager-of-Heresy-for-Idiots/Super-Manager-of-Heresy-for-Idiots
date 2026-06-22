@@ -37,6 +37,16 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    @GetMapping
+    @Operation(summary = "List all vanilla item templates (Admin only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ItemTemplateResponse>>>> listAllTemplates(
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<ItemTemplateResponse> templates = itemTemplateService.listAllVanilla(auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(templates));
+        }, controllerTaskExecutor);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get item template")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> getTemplate(@PathVariable UUID id) {

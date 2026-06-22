@@ -6,6 +6,8 @@ import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.ApplyCombatantHpRequest;
+import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
@@ -14,8 +16,11 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.combat.AttackResolver;
 import com.dnd.app.service.combat.CombatCalculator;
 import com.dnd.app.service.combat.DiceRoller;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +30,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -54,6 +62,7 @@ public class BattleService {
     private final CharacterEffectService characterEffectService;
     private final WebSocketEventService webSocketEventService;
     private final DiceRoller diceRoller;
+    private final ObjectMapper objectMapper;
 
     // ================================ Lifecycle ================================
 
@@ -400,7 +409,242 @@ public class BattleService {
         return builder.build();
     }
 
+    // ============================ Attacks & damage ============================
+
+    /**
+     * The combatant whose turn it currently is strikes a target. The attacker supplies their own
+     * d20 (tabletop style); the server resolves hit/crit against the target's AC, rolls the named
+     * attack's damage and applies it to the target's HP. When the target is a character the change
+     * is written through to its sheet (with temp-HP absorption) so death/HP persists after the
+     * battle. Authorization: the GM (any combatant, e.g. monsters) or the owner of the active
+     * character, and only on that combatant's own turn.
+     */
+    @Transactional
+    public BattleActionResultResponse performAttack(UUID campaignId, UUID battleId,
+                                                    BattleAttackRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Attacks can only happen in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant attacker = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        enforceControls(campaignId, user, attacker);
+
+        BattleCombatant target = combatantRepository.findById(request.getTargetCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
+        if (!target.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Target does not belong to this battle");
+        }
+        if (target.getId().equals(attacker.getId())) {
+            throw new BadRequestException("A combatant cannot attack itself");
+        }
+
+        AttackOption attack = resolveAttack(attacker, request.getAttackName());
+        int targetAc = resolveTargetAc(target);
+        AttackResolver.Outcome outcome = AttackResolver.resolve(request.getD20(), attack.attackBonus(), targetAc);
+
+        Integer damage = null;
+        if (outcome.dealsDamage()) {
+            damage = diceRoller.rollDamage(attack.damage(), outcome == AttackResolver.Outcome.CRIT);
+            applyDamageOrHeal(target, -damage, user, campaignId);
+        }
+
+        boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
+        log.info("Attack resolved: battleId={}, attacker={}, target={}, attack='{}', d20={}, outcome={}, dmg={}, by={}",
+                battleId, attacker.getDisplayName(), target.getDisplayName(), attack.name(),
+                request.getD20(), outcome, damage, username);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("battleId", battleId);
+        payload.put("attackerName", attacker.getDisplayName());
+        payload.put("targetName", target.getDisplayName());
+        payload.put("attackName", attack.name());
+        payload.put("outcome", outcome.name());
+        if (damage != null) {
+            payload.put("damage", damage);
+        }
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
+
+        BattleResponse fresh = toResponse(battle, orderedCombatants(battleId));
+        return BattleActionResultResponse.builder()
+                .attackerCombatantId(attacker.getId())
+                .attackerName(attacker.getDisplayName())
+                .targetCombatantId(target.getId())
+                .targetName(target.getDisplayName())
+                .attackName(attack.name())
+                .d20(request.getD20())
+                .attackBonus(attack.attackBonus())
+                .total(request.getD20() + attack.attackBonus())
+                .targetAc(targetAc)
+                .outcome(outcome.name())
+                .damage(damage)
+                .damageType(attack.damageType())
+                .targetCurrentHp(target.getCurrentHp())
+                .targetMaxHp(target.getMaxHp())
+                .targetDown(down)
+                .battle(fresh)
+                .build();
+    }
+
+    /**
+     * GM manual HP adjustment of any combatant (negative {@code delta} damages, positive heals).
+     * Bookkeeping for NPCs and corrections outside the attack flow; writes through to the sheet
+     * for characters.
+     */
+    @Transactional
+    public BattleResponse applyCombatantHp(UUID campaignId, UUID battleId, UUID combatantId,
+                                           ApplyCombatantHpRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "HP can only be adjusted in an active battle");
+
+        BattleCombatant combatant = combatantRepository.findById(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+
+        applyDamageOrHeal(combatant, request.getDelta(), user, campaignId);
+
+        log.info("Combatant HP adjusted: battleId={}, combatant={}, delta={}, newHp={}, by={}",
+                battleId, combatant.getDisplayName(), request.getDelta(), combatant.getCurrentHp(), username);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("battleId", battleId);
+        payload.put("targetName", combatant.getDisplayName());
+        payload.put("delta", request.getDelta());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
+
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /** A combatant's usable attack reduced to the numbers the resolver needs. */
+    private record AttackOption(String name, int attackBonus, String damage, String damageType) {
+    }
+
+    /** Finds the named attack on the active combatant — character {@code attacksJson} or monster features. */
+    private AttackOption resolveAttack(BattleCombatant attacker, String attackName) {
+        if (attacker.getType() == CombatantType.CHARACTER && attacker.getCharacter() != null) {
+            String json = attacker.getCharacter().getAttacksJson();
+            if (json != null && !json.isBlank()) {
+                try {
+                    List<CharacterAttackResponse> attacks = objectMapper.readValue(
+                            json, new TypeReference<List<CharacterAttackResponse>>() {});
+                    return attacks.stream()
+                            .filter(a -> a.getName() != null && a.getName().equalsIgnoreCase(attackName))
+                            .findFirst()
+                            .map(a -> new AttackOption(a.getName(),
+                                    AttackResolver.parseAttackBonus(a.getAttackBonus()),
+                                    a.getDamage(), a.getDamageType()))
+                            .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
+                } catch (BadRequestException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new BadRequestException("Could not read this character's attacks");
+                }
+            }
+            throw new BadRequestException("This character has no attacks");
+        }
+
+        if (attacker.getType() == CombatantType.MONSTER && attacker.getMonster() != null) {
+            MonsterFeature feature = attacker.getMonster().getFeatures().stream()
+                    .filter(f -> f.getAttackType() != null && f.getNameRusloc() != null
+                            && f.getNameRusloc().equalsIgnoreCase(attackName))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this monster"));
+            int bonus = feature.getAttackBonus() != null ? feature.getAttackBonus() : 0;
+            Optional<FeatureDamage> primary = feature.getDamages().stream()
+                    .min(Comparator.comparing(FeatureDamage::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder())));
+            String dice = primary.map(FeatureDamage::getDice).orElse(null);
+            String damageType = primary
+                    .map(d -> d.getDamageType() != null ? d.getDamageType().getNameRusloc() : null)
+                    .orElse(null);
+            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType);
+        }
+
+        throw new BadRequestException("This combatant cannot attack");
+    }
+
+    /** Target armor class: monster's authored AC or character's AC; falls back to 10. */
+    private int resolveTargetAc(BattleCombatant target) {
+        if (target.getType() == CombatantType.MONSTER && target.getMonster() != null
+                && target.getMonster().getArmorClass() != null) {
+            return target.getMonster().getArmorClass().intValue();
+        }
+        if (target.getType() == CombatantType.CHARACTER && target.getCharacter() != null
+                && target.getCharacter().getArmorClass() != null) {
+            return target.getCharacter().getArmorClass();
+        }
+        return 10;
+    }
+
+    /**
+     * Applies a signed HP {@code delta} to a combatant. For characters the change is written
+     * through to the sheet (temp HP absorbs damage first, healing is capped at max HP) and an
+     * {@code HP_CHANGED} event keeps the character views in sync; the combatant row mirrors the
+     * result. Monsters are tracked solely on the combatant row.
+     */
+    private void applyDamageOrHeal(BattleCombatant combatant, int delta, User actor, UUID campaignId) {
+        if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
+            PlayerCharacter character = combatant.getCharacter();
+            int maxHp = character.getMaxHp() != null ? character.getMaxHp()
+                    : (combatant.getMaxHp() != null ? combatant.getMaxHp() : 0);
+            int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
+            int tempHp = character.getTempHp() != null ? character.getTempHp() : 0;
+
+            if (delta < 0) {
+                int dmg = -delta;
+                int absorbed = Math.min(tempHp, dmg);
+                tempHp -= absorbed;
+                currentHp = Math.max(0, currentHp - (dmg - absorbed));
+            } else if (delta > 0) {
+                currentHp = maxHp > 0 ? Math.min(currentHp + delta, maxHp) : currentHp + delta;
+            }
+
+            character.setCurrentHp(currentHp);
+            character.setTempHp(tempHp);
+            characterRepository.save(character);
+
+            combatant.setCurrentHp(currentHp);
+            combatant.setMaxHp(maxHp > 0 ? maxHp : combatant.getMaxHp());
+            combatantRepository.save(combatant);
+
+            webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
+                    character.getId(),
+                    Map.of("currentHp", currentHp, "tempHp", tempHp, "maxHp", maxHp),
+                    actor.getId());
+        } else {
+            int maxHp = combatant.getMaxHp() != null ? combatant.getMaxHp() : 0;
+            int currentHp = combatant.getCurrentHp() != null ? combatant.getCurrentHp() : 0;
+            if (delta < 0) {
+                currentHp = Math.max(0, currentHp + delta);
+            } else if (delta > 0) {
+                currentHp = maxHp > 0 ? Math.min(maxHp, currentHp + delta) : currentHp + delta;
+            }
+            combatant.setCurrentHp(currentHp);
+            combatantRepository.save(combatant);
+        }
+    }
+
     // ================================ Helpers ================================
+
+    /** The GM/admin may act for any combatant; a player only for their own active character. */
+    private void enforceControls(UUID campaignId, User user, BattleCombatant combatant) {
+        if (user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId())) {
+            return;
+        }
+        if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null
+                && combatant.getCharacter().getOwner().getId().equals(user.getId())) {
+            return;
+        }
+        throw new AccessDeniedException("Only the GM or the active character's owner can act for this combatant");
+    }
 
     private void enforceCanEndTurn(UUID campaignId, User user, BattleCombatant current) {
         if (user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId())) {
