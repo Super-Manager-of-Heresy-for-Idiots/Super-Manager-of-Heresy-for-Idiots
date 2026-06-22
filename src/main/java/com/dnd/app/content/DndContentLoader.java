@@ -46,6 +46,7 @@ public class DndContentLoader implements ApplicationRunner {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private final com.dnd.app.service.ClassRewardSeedService classRewardSeedService;
+    private final com.dnd.app.service.ClassLevelRewardSeedService classLevelRewardSeedService;
 
     // slug -> generated UUID lookup tables, built as we go.
     private final Map<String, UUID> currencies = new HashMap<>();
@@ -72,10 +73,12 @@ public class DndContentLoader implements ApplicationRunner {
     private UUID modId;
 
     public DndContentLoader(JdbcTemplate jdbc, ObjectMapper mapper,
-                            com.dnd.app.service.ClassRewardSeedService classRewardSeedService) {
+                            com.dnd.app.service.ClassRewardSeedService classRewardSeedService,
+                            com.dnd.app.service.ClassLevelRewardSeedService classLevelRewardSeedService) {
         this.jdbc = jdbc;
         this.mapper = mapper;
         this.classRewardSeedService = classRewardSeedService;
+        this.classLevelRewardSeedService = classLevelRewardSeedService;
     }
 
     @Override
@@ -123,6 +126,14 @@ public class DndContentLoader implements ApplicationRunner {
             classRewardSeedService.seedCoreSubclassChoiceGroups();
         } catch (DataAccessException e) {
             log.warn("class reward backfill skipped: {}", e.getMessage());
+        }
+
+        // Backfill per-level reward groups (base features, ASI, expertise, prepared/cantrip
+        // spell choices) so level-up grants more than just HP. Idempotent; never touches homebrew.
+        try {
+            classLevelRewardSeedService.seedCoreLevelRewards();
+        } catch (DataAccessException e) {
+            log.warn("per-level reward backfill skipped: {}", e.getMessage());
         }
     }
 

@@ -50,8 +50,22 @@ springdoc:
 app:
   jwt:
     secret: ${JWT_SECRET:?JWT_SECRET must be provided (>= 32 bytes)}
+    # Access token TTL (short). The session stays alive far longer via silent refresh.
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    # Refresh token TTL (long). Max idle window before the user must log in again. 7d default.
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+    access-cookie-name: ${JWT_ACCESS_COOKIE:access_token}
+    refresh-cookie-name: ${JWT_REFRESH_COOKIE:refresh_token}
+    cookie:
+      # Set true in production (https). Must be false for local http dev or the browser drops the cookie.
+      secure: ${JWT_COOKIE_SECURE:false}
+      # Lax works when FE and API share a site (incl. localhost different ports / dev proxy).
+      # Use None (with secure=true) only if FE and API are on different registrable domains.
+      same-site: ${JWT_COOKIE_SAMESITE:Lax}
+      access-path: ${JWT_COOKIE_ACCESS_PATH:/}
+      # Refresh cookie is scoped so it is only sent to the refresh/logout endpoints.
+      refresh-path: ${JWT_COOKIE_REFRESH_PATH:/api/auth}
+      domain: ${JWT_COOKIE_DOMAIN:}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   ratelimit:

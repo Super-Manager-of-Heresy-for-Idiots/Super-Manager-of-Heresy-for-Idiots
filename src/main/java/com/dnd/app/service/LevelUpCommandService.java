@@ -24,6 +24,7 @@ import com.dnd.app.domain.content.ClassLevelRewardOption;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.SkillProficiencyLevel;
 import com.dnd.app.domain.enums.SkillProficiencySource;
 import com.dnd.app.dto.content.LevelUpRequest;
 import com.dnd.app.dto.content.LevelUpResultResponse;
@@ -402,6 +403,7 @@ public class LevelUpCommandService {
             throw new UnprocessableEntityException("Навыки: дублирующиеся значения");
         }
         boolean any = Boolean.TRUE.equals(cfg.getAnySkill());
+        boolean expertise = Boolean.TRUE.equals(cfg.getGrantsExpertise());
         Set<UUID> allowed = cfg.getSkillOptions() == null ? Set.of()
                 : cfg.getSkillOptions().stream().map(ContentSkill::getId).collect(Collectors.toSet());
 
@@ -415,12 +417,46 @@ public class LevelUpCommandService {
                         .selection(selection).grant(cfg)
                         .skill(entityManager.getReference(ContentSkill.class, skillId)).build());
             }
-            skillProficiencyRepository.save(CharacterSkillProficiency.builder()
-                    .character(character)
-                    .skill(entityManager.getReference(ContentSkill.class, skillId))
-                    .source(SkillProficiencySource.CLASS).build());
-            applied.add(appliedGrant(grant, "Владение навыком получено"));
+            if (expertise) {
+                applyExpertise(character, skillId, grant, applied);
+            } else {
+                applyProficiency(character, skillId, grant, applied);
+            }
         }
+    }
+
+    private void applyProficiency(PlayerCharacter character, UUID skillId,
+                                  ClassLevelRewardGrant grant,
+                                  List<LevelUpResultResponse.AppliedGrant> applied) {
+        Optional<CharacterSkillProficiency> existing =
+                skillProficiencyRepository.findByCharacterIdAndSkillId(character.getId(), skillId);
+        if (existing.isPresent()) {
+            // Already proficient (or has expertise) — nothing to add, just report.
+            applied.add(appliedGrant(grant, "Навык уже освоен — пропущено"));
+            return;
+        }
+        skillProficiencyRepository.save(CharacterSkillProficiency.builder()
+                .character(character)
+                .skill(entityManager.getReference(ContentSkill.class, skillId))
+                .source(SkillProficiencySource.CLASS)
+                .proficiencyLevel(SkillProficiencyLevel.PROFICIENT).build());
+        applied.add(appliedGrant(grant, "Владение навыком получено"));
+    }
+
+    private void applyExpertise(PlayerCharacter character, UUID skillId,
+                                ClassLevelRewardGrant grant,
+                                List<LevelUpResultResponse.AppliedGrant> applied) {
+        CharacterSkillProficiency row = skillProficiencyRepository
+                .findByCharacterIdAndSkillId(character.getId(), skillId)
+                .orElseThrow(() -> new UnprocessableEntityException(
+                        "Нельзя получить Экспертность в навыке, которым вы не владеете"));
+        if (row.getProficiencyLevel() == SkillProficiencyLevel.EXPERTISE) {
+            throw new UnprocessableEntityException(
+                    "Нельзя получить Экспертность в одном навыке дважды");
+        }
+        row.setProficiencyLevel(SkillProficiencyLevel.EXPERTISE);
+        skillProficiencyRepository.save(row);
+        applied.add(appliedGrant(grant, "Экспертность в навыке получена"));
     }
 
     private void applySpell(PlayerCharacter character, CharacterRewardSelection selection,

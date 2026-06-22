@@ -4,7 +4,6 @@ import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LoginRequest;
 import com.dnd.app.dto.request.RegisterRequest;
-import com.dnd.app.dto.response.AuthResponse;
 import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
@@ -84,20 +83,25 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Успешный вход возвращает токен")
+    @DisplayName("Успешный вход возвращает access и refresh токены")
     void login_success() {
         LoginRequest request = LoginRequest.builder().username("user1").password("pass123").build();
         User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
-        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("jwt-token");
-        when(tokenProvider.getExpirationMs()).thenReturn(86400000L);
+        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken("user1", "PLAYER")).thenReturn("refresh-token");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
         UserResponse userResp = UserResponse.builder().username("user1").build();
         when(userMapper.toResponse(user)).thenReturn(userResp);
 
-        AuthResponse result = authService.login(request);
+        IssuedTokens result = authService.login(request);
 
-        assertEquals("jwt-token", result.getToken());
-        assertEquals(86400000L, result.getExpiresIn());
+        assertEquals("access-token", result.accessToken());
+        assertEquals("refresh-token", result.refreshToken());
+        assertEquals(3600000L, result.accessExpiresInMs());
+        assertEquals(604800000L, result.refreshExpiresInMs());
+        assertEquals("user1", result.user().getUsername());
     }
 
     @Test
@@ -108,5 +112,40 @@ class AuthServiceTest {
                 .when(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
 
         assertThrows(BadCredentialsException.class, () -> authService.login(request));
+    }
+
+    @Test
+    @DisplayName("Продление по валидному refresh-токену выдаёт новую пару токенов")
+    void refresh_validToken_rotatesTokens() {
+        User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
+        when(tokenProvider.isRefreshToken("old-refresh")).thenReturn(true);
+        when(tokenProvider.getUsernameFromToken("old-refresh")).thenReturn("user1");
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("new-access");
+        when(tokenProvider.generateRefreshToken("user1", "PLAYER")).thenReturn("new-refresh");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
+        when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().username("user1").build());
+
+        IssuedTokens result = authService.refresh("old-refresh");
+
+        assertEquals("new-access", result.accessToken());
+        assertEquals("new-refresh", result.refreshToken());
+    }
+
+    @Test
+    @DisplayName("Продление с отсутствующим refresh-токеном выбрасывает ошибку")
+    void refresh_nullToken_throws() {
+        assertThrows(BadCredentialsException.class, () -> authService.refresh(null));
+        verify(userRepository, never()).findByUsername(anyString());
+    }
+
+    @Test
+    @DisplayName("Продление по access-токену вместо refresh выбрасывает ошибку")
+    void refresh_nonRefreshToken_throws() {
+        when(tokenProvider.isRefreshToken("access-token")).thenReturn(false);
+
+        assertThrows(BadCredentialsException.class, () -> authService.refresh("access-token"));
+        verify(userRepository, never()).findByUsername(anyString());
     }
 }

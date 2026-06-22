@@ -1,6 +1,7 @@
 package com.dnd.app.domain;
 
 import com.dnd.app.domain.content.ContentSkill;
+import com.dnd.app.domain.enums.SkillProficiencyLevel;
 import com.dnd.app.domain.enums.SkillProficiencySource;
 import jakarta.persistence.*;
 import lombok.*;
@@ -38,4 +39,9 @@ public class CharacterSkillProficiency {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SkillProficiencySource source;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "proficiency_level", nullable = false, length = 20)
+    @Builder.Default
+    private SkillProficiencyLevel proficiencyLevel = SkillProficiencyLevel.PROFICIENT;
 }

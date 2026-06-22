@@ -36,4 +36,8 @@ public class SkillProficiencyGrantPayload implements GrantPayload {
     // mode = CHOICE | ANY
     @Schema(description = "How many skills to choose", example = "2")
     private Integer chooseCount;
+
+    @Schema(description = "When true, this grant confers Expertise (doubled proficiency bonus) and the "
+            + "chosen skills must be ones the character is already proficient in.", example = "true")
+    private Boolean grantsExpertise;
 }

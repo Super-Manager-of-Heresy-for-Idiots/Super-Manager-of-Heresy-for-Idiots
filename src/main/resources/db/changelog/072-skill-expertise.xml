@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Skill expertise support.
+
+      A character proficiency row now carries a proficiency_level. PROFICIENT is the
+      normal "add proficiency bonus" state; EXPERTISE doubles the proficiency bonus for
+      that skill (the character must already be proficient to gain expertise). The
+      existing unique (character_id, skill_id) stays: expertise upgrades the same row
+      rather than inserting a second one.
+
+      A skill-proficiency reward grant can declare that it confers expertise rather than
+      base proficiency (e.g. Wizard L2 "Академические знания"). The reward seeder marks
+      such grants with grants_expertise = TRUE.
+    -->
+    <changeSet id="072-01-add-skill-proficiency-level" author="content">
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+ALTER TABLE character_skill_proficiencies
+    ADD COLUMN proficiency_level TEXT NOT NULL DEFAULT 'PROFICIENT'
+]]></sql>
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+ALTER TABLE character_skill_proficiencies
+    ADD CONSTRAINT chk_character_skill_proficiency_level
+        CHECK (proficiency_level IN ('PROFICIENT','EXPERTISE'))
+]]></sql>
+        <rollback>
+            <sql>ALTER TABLE character_skill_proficiencies DROP CONSTRAINT IF EXISTS chk_character_skill_proficiency_level</sql>
+            <sql>ALTER TABLE character_skill_proficiencies DROP COLUMN IF EXISTS proficiency_level</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="072-02-add-grant-expertise-flag" author="content">
+        <sql splitStatements="false" stripComments="false"><![CDATA[
+ALTER TABLE class_level_reward_grant_skill_proficiency
+    ADD COLUMN grants_expertise BOOLEAN NOT NULL DEFAULT FALSE
+]]></sql>
+        <rollback>
+            <sql>ALTER TABLE class_level_reward_grant_skill_proficiency DROP COLUMN IF EXISTS grants_expertise</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

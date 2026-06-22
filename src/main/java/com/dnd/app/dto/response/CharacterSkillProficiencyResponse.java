@@ -15,4 +15,6 @@ public class CharacterSkillProficiencyResponse {
     private UUID skillId;
     private String skillName;
     private String source;
+    /** PROFICIENT or EXPERTISE. EXPERTISE means the proficiency bonus is doubled for this skill. */
+    private String proficiencyLevel;
 }
