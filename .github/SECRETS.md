@@ -11,13 +11,13 @@
 | `DOCKERHUB_USERNAME` | Логин Docker Hub. Образ: `DOCKERHUB_USERNAME/dnd-backend`. |
 | `DOCKERHUB_TOKEN` | Access Token Docker Hub (Read & Write). |
 | `GITOPS_REPO_TOKEN` | Personal Access Token с правом записи (push) в GitOps-репозиторий. |
-| `GITOPS_REPO_URL` | URL GitOps-репозитория, напр. `https://github.com/org/dnd-gitops.git`. |
+| `GITOPS_REPO_URL` | URL GitOps-репозитория: `https://github.com/Super-Manager-of-Heresy-for-Idiots/dnd-gitops.git`. |
 
 ## Variables
 
 | Имя | Назначение |
 | --- | --- |
-| `GITOPS_REPO_SLUG` | `owner/repo` GitOps-репозитория для `actions/checkout`, напр. `org/dnd-gitops`. |
+| `GITOPS_REPO_SLUG` | `owner/repo` GitOps-репозитория для `actions/checkout`: `Super-Manager-of-Heresy-for-Idiots/dnd-gitops`. |
 
 > Примечание: workflow использует `vars.GITOPS_REPO_SLUG` + `secrets.GITOPS_REPO_TOKEN`
 > для checkout. Секрет `GITOPS_REPO_URL` оставлен по ТЗ как альтернатива

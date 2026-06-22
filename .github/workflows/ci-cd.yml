@@ -19,7 +19,8 @@ env:
   # Имя образа внутри Kustomize (поле images[].name в kustomization.yaml GitOps-репо).
   KUSTOMIZE_IMAGE_NAME: dnd-backend
   # Путь к kustomization.yaml в GitOps-репозитории, где лежит блок images:.
-  GITOPS_KUSTOMIZATION_PATH: apps/dnd/base/kustomization.yaml
+  # Блок images: лежит в оверлее prod, НЕ в base.
+  GITOPS_KUSTOMIZATION_PATH: apps/dnd/overlays/prod/kustomization.yaml
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -131,15 +132,21 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
+      # Если GITOPS_REPO_SLUG пуст, actions/checkout молча выкачает ТЕКУЩИЙ
+      # (app) репозиторий — отсюда "no such file" на apps/dnd/...
+      - name: Validate GitOps repo slug
+        run: |
+          if [ -z "${{ vars.GITOPS_REPO_SLUG }}" ]; then
+            echo "::error::Variable GITOPS_REPO_SLUG is empty. Set it to Super-Manager-of-Heresy-for-Idiots/dnd-gitops"
+            exit 1
+          fi
+
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.GITOPS_REPO_SLUG }}   # напр. org/dnd-gitops; см. SECRETS.md
+          repository: ${{ vars.GITOPS_REPO_SLUG }}   # org/dnd-gitops; см. SECRETS.md
           token: ${{ secrets.GITOPS_REPO_TOKEN }}
           path: gitops
-          # Альтернатива (по ТЗ — GITOPS_REPO_URL как секрет): вместо repository/token
-          # можно клонировать вручную:
-          #   git clone https://x-access-token:${{ secrets.GITOPS_REPO_TOKEN }}@...
 
       - name: Update image tag in Kustomize
         working-directory: gitops
@@ -147,6 +154,10 @@ jobs:
           NEW_TAG: ${{ github.sha }}
         run: |
           FILE="${GITOPS_KUSTOMIZATION_PATH}"
+          if [ ! -f "${FILE}" ]; then
+            echo "::error::${FILE} not found in GitOps repo ${{ vars.GITOPS_REPO_SLUG }}"
+            exit 1
+          fi
           echo "Updating ${KUSTOMIZE_IMAGE_NAME} -> tag ${NEW_TAG} in ${FILE}"
           # yq v4 предустановлен на ubuntu-latest
           IMG="${KUSTOMIZE_IMAGE_NAME}" TAG="${NEW_TAG}" \
