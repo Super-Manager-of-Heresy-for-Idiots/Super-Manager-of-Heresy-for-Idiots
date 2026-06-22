@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("AttackResolver: попадание/промах/крит и разбор бонуса атаки")
 class AttackResolverTest {
@@ -38,5 +39,37 @@ class AttackResolverTest {
         assertEquals(0, AttackResolver.parseAttackBonus(""));
         assertEquals(0, AttackResolver.parseAttackBonus(null));
         assertEquals(0, AttackResolver.parseAttackBonus("abc"));
+    }
+
+    @Test
+    @DisplayName("Урон извлекается из описания атаки монстра: кости в скобках")
+    void extractDamage_diceInParens() {
+        String desc = "Коготь . Рукопашная атака оружием : +5 , досягаемость 5 фт. " +
+                "Попадание : 5 ( 1к4 + 3 ) колющего урона.";
+        assertEquals("1к4 + 3", AttackResolver.extractDamageExpression(desc));
+    }
+
+    @Test
+    @DisplayName("Урон извлекается из описания: плоское число без костей")
+    void extractDamage_flatNumber() {
+        String desc = "Укус . Рукопашная атака оружием : +2 , досягаемость 5 фт. " +
+                "Попадание : 1 дробящего урона.";
+        assertEquals("1", AttackResolver.extractDamageExpression(desc));
+    }
+
+    @Test
+    @DisplayName("Якорь на клаузу попадания: не хватает бонус к попаданию или досягаемость")
+    void extractDamage_anchorsOnHitClause() {
+        String desc = "Дальнобойная атака : +5 , дистанция 25/50 фт. " +
+                "Попадание : 10 ( 2к6 + 3 ) колющего урона";
+        assertEquals("2к6 + 3", AttackResolver.extractDamageExpression(desc));
+    }
+
+    @Test
+    @DisplayName("Нет урона в описании → null")
+    void extractDamage_noneIsNull() {
+        assertNull(AttackResolver.extractDamageExpression("Особая способность без урона."));
+        assertNull(AttackResolver.extractDamageExpression(null));
+        assertNull(AttackResolver.extractDamageExpression(""));
     }
 }

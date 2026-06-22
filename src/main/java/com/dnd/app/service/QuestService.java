@@ -310,7 +310,8 @@ public class QuestService {
         for (QuestReward reward : rewards) {
             if (reward.getItemTemplate() != null) {
                 GrantItemRequest grant = GrantItemRequest.builder()
-                        .templateId(reward.getItemTemplate().getId())
+                        .itemId(reward.getItemTemplate().getId())
+                        .itemKind("TEMPLATE")
                         .quantity(reward.getQuantity() != null ? reward.getQuantity() : 1)
                         .build();
                 itemInstanceService.grantItem(campaignId, recipientId, grant, username);

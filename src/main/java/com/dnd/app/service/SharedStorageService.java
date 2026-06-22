@@ -8,6 +8,7 @@ import com.dnd.app.dto.response.SharedStorageResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.mapper.ItemInstanceMapper;
 import com.dnd.app.repository.ItemInstanceRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.SharedStorageRepository;
@@ -124,7 +125,7 @@ public class SharedStorageService {
 
             if (mergeable) {
                 Optional<ItemInstance> existing = itemInstanceRepository
-                        .findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(storageId, instance.getTemplate().getId());
+                        .findStackableForStorage(storageId, tplId(instance), eqId(instance), mgId(instance));
                 if (existing.isPresent()) {
                     itemInstanceRepository.incrementQuantity(existing.get().getId(), moveQty);
                     log.info("Item partially deposited (merged): instanceId={}, storageId={}, qty={}, by={}",
@@ -135,6 +136,8 @@ public class SharedStorageService {
 
             ItemInstance moved = ItemInstance.builder()
                     .template(instance.getTemplate())
+                    .equipmentItem(instance.getEquipmentItem())
+                    .magicItem(instance.getMagicItem())
                     .sharedStorage(storage)
                     .quantity(moveQty)
                     .customName(instance.getCustomName())
@@ -150,7 +153,7 @@ public class SharedStorageService {
         // Whole stack: merge into an existing storage stack if possible, else move the instance
         if (mergeable) {
             Optional<ItemInstance> existing = itemInstanceRepository
-                    .findBySharedStorageIdAndTemplateIdAndIsUniqueFalse(storageId, instance.getTemplate().getId());
+                    .findStackableForStorage(storageId, tplId(instance), eqId(instance), mgId(instance));
             if (existing.isPresent()) {
                 itemInstanceRepository.incrementQuantity(existing.get().getId(), instance.getQuantity());
                 itemInstanceRepository.delete(instance);
@@ -211,7 +214,7 @@ public class SharedStorageService {
 
             if (mergeable) {
                 Optional<ItemInstance> existing = itemInstanceRepository
-                        .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, instance.getTemplate().getId());
+                        .findStackableForCharacter(characterId, tplId(instance), eqId(instance), mgId(instance));
                 if (existing.isPresent()) {
                     itemInstanceRepository.incrementQuantity(existing.get().getId(), moveQty);
                     log.info("Item partially taken (merged): instanceId={}, storageId={}, toCharacterId={}, qty={}, by={}",
@@ -222,6 +225,8 @@ public class SharedStorageService {
 
             ItemInstance moved = ItemInstance.builder()
                     .template(instance.getTemplate())
+                    .equipmentItem(instance.getEquipmentItem())
+                    .magicItem(instance.getMagicItem())
                     .ownerCharacter(character)
                     .quantity(moveQty)
                     .customName(instance.getCustomName())
@@ -237,7 +242,7 @@ public class SharedStorageService {
         // Whole stack: merge into the character's existing stack if possible, else move the instance
         if (mergeable) {
             Optional<ItemInstance> existing = itemInstanceRepository
-                    .findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(characterId, instance.getTemplate().getId());
+                    .findStackableForCharacter(characterId, tplId(instance), eqId(instance), mgId(instance));
             if (existing.isPresent()) {
                 itemInstanceRepository.incrementQuantity(existing.get().getId(), instance.getQuantity());
                 itemInstanceRepository.delete(instance);
@@ -296,17 +301,18 @@ public class SharedStorageService {
     }
 
     private ItemInstanceResponse toItemResponse(ItemInstance instance) {
-        return ItemInstanceResponse.builder()
-                .id(instance.getId())
-                .templateId(instance.getTemplate().getId())
-                .templateName(instance.getTemplate().getName())
-                .displayName(instance.getDisplayName())
-                .customName(instance.getCustomName())
-                .quantity(instance.getQuantity())
-                .isUnique(instance.getIsUnique())
-                .slot(instance.getSlot() != null ? instance.getSlot().getCode() : null)
-                .notes(instance.getNotes())
-                .rarity(instance.getTemplate().getRarity() != null ? instance.getTemplate().getRarity().getSlug() : null)
-                .build();
+        return ItemInstanceMapper.toResponse(instance);
+    }
+
+    private static UUID tplId(ItemInstance i) {
+        return i.getTemplate() != null ? i.getTemplate().getId() : null;
+    }
+
+    private static UUID eqId(ItemInstance i) {
+        return i.getEquipmentItem() != null ? i.getEquipmentItem().getId() : null;
+    }
+
+    private static UUID mgId(ItemInstance i) {
+        return i.getMagicItem() != null ? i.getMagicItem().getId() : null;
     }
 }

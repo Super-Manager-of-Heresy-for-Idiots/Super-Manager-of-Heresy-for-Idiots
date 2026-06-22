@@ -257,7 +257,8 @@ class ItemInstanceServiceTest {
                 .build();
 
         GrantItemRequest request = GrantItemRequest.builder()
-                .templateId(templateId)
+                .itemId(templateId)
+                .itemKind("TEMPLATE")
                 .quantity(2)
                 .build();
 
@@ -266,7 +267,7 @@ class ItemInstanceServiceTest {
         doNothing().when(campaignService).enforceGmOrAdmin(any(), any());
         when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
-        when(itemInstanceRepository.findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(fromCharId, templateId))
+        when(itemInstanceRepository.findStackableForCharacter(fromCharId, templateId, null, null))
                 .thenReturn(Optional.of(existingInstance));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(incrementedInstance));
 
@@ -286,7 +287,8 @@ class ItemInstanceServiceTest {
         template.setIsStackable(true);
 
         GrantItemRequest request = GrantItemRequest.builder()
-                .templateId(templateId)
+                .itemId(templateId)
+                .itemKind("TEMPLATE")
                 .quantity(2)
                 .build();
 
@@ -295,7 +297,7 @@ class ItemInstanceServiceTest {
         doNothing().when(campaignService).enforceGmOrAdmin(any(), any());
         when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
-        when(itemInstanceRepository.findByOwnerCharacterIdAndTemplateIdAndSlotIsNullAndIsUniqueFalse(fromCharId, templateId))
+        when(itemInstanceRepository.findStackableForCharacter(fromCharId, templateId, null, null))
                 .thenReturn(Optional.empty());
         when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
