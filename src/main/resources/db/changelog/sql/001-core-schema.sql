@@ -1348,7 +1348,9 @@ CREATE TABLE public.item_enchantments (
 
 CREATE TABLE public.item_instances (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
+    template_id uuid,
+    equipment_item_id uuid,
+    magic_item_id uuid,
     owner_character_id uuid,
     shared_storage_id uuid,
     custom_name character varying(100),
@@ -1357,7 +1359,11 @@ CREATE TABLE public.item_instances (
     notes text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    slot_id uuid
+    slot_id uuid,
+    CONSTRAINT chk_iteminst_one_ref CHECK ((((
+        CASE WHEN (template_id IS NOT NULL) THEN 1 ELSE 0 END
+      + CASE WHEN (equipment_item_id IS NOT NULL) THEN 1 ELSE 0 END
+      + CASE WHEN (magic_item_id IS NOT NULL) THEN 1 ELSE 0 END)) = 1))
 );
 
 
@@ -3787,6 +3793,20 @@ CREATE INDEX idx_homebrew_status ON public.homebrew_packages USING btree (status
 
 
 --
+-- Name: idx_iteminst_equipment_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_iteminst_equipment_item_id ON public.item_instances USING btree (equipment_item_id);
+
+
+--
+-- Name: idx_iteminst_magic_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_iteminst_magic_item_id ON public.item_instances USING btree (magic_item_id);
+
+
+--
 -- Name: idx_iteminst_owner_character_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5452,6 +5472,22 @@ ALTER TABLE ONLY public.item_instances
 
 ALTER TABLE ONLY public.item_instances
     ADD CONSTRAINT fk_iteminst_template FOREIGN KEY (template_id) REFERENCES public.item_templates(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: item_instances fk_iteminst_equipment_item; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_instances
+    ADD CONSTRAINT fk_iteminst_equipment_item FOREIGN KEY (equipment_item_id) REFERENCES public.equipment_item(equipment_item_id) ON DELETE RESTRICT;
+
+
+--
+-- Name: item_instances fk_iteminst_magic_item; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_instances
+    ADD CONSTRAINT fk_iteminst_magic_item FOREIGN KEY (magic_item_id) REFERENCES public.magic_item(magic_item_id) ON DELETE RESTRICT;
 
 
 --
