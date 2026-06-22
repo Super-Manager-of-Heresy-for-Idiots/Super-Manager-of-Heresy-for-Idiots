@@ -59,6 +59,17 @@ public class ItemTemplateService {
     }
 
     @Transactional(readOnly = true)
+    public List<ItemTemplateResponse> listAllVanilla(String username) {
+        User user = getUser(username);
+        if (user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only ADMIN can list all item templates");
+        }
+        return itemTemplateRepository.findByHomebrewIsNull().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<ItemTemplateResponse> listTemplates(UUID campaignId, String username) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
