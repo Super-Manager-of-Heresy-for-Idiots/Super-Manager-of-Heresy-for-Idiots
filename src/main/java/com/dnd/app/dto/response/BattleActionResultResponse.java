@@ -29,7 +29,10 @@ public class BattleActionResultResponse {
     private Integer total;
     private Integer targetAc;
 
-    /** HIT | MISS | CRIT */
+    /** Save difficulty class for save-based attacks (target rolls a saving throw); null otherwise. */
+    private Integer saveDc;
+
+    /** HIT | MISS | CRIT for attack rolls; SUCCESS | FAIL for saving throws; ITEM_USED for consumables. */
     private String outcome;
 
     /** Damage dealt; null on a miss. */

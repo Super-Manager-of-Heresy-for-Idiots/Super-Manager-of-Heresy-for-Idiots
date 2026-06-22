@@ -73,6 +73,19 @@ public class BattleCombatant {
     @Column(name = "max_hp")
     private Integer maxHp;
 
+    /** Action economy for the current turn; reset when this combatant's turn begins. */
+    @Column(name = "action_used", nullable = false)
+    @Builder.Default
+    private Boolean actionUsed = false;
+
+    @Column(name = "bonus_action_used", nullable = false)
+    @Builder.Default
+    private Boolean bonusActionUsed = false;
+
+    @Column(name = "reaction_used", nullable = false)
+    @Builder.Default
+    private Boolean reactionUsed = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

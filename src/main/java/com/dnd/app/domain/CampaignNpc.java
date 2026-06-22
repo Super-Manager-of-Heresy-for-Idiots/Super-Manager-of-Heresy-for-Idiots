@@ -1,6 +1,7 @@
 package com.dnd.app.domain;
 
 import com.dnd.app.domain.content.ContentCharacterClass;
+import com.dnd.app.domain.enums.NpcRole;
 import com.dnd.app.domain.enums.NpcSourceType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,6 +53,11 @@ public class CampaignNpc {
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", length = 20)
     private NpcSourceType sourceType;
+
+    // The NPC's world role (merchant, quest giver, …). NULL => unspecified.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "npc_role", length = 20)
+    private NpcRole npcRole;
 
     // --- CLASS_BASED build (all optional except race/class/level, enforced in service) ---
 

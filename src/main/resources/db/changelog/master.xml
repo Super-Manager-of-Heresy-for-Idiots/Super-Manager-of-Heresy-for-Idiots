@@ -19,4 +19,10 @@
     <!-- Core <-> bestiary FK links (deferred from 001). -->
     <include file="db/changelog/045-link-core-bestiary-fks.xml"/>
 
+    <!-- NPC roles (merchant, quest giver, …) and merchant trading. -->
+    <include file="db/changelog/050-npc-roles-and-trading.xml"/>
+
+    <!-- Per-combatant action economy (action / bonus action / reaction). -->
+    <include file="db/changelog/051-combat-action-economy.xml"/>
+
 </databaseChangeLog>

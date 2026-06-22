@@ -25,6 +25,8 @@ public class CombatantTurnResponse {
     private CharacterResponse character;
     private List<ResourceResponse> resources;
     private List<CharacterActiveEffectResponse> activeEffects;
+    /** Class features unlocked at the character's current level (progression-based actions). */
+    private List<ClassAbilityResponse> classAbilities;
 
     // Populated when the active combatant is a MONSTER
     private MonsterResponse monster;

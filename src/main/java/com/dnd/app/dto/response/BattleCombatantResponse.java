@@ -30,4 +30,9 @@ public class BattleCombatantResponse {
     private Integer currentHp;
     private Integer maxHp;
     private boolean currentTurn;
+
+    // Action economy for the current turn (true = already spent).
+    private boolean actionUsed;
+    private boolean bonusActionUsed;
+    private boolean reactionUsed;
 }

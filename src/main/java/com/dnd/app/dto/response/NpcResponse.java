@@ -1,5 +1,6 @@
 package com.dnd.app.dto.response;
 
+import com.dnd.app.domain.enums.NpcRole;
 import com.dnd.app.domain.enums.NpcSourceType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class NpcResponse {
     private Boolean isVisibleToPlayers;
 
     private NpcSourceType sourceType;
+    private NpcRole npcRole;
 
     // CLASS_BASED
     private Ref race;

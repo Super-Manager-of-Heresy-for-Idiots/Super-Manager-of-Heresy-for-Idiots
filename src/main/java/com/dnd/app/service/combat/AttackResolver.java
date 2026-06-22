@@ -31,6 +31,14 @@ public final class AttackResolver {
         }
     }
 
+    /** Outcome of a saving throw vs a difficulty class. */
+    public enum SaveOutcome {
+        /** Target failed the save: full effect/damage. */
+        FAIL,
+        /** Target succeeded: typically half damage (or none). */
+        SUCCESS
+    }
+
     /** Outcome of a d20 attack vs the target's AC. */
     public static Outcome resolve(int d20, int attackBonus, int targetAc) {
         if (d20 >= 20) {
@@ -40,6 +48,20 @@ public final class AttackResolver {
             return Outcome.MISS;
         }
         return (d20 + attackBonus >= targetAc) ? Outcome.HIT : Outcome.MISS;
+    }
+
+    /**
+     * Resolves a target's saving throw: {@code d20 + saveBonus} reaching the {@code saveDc} is a
+     * success, otherwise a failure. A natural 1 always fails and a natural 20 always succeeds.
+     */
+    public static SaveOutcome resolveSave(int d20, int saveBonus, int saveDc) {
+        if (d20 >= 20) {
+            return SaveOutcome.SUCCESS;
+        }
+        if (d20 <= 1) {
+            return SaveOutcome.FAIL;
+        }
+        return (d20 + saveBonus >= saveDc) ? SaveOutcome.SUCCESS : SaveOutcome.FAIL;
     }
 
     /** Parses a signed attack bonus such as "+5", "5" or "-1"; unparseable/blank → 0. */

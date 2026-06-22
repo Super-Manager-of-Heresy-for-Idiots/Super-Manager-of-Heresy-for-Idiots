@@ -50,7 +50,8 @@ public class CreateContentCharacterRequest {
     @Schema(description = "background id")
     private UUID backgroundId;
 
-    @Min(1)
+    // Target level. Values below 1 are clamped to 1 by the creation service
+    // (the character is always created at level 1 and granted XP for the target level).
     @Max(20)
     @Builder.Default
     private int level = 1;

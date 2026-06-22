@@ -3,8 +3,10 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
+import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
+import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
@@ -174,6 +176,31 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleActionResultResponse data = battleService.performAttack(campaignId, battleId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Attack resolved"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/use-item")
+    @Operation(summary = "The active character uses a carried consumable (e.g. drinks a healing potion)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleActionResultResponse>>> useItem(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody BattleUseItemRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleActionResultResponse data = battleService.performUseItem(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Item used"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/spend")
+    @Operation(summary = "Mark a combatant's action / bonus action / reaction as spent this turn")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> spendAction(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody SpendActionRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.spendAction(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Action spent"));
         }, controllerTaskExecutor);
     }
 

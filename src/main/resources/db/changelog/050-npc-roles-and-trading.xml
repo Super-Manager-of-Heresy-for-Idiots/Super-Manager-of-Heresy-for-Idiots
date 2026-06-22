@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      NPC roles + merchant trading. Adds a role discriminator to NPCs (merchant, quest
+      giver, …), a base price to legacy item templates, and a per-merchant shop inventory
+      (npc_shop_items) the party can buy from / sell to. Prices are expressed in gold pieces.
+    -->
+    <changeSet id="050-npc-role" author="claude">
+        <addColumn tableName="campaign_npcs">
+            <column name="npc_role" type="varchar(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="050-item-template-price" author="claude">
+        <addColumn tableName="item_templates">
+            <column name="price_gold" type="numeric(12,2)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="050-npc-shop-items" author="claude">
+        <createTable tableName="npc_shop_items">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="npc_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="item_template_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="price_gold" type="numeric(12,2)"/>
+            <column name="quantity" type="integer" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="npc_shop_items"
+                baseColumnNames="npc_id"
+                referencedTableName="campaign_npcs"
+                referencedColumnNames="id"
+                constraintName="fk_npcshop_npc"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="npc_shop_items"
+                baseColumnNames="item_template_id"
+                referencedTableName="item_templates"
+                referencedColumnNames="id"
+                constraintName="fk_npcshop_item_template"
+                onDelete="RESTRICT"/>
+
+        <createIndex tableName="npc_shop_items" indexName="idx_npcshop_npc_id">
+            <column name="npc_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
