@@ -33,6 +33,9 @@ public class WeaponAttackService {
 
     private static final String STR = "str";
     private static final String DEX = "dex";
+    private static final String CAT_MELEE = "MELEE";
+    private static final String CAT_RANGED = "RANGED";
+    private static final String CAT_THROWN = "THROWN";
 
     private final ItemInstanceRepository itemInstanceRepository;
 
@@ -73,21 +76,25 @@ public class WeaponAttackService {
 
             String name = instance.getDisplayName();
             String damageType = damageType(weaponStat);
+            String baseCategory = ranged ? CAT_RANGED : CAT_MELEE;
 
-            // Primary strike.
+            // Primary strike (melee, or a shot for ammunition weapons).
             attacks.add(attack(name, attackBonus,
-                    ItemInstanceMapper.formatDice(weaponStat.getDamageDiceFormula()), damageBonus, damageType));
+                    ItemInstanceMapper.formatDice(weaponStat.getDamageDiceFormula()), damageBonus, damageType,
+                    baseCategory, ranged ? "дальний" : "5 фт."));
 
             // Throw action for thrown weapons.
             if (thrown) {
                 attacks.add(attack(name + " (метание)", attackBonus,
-                        ItemInstanceMapper.formatDice(weaponStat.getDamageDiceFormula()), damageBonus, damageType));
+                        ItemInstanceMapper.formatDice(weaponStat.getDamageDiceFormula()), damageBonus, damageType,
+                        CAT_THROWN, "20/60 фт."));
             }
 
             // Two-handed variant for versatile weapons (uses the versatile dice when authored).
             String versatileDice = versatileDice(weapon);
             if (versatileDice != null) {
-                attacks.add(attack(name + " (двумя руками)", attackBonus, versatileDice, damageBonus, damageType));
+                attacks.add(attack(name + " (двумя руками)", attackBonus, versatileDice, damageBonus, damageType,
+                        CAT_MELEE, "5 фт."));
             }
         }
         return attacks;
@@ -95,12 +102,16 @@ public class WeaponAttackService {
 
     // --- helpers ---
 
-    private CharacterAttackResponse attack(String name, int attackBonus, String dice, int damageBonus, String damageType) {
+    private CharacterAttackResponse attack(String name, int attackBonus, String dice, int damageBonus,
+                                           String damageType, String category, String range) {
         return CharacterAttackResponse.builder()
                 .name(name)
                 .attackBonus(signed(attackBonus))
                 .damage(appendBonus(dice, damageBonus))
                 .damageType(damageType)
+                .category(category)
+                .source("WEAPON")
+                .range(range)
                 .build();
     }
 

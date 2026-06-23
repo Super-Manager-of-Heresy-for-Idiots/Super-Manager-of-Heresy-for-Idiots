@@ -135,8 +135,13 @@ public class ContentCharacterCreationService {
         }
 
         int targetLevel = req.getLevel();
-        if (targetLevel < 1 || targetLevel > 20) {
-            throw new BadRequestException("Level must be between 1 and 20");
+        if (targetLevel > 20) {
+            throw new BadRequestException("Level must not exceed 20");
+        }
+        // A target level below 1 is treated as level 1: the character is created fresh
+        // (level 1, XP for level 1) and the player levels them up themselves.
+        if (targetLevel < 1) {
+            targetLevel = 1;
         }
 
         // The character is always created at level 1. When a higher target level is

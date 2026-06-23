@@ -1,0 +1,53 @@
+package com.dnd.app.domain;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * A line in a merchant NPC's shop: an item template offered for sale at a price (gold pieces)
+ * with an available quantity. Buying decrements the quantity and grants the item to the buyer;
+ * selling can restock it. Only NPCs with the MERCHANT role carry these.
+ */
+@Entity
+@Table(name = "npc_shop_items")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class NpcShopItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "npc_id", nullable = false)
+    private CampaignNpc npc;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "item_template_id", nullable = false)
+    private ItemTemplate itemTemplate;
+
+    /** Sale price in gold pieces. When null the item template's base price is used. */
+    @Column(name = "price_gold")
+    private BigDecimal priceGold;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer quantity = 1;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+}

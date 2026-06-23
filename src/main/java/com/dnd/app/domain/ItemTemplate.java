@@ -60,6 +60,10 @@ public class ItemTemplate {
     @Builder.Default
     private Boolean isStackable = false;
 
+    /** Base buy price in gold pieces; null when the item has no defined price. */
+    @Column(name = "price_gold")
+    private java.math.BigDecimal priceGold;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_id")
     private Skill skill;

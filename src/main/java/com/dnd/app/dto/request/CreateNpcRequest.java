@@ -1,5 +1,6 @@
 package com.dnd.app.dto.request;
 
+import com.dnd.app.domain.enums.NpcRole;
 import com.dnd.app.domain.enums.NpcSourceType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -30,6 +31,9 @@ public class CreateNpcRequest {
 
     // Mutually exclusive authoring mode. NULL => legacy free-form NPC.
     private NpcSourceType sourceType;
+
+    // World role (merchant, quest giver, …). NULL => unspecified.
+    private NpcRole npcRole;
 
     // --- CLASS_BASED (required when sourceType == CLASS_BASED) ---
     private UUID raceId;

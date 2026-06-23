@@ -7,6 +7,7 @@ import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.response.BattleActionResultResponse;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.combat.ClassAbilityCombatService;
 import com.dnd.app.service.combat.DiceRoller;
 import com.dnd.app.service.combat.WeaponAttackService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,8 @@ class BattleServiceAttackTest {
     @Mock private WebSocketEventService webSocketEventService;
     @Mock private DiceRoller diceRoller;
     @Mock private WeaponAttackService weaponAttackService;
+    @Mock private ClassAbilityCombatService classAbilityCombatService;
+    @Mock private ItemInstanceRepository itemInstanceRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -53,7 +56,7 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, weaponAttackService, objectMapper);
+                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -119,7 +122,7 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, weaponAttackService, objectMapper);
+                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

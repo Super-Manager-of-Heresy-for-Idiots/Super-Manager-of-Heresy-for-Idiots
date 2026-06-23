@@ -1,5 +1,6 @@
 package com.dnd.app.dto.request;
 
+import com.dnd.app.domain.enums.NpcRole;
 import com.dnd.app.domain.enums.NpcSourceType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -29,6 +30,9 @@ public class UpdateNpcRequest {
     // Optional: switch the authoring mode. When provided, the corresponding
     // build fields are (re)validated.
     private NpcSourceType sourceType;
+
+    // Optional: update the NPC's world role (merchant, quest giver, …).
+    private NpcRole npcRole;
 
     // --- CLASS_BASED build fields ---
     private UUID raceId;

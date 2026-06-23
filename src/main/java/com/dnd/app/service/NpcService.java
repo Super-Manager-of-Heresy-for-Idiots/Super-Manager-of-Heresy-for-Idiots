@@ -61,6 +61,7 @@ public class NpcService {
                 .publicDescription(request.getPublicDescription())
                 .privateDescription(request.getPrivateDescription())
                 .isVisibleToPlayers(request.getIsVisibleToPlayers() != null ? request.getIsVisibleToPlayers() : false)
+                .npcRole(request.getNpcRole())
                 .createdBy(user)
                 .build();
 
@@ -114,6 +115,7 @@ public class NpcService {
         if (request.getPublicDescription() != null) npc.setPublicDescription(request.getPublicDescription());
         if (request.getPrivateDescription() != null) npc.setPrivateDescription(request.getPrivateDescription());
         if (request.getIsVisibleToPlayers() != null) npc.setIsVisibleToPlayers(request.getIsVisibleToPlayers());
+        if (request.getNpcRole() != null) npc.setNpcRole(request.getNpcRole());
 
         applyUpdateSource(npc, request);
 
@@ -242,6 +244,7 @@ public class NpcService {
                 .privateDescription(includePrivate ? npc.getPrivateDescription() : null)
                 .isVisibleToPlayers(npc.getIsVisibleToPlayers())
                 .sourceType(npc.getSourceType())
+                .npcRole(npc.getNpcRole())
                 .race(npc.getRace() == null ? null
                         : ref(npc.getRace().getId(), displayName(npc.getRace().getNameRu(), npc.getRace().getNameEn())))
                 .characterClass(npc.getCharacterClass() == null ? null

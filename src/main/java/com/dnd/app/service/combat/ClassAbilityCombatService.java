@@ -1,0 +1,110 @@
+package com.dnd.app.service.combat;
+
+import com.dnd.app.domain.CharacterClassLevel;
+import com.dnd.app.domain.CharacterStat;
+import com.dnd.app.domain.PlayerCharacter;
+import com.dnd.app.domain.content.ClassFeature;
+import com.dnd.app.domain.content.ContentCharacterClass;
+import com.dnd.app.dto.response.CharacterAttackResponse;
+import com.dnd.app.dto.response.ClassAbilityResponse;
+import com.dnd.app.repository.ClassFeatureRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Bridges the class progression system into combat. A character unlocks class features as they
+ * level up; this service lists those the character has reached (level &lt;= current class level)
+ * so the combat panel can show progression-based, class-specific actions (e.g. a Fighter's
+ * abilities). Features whose description carries a damage expression are additionally turned into
+ * resolvable {@link CharacterAttackResponse} attacks so they can be used through the attack flow.
+ */
+@Service
+@RequiredArgsConstructor
+public class ClassAbilityCombatService {
+
+    private static final String STR = "str";
+    private static final String DEX = "dex";
+
+    private final ClassFeatureRepository classFeatureRepository;
+
+    /** Every class feature the character has unlocked at their current class levels. */
+    public List<ClassAbilityResponse> listAbilities(PlayerCharacter character) {
+        List<ClassAbilityResponse> result = new ArrayList<>();
+        if (character.getClassLevels() == null) {
+            return result;
+        }
+        for (CharacterClassLevel cl : character.getClassLevels()) {
+            ContentCharacterClass cls = cl.getCharacterClass();
+            if (cls == null) {
+                continue;
+            }
+            int classLevel = cl.getClassLevel() != null ? cl.getClassLevel() : 1;
+            String className = cls.getNameRu() != null ? cls.getNameRu() : cls.getNameEn();
+            for (ClassFeature f : classFeatureRepository.findAllByCharacterClassIdOrderByLevelAscSortOrderAsc(cls.getId())) {
+                int featureLevel = f.getLevel() != null ? f.getLevel() : 1;
+                if (featureLevel > classLevel) {
+                    continue; // not yet unlocked
+                }
+                String damage = AttackResolver.extractDamageExpression(f.getDescription());
+                result.add(ClassAbilityResponse.builder()
+                        .name(f.getTitle())
+                        .level(featureLevel)
+                        .className(className)
+                        .description(f.getDescription())
+                        .usableAsAttack(damage != null)
+                        .damage(damage)
+                        .build());
+            }
+        }
+        return result;
+    }
+
+    /** The subset of unlocked class features that carry a damage expression, as usable attacks. */
+    public List<CharacterAttackResponse> classAttacks(PlayerCharacter character) {
+        int profBonus = proficiencyBonus(character.getTotalLevel() != null ? character.getTotalLevel() : 1);
+        int abilityMod = Math.max(abilityModifier(character, STR), abilityModifier(character, DEX));
+        int attackBonus = abilityMod + profBonus;
+
+        List<CharacterAttackResponse> attacks = new ArrayList<>();
+        for (ClassAbilityResponse ability : listAbilities(character)) {
+            if (!ability.isUsableAsAttack()) {
+                continue;
+            }
+            attacks.add(CharacterAttackResponse.builder()
+                    .name(ability.getName())
+                    .attackBonus(signed(attackBonus))
+                    .damage(ability.getDamage())
+                    .damageType(null)
+                    .category("CLASS")
+                    .source("CLASS")
+                    .build());
+        }
+        return attacks;
+    }
+
+    // --- helpers ---
+
+    private int abilityModifier(PlayerCharacter character, String slug) {
+        if (character.getStats() == null) {
+            return 0;
+        }
+        int score = character.getStats().stream()
+                .filter(s -> s.getStatType() != null && slug.equalsIgnoreCase(s.getStatType().getSlug()))
+                .findFirst()
+                .map(CharacterStat::getValue)
+                .orElse(10);
+        return CombatCalculator.abilityModifier(score);
+    }
+
+    /** D&D 5e proficiency bonus from total level: 2 at 1–4, 3 at 5–8, etc. */
+    private int proficiencyBonus(int totalLevel) {
+        return 2 + (Math.max(1, totalLevel) - 1) / 4;
+    }
+
+    private static String signed(int v) {
+        return (v >= 0 ? "+" : "") + v;
+    }
+}

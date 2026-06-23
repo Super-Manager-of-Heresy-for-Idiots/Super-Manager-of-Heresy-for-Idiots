@@ -8,8 +8,10 @@ import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
+import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
+import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
@@ -17,6 +19,7 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.combat.AttackResolver;
+import com.dnd.app.service.combat.ClassAbilityCombatService;
 import com.dnd.app.service.combat.CombatCalculator;
 import com.dnd.app.service.combat.DiceRoller;
 import com.dnd.app.service.combat.WeaponAttackService;
@@ -64,6 +67,8 @@ public class BattleService {
     private final WebSocketEventService webSocketEventService;
     private final DiceRoller diceRoller;
     private final WeaponAttackService weaponAttackService;
+    private final ClassAbilityCombatService classAbilityCombatService;
+    private final ItemInstanceRepository itemInstanceRepository;
     private final ObjectMapper objectMapper;
 
     // ================================ Lifecycle ================================
@@ -371,6 +376,9 @@ public class BattleService {
         battle.setCurrentTurnIndex(nextIndex);
         battleRepository.save(battle);
 
+        // The combatant now on turn starts with a fresh action economy.
+        resetActionEconomy(combatants.get(nextIndex));
+
         log.info("Turn passed: battleId={}, newIndex={}, round={}, by={}",
                 battleId, nextIndex, battle.getRoundNumber(), username);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
@@ -400,19 +408,21 @@ public class BattleService {
         if (current.getType() == CombatantType.CHARACTER && current.getCharacter() != null) {
             UUID characterId = current.getCharacter().getId();
             CharacterResponse characterResponse = characterService.getCharacterById(characterId, username);
-            // Surface weapon-driven attacks (derived from equipped weapons + proficiency) alongside
-            // any manually-authored attacks so the combat UI lists actionable strikes/throws.
-            List<CharacterAttackResponse> weaponAttacks = weaponAttackService.computeAttacks(current.getCharacter());
-            if (!weaponAttacks.isEmpty()) {
-                List<CharacterAttackResponse> combined = new ArrayList<>(weaponAttacks);
+            // Surface weapon-driven attacks (equipped weapons + proficiency, incl. throw variants)
+            // and progression-based class attacks alongside any manually-authored attacks so the
+            // combat UI lists every actionable strike/throw/class action.
+            List<CharacterAttackResponse> derived = new ArrayList<>(weaponAttackService.computeAttacks(current.getCharacter()));
+            derived.addAll(classAbilityCombatService.classAttacks(current.getCharacter()));
+            if (!derived.isEmpty()) {
                 if (characterResponse.getAttacks() != null) {
-                    combined.addAll(characterResponse.getAttacks());
+                    derived.addAll(characterResponse.getAttacks());
                 }
-                characterResponse.setAttacks(combined);
+                characterResponse.setAttacks(derived);
             }
             builder.character(characterResponse)
                     .resources(characterResourceService.getResources(characterId, username))
-                    .activeEffects(characterEffectService.getActiveEffects(characterId, username));
+                    .activeEffects(characterEffectService.getActiveEffects(characterId, username))
+                    .classAbilities(classAbilityCombatService.listAbilities(current.getCharacter()));
         } else if (current.getType() == CombatantType.MONSTER && current.getMonster() != null) {
             boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
             if (gm) {
@@ -458,26 +468,50 @@ public class BattleService {
         }
 
         AttackOption attack = resolveAttack(attacker, request.getAttackName());
-        int targetAc = resolveTargetAc(target);
-        AttackResolver.Outcome outcome = AttackResolver.resolve(request.getD20(), attack.attackBonus(), targetAc);
 
         Integer damage = null;
-        if (outcome.dealsDamage()) {
-            damage = diceRoller.rollDamage(attack.damage(), outcome == AttackResolver.Outcome.CRIT);
-            applyDamageOrHeal(target, -damage, user, campaignId);
+        Integer targetAc = null;
+        Integer attackBonusOut = null;
+        Integer total = null;
+        String outcomeName;
+
+        if (attack.saveDc() != null) {
+            // Save-based attack (e.g. a monster's breath weapon): the target rolls the supplied d20
+            // against the save DC. A success halves the damage, a failure takes it in full.
+            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(request.getD20(), 0, attack.saveDc());
+            int rolled = diceRoller.rollDamage(attack.damage(), false);
+            damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
+            if (damage > 0) {
+                applyDamageOrHeal(target, -damage, user, campaignId);
+            }
+            outcomeName = save.name();
+            total = request.getD20();
+        } else {
+            targetAc = resolveTargetAc(target);
+            AttackResolver.Outcome outcome = AttackResolver.resolve(request.getD20(), attack.attackBonus(), targetAc);
+            if (outcome.dealsDamage()) {
+                damage = diceRoller.rollDamage(attack.damage(), outcome == AttackResolver.Outcome.CRIT);
+                applyDamageOrHeal(target, -damage, user, campaignId);
+            }
+            outcomeName = outcome.name();
+            attackBonusOut = attack.attackBonus();
+            total = request.getD20() + attack.attackBonus();
         }
+
+        attacker.setActionUsed(true);
+        combatantRepository.save(attacker);
 
         boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
         log.info("Attack resolved: battleId={}, attacker={}, target={}, attack='{}', d20={}, outcome={}, dmg={}, by={}",
                 battleId, attacker.getDisplayName(), target.getDisplayName(), attack.name(),
-                request.getD20(), outcome, damage, username);
+                request.getD20(), outcomeName, damage, username);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("battleId", battleId);
         payload.put("attackerName", attacker.getDisplayName());
         payload.put("targetName", target.getDisplayName());
         payload.put("attackName", attack.name());
-        payload.put("outcome", outcome.name());
+        payload.put("outcome", outcomeName);
         if (damage != null) {
             payload.put("damage", damage);
         }
@@ -491,10 +525,11 @@ public class BattleService {
                 .targetName(target.getDisplayName())
                 .attackName(attack.name())
                 .d20(request.getD20())
-                .attackBonus(attack.attackBonus())
-                .total(request.getD20() + attack.attackBonus())
+                .attackBonus(attackBonusOut)
+                .total(total)
                 .targetAc(targetAc)
-                .outcome(outcome.name())
+                .saveDc(attack.saveDc())
+                .outcome(outcomeName)
                 .damage(damage)
                 .damageType(attack.damageType())
                 .targetCurrentHp(target.getCurrentHp())
@@ -502,6 +537,175 @@ public class BattleService {
                 .targetDown(down)
                 .battle(fresh)
                 .build();
+    }
+
+    /**
+     * The active character consumes a carried item (e.g. drinks a healing potion). Only the
+     * combatant whose turn it is may act, and only with an item they own. The item's healing dice
+     * (the consumable template's damage dice, read as restoration) are rolled and applied to the
+     * chosen target — by default the user themselves — then one unit of the item is spent.
+     */
+    @Transactional
+    public BattleActionResultResponse performUseItem(UUID campaignId, UUID battleId,
+                                                     BattleUseItemRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Items can only be used in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant actor = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        enforceControls(campaignId, user, actor);
+        if (actor.getType() != CombatantType.CHARACTER || actor.getCharacter() == null) {
+            throw new BadRequestException("Only characters can use items");
+        }
+
+        ItemInstance item = itemInstanceRepository.findById(request.getItemInstanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+        if (item.getOwnerCharacter() == null || !item.getOwnerCharacter().getId().equals(actor.getCharacter().getId())) {
+            throw new BadRequestException("This item is not carried by the active character");
+        }
+
+        String healExpression = consumableHealExpression(item);
+        if (healExpression == null) {
+            throw new BadRequestException("This item cannot be used in combat");
+        }
+
+        BattleCombatant target = actor;
+        if (request.getTargetCombatantId() != null) {
+            target = combatantRepository.findById(request.getTargetCombatantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
+            if (!target.getBattle().getId().equals(battleId)) {
+                throw new BadRequestException("Target does not belong to this battle");
+            }
+        }
+
+        int healed = diceRoller.rollDamage(healExpression, false);
+        applyDamageOrHeal(target, healed, user, campaignId);
+        consumeOneUnit(item);
+
+        actor.setActionUsed(true);
+        combatantRepository.save(actor);
+
+        log.info("Item used: battleId={}, actor={}, item='{}', target={}, healed={}, by={}",
+                battleId, actor.getDisplayName(), item.getDisplayName(), target.getDisplayName(), healed, username);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("battleId", battleId);
+        payload.put("actorName", actor.getDisplayName());
+        payload.put("itemName", item.getDisplayName());
+        payload.put("targetName", target.getDisplayName());
+        payload.put("healed", healed);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
+
+        boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
+        BattleResponse fresh = toResponse(battle, orderedCombatants(battleId));
+        return BattleActionResultResponse.builder()
+                .attackerCombatantId(actor.getId())
+                .attackerName(actor.getDisplayName())
+                .targetCombatantId(target.getId())
+                .targetName(target.getDisplayName())
+                .attackName(item.getDisplayName())
+                .outcome("ITEM_USED")
+                .damage(healed)
+                .targetCurrentHp(target.getCurrentHp())
+                .targetMaxHp(target.getMaxHp())
+                .targetDown(down)
+                .battle(fresh)
+                .build();
+    }
+
+    /**
+     * Restoration dice for a usable consumable, or {@code null} when the item has no in-combat
+     * use. A legacy {@link ItemTemplate} that authors damage dice (e.g. a healing potion) exposes
+     * them here as the amount restored, combined with its flat bonus.
+     */
+    private String consumableHealExpression(ItemInstance item) {
+        ItemTemplate template = item.getTemplate();
+        if (template == null) {
+            return null;
+        }
+        String dice = template.getDamageDice();
+        if (dice == null || dice.isBlank()) {
+            return null;
+        }
+        int bonus = template.getDamageBonus() != null ? template.getDamageBonus() : 0;
+        return bonus != 0 ? dice + (bonus > 0 ? "+" : "") + bonus : dice;
+    }
+
+    /** Spends one unit of an item: decrements the stack, deleting the row when it reaches zero. */
+    private void consumeOneUnit(ItemInstance item) {
+        int quantity = item.getQuantity() != null ? item.getQuantity() : 1;
+        if (quantity <= 1) {
+            itemInstanceRepository.delete(item);
+        } else {
+            item.setQuantity(quantity - 1);
+            itemInstanceRepository.save(item);
+        }
+    }
+
+    /**
+     * Declaratively marks one of a combatant's action-economy slots (action / bonus action /
+     * reaction) as spent for this turn. Actions and bonus actions may only be spent on the
+     * combatant's own turn; a reaction can be spent at any time. Re-spending a slot is rejected.
+     */
+    @Transactional
+    public BattleResponse spendAction(UUID campaignId, UUID battleId, UUID combatantId,
+                                      SpendActionRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Actions can only be spent in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant combatant = combatantRepository.findById(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+
+        SpendActionRequest.Slot slot = request.getSlot();
+        if (slot != SpendActionRequest.Slot.REACTION) {
+            BattleCombatant active = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+            if (!active.getId().equals(combatant.getId())) {
+                throw new BadRequestException("An action or bonus action can only be spent on the combatant's own turn");
+            }
+        }
+
+        switch (slot) {
+            case ACTION -> {
+                if (Boolean.TRUE.equals(combatant.getActionUsed())) {
+                    throw new BadRequestException("The action has already been used this turn");
+                }
+                combatant.setActionUsed(true);
+            }
+            case BONUS_ACTION -> {
+                if (Boolean.TRUE.equals(combatant.getBonusActionUsed())) {
+                    throw new BadRequestException("The bonus action has already been used this turn");
+                }
+                combatant.setBonusActionUsed(true);
+            }
+            case REACTION -> {
+                if (Boolean.TRUE.equals(combatant.getReactionUsed())) {
+                    throw new BadRequestException("The reaction has already been used this turn");
+                }
+                combatant.setReactionUsed(true);
+            }
+        }
+        combatantRepository.save(combatant);
+
+        log.info("Action economy spent: battleId={}, combatant={}, slot={}, by={}",
+                battleId, combatant.getDisplayName(), slot, username);
+        return toResponse(battle, orderedCombatants(battleId));
     }
 
     /**
@@ -537,13 +741,22 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
-    /** A combatant's usable attack reduced to the numbers the resolver needs. */
-    private record AttackOption(String name, int attackBonus, String damage, String damageType) {
+    /**
+     * A combatant's usable attack reduced to the numbers the resolver needs. {@code saveDc} is set
+     * only for save-based attacks (the target rolls a saving throw instead of the attacker rolling
+     * to hit); it stays null for ordinary attack-roll strikes.
+     */
+    private record AttackOption(String name, int attackBonus, String damage, String damageType, Integer saveDc) {
     }
 
-    /** A character's full attack list: weapon-driven attacks plus any manually-authored ones. */
+    /**
+     * A character's full attack list: weapon-driven attacks (incl. throw/two-handed variants),
+     * progression-based class attacks (class features that deal damage) and any manually-authored
+     * attacks from the sheet.
+     */
     private List<CharacterAttackResponse> characterAttackList(PlayerCharacter character) {
         List<CharacterAttackResponse> list = new ArrayList<>(weaponAttackService.computeAttacks(character));
+        list.addAll(classAbilityCombatService.classAttacks(character));
         String json = character.getAttacksJson();
         if (json != null && !json.isBlank()) {
             try {
@@ -567,7 +780,7 @@ public class BattleService {
                     .findFirst()
                     .map(a -> new AttackOption(a.getName(),
                             AttackResolver.parseAttackBonus(a.getAttackBonus()),
-                            a.getDamage(), a.getDamageType()))
+                            a.getDamage(), a.getDamageType(), null))
                     .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
 
@@ -591,7 +804,8 @@ public class BattleService {
             if (dice == null) {
                 dice = AttackResolver.extractDamageExpression(feature.getDescriptionRusloc());
             }
-            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType);
+            Integer saveDc = feature.getSaveDc() != null ? feature.getSaveDc().intValue() : null;
+            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, saveDc);
         }
 
         throw new BadRequestException("This combatant cannot attack");
@@ -812,6 +1026,17 @@ public class BattleService {
                 .currentHp(c.getCurrentHp())
                 .maxHp(c.getMaxHp())
                 .currentTurn(currentTurn)
+                .actionUsed(Boolean.TRUE.equals(c.getActionUsed()))
+                .bonusActionUsed(Boolean.TRUE.equals(c.getBonusActionUsed()))
+                .reactionUsed(Boolean.TRUE.equals(c.getReactionUsed()))
                 .build();
+    }
+
+    /** Clears a combatant's action economy at the start of their turn. */
+    private void resetActionEconomy(BattleCombatant combatant) {
+        combatant.setActionUsed(false);
+        combatant.setBonusActionUsed(false);
+        combatant.setReactionUsed(false);
+        combatantRepository.save(combatant);
     }
 }
