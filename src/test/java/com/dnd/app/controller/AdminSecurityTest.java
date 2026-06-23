@@ -1,6 +1,7 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.config.SecurityConfig;
+import com.dnd.app.security.AuthCookieService;
 import com.dnd.app.security.JwtTokenProvider;
 import com.dnd.app.service.AdminService;
 import com.dnd.app.service.homebrew.HomebrewAdminService;
@@ -23,7 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, AuthCookieService.class})
 @DisplayName("AdminController: эндпоинты типов предметов только для администратора")
 class AdminSecurityTest {
 

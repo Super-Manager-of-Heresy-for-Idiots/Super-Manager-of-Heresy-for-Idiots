@@ -101,6 +101,7 @@ class BattleServiceAttackTest {
         when(battleRepository.findByIdAndCampaignId(battleId, campaignId)).thenReturn(Optional.of(battle));
         when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(combatants);
         when(combatantRepository.findById(characterC.getId())).thenReturn(Optional.of(characterC));
+        when(characterRepository.findByIdForUpdate(character.getId())).thenReturn(Optional.of(character));
         when(diceRoller.rollDamage("3к4", false)).thenReturn(7);
 
         BattleAttackRequest req = BattleAttackRequest.builder()
@@ -166,6 +167,7 @@ class BattleServiceAttackTest {
         when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId))
                 .thenReturn(List.of(monsterC, characterC));
         when(combatantRepository.findById(characterC.getId())).thenReturn(Optional.of(characterC));
+        when(characterRepository.findByIdForUpdate(character.getId())).thenReturn(Optional.of(character));
         // The dice parsed from the description must be the doubled-on-crit "1к6 + 4".
         when(diceRoller.rollDamage("1к6 + 4", true)).thenReturn(14);
 

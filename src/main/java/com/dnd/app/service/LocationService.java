@@ -2,6 +2,7 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.CreateLocationRequest;
 import com.dnd.app.dto.request.UpdateLocationRequest;
 import com.dnd.app.dto.response.LocationResponse;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +26,7 @@ public class LocationService {
     private final CampaignLocationRepository locationRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final WebSocketEventService webSocketEventService;
 
     @Transactional
     public LocationResponse createLocation(UUID campaignId, CreateLocationRequest request, String username) {
@@ -108,6 +111,11 @@ public class LocationService {
         location = locationRepository.save(location);
 
         log.info("Location visibility toggled: id={}, visible={}, by={}", locationId, location.getIsVisibleToPlayers(), username);
+
+        boolean nowVisible = Boolean.TRUE.equals(location.getIsVisibleToPlayers());
+        webSocketEventService.sendCampaignEvent(
+                nowVisible ? WebSocketEventType.LOCATION_REVEALED : WebSocketEventType.LOCATION_HIDDEN,
+                location.getCampaign().getId(), Map.of("locationId", locationId), user.getId());
         return toResponse(location);
     }
 

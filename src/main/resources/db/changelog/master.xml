@@ -25,4 +25,10 @@
     <!-- Per-combatant action economy (action / bonus action / reaction). -->
     <include file="db/changelog/051-combat-action-economy.xml"/>
 
+    <!-- Active effect -> source item instance, so unequip removes only that item's buffs. -->
+    <include file="db/changelog/052-active-effect-source-item.xml"/>
+
+    <!-- Server-side refresh-token sessions: rotation + reuse detection. -->
+    <include file="db/changelog/053-refresh-token-sessions.xml"/>
+
 </databaseChangeLog>

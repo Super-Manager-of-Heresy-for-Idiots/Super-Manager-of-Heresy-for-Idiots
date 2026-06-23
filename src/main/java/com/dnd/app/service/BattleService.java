@@ -350,7 +350,9 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        // Row-lock the battle so two simultaneous end-turn calls can't both advance it.
+        Battle battle = battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Battle not found"));
         requireStatus(battle, BattleStatus.ACTIVE, "Turns can only be passed in an active battle");
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
@@ -832,25 +834,18 @@ public class BattleService {
      */
     private void applyDamageOrHeal(BattleCombatant combatant, int delta, User actor, UUID campaignId) {
         if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
-            PlayerCharacter character = combatant.getCharacter();
+            // Re-load under a pessimistic write lock so simultaneous attacks / manual HP edits on the
+            // same character accumulate instead of overwriting one another (deltas, not last-write-wins).
+            PlayerCharacter character = characterRepository.findByIdForUpdate(combatant.getCharacter().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
             int maxHp = character.getMaxHp() != null ? character.getMaxHp()
                     : (combatant.getMaxHp() != null ? combatant.getMaxHp() : 0);
-            int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
-            int tempHp = character.getTempHp() != null ? character.getTempHp() : 0;
 
-            if (delta < 0) {
-                int dmg = -delta;
-                int absorbed = Math.min(tempHp, dmg);
-                tempHp -= absorbed;
-                currentHp = Math.max(0, currentHp - (dmg - absorbed));
-            } else if (delta > 0) {
-                currentHp = maxHp > 0 ? Math.min(currentHp + delta, maxHp) : currentHp + delta;
-            }
-
-            character.setCurrentHp(currentHp);
-            character.setTempHp(tempHp);
+            character.applyHpDelta(delta, maxHp);
             characterRepository.save(character);
 
+            int currentHp = character.getCurrentHp();
+            int tempHp = character.getTempHp();
             combatant.setCurrentHp(currentHp);
             combatant.setMaxHp(maxHp > 0 ? maxHp : combatant.getMaxHp());
             combatantRepository.save(combatant);

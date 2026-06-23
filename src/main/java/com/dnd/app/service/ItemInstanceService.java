@@ -52,6 +52,9 @@ public class ItemInstanceService {
         campaignService.enforceGmOrAdmin(campaign, user);
 
         PlayerCharacter character = findCharacter(characterId);
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character not found in this campaign");
+        }
 
         // Resolve the catalog item from the new content model (equipment / magic) or the
         // legacy template table, depending on the request's itemKind.
@@ -180,7 +183,7 @@ public class ItemInstanceService {
 
         // Auto-apply template buffs as active effects (legacy template-backed items only)
         if (instance.getTemplate() != null) {
-            applyTemplateBuffs(character, instance.getTemplate(), user);
+            applyTemplateBuffs(character, instance, user);
         }
 
         log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot.getCode(), characterId);
@@ -200,7 +203,7 @@ public class ItemInstanceService {
 
         // Auto-remove template buffs (legacy template-backed items only)
         if (instance.getTemplate() != null) {
-            removeTemplateBuffs(character, instance.getTemplate());
+            removeTemplateBuffs(instance);
         }
 
         instance.setSlot(null);
@@ -220,12 +223,15 @@ public class ItemInstanceService {
         if (instance.getOwnerCharacter() == null || !instance.getOwnerCharacter().getId().equals(characterId)) {
             throw new BadRequestException("Item does not belong to this character");
         }
+        if (instance.getOwnerCharacter().getCampaign() == null
+                || !instance.getOwnerCharacter().getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character not found in this campaign");
+        }
 
         // If equipped, unequip first
         if (instance.getSlot() != null) {
             if (instance.getTemplate() != null) {
-                PlayerCharacter character = findCharacter(characterId);
-                removeTemplateBuffs(character, instance.getTemplate());
+                removeTemplateBuffs(instance);
             }
             instance.setSlot(null);
         }
@@ -332,25 +338,22 @@ public class ItemInstanceService {
 
     // --- Private helpers ---
 
-    private void applyTemplateBuffs(PlayerCharacter character, ItemTemplate template, User appliedBy) {
-        List<ItemTemplateBuff> templateBuffs = itemTemplateBuffRepository.findByTemplateId(template.getId());
+    private void applyTemplateBuffs(PlayerCharacter character, ItemInstance instance, User appliedBy) {
+        List<ItemTemplateBuff> templateBuffs = itemTemplateBuffRepository.findByTemplateId(instance.getTemplate().getId());
         for (ItemTemplateBuff tb : templateBuffs) {
             CharacterActiveEffect effect = CharacterActiveEffect.builder()
                     .character(character)
                     .buffDebuff(tb.getBuffDebuff())
                     .appliedBy(appliedBy)
+                    .sourceItemInstance(instance)
                     .remainingRounds(null) // permanent while equipped
                     .build();
             characterActiveEffectRepository.save(effect);
         }
     }
 
-    private void removeTemplateBuffs(PlayerCharacter character, ItemTemplate template) {
-        List<ItemTemplateBuff> templateBuffs = itemTemplateBuffRepository.findByTemplateId(template.getId());
-        for (ItemTemplateBuff tb : templateBuffs) {
-            characterActiveEffectRepository.deleteByCharacterIdAndBuffDebuffId(
-                    character.getId(), tb.getBuffDebuff().getId());
-        }
+    private void removeTemplateBuffs(ItemInstance instance) {
+        characterActiveEffectRepository.deleteBySourceItemInstanceId(instance.getId());
     }
 
     private void enforceViewAccess(PlayerCharacter character, User user) {

@@ -71,6 +71,12 @@ app:
   ratelimit:
     login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
     register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
+    refresh-per-minute: ${APP_RATELIMIT_REFRESH_PER_MIN:20}
+  security:
+    # Number of reverse proxies (e.g. nginx) in front of the app. Used to pick the trusted hop from
+    # X-Forwarded-For so the client IP cannot be spoofed to bypass auth rate limiting. Set to 0 if the
+    # app is exposed directly with no proxy.
+    trusted-proxy-count: ${APP_TRUSTED_PROXY_COUNT:1}
   websocket:
     endpoint:
       # true = this node terminates client /ws connections (WS role / all-in-one).

@@ -9,6 +9,7 @@ import com.dnd.app.dto.response.AbilityCheckResponse;
 import com.dnd.app.dto.response.CharacterActiveEffectResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.util.AbilityScores;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -128,7 +129,7 @@ public class CharacterEffectService {
                 .map(CharacterStat::getValue)
                 .orElse(10);
 
-        int baseModifier = (int) Math.floor((baseValue - 10) / 2.0);
+        int baseModifier = AbilityScores.modifier(baseValue);
 
         // Sum of active STAT_MODIFIER buffs/debuffs on that stat
         List<CharacterActiveEffect> activeEffects = characterActiveEffectRepository.findByCharacterId(characterId);

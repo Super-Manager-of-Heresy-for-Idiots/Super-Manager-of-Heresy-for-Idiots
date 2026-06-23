@@ -36,6 +36,7 @@ import com.dnd.app.repository.ClassLevelRewardGrantSpellRepository;
 import com.dnd.app.repository.ClassLevelRewardGroupRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
+import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -87,6 +88,7 @@ class LevelUpCommandServiceTest {
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private CharacterSkillProficiencyRepository skillProficiencyRepository;
     @Mock private CharacterKnownSpellRepository knownSpellRepository;
+    @Mock private SpellRepository spellRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
     @Mock private CampaignService campaignService;
     @Mock private LevelThresholdService thresholdService;
@@ -317,6 +319,8 @@ class LevelUpCommandServiceTest {
         stubGroupAtLevel3(group);
         when(spellGrantRepository.findById(grantId)).thenReturn(Optional.of(
                 ClassLevelRewardGrantSpell.builder().id(grantId).chooseCount(1).build()));
+        when(spellRepository.findById(spellId)).thenReturn(Optional.of(
+                Spell.builder().id(spellId).level(1).build()));
 
         LevelUpRequest.ChildSelections child = LevelUpRequest.ChildSelections.builder()
                 .spellIds(List.of(spellId)).build();

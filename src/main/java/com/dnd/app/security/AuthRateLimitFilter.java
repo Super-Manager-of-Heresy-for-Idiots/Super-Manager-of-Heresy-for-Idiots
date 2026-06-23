@@ -24,19 +24,27 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final String LOGIN_PATH = "/api/auth/login";
     private static final String REGISTER_PATH = "/api/auth/register";
+    private static final String REFRESH_PATH = "/api/auth/refresh";
 
     private final int loginPerMinute;
     private final int registerPerHour;
+    private final int refreshPerMinute;
+    private final int trustedProxyCount;
 
     private final ConcurrentHashMap<String, Deque<Instant>> loginHits = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deque<Instant>> registerHits = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Deque<Instant>> refreshHits = new ConcurrentHashMap<>();
 
     public AuthRateLimitFilter(
             @Value("${app.ratelimit.login-per-minute:5}") int loginPerMinute,
-            @Value("${app.ratelimit.register-per-hour:3}") int registerPerHour
+            @Value("${app.ratelimit.register-per-hour:3}") int registerPerHour,
+            @Value("${app.ratelimit.refresh-per-minute:20}") int refreshPerMinute,
+            @Value("${app.security.trusted-proxy-count:1}") int trustedProxyCount
     ) {
         this.loginPerMinute = loginPerMinute;
         this.registerPerHour = registerPerHour;
+        this.refreshPerMinute = refreshPerMinute;
+        this.trustedProxyCount = trustedProxyCount;
     }
 
     @Override
@@ -56,6 +64,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         }
         if (REGISTER_PATH.equals(path) && exceeds(registerHits, ip, registerPerHour, Duration.ofHours(1))) {
             reject(response, "Too many registration attempts. Try again later.");
+            return;
+        }
+        if (REFRESH_PATH.equals(path) && exceeds(refreshHits, ip, refreshPerMinute, Duration.ofMinutes(1))) {
+            reject(response, "Too many refresh attempts. Try again later.");
             return;
         }
 
@@ -90,11 +102,28 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\"}");
     }
 
+    /**
+     * Resolves the client IP used as the rate-limit key. The left side of {@code X-Forwarded-For}
+     * is attacker-controlled (a client may prepend arbitrary hops), so the leftmost value must
+     * never be trusted. With {@code trustedProxyCount} reverse proxies in front of the app — each
+     * appending the downstream peer's address (e.g. nginx {@code $proxy_add_x_forwarded_for}) — the
+     * genuine client IP is the hop our outermost proxy appended, at index
+     * {@code length - trustedProxyCount}. A header shorter than expected (forged/stripped, or no
+     * proxy in front) falls back to the transport remote address.
+     */
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            int comma = forwarded.indexOf(',');
-            return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
+        if (trustedProxyCount > 0) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                String[] hops = forwarded.split(",");
+                int idx = hops.length - trustedProxyCount;
+                if (idx >= 0 && idx < hops.length) {
+                    String candidate = hops[idx].trim();
+                    if (!candidate.isEmpty()) {
+                        return candidate;
+                    }
+                }
+            }
         }
         return request.getRemoteAddr();
     }

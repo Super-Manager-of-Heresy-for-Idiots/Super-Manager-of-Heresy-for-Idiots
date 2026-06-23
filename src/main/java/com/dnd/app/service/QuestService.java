@@ -46,6 +46,7 @@ public class QuestService {
     private final CurrencyTypeRepository currencyTypeRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
     private final UserRepository userRepository;
+    private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
     private final ItemInstanceService itemInstanceService;
@@ -185,8 +186,10 @@ public class QuestService {
         QuestNote note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found"));
 
-        if (!note.getAuthor().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the note author can update it");
+        boolean isAuthorMember = note.getAuthor().getId().equals(user.getId())
+                && campaignService.isMemberOfCampaign(note.getQuest().getCampaign().getId(), user.getId());
+        if (!isAuthorMember && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the note author (current campaign member) can update it");
         }
 
         if (request.getContent() != null) note.setContent(request.getContent());
@@ -203,8 +206,10 @@ public class QuestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found"));
 
         boolean isGm = isGmOrAdmin(note.getQuest().getCampaign().getId(), user);
-        if (!note.getAuthor().getId().equals(user.getId()) && !isGm) {
-            throw new AccessDeniedException("Only the note author or a GM can delete it");
+        boolean isAuthorMember = note.getAuthor().getId().equals(user.getId())
+                && campaignService.isMemberOfCampaign(note.getQuest().getCampaign().getId(), user.getId());
+        if (!isAuthorMember && !isGm) {
+            throw new AccessDeniedException("Only the note author (current member) or a GM can delete it");
         }
 
         noteRepository.delete(note);
@@ -232,14 +237,17 @@ public class QuestService {
                 .xpAmount(request.getXpAmount())
                 .build();
 
+        UUID campaignId = quest.getCampaign().getId();
         if (request.getItemTemplateId() != null) {
             ItemTemplate template = itemTemplateRepository.findById(request.getItemTemplateId())
                     .orElseThrow(() -> new ResourceNotFoundException("Item template not found"));
+            requireVisibleInCampaign(template.getHomebrew(), campaignId, "Item is not available in this campaign");
             reward.setItemTemplate(template);
         }
         if (request.getCurrencyTypeId() != null) {
             CurrencyType currencyType = currencyTypeRepository.findById(request.getCurrencyTypeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Currency type not found"));
+            requireVisibleInCampaign(currencyType.getHomebrew(), campaignId, "Currency is not available in this campaign");
             reward.setCurrencyType(currencyType);
             reward.setCurrencyAmount(request.getCurrencyAmount());
         }
@@ -445,6 +453,14 @@ public class QuestService {
 
     private boolean isGmOrAdmin(UUID campaignId, User user) {
         return user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
+    }
+
+    /** Vanilla content (no homebrew package) is always visible; homebrew only if its package is active in the campaign. */
+    private void requireVisibleInCampaign(HomebrewPackage homebrew, UUID campaignId, String message) {
+        if (homebrew == null) return;
+        if (!campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId).contains(homebrew.getId())) {
+            throw new BadRequestException(message);
+        }
     }
 
     private CampaignQuest findQuest(UUID questId) {

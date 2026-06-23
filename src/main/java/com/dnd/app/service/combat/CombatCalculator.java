@@ -1,6 +1,7 @@
 package com.dnd.app.service.combat;
 
 import com.dnd.app.domain.BattleCombatant;
+import com.dnd.app.util.AbilityScores;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,7 +22,7 @@ public final class CombatCalculator {
 
     /** D&D ability modifier: floor((score - 10) / 2). */
     public static int abilityModifier(int score) {
-        return (int) Math.floor((score - 10) / 2.0);
+        return AbilityScores.modifier(score);
     }
 
     /**

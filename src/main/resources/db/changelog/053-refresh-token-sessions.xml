@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Server-side refresh-token sessions with rotation + reuse detection. Each login opens a
+      family_id chain; every refresh rotates the token (old row -> revoked + replaced_by). Re-presenting
+      a consumed token revokes the whole family (theft signal). No backfill: tokens issued before this
+      table carry no jti and simply force one re-login.
+    -->
+    <changeSet id="053-refresh-token" author="claude">
+        <createTable tableName="refresh_token">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="jti" type="uuid">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_refresh_token_jti"/>
+            </column>
+            <column name="family_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revoked" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="replaced_by" type="uuid"/>
+            <column name="user_agent" type="text"/>
+            <column name="ip" type="text"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="refresh_token"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_refresh_token_user"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="refresh_token"
+                baseColumnNames="replaced_by"
+                referencedTableName="refresh_token"
+                referencedColumnNames="id"
+                constraintName="fk_refresh_token_replaced_by"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="refresh_token" indexName="idx_refresh_token_user">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

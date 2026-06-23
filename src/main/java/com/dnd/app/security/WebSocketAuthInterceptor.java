@@ -44,16 +44,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private void handleConnect(StompHeaderAccessor accessor) {
         String token = accessor.getFirstNativeHeader("Authorization");
-        if (token == null) {
-            String query = accessor.getFirstNativeHeader("token");
-            if (query != null) token = query;
-        }
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
 
-        if (token == null || !jwtTokenProvider.validateToken(token)) {
-            log.warn("WebSocket CONNECT denied: missing or invalid token");
+        if (token == null || !jwtTokenProvider.isAccessToken(token)) {
+            log.warn("WebSocket CONNECT denied: missing or invalid access token");
             throw new org.springframework.messaging.MessageDeliveryException("Authentication required");
         }
 

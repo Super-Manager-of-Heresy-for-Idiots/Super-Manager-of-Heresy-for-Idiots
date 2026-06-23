@@ -185,8 +185,10 @@ public class NpcService {
         NpcNote note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found"));
 
-        if (!note.getAuthor().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
-            throw new AccessDeniedException("Only the note author can update it");
+        boolean isAuthorMember = note.getAuthor().getId().equals(user.getId())
+                && campaignService.isMemberOfCampaign(note.getNpc().getCampaign().getId(), user.getId());
+        if (!isAuthorMember && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the note author (current campaign member) can update it");
         }
 
         if (request.getContent() != null) note.setContent(request.getContent());
@@ -203,8 +205,10 @@ public class NpcService {
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found"));
 
         boolean isGm = isGmOrAdmin(note.getNpc().getCampaign().getId(), user);
-        if (!note.getAuthor().getId().equals(user.getId()) && !isGm) {
-            throw new AccessDeniedException("Only the note author or a GM can delete it");
+        boolean isAuthorMember = note.getAuthor().getId().equals(user.getId())
+                && campaignService.isMemberOfCampaign(note.getNpc().getCampaign().getId(), user.getId());
+        if (!isAuthorMember && !isGm) {
+            throw new AccessDeniedException("Only the note author (current campaign member) or a GM can delete it");
         }
 
         noteRepository.delete(note);
@@ -278,12 +282,12 @@ public class NpcService {
         if (sourceType == NpcSourceType.CLASS_BASED) {
             // Required: race, class, level. Everything else is optional and is NOT
             // validated against level/class — the GM authors abilities freely.
-            npc.setRace(resolveRace(requireField(raceId, "raceId is required for a class-based NPC")));
-            npc.setCharacterClass(resolveClass(requireField(classId, "classId is required for a class-based NPC")));
+            npc.setRace(resolveRace(requireField(raceId, "raceId is required for a class-based NPC"), campaign.getId()));
+            npc.setCharacterClass(resolveClass(requireField(classId, "classId is required for a class-based NPC"), campaign.getId()));
             npc.setLevel(requireField(level, "level is required for a class-based NPC"));
             npc.setAbilities(abilities);
             npc.getSpells().clear();
-            npc.getSpells().addAll(resolveSpells(spellIds));
+            npc.getSpells().addAll(resolveSpells(spellIds, campaign.getId()));
         } else if (sourceType == NpcSourceType.MONSTER_BASED) {
             UUID monsterId = requireField(sourceMonsterId, "sourceMonsterId is required for a monster-based NPC");
             npc.setSourceMonster(resolveCampaignMonster(monsterId, campaign));
@@ -298,13 +302,13 @@ public class NpcService {
         if (targetType == NpcSourceType.CLASS_BASED) {
             npc.setSourceType(NpcSourceType.CLASS_BASED);
             npc.setSourceMonster(null);
-            if (request.getRaceId() != null) npc.setRace(resolveRace(request.getRaceId()));
-            if (request.getClassId() != null) npc.setCharacterClass(resolveClass(request.getClassId()));
+            if (request.getRaceId() != null) npc.setRace(resolveRace(request.getRaceId(), npc.getCampaign().getId()));
+            if (request.getClassId() != null) npc.setCharacterClass(resolveClass(request.getClassId(), npc.getCampaign().getId()));
             if (request.getLevel() != null) npc.setLevel(request.getLevel());
             if (request.getAbilities() != null) npc.setAbilities(request.getAbilities());
             if (request.getSpellIds() != null) {
                 npc.getSpells().clear();
-                npc.getSpells().addAll(resolveSpells(request.getSpellIds()));
+                npc.getSpells().addAll(resolveSpells(request.getSpellIds(), npc.getCampaign().getId()));
             }
             if (switching) {
                 requireField(npc.getRace(), "raceId is required for a class-based NPC");
@@ -330,17 +334,21 @@ public class NpcService {
         // targetType == null => legacy free-form NPC, nothing to update.
     }
 
-    private com.dnd.app.domain.content.Species resolveRace(UUID raceId) {
-        return speciesRepository.findById(raceId)
+    private com.dnd.app.domain.content.Species resolveRace(UUID raceId, UUID campaignId) {
+        com.dnd.app.domain.content.Species species = speciesRepository.findById(raceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Species not found"));
+        requireVisibleInCampaign(species.getHomebrew(), campaignId, "Species is not available in this campaign");
+        return species;
     }
 
-    private ContentCharacterClass resolveClass(UUID classId) {
-        return classRepository.findById(classId)
+    private ContentCharacterClass resolveClass(UUID classId, UUID campaignId) {
+        ContentCharacterClass charClass = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        requireVisibleInCampaign(charClass.getHomebrew(), campaignId, "Class is not available in this campaign");
+        return charClass;
     }
 
-    private Set<Spell> resolveSpells(List<UUID> spellIds) {
+    private Set<Spell> resolveSpells(List<UUID> spellIds, UUID campaignId) {
         if (spellIds == null || spellIds.isEmpty()) {
             return new LinkedHashSet<>();
         }
@@ -349,7 +357,21 @@ public class NpcService {
         if (found.size() != distinct.size()) {
             throw new ResourceNotFoundException("One or more spells were not found");
         }
+        Set<UUID> activePackageIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        for (Spell spell : found) {
+            if (spell.getHomebrew() != null && !activePackageIds.contains(spell.getHomebrew().getId())) {
+                throw new BadRequestException("Spell is not available in this campaign");
+            }
+        }
         return new LinkedHashSet<>(found);
+    }
+
+    /** Vanilla content (no homebrew package) is always visible; homebrew only if its package is active in the campaign. */
+    private void requireVisibleInCampaign(HomebrewPackage homebrew, UUID campaignId, String message) {
+        if (homebrew == null) return;
+        if (!campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId).contains(homebrew.getId())) {
+            throw new BadRequestException(message);
+        }
     }
 
     // Resolves a monster usable as an NPC source within this campaign. Allowed:

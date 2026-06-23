@@ -166,4 +166,29 @@ public class PlayerCharacter {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /**
+     * Applies a signed HP change in place using D&D damage/heal rules, so every write path stays
+     * consistent: a negative delta drains temp HP first and then current HP (floored at 0); a positive
+     * delta heals current HP, capped at {@code maxHpCap} when it is positive (a non-positive cap means
+     * the max is unknown, so healing is left uncapped). Null current/temp HP are treated as 0.
+     *
+     * <p>Concurrency: callers must load the row under a pessimistic write lock
+     * ({@link com.dnd.app.repository.PlayerCharacterRepository#findByIdForUpdate}) so simultaneous
+     * damage/heal events accumulate instead of overwriting one another.
+     */
+    public void applyHpDelta(int delta, int maxHpCap) {
+        int curHp = currentHp != null ? currentHp : 0;
+        int tmpHp = tempHp != null ? tempHp : 0;
+        if (delta < 0) {
+            int damage = -delta;
+            int absorbed = Math.min(tmpHp, damage);
+            tmpHp -= absorbed;
+            curHp = Math.max(0, curHp - (damage - absorbed));
+        } else if (delta > 0) {
+            curHp = maxHpCap > 0 ? Math.min(curHp + delta, maxHpCap) : curHp + delta;
+        }
+        this.currentHp = curHp;
+        this.tempHp = tmpHp;
+    }
 }
