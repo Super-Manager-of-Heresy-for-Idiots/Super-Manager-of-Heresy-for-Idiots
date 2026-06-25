@@ -66,6 +66,10 @@ app:
       # Refresh cookie is scoped so it is only sent to the refresh/logout endpoints.
       refresh-path: ${JWT_COOKIE_REFRESH_PATH:/api/auth}
       domain: ${JWT_COOKIE_DOMAIN:}
+  internal:
+    # Shared secret for service-to-service calls (e.g. map-service -> core BE) on /api/internal/**,
+    # presented in the X-Internal-Api-Key header. When blank, all internal endpoints are rejected.
+    api-key: ${INTERNAL_API_KEY:}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   ratelimit:

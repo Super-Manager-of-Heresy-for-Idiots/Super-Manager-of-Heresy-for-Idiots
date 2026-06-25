@@ -1,6 +1,7 @@
 package com.dnd.app.config;
 
 import com.dnd.app.security.AuthRateLimitFilter;
+import com.dnd.app.security.InternalApiKeyFilter;
 import com.dnd.app.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
+    private final InternalApiKeyFilter internalApiKeyFilter;
 
     @Bean
     public FilterRegistrationBean<AuthRateLimitFilter> authRateLimitFilterRegistration(AuthRateLimitFilter filter) {
@@ -66,6 +68,9 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/api/auth/login", "/api/auth/register",
                                 "/api/auth/refresh", "/api/auth/logout",
+                                // Service-to-service calls authenticate with X-Internal-Api-Key,
+                                // not the SPA cookie, so they can't carry a CSRF token.
+                                "/api/internal/**",
                                 "/ws/**"))
                 // Materialize the deferred token so the XSRF-TOKEN cookie is emitted on GETs,
                 // giving the SPA a token to echo before its first mutation.
@@ -99,12 +104,14 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/internal/**").hasRole("INTERNAL_SERVICE")
                         .requestMatchers("/api/admin/users/**", "/api/admin/teams/**", "/api/admin/homebrew/**",
                                 "/api/admin/buffs-debuffs/**", "/api/admin/enchantment-types/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
