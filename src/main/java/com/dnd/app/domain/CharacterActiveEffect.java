@@ -32,6 +32,11 @@ public class CharacterActiveEffect {
     @JoinColumn(name = "applied_by", nullable = false)
     private User appliedBy;
 
+    /** The item instance that applied this effect, when it comes from equipped gear; null for manual effects. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_item_instance_id")
+    private ItemInstance sourceItemInstance;
+
     @Column(name = "remaining_rounds")
     private Integer remainingRounds;
 

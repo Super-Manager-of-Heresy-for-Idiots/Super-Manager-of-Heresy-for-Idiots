@@ -11,4 +11,6 @@ public interface CharacterActiveEffectRepository extends JpaRepository<Character
     List<CharacterActiveEffect> findByCharacterId(UUID characterId);
 
     void deleteByCharacterIdAndBuffDebuffId(UUID characterId, UUID buffDebuffId);
+
+    void deleteBySourceItemInstanceId(UUID sourceItemInstanceId);
 }

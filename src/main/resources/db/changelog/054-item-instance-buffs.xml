@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="054-item-instance-buffs" author="codex">
+        <createTable tableName="item_instance_buffs">
+            <column name="id" type="uuid">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="item_instance_buffs_pkey"/>
+            </column>
+            <column name="item_instance_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="buff_debuff_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="item_instance_buffs"
+                             columnNames="item_instance_id,buff_debuff_id"
+                             constraintName="uq_iteminst_buff"/>
+
+        <createIndex tableName="item_instance_buffs" indexName="idx_iteminstbuff_item_instance_id">
+            <column name="item_instance_id"/>
+        </createIndex>
+        <createIndex tableName="item_instance_buffs" indexName="idx_iteminstbuff_buff_debuff_id">
+            <column name="buff_debuff_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint constraintName="fk_iteminstbuff_iteminst"
+                                 baseTableName="item_instance_buffs"
+                                 baseColumnNames="item_instance_id"
+                                 referencedTableName="item_instances"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_iteminstbuff_buffdebuff"
+                                 baseTableName="item_instance_buffs"
+                                 baseColumnNames="buff_debuff_id"
+                                 referencedTableName="buffs_debuffs"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

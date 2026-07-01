@@ -179,6 +179,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @Valid @RequestBody GrantItemRequest request, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
             ItemInstanceResponse response = itemInstanceService.grantItem(campaignId, characterId, request, auth.getName());
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Item granted"));
         }, controllerTaskExecutor);
@@ -218,6 +219,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @PathVariable UUID instanceId, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
             itemInstanceService.removeItem(campaignId, characterId, instanceId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(null, "Item removed"));
         }, controllerTaskExecutor);
@@ -376,6 +378,7 @@ public class CampaignCharacterController {
             @PathVariable UUID characterId,
             @Valid @RequestBody ModifyHpRequest request, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
             CharacterResponse response = characterService.modifyHp(campaignId, characterId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(response, "HP modified"));
         }, controllerTaskExecutor);

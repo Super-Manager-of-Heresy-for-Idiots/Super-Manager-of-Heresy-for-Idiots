@@ -85,7 +85,7 @@ class AuthControllerTest {
         LoginRequest req = LoginRequest.builder().username("user1").password("pass1234").build();
         UserResponse userResp = UserResponse.builder().username("user1").role("PLAYER").build();
         IssuedTokens tokens = new IssuedTokens("access-token", "refresh-token", 3600000L, 604800000L, userResp);
-        when(authService.login(any())).thenReturn(tokens);
+        when(authService.login(any(), any(), any())).thenReturn(tokens);
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -111,7 +111,7 @@ class AuthControllerTest {
     void refresh_withCookie_returnsNewToken() throws Exception {
         UserResponse userResp = UserResponse.builder().username("user1").role("PLAYER").build();
         IssuedTokens tokens = new IssuedTokens("new-access", "new-refresh", 3600000L, 604800000L, userResp);
-        when(authService.refresh(eq("old-refresh"))).thenReturn(tokens);
+        when(authService.refresh(eq("old-refresh"), any(), any())).thenReturn(tokens);
 
         MvcResult result = mockMvc.perform(post("/api/auth/refresh")
                         .cookie(new Cookie("refresh_token", "old-refresh")))

@@ -20,6 +20,7 @@ public class JwtTokenProvider {
     public static final String TYPE_REFRESH = "refresh";
     private static final String CLAIM_TYPE = "tt";
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_JTI = "jti";
 
     private final SecretKey key;
     private final long expirationMs;
@@ -40,9 +41,23 @@ public class JwtTokenProvider {
         return build(username, role, TYPE_ACCESS, expirationMs);
     }
 
-    /** Refresh token: only accepted by /api/auth/refresh, long TTL, never used to authorize requests. */
-    public String generateRefreshToken(String username, String role) {
-        return build(username, role, TYPE_REFRESH, refreshExpirationMs);
+    /**
+     * Refresh token: only accepted by /api/auth/refresh, long TTL, never used to authorize requests.
+     * The {@code jti} ties the token to its server-side {@code refresh_token} row so it can be
+     * rotated and revoked; reuse of a rotated jti is the theft signal.
+     */
+    public String generateRefreshToken(String username, String role, String jti) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshExpirationMs);
+        return Jwts.builder()
+                .subject(username)
+                .claim(CLAIM_ROLE, role)
+                .claim(CLAIM_TYPE, TYPE_REFRESH)
+                .claim(CLAIM_JTI, jti)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(key)
+                .compact();
     }
 
     private String build(String username, String role, String type, long ttlMs) {
@@ -68,6 +83,11 @@ public class JwtTokenProvider {
 
     public String getTokenType(String token) {
         return parseClaims(token).get(CLAIM_TYPE, String.class);
+    }
+
+    /** Refresh-token rotation id. Null for legacy refresh tokens minted before server-side sessions. */
+    public String getJti(String token) {
+        return parseClaims(token).get(CLAIM_JTI, String.class);
     }
 
     /** Generic validity (signature + expiry). Does not check token type. */

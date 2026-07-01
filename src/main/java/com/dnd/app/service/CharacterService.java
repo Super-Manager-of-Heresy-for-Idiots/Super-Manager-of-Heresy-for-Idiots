@@ -75,6 +75,18 @@ public class CharacterService {
         return toResponse(character);
     }
 
+    /**
+     * Instantiates a campaign character from a (campaign-less) template using <b>sheet-only</b>
+     * semantics: the durable character definition is copied, while runtime/play state starts fresh.
+     *
+     * <p>Copied: identity and sheet fields, class levels, ability stats, skill proficiencies,
+     * known spells, wallets, and resource pools.</p>
+     *
+     * <p>Intentionally reset to defaults for the new character (never carried over from the
+     * template): inventory and equipment ({@code item_instance}), active effects, reward
+     * selections, and spell-slot usage; HP is set to max, temp HP / death saves / inspiration
+     * are cleared. A full playable clone is deliberately not offered here.</p>
+     */
     @Transactional
     public CharacterResponse cloneCharacterToCampaign(UUID campaignId, UUID templateId, String username) {
         User user = userRepository.findByUsername(username)
@@ -430,11 +442,15 @@ public class CharacterService {
 
     @Transactional
     public CharacterResponse modifyHp(UUID campaignId, UUID characterId, ModifyHpRequest request, String username) {
-        PlayerCharacter character = characterRepository.findById(characterId)
+        PlayerCharacter character = characterRepository.findByIdForUpdate(characterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         enforceWriteAccess(character, user);
+
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character not found in this campaign");
+        }
 
         if (character.getMaxHp() == null) {
             throw new BadRequestException("Character max HP is not set");
@@ -444,28 +460,15 @@ public class CharacterService {
             character.setTempHp(request.getSetTempHp());
         }
 
-        int currentHp = character.getCurrentHp() != null ? character.getCurrentHp() : 0;
-        int tempHp = character.getTempHp() != null ? character.getTempHp() : 0;
-        int delta = request.getAmount();
-
-        if (delta < 0) {
-            int damage = -delta;
-            int absorbed = Math.min(tempHp, damage);
-            tempHp -= absorbed;
-            int remaining = damage - absorbed;
-            currentHp = Math.max(0, currentHp - remaining);
-        } else if (delta > 0) {
-            currentHp = Math.min(currentHp + delta, character.getMaxHp());
-        }
-
-        character.setCurrentHp(currentHp);
-        character.setTempHp(tempHp);
+        character.applyHpDelta(request.getAmount(), character.getMaxHp());
         character = characterRepository.save(character);
 
+        int currentHp = character.getCurrentHp();
+        int tempHp = character.getTempHp();
         log.info("HP modified: characterId={}, amount={}, setTempHp={}, newHp={}, newTempHp={}, by user={}",
                 characterId, request.getAmount(), request.getSetTempHp(), currentHp, tempHp, username);
 
-        webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, character.getCampaign().getId(),
                 characterId, Map.of("currentHp", currentHp, "tempHp", tempHp, "maxHp", character.getMaxHp()),
                 user.getId());
         return toResponse(character);

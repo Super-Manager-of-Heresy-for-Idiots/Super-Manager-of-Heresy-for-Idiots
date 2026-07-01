@@ -314,6 +314,38 @@ class ItemInstanceServiceTest {
         assertEquals(fromCharacter, savedInstance.getOwnerCharacter());
     }
 
+    @Test
+    @DisplayName("Уникальный предмет (isUnique=true) без customName не стакается")
+    void grantItem_uniqueFlagNoCustomName_doesNotStack() {
+        // Arrange: stackable template, but the grant is flagged unique with no custom name
+        template.setIsStackable(true);
+
+        GrantItemRequest request = GrantItemRequest.builder()
+                .itemId(templateId)
+                .itemKind("TEMPLATE")
+                .quantity(1)
+                .isUnique(true)
+                .build();
+
+        when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+        when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
+        doNothing().when(campaignService).enforceGmOrAdmin(any(), any());
+        when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
+        when(itemTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
+        when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ItemInstanceResponse response = itemInstanceService.grantItem(campaignId, fromCharId, request, USERNAME);
+
+        // Assert: unique short-circuits stacking entirely — no lookup, a fresh unique instance is saved
+        assertNotNull(response);
+        verify(itemInstanceRepository, never()).findStackableForCharacter(any(), any(), any(), any());
+        ArgumentCaptor<ItemInstance> captor = ArgumentCaptor.forClass(ItemInstance.class);
+        verify(itemInstanceRepository).save(captor.capture());
+        assertTrue(captor.getValue().getIsUnique());
+        assertNull(captor.getValue().getCustomName());
+    }
+
     // ========================================================================
     // equipItem tests
     // ========================================================================
@@ -377,21 +409,6 @@ class ItemInstanceServiceTest {
     @DisplayName("Снятие предмета удаляет ранее применённые баффы")
     void unequipItem_removesBuffs() {
         // Arrange
-        UUID buffDebuffId = UUID.randomUUID();
-        BuffDebuff buffDebuff = BuffDebuff.builder()
-                .id(buffDebuffId)
-                .name("Strength Buff")
-                .isBuff(true)
-                .effectType("STAT_MODIFIER")
-                .modifierValue(2)
-                .build();
-
-        ItemTemplateBuff templateBuff = ItemTemplateBuff.builder()
-                .id(UUID.randomUUID())
-                .template(template)
-                .buffDebuff(buffDebuff)
-                .build();
-
         ItemInstance instance = ItemInstance.builder()
                 .id(instanceId)
                 .template(template)
@@ -404,7 +421,6 @@ class ItemInstanceServiceTest {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
         when(playerCharacterRepository.findById(fromCharId)).thenReturn(Optional.of(fromCharacter));
         when(itemInstanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
-        when(itemTemplateBuffRepository.findByTemplateId(templateId)).thenReturn(List.of(templateBuff));
         when(itemInstanceRepository.save(any(ItemInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
@@ -414,7 +430,7 @@ class ItemInstanceServiceTest {
         assertNotNull(response);
         assertNull(response.getSlot());
         verify(characterActiveEffectRepository, times(1))
-                .deleteByCharacterIdAndBuffDebuffId(fromCharId, buffDebuffId);
+                .deleteBySourceItemInstanceId(instanceId);
     }
 
     // ========================================================================

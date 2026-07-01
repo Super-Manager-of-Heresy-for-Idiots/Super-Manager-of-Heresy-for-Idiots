@@ -49,8 +49,10 @@ import com.dnd.app.repository.ClassLevelRewardGrantSpellRepository;
 import com.dnd.app.repository.ClassLevelRewardGroupRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
+import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.util.AbilityScores;
 import com.dnd.app.util.Localization;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -101,6 +103,7 @@ public class LevelUpCommandService {
     private final StatTypeRepository statTypeRepository;
     private final CharacterSkillProficiencyRepository skillProficiencyRepository;
     private final CharacterKnownSpellRepository knownSpellRepository;
+    private final SpellRepository spellRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final LevelThresholdService thresholdService;
@@ -158,17 +161,7 @@ public class LevelUpCommandService {
         List<LevelUpResultResponse.AppliedGrant> applied = new ArrayList<>();
         List<LevelUpResultResponse.ManualActionItem> manual = new ArrayList<>();
 
-        for (ClassLevelRewardGroup group : groups) {
-            LevelUpRequest.GroupSelection sel = selectionByGroup.get(group.getId());
-            if ("CHOICE".equalsIgnoreCase(group.getGroupKind())) {
-                processChoiceGroup(character, group, sel, applied, manual);
-            } else {
-                // AUTO: deterministic group-level grants applied automatically (no choice recorded)
-                for (ClassLevelRewardGrant grant : group.getGrants()) {
-                    applyGrant(character, null, grant, null, applied, manual);
-                }
-            }
-        }
+        applyRewardGroups(character, groups, selectionByGroup, applied, manual);
 
         // --- class level / total level / HP / proficiency ---
         if (existingLevel.isPresent()) {
@@ -246,15 +239,7 @@ public class LevelUpCommandService {
         List<LevelUpResultResponse.AppliedGrant> applied = new ArrayList<>();
         List<LevelUpResultResponse.ManualActionItem> manual = new ArrayList<>();
 
-        for (ClassLevelRewardGroup group : groups) {
-            LevelUpRequest.GroupSelection sel = selectionByGroup.get(group.getId());
-            if ("CHOICE".equalsIgnoreCase(group.getGroupKind())) {
-                processChoiceGroup(character, group, sel, applied, manual);
-            } else if (sel != null) {
-                throw new UnprocessableEntityException(
-                        "Группа наград не является группой выбора: " + group.getId());
-            }
-        }
+        applyRewardGroups(character, groups, selectionByGroup, applied, manual);
 
         return LevelUpResultResponse.builder()
                 .newTotalLevel(character.getTotalLevel())
@@ -268,6 +253,29 @@ public class LevelUpCommandService {
                 .appliedGrants(applied)
                 .manualActions(manual)
                 .build();
+    }
+
+    /**
+     * Applies all reward groups for a single class level: CHOICE groups consume the player's
+     * selection, while AUTO (non-CHOICE) groups apply their deterministic grants automatically.
+     * Shared by the regular level-up commit and the level-1 character-creation path so both apply
+     * auto grants identically.
+     */
+    private void applyRewardGroups(PlayerCharacter character,
+                                   List<ClassLevelRewardGroup> groups,
+                                   Map<UUID, LevelUpRequest.GroupSelection> selectionByGroup,
+                                   List<LevelUpResultResponse.AppliedGrant> applied,
+                                   List<LevelUpResultResponse.ManualActionItem> manual) {
+        for (ClassLevelRewardGroup group : groups) {
+            LevelUpRequest.GroupSelection sel = selectionByGroup.get(group.getId());
+            if ("CHOICE".equalsIgnoreCase(group.getGroupKind())) {
+                processChoiceGroup(character, group, sel, applied, manual);
+            } else {
+                for (ClassLevelRewardGrant grant : group.getGrants()) {
+                    applyGrant(character, null, grant, null, applied, manual);
+                }
+            }
+        }
     }
 
     private void processChoiceGroup(PlayerCharacter character, ClassLevelRewardGroup group,
@@ -474,16 +482,49 @@ public class LevelUpCommandService {
             throw new UnprocessableEntityException("Заклинания: дублирующиеся значения");
         }
         for (UUID spellId : spellIds) {
+            Spell spell = spellRepository.findById(spellId)
+                    .orElseThrow(() -> new UnprocessableEntityException("Заклинание не найдено"));
+            validateSpellSelectable(spell, cfg, character);
             if (selection != null) {
                 spellSelectionRepository.save(CharacterRewardSpellSelection.builder()
                         .id(new CharacterRewardSpellSelectionId(selection.getId(), cfg.getId(), spellId))
                         .selection(selection).grant(cfg)
-                        .spell(entityManager.getReference(Spell.class, spellId)).build());
+                        .spell(spell).build());
             }
             knownSpellRepository.save(CharacterKnownSpell.builder()
                     .character(character)
-                    .spell(entityManager.getReference(Spell.class, spellId)).build());
+                    .spell(spell).build());
             applied.add(appliedGrant(grant, "Заклинание изучено"));
+        }
+    }
+
+    /**
+     * Guards client-supplied spell IDs at level-up: the spell must be visible in the character's
+     * campaign and must satisfy the grant's authored filters (fixed spell / spell level / school).
+     * The grant filters are only enforced when the author set them, so sparse seed data never
+     * blocks a legitimate choice.
+     */
+    private void validateSpellSelectable(Spell spell, ClassLevelRewardGrantSpell cfg, PlayerCharacter character) {
+        UUID campaignId = character.getCampaign() != null ? character.getCampaign().getId() : null;
+        if (spell.getHomebrew() != null) {
+            if (campaignId == null) {
+                throw new BadRequestException("Заклинание недоступно для персонажа вне кампании");
+            }
+            Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+            if (!pkgIds.contains(spell.getHomebrew().getId())) {
+                throw new BadRequestException("Заклинание недоступно в текущей кампании");
+            }
+        }
+        if (cfg.getSpell() != null && !cfg.getSpell().getId().equals(spell.getId())) {
+            throw new BadRequestException("Это заклинание не предусмотрено выбранным грантом");
+        }
+        if (cfg.getSpellLevel() != null && spell.getLevel() != null
+                && !cfg.getSpellLevel().equals(spell.getLevel())) {
+            throw new BadRequestException("Уровень заклинания не соответствует гранту");
+        }
+        if (cfg.getSchool() != null && spell.getSchool() != null
+                && !cfg.getSchool().getId().equals(spell.getSchool().getId())) {
+            throw new BadRequestException("Школа заклинания не соответствует гранту");
         }
     }
 
@@ -518,7 +559,7 @@ public class LevelUpCommandService {
                 .filter(s -> s.getStatType() != null && s.getStatType().getId().equals(con.getId()))
                 .findFirst()
                 .map(CharacterStat::getValue)
-                .map(v -> (v - 10) / 2)
+                .map(AbilityScores::modifier)
                 .orElse(0);
     }
 

@@ -23,6 +23,7 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.util.AbilityScores;
 import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -190,7 +191,7 @@ public class LevelUpQueryService {
                 .filter(s -> s.getStatType() != null && s.getStatType().getId().equals(con.getId()))
                 .findFirst()
                 .map(CharacterStat::getValue)
-                .map(v -> (v - 10) / 2)
+                .map(AbilityScores::modifier)
                 .orElse(0);
     }
 

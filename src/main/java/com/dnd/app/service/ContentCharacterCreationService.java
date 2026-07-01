@@ -8,6 +8,7 @@ import com.dnd.app.domain.CharacterStat;
 import com.dnd.app.domain.CharacterClassLevel;
 import com.dnd.app.domain.CharacterWallet;
 import com.dnd.app.domain.CurrencyType;
+import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.PlayerCharacter;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
@@ -20,6 +21,7 @@ import com.dnd.app.domain.enums.SkillProficiencySource;
 import com.dnd.app.dto.content.ContentCharacterCreationResponse;
 import com.dnd.app.dto.request.CreateContentCharacterRequest;
 import com.dnd.app.exception.BadRequestException;
+import com.dnd.app.util.AbilityScores;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.CampaignHomebrewRepository;
@@ -133,6 +135,10 @@ public class ContentCharacterCreationService {
         if (campaign == null && background.getHomebrew() != null) {
             throw new BadRequestException("Homebrew backgrounds cannot be used in vanilla characters");
         }
+        if (campaign != null) {
+            requireVisibleInCampaign(background.getHomebrew(), campaign.getId(),
+                    "Background is not available in this campaign");
+        }
 
         int targetLevel = req.getLevel();
         if (targetLevel > 20) {
@@ -153,7 +159,7 @@ public class ContentCharacterCreationService {
         ScoreMethod scoreMethod = parseScoreMethod(req.getScoreMethod());
         validateAbilityScores(req.getAbilityScores(), scoreMethod);
         List<UUID> chosenSkills = validateSkillChoices(req.getChosenSkillIds(), charClass);
-        validateSpells(req.getCantripIds(), req.getSpellIds(), charClass, creationLevel, campaign == null);
+        validateSpells(req.getCantripIds(), req.getSpellIds(), charClass, creationLevel, campaign);
 
         // ability scores
         List<StatType> allStatTypes = statTypeRepository.findAll();
@@ -247,6 +253,13 @@ public class ContentCharacterCreationService {
             for (var coin : req.getStartingCoins()) {
                 CurrencyType ct = currencyTypeRepository.findById(coin.getCurrencyTypeId())
                         .orElseThrow(() -> new ResourceNotFoundException("Currency type not found"));
+                if (campaign == null && ct.getHomebrew() != null) {
+                    throw new BadRequestException("Homebrew currency cannot be used in vanilla characters");
+                }
+                if (campaign != null) {
+                    requireVisibleInCampaign(ct.getHomebrew(), campaign.getId(),
+                            "Currency is not available in this campaign");
+                }
                 walletRepository.save(CharacterWallet.builder()
                         .character(character)
                         .currencyType(ct)
@@ -320,6 +333,14 @@ public class ContentCharacterCreationService {
             }
         }
         return charClass;
+    }
+
+    /** Homebrew content is usable in a campaign only if its package is attached to that campaign. */
+    private void requireVisibleInCampaign(HomebrewPackage homebrew, UUID campaignId, String message) {
+        if (homebrew == null) return;
+        if (!campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId).contains(homebrew.getId())) {
+            throw new BadRequestException(message);
+        }
     }
 
     // --- validation ---
@@ -407,9 +428,10 @@ public class ContentCharacterCreationService {
     }
 
     private void validateSpells(List<UUID> cantripIds, List<UUID> spellIds,
-                                ContentCharacterClass charClass, int level, boolean vanilla) {
+                                ContentCharacterClass charClass, int level, Campaign campaign) {
         boolean hasCantrips = cantripIds != null && !cantripIds.isEmpty();
         boolean hasSpells = spellIds != null && !spellIds.isEmpty();
+        boolean vanilla = campaign == null;
 
         if (!Boolean.TRUE.equals(charClass.getSpellcaster())) {
             if (hasCantrips || hasSpells) {
@@ -418,6 +440,9 @@ public class ContentCharacterCreationService {
             return;
         }
 
+        Set<UUID> activePackageIds = vanilla ? Set.of()
+                : campaignHomebrewRepository.findPackageIdsByCampaignId(campaign.getId());
+
         if (hasCantrips) {
             if (!Boolean.TRUE.equals(charClass.getHasCantrips())) {
                 throw new BadRequestException("This class does not have cantrips");
@@ -425,9 +450,7 @@ public class ContentCharacterCreationService {
             for (UUID id : cantripIds) {
                 Spell spell = spellRepository.findById(id)
                         .orElseThrow(() -> new BadRequestException("Spell not found: " + id));
-                if (vanilla && spell.getHomebrew() != null) {
-                    throw new BadRequestException("Homebrew spells cannot be used in vanilla characters");
-                }
+                requireSpellVisible(spell, vanilla, activePackageIds);
                 if (spell.getLevel() != null && spell.getLevel() != 0) {
                     throw new BadRequestException("Cantrips must be level 0 spells");
                 }
@@ -439,9 +462,7 @@ public class ContentCharacterCreationService {
             for (UUID id : spellIds) {
                 Spell spell = spellRepository.findById(id)
                         .orElseThrow(() -> new BadRequestException("Spell not found: " + id));
-                if (vanilla && spell.getHomebrew() != null) {
-                    throw new BadRequestException("Homebrew spells cannot be used in vanilla characters");
-                }
+                requireSpellVisible(spell, vanilla, activePackageIds);
                 if (spell.getLevel() != null && spell.getLevel() == 0) {
                     throw new BadRequestException("Cantrips should be in cantripIds, not spellIds");
                 }
@@ -450,6 +471,16 @@ public class ContentCharacterCreationService {
                             + ") exceeds max spell level " + maxSpellLevel);
                 }
             }
+        }
+    }
+
+    private void requireSpellVisible(Spell spell, boolean vanilla, Set<UUID> activePackageIds) {
+        if (spell.getHomebrew() == null) return;
+        if (vanilla) {
+            throw new BadRequestException("Homebrew spells cannot be used in vanilla characters");
+        }
+        if (!activePackageIds.contains(spell.getHomebrew().getId())) {
+            throw new BadRequestException("Spell is not available in this campaign");
         }
     }
 
@@ -466,7 +497,7 @@ public class ContentCharacterCreationService {
     }
 
     private int abilityModifier(int score) {
-        return (score - 10) / 2;
+        return AbilityScores.modifier(score);
     }
 
     private int calculateMaxHp(int hitDie, int level, int conModifier) {

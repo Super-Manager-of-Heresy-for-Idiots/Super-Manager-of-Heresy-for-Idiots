@@ -13,6 +13,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CharacterClassLevelRepository;
 import com.dnd.app.repository.CharacterRewardSelectionRepository;
+import com.dnd.app.repository.ClassLevelRewardGroupRepository;
 import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.UserRepository;
@@ -40,6 +41,7 @@ public class CharacterRewardQueryService {
     private final CharacterClassLevelRepository classLevelRepository;
     private final CharacterRewardSelectionRepository selectionRepository;
     private final ContentCharacterClassRepository contentClassRepository;
+    private final ClassLevelRewardGroupRepository rewardGroupRepository;
 
     @Transactional(readOnly = true)
     public CharacterRewardsResponse getCharacterRewards(UUID characterId, String username) {
@@ -97,6 +99,39 @@ public class CharacterRewardQueryService {
                         subclassByClass.putIfAbsent(classId, CharacterRewardsResponse.SubclassInfo.builder()
                                 .name(optionName)
                                 .description(option.getDescription())
+                                .build());
+                    }
+                }
+            }
+        }
+
+        // AUTO (non-CHOICE) FEATURE/SUBCLASS grants are applied automatically at level-up and are
+        // not recorded in character_reward_selection. Derive them on read from the class progression
+        // (like spell slots are derived) so the sheet reflects auto-gained class features; this also
+        // works for characters created before any persistence existed.
+        for (CharacterClassLevel ccl : classLevels) {
+            UUID classId = ccl.getClassId();
+            int classLevel = ccl.getClassLevel();
+            Map<String, List<CharacterRewardsResponse.AcquiredReward>> rewardsByType =
+                    rewardsByClass.computeIfAbsent(classId, id -> new LinkedHashMap<>());
+            for (ClassLevelRewardGroup group : rewardGroupRepository
+                    .findAllByCharacterClassIdOrderByClassLevelAscSortOrderAsc(classId)) {
+                if (group.getClassLevel() == null || group.getClassLevel() > classLevel
+                        || "CHOICE".equalsIgnoreCase(group.getGroupKind()) || group.getGrants() == null) {
+                    continue;
+                }
+                for (ClassLevelRewardGrant grant : group.getGrants()) {
+                    String type = grant.getGrantType();
+                    if (!"FEATURE".equalsIgnoreCase(type) && !"SUBCLASS".equalsIgnoreCase(type)) {
+                        continue;
+                    }
+                    String name = localized(grant.getLabelRu(), grant.getLabelEn());
+                    rewardsByType.computeIfAbsent(type, k -> new ArrayList<>())
+                            .add(CharacterRewardsResponse.AcquiredReward.builder().name(name).build());
+                    if ("SUBCLASS".equalsIgnoreCase(type)) {
+                        subclassByClass.putIfAbsent(classId, CharacterRewardsResponse.SubclassInfo.builder()
+                                .name(name)
+                                .description(grant.getDescription())
                                 .build());
                     }
                 }

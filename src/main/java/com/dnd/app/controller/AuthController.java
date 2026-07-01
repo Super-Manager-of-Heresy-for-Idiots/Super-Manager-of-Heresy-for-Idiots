@@ -8,6 +8,7 @@ import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.security.AuthCookieService;
 import com.dnd.app.service.AuthService;
 import com.dnd.app.service.IssuedTokens;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,12 +58,16 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> login(@Valid @RequestBody LoginRequest request) {
+    public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> login(
+            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        // Read request metadata on the servlet thread, before handing off to the async executor.
+        String userAgent = httpRequest.getHeader(HttpHeaders.USER_AGENT);
+        String ip = clientIp(httpRequest);
         return CompletableFuture.supplyAsync(() -> {
             log.info("Login attempt: username={}", request.getUsername());
             long startTime = System.currentTimeMillis();
 
-            IssuedTokens tokens = authService.login(request);
+            IssuedTokens tokens = authService.login(request, userAgent, ip);
 
             log.info("Login successful: username={}, userId={}, role={}, tokenIssued=true, durationMs={}",
                     tokens.user().getUsername(),
@@ -81,23 +86,43 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> refresh(
-            @CookieValue(name = "${app.jwt.refresh-cookie-name:refresh_token}", required = false) String refreshToken) {
+            @CookieValue(name = "${app.jwt.refresh-cookie-name:refresh_token}", required = false) String refreshToken,
+            HttpServletRequest httpRequest) {
+        String userAgent = httpRequest.getHeader(HttpHeaders.USER_AGENT);
+        String ip = clientIp(httpRequest);
         return CompletableFuture.supplyAsync(() -> {
-            IssuedTokens tokens = authService.refresh(refreshToken);
+            IssuedTokens tokens = authService.refresh(refreshToken, userAgent, ip);
             log.info("Token refreshed: username={}", tokens.user().getUsername());
             return sessionResponse(tokens, "Сессия продлена");
         }, controllerTaskExecutor);
     }
 
-    /** Clears both session cookies. Idempotent and public — always succeeds. */
+    /**
+     * Revokes the server-side session family and clears both cookies. Idempotent and public —
+     * always succeeds even if the refresh cookie is absent or already revoked.
+     */
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout() {
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = "${app.jwt.refresh-cookie-name:refresh_token}", required = false) String refreshToken) {
+        authService.logout(refreshToken);
         ResponseCookie clearAccess = cookieService.clearAccessCookie();
         ResponseCookie clearRefresh = cookieService.clearRefreshCookie();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearAccess.toString())
                 .header(HttpHeaders.SET_COOKIE, clearRefresh.toString())
                 .body(ApiResponse.ok(null, "Выход выполнен"));
+    }
+
+    /**
+     * Best-effort client IP for session forensics only (stored, never used for a trust decision).
+     * Prefers the X-Forwarded-For chain when present so it is meaningful behind a proxy.
+     */
+    private static String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     private ResponseEntity<ApiResponse<AuthResponse>> sessionResponse(IssuedTokens tokens, String message) {

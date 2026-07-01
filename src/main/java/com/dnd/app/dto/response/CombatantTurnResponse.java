@@ -30,4 +30,10 @@ public class CombatantTurnResponse {
 
     // Populated when the active combatant is a MONSTER
     private MonsterResponse monster;
+
+    /**
+     * Read-only targeting metadata for every actionable option of the current combatant, so the
+     * frontend tactical map can draw range/AoE previews. Additive — existing fields are untouched.
+     */
+    private List<TacticalActionResponse> tacticalActions;
 }
