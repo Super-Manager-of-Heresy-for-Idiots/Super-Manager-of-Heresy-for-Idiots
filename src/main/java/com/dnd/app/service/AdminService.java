@@ -568,6 +568,10 @@ public class AdminService {
         try {
             return objectMapper.writeValueAsString(list);
         } catch (Exception e) {
+            log.warn(
+                    "AdminService#serializeStringList failed: operation=admin-json-serialize, valueType=string-list, itemCount={}",
+                    list.size(),
+                    e);
             return null;
         }
     }
@@ -578,6 +582,10 @@ public class AdminService {
             List<String> strList = list.stream().map(UUID::toString).toList();
             return objectMapper.writeValueAsString(strList);
         } catch (Exception e) {
+            log.warn(
+                    "AdminService#serializeUuidList failed: operation=admin-json-serialize, valueType=uuid-list, itemCount={}",
+                    list.size(),
+                    e);
             return null;
         }
     }

@@ -1001,7 +1001,7 @@ public class BattleService {
             try {
                 list.addAll(objectMapper.readValue(json, new TypeReference<List<CharacterAttackResponse>>() {}));
             } catch (Exception e) {
-                throw new BadRequestException("Could not read this character's attacks");
+                throw new BadRequestException("Could not read this character's attacks", e);
             }
         }
         return list;

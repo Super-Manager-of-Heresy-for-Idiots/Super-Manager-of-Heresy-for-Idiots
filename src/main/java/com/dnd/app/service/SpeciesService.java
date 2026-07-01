@@ -89,7 +89,7 @@ public class SpeciesService {
         try {
             return objectMapper.readValue(snapshotJson, new TypeReference<CharacterRaceSnapshotResponse>() {});
         } catch (JsonProcessingException e) {
-            throw new BadRequestException("Invalid species snapshot payload: " + e.getMessage());
+            throw new BadRequestException("Invalid species snapshot payload: " + e.getMessage(), e);
         }
     }
 
@@ -141,7 +141,7 @@ public class SpeciesService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
-            throw new BadRequestException("Invalid species snapshot payload: " + e.getMessage());
+            throw new BadRequestException("Invalid species snapshot payload: " + e.getMessage(), e);
         }
     }
 }

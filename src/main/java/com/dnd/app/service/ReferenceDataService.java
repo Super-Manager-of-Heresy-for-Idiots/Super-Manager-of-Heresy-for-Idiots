@@ -304,6 +304,10 @@ public class ReferenceDataService {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (Exception e) {
+            log.warn(
+                    "ReferenceDataService#parseJsonStringList failed: operation=reference-json-deserialize, payloadLength={}",
+                    json.length(),
+                    e);
             return List.of();
         }
     }

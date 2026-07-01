@@ -457,7 +457,10 @@ public class ClassLevelRewardSeedService {
         try {
             return mapper.readTree(new ClassPathResource(SOURCE_FILE).getInputStream());
         } catch (IOException e) {
-            log.warn("Failed to read {}: {}", SOURCE_FILE, e.getMessage());
+            log.warn(
+                    "ClassLevelRewardSeedService#read failed: operation=class-level-reward-source-read, sourceFile={}",
+                    SOURCE_FILE,
+                    e);
             return null;
         }
     }

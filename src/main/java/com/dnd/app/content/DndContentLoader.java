@@ -90,7 +90,10 @@ public class DndContentLoader implements ApplicationRunner {
                     "SELECT count(*) FROM mod_package WHERE slug = ?", Integer.class, CORE_MOD_SLUG);
             coreAlreadyPresent = existing != null && existing > 0;
         } catch (DataAccessException e) {
-            log.warn("content tables not available, skipping content import: {}", e.getMessage());
+            log.warn(
+                    "DndContentLoader#run skipped base content import: operation=content-import-startup, modSlug={}, reason=content-tables-unavailable",
+                    CORE_MOD_SLUG,
+                    e);
             return;
         }
 
@@ -125,7 +128,10 @@ public class DndContentLoader implements ApplicationRunner {
         try {
             classRewardSeedService.seedCoreSubclassChoiceGroups();
         } catch (DataAccessException e) {
-            log.warn("class reward backfill skipped: {}", e.getMessage());
+            log.warn(
+                    "DndContentLoader#run skipped class reward backfill: operation=class-reward-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
         }
 
         // Backfill per-level reward groups (base features, ASI, expertise, prepared/cantrip
@@ -133,7 +139,10 @@ public class DndContentLoader implements ApplicationRunner {
         try {
             classLevelRewardSeedService.seedCoreLevelRewards();
         } catch (DataAccessException e) {
-            log.warn("per-level reward backfill skipped: {}", e.getMessage());
+            log.warn(
+                    "DndContentLoader#run skipped per-level reward backfill: operation=class-level-reward-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
         }
     }
 
@@ -764,7 +773,10 @@ public class DndContentLoader implements ApplicationRunner {
                 return;
             }
         } catch (DataAccessException e) {
-            log.warn("class mechanics tables not available, skipping: {}", e.getMessage());
+            log.warn(
+                    "DndContentLoader#loadClassMechanics skipped: operation=class-mechanics-seed, modSlug={}, reason=class-mechanics-tables-unavailable",
+                    CORE_MOD_SLUG,
+                    e);
             return;
         }
 

@@ -113,7 +113,11 @@ public class JwtTokenProvider {
             parseClaims(token);
             return true;
         } catch (Exception e) {
-            log.warn("JWT validation failed: {} — {}", e.getClass().getSimpleName(), e.getMessage());
+            log.warn(
+                    "JwtTokenProvider#validateToken failed: operation=jwt-validate, exception={}, message='{}'",
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    e);
             return false;
         }
     }
@@ -138,7 +142,12 @@ public class JwtTokenProvider {
             }
             return expectedType.equals(type);
         } catch (Exception e) {
-            log.warn("JWT type check failed: {} — {}", e.getClass().getSimpleName(), e.getMessage());
+            log.warn(
+                    "JwtTokenProvider#isOfType failed: operation=jwt-type-check, expectedType={}, exception={}, message='{}'",
+                    expectedType,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    e);
             return false;
         }
     }

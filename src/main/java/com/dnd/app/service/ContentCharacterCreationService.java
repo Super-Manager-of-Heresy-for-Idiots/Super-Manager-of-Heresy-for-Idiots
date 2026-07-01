@@ -317,7 +317,7 @@ public class ContentCharacterCreationService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
-            throw new BadRequestException("Failed to serialize character payload");
+            throw new BadRequestException("Failed to serialize character payload", e);
         }
     }
 
@@ -355,7 +355,8 @@ public class ContentCharacterCreationService {
             return ScoreMethod.valueOf(method);
         } catch (Exception e) {
             throw new BadRequestException(
-                    "Invalid score method: " + method + ". Must be STANDARD_ARRAY, POINT_BUY, or ROLL");
+                    "Invalid score method: " + method + ". Must be STANDARD_ARRAY, POINT_BUY, or ROLL",
+                    e);
         }
     }
 

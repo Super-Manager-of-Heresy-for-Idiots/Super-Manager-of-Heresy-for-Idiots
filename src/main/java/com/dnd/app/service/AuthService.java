@@ -142,7 +142,7 @@ public class AuthService {
             refreshTokenRepository.findByJti(jti)
                     .ifPresent(row -> refreshTokenRepository.revokeFamily(row.getFamilyId()));
         } catch (RuntimeException e) {
-            log.debug("Logout refresh-token revocation skipped: {}", e.getMessage());
+            log.warn("AuthService#logout refresh-token revocation skipped: operation=logout-revoke-refresh-token", e);
         }
     }
 

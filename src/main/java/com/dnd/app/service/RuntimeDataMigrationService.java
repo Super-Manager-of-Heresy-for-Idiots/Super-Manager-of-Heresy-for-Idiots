@@ -164,6 +164,11 @@ public class RuntimeDataMigrationService {
                             return names;
                         }, legacyId);
             } catch (DataAccessException e) {
+                log.warn(
+                        "RuntimeDataMigrationService#legacyThreeNamesFrom failed: operation=runtime-data-migration-legacy-lookup, legacyTable={}, legacyId={}",
+                        legacyTable,
+                        legacyId,
+                        e);
                 return null;
             }
         };

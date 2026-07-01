@@ -87,7 +87,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                             "Not authorized to subscribe to this campaign");
                 }
             } catch (IllegalArgumentException e) {
-                log.warn("WebSocket SUBSCRIBE denied: malformed campaign destination: {}", destination);
+                log.warn(
+                        "WebSocketAuthInterceptor#handleSubscribe denied: operation=websocket-subscribe-authorize, reason=malformed-campaign-destination, destination={}",
+                        destination,
+                        e);
                 throw new org.springframework.messaging.MessageDeliveryException(
                         "Malformed subscription destination");
             }

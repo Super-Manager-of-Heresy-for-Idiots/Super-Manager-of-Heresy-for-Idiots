@@ -560,14 +560,24 @@ public class CharacterService {
             try {
                 response.setBiography(objectMapper.readValue(character.getBiographyJson(),
                         com.dnd.app.dto.response.BiographyResponse.class));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn(
+                        "CharacterService#toResponse skipped biography payload: operation=character-response-map, characterId={}",
+                        character.getId(),
+                        e);
+            }
         }
 
         if (character.getAttacksJson() != null) {
             try {
                 response.setAttacks(objectMapper.readValue(character.getAttacksJson(),
                         new com.fasterxml.jackson.core.type.TypeReference<java.util.List<com.dnd.app.dto.response.CharacterAttackResponse>>() {}));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn(
+                        "CharacterService#toResponse skipped attacks payload: operation=character-response-map, characterId={}",
+                        character.getId(),
+                        e);
+            }
         }
 
         return response;
@@ -580,7 +590,7 @@ public class CharacterService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
-            throw new BadRequestException("Failed to serialize character payload");
+            throw new BadRequestException("Failed to serialize character payload", e);
         }
     }
 

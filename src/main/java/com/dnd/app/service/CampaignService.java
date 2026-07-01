@@ -258,7 +258,7 @@ public class CampaignService {
         try {
             newStatus = CampaignStatus.valueOf(request.getStatus().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid campaign status: " + request.getStatus());
+            throw new BadRequestException("Invalid campaign status: " + request.getStatus(), e);
         }
 
         campaign.setStatus(newStatus);

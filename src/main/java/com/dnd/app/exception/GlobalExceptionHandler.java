@@ -158,7 +158,12 @@ public class GlobalExceptionHandler {
             log.error(
                     "Controller exception: id={}, status={}, error={}, handler={}, method={}, path={}, user={}, exception={}, message='{}', rootCause='{}', details='{}'",
                     requestId, status.value(), errorCode, handler, request.getMethod(), buildPath(request),
-                    user, ex.getClass().getSimpleName(), message, rootCause, compactDetails);
+                    user, ex.getClass().getSimpleName(), message, rootCause, compactDetails, ex);
+        } else if (ex.getCause() != null) {
+            log.warn(
+                    "Controller exception: id={}, status={}, error={}, handler={}, method={}, path={}, user={}, exception={}, message='{}', rootCause='{}', details='{}'",
+                    requestId, status.value(), errorCode, handler, request.getMethod(), buildPath(request),
+                    user, ex.getClass().getSimpleName(), message, rootCause, compactDetails, ex);
         } else {
             log.warn(
                     "Controller exception: id={}, status={}, error={}, handler={}, method={}, path={}, user={}, exception={}, message='{}', rootCause='{}', details='{}'",

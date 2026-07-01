@@ -64,7 +64,7 @@ public class QuestService {
             try {
                 status = QuestStatus.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid quest status: " + request.getStatus());
+                throw new BadRequestException("Invalid quest status: " + request.getStatus(), e);
             }
         }
 
@@ -125,7 +125,7 @@ public class QuestService {
             try {
                 newStatus = QuestStatus.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid quest status: " + request.getStatus());
+                throw new BadRequestException("Invalid quest status: " + request.getStatus(), e);
             }
             if (newStatus == QuestStatus.COMPLETED && quest.getStatus() != QuestStatus.COMPLETED) {
                 throw new BadRequestException(
