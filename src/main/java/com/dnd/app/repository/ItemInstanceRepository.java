@@ -2,7 +2,9 @@ package com.dnd.app.repository;
 
 import com.dnd.app.domain.EquipmentSlot;
 import com.dnd.app.domain.ItemInstance;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,14 @@ import java.util.UUID;
 public interface ItemInstanceRepository extends JpaRepository<ItemInstance, UUID> {
 
     List<ItemInstance> findByOwnerCharacterId(UUID characterId);
+
+    /**
+     * Row-locking load for the in-combat use-item flow, so the quantity decrement / stack delete
+     * cannot race with another consumer of the same stack (avoids lost updates / double-spend).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from ItemInstance i where i.id = :id")
+    Optional<ItemInstance> findByIdForUpdate(@Param("id") UUID id);
 
     List<ItemInstance> findByOwnerCharacterIdAndSlotIsNotNull(UUID characterId);
 

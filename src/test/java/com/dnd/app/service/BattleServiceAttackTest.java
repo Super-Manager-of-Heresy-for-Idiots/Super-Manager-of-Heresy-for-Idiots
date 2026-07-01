@@ -46,6 +46,7 @@ class BattleServiceAttackTest {
     @Mock private WeaponAttackService weaponAttackService;
     @Mock private ClassAbilityCombatService classAbilityCombatService;
     @Mock private ItemInstanceRepository itemInstanceRepository;
+    @Mock private SpellRepository spellRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -56,7 +57,8 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository, objectMapper);
+                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
+                spellRepository, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -98,9 +100,10 @@ class BattleServiceAttackTest {
 
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(gm));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
-        when(battleRepository.findByIdAndCampaignId(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)).thenReturn(Optional.of(battle));
         when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(combatants);
-        when(combatantRepository.findById(characterC.getId())).thenReturn(Optional.of(characterC));
+        when(combatantRepository.findByIdForUpdate(monsterC.getId())).thenReturn(Optional.of(monsterC));
+        when(combatantRepository.findByIdForUpdate(characterC.getId())).thenReturn(Optional.of(characterC));
         when(characterRepository.findByIdForUpdate(character.getId())).thenReturn(Optional.of(character));
         when(diceRoller.rollDamage("3к4", false)).thenReturn(7);
 
@@ -123,7 +126,8 @@ class BattleServiceAttackTest {
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
-                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository, objectMapper);
+                diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
+                spellRepository, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -163,10 +167,11 @@ class BattleServiceAttackTest {
 
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(gm));
         when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
-        when(battleRepository.findByIdAndCampaignId(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)).thenReturn(Optional.of(battle));
         when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId))
                 .thenReturn(List.of(monsterC, characterC));
-        when(combatantRepository.findById(characterC.getId())).thenReturn(Optional.of(characterC));
+        when(combatantRepository.findByIdForUpdate(monsterC.getId())).thenReturn(Optional.of(monsterC));
+        when(combatantRepository.findByIdForUpdate(characterC.getId())).thenReturn(Optional.of(characterC));
         when(characterRepository.findByIdForUpdate(character.getId())).thenReturn(Optional.of(character));
         // The dice parsed from the description must be the doubled-on-crit "1к6 + 4".
         when(diceRoller.rollDamage("1к6 + 4", true)).thenReturn(14);

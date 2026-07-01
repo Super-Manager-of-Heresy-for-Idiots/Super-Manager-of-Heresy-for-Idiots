@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.enums.AttackRollMode;
 import com.dnd.app.domain.enums.BattleStatus;
 import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
@@ -69,6 +70,7 @@ public class BattleService {
     private final WeaponAttackService weaponAttackService;
     private final ClassAbilityCombatService classAbilityCombatService;
     private final ItemInstanceRepository itemInstanceRepository;
+    private final SpellRepository spellRepository;
     private final ObjectMapper objectMapper;
 
     // ================================ Lifecycle ================================
@@ -220,7 +222,8 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceGmOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        // Lock the battle row so a second concurrent start can't also roll initiative / reorder.
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ASSEMBLING, "Battle has already started");
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
@@ -261,7 +264,8 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        // Lock the battle row so concurrent joins serialize their tracker reorder + index re-anchor.
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ACTIVE, "Characters can only join an active battle");
 
         boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
@@ -379,12 +383,14 @@ public class BattleService {
         battleRepository.save(battle);
 
         // The combatant now on turn starts with a fresh action economy.
-        resetActionEconomy(combatants.get(nextIndex));
+        BattleCombatant nowOnTurn = combatants.get(nextIndex);
+        resetActionEconomy(nowOnTurn);
 
         log.info("Turn passed: battleId={}, newIndex={}, round={}, by={}",
                 battleId, nextIndex, battle.getRoundNumber(), username);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
-                java.util.Map.of("battleId", battleId, "currentTurnIndex", nextIndex), user.getId());
+                java.util.Map.of("battleId", battleId, "currentTurnIndex", nextIndex,
+                        "currentCombatantId", nowOnTurn.getId()), user.getId());
         return toResponse(battle, combatants);
     }
 
@@ -424,14 +430,173 @@ public class BattleService {
             builder.character(characterResponse)
                     .resources(characterResourceService.getResources(characterId, username))
                     .activeEffects(characterEffectService.getActiveEffects(characterId, username))
-                    .classAbilities(classAbilityCombatService.listAbilities(current.getCharacter()));
+                    .classAbilities(classAbilityCombatService.listAbilities(current.getCharacter()))
+                    .tacticalActions(buildCharacterTacticalActions(characterResponse));
         } else if (current.getType() == CombatantType.MONSTER && current.getMonster() != null) {
             boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
             if (gm) {
-                builder.monster(monsterService.getMonster(current.getMonster().getId(), username));
+                MonsterResponse monster = monsterService.getMonster(current.getMonster().getId(), username);
+                builder.monster(monster)
+                        .tacticalActions(buildMonsterTacticalActions(monster));
             }
         }
         return builder.build();
+    }
+
+    // ===================== Tactical targeting metadata (read-only) =====================
+    // Exposes range/AoE hints for the tactical map. Spatial state stays in map-service; nothing
+    // here is parsed from free localized text — unreliable data is reported as UNKNOWN.
+
+    private List<TacticalActionResponse> buildCharacterTacticalActions(CharacterResponse character) {
+        List<TacticalActionResponse> actions = new ArrayList<>();
+        if (character.getAttacks() != null) {
+            for (CharacterAttackResponse atk : character.getAttacks()) {
+                List<TacticalActionResponse.Damage> dmg = null;
+                if (atk.getDamage() != null) {
+                    dmg = List.of(TacticalActionResponse.Damage.builder()
+                            .dice(atk.getDamage()).damageType(atk.getDamageType()).build());
+                }
+                actions.add(TacticalActionResponse.builder()
+                        .id(atk.getName())
+                        .name(atk.getName())
+                        .source(mapAttackSource(atk.getSource()))
+                        .actionCost("UNKNOWN")
+                        .targeting(TacticalActionResponse.Targeting.builder()
+                                // The localized range string is not reliably structured, so rangeFt
+                                // stays null and the shape is UNKNOWN; an attack is always single-target.
+                                .mode("SINGLE_TARGET")
+                                .areaShape("UNKNOWN")
+                                .requiresAttackRoll(true)
+                                .requiresSavingThrow(false)
+                                .build())
+                        .damage(dmg)
+                        .build());
+            }
+        }
+        if (character.getKnownSpells() != null && !character.getKnownSpells().isEmpty()) {
+            List<UUID> spellIds = character.getKnownSpells().stream()
+                    .map(CharacterKnownSpellResponse::getSpellId)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            for (Spell spell : spellRepository.findAllById(spellIds)) {
+                actions.add(TacticalActionResponse.builder()
+                        .id(spell.getId() != null ? spell.getId().toString() : spell.getSlug())
+                        .name(spell.getNameRu())
+                        .source("SPELL")
+                        .actionCost(mapSpellActionCost(spell.getCastingActionSlug()))
+                        .targeting(TacticalActionResponse.Targeting.builder()
+                                .mode(isSelfRange(spell.getRangeType()) ? "SELF" : "UNKNOWN")
+                                .rangeFt(structuredRangeFt(spell.getRangeDistance(), spell.getRangeUnit()))
+                                // No structured area/radius/shape columns exist for spells — never
+                                // invent them from text.
+                                .areaShape("UNKNOWN")
+                                .requiresAttackRoll(false)
+                                .requiresSavingThrow(false)
+                                .build())
+                        .build());
+            }
+        }
+        return actions;
+    }
+
+    private List<TacticalActionResponse> buildMonsterTacticalActions(MonsterResponse monster) {
+        List<TacticalActionResponse> actions = new ArrayList<>();
+        if (monster.getFeatures() == null) {
+            return actions;
+        }
+        for (MonsterResponse.FeatureView f : monster.getFeatures()) {
+            boolean hasAttack = f.getAttackType() != null;
+            boolean hasSave = f.getSaveDc() != null;
+            if (!hasAttack && !hasSave) {
+                continue;
+            }
+            boolean requiresAttackRoll = hasAttack && f.getAttackBonus() != null;
+            Short rangeShort = f.getRangeFt() != null ? f.getRangeFt() : f.getReachFt();
+            Integer rangeFt = rangeShort != null ? rangeShort.intValue() : null;
+            List<TacticalActionResponse.Damage> dmg = null;
+            if (f.getDamages() != null && !f.getDamages().isEmpty()) {
+                dmg = f.getDamages().stream()
+                        .map(d -> TacticalActionResponse.Damage.builder()
+                                .dice(d.getDice())
+                                .damageType(d.getDamageType() != null ? d.getDamageType().getNameRusloc() : null)
+                                .build())
+                        .toList();
+            }
+            actions.add(TacticalActionResponse.builder()
+                    .id(f.getId() != null ? f.getId().toString() : f.getNameRusloc())
+                    .name(f.getNameRusloc())
+                    .source("MONSTER_FEATURE")
+                    .actionCost(mapFeatureActionCost(f.getKind()))
+                    .targeting(TacticalActionResponse.Targeting.builder()
+                            .mode(requiresAttackRoll ? "SINGLE_TARGET" : "UNKNOWN")
+                            .rangeFt(rangeFt)
+                            .areaShape("UNKNOWN")
+                            .requiresAttackRoll(requiresAttackRoll)
+                            .requiresSavingThrow(hasSave)
+                            .build())
+                    .damage(dmg)
+                    .build());
+        }
+        return actions;
+    }
+
+    private String mapAttackSource(String source) {
+        if (source == null) {
+            return "MANUAL";
+        }
+        return switch (source.toUpperCase()) {
+            case "WEAPON" -> "WEAPON";
+            case "CLASS" -> "CLASS_ABILITY";
+            default -> "MANUAL";
+        };
+    }
+
+    private String mapSpellActionCost(String slug) {
+        if (slug == null) {
+            return "UNKNOWN";
+        }
+        String s = slug.toLowerCase();
+        if (s.contains("bonus")) {
+            return "BONUS_ACTION";
+        }
+        if (s.contains("reaction")) {
+            return "REACTION";
+        }
+        if (s.contains("action")) {
+            return "ACTION";
+        }
+        return "UNKNOWN";
+    }
+
+    private String mapFeatureActionCost(String kind) {
+        if (kind == null) {
+            return "UNKNOWN";
+        }
+        String k = kind.toLowerCase();
+        if (k.contains("bonus")) {
+            return "BONUS_ACTION";
+        }
+        if (k.contains("reaction")) {
+            return "REACTION";
+        }
+        if (k.contains("action")) {
+            return "ACTION";
+        }
+        return "UNKNOWN";
+    }
+
+    private boolean isSelfRange(String rangeType) {
+        return rangeType != null && rangeType.equalsIgnoreCase("self");
+    }
+
+    /** Only surface a range in feet when the unit is reliably feet; otherwise leave it unknown (null). */
+    private Integer structuredRangeFt(Integer distance, String unit) {
+        if (distance == null || unit == null) {
+            return null;
+        }
+        String u = unit.toLowerCase();
+        boolean feet = u.contains("ft") || u.contains("feet") || u.contains("фут");
+        return feet ? distance : null;
     }
 
     // ============================ Attacks & damage ============================
@@ -450,7 +615,7 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ACTIVE, "Attacks can only happen in an active battle");
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
@@ -460,7 +625,17 @@ public class BattleService {
         BattleCombatant attacker = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
         enforceControls(campaignId, user, attacker);
 
-        BattleCombatant target = combatantRepository.findById(request.getTargetCombatantId())
+        // Lock the attacker row and reject a second action this turn: one action per turn is modelled,
+        // multi-attack is not, so a duplicate/racing attack must not spend the action again.
+        attacker = combatantRepository.findByIdForUpdate(attacker.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
+        if (Boolean.TRUE.equals(attacker.getActionUsed())) {
+            throw new BadRequestException("The action has already been used this turn");
+        }
+
+        // Lock the target row before its HP changes (matters for monster targets, whose HP lives
+        // only on the combatant row; character targets are additionally locked on the sheet).
+        BattleCombatant target = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
         if (!target.getBattle().getId().equals(battleId)) {
             throw new BadRequestException("Target does not belong to this battle");
@@ -471,6 +646,11 @@ public class BattleService {
 
         AttackOption attack = resolveAttack(attacker, request.getAttackName());
 
+        // Resolve the d20 according to the roll mode (virtual rolls or manual advantage dice).
+        RollResolution roll = resolveAttackRoll(request);
+        int effectiveD20 = roll.effectiveD20();
+        AttackRollMode rollMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
+
         Integer damage = null;
         Integer targetAc = null;
         Integer attackBonusOut = null;
@@ -480,33 +660,33 @@ public class BattleService {
         if (attack.saveDc() != null) {
             // Save-based attack (e.g. a monster's breath weapon): the target rolls the supplied d20
             // against the save DC. A success halves the damage, a failure takes it in full.
-            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(request.getD20(), 0, attack.saveDc());
+            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, 0, attack.saveDc());
             int rolled = diceRoller.rollDamage(attack.damage(), false);
             damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
             if (damage > 0) {
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = save.name();
-            total = request.getD20();
+            total = effectiveD20;
         } else {
             targetAc = resolveTargetAc(target);
-            AttackResolver.Outcome outcome = AttackResolver.resolve(request.getD20(), attack.attackBonus(), targetAc);
+            AttackResolver.Outcome outcome = AttackResolver.resolve(effectiveD20, attack.attackBonus(), targetAc);
             if (outcome.dealsDamage()) {
                 damage = diceRoller.rollDamage(attack.damage(), outcome == AttackResolver.Outcome.CRIT);
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = outcome.name();
             attackBonusOut = attack.attackBonus();
-            total = request.getD20() + attack.attackBonus();
+            total = effectiveD20 + attack.attackBonus();
         }
 
         attacker.setActionUsed(true);
         combatantRepository.save(attacker);
 
         boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
-        log.info("Attack resolved: battleId={}, attacker={}, target={}, attack='{}', d20={}, outcome={}, dmg={}, by={}",
+        log.info("Attack resolved: battleId={}, attacker={}, target={}, attack='{}', mode={}, d20={}, outcome={}, dmg={}, by={}",
                 battleId, attacker.getDisplayName(), target.getDisplayName(), attack.name(),
-                request.getD20(), outcomeName, damage, username);
+                rollMode, effectiveD20, outcomeName, damage, username);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("battleId", battleId);
@@ -526,7 +706,12 @@ public class BattleService {
                 .targetCombatantId(target.getId())
                 .targetName(target.getDisplayName())
                 .attackName(attack.name())
-                .d20(request.getD20())
+                .d20(effectiveD20)
+                .rollMode(rollMode.name())
+                .d20A(roll.d20A())
+                .d20B(roll.d20B())
+                .effectiveD20(effectiveD20)
+                .advantageReason(request.getAdvantageReason())
                 .attackBonus(attackBonusOut)
                 .total(total)
                 .targetAc(targetAc)
@@ -553,7 +738,7 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ACTIVE, "Items can only be used in an active battle");
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
@@ -566,7 +751,15 @@ public class BattleService {
             throw new BadRequestException("Only characters can use items");
         }
 
-        ItemInstance item = itemInstanceRepository.findById(request.getItemInstanceId())
+        // Lock the actor row and reject a second action this turn (using an item spends the action).
+        actor = combatantRepository.findByIdForUpdate(actor.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Actor combatant not found"));
+        if (Boolean.TRUE.equals(actor.getActionUsed())) {
+            throw new BadRequestException("The action has already been used this turn");
+        }
+
+        // Lock the item row so the quantity decrement / delete can't double-spend under a race.
+        ItemInstance item = itemInstanceRepository.findByIdForUpdate(request.getItemInstanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
         if (item.getOwnerCharacter() == null || !item.getOwnerCharacter().getId().equals(actor.getCharacter().getId())) {
             throw new BadRequestException("This item is not carried by the active character");
@@ -579,7 +772,7 @@ public class BattleService {
 
         BattleCombatant target = actor;
         if (request.getTargetCombatantId() != null) {
-            target = combatantRepository.findById(request.getTargetCombatantId())
+            target = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
             if (!target.getBattle().getId().equals(battleId)) {
                 throw new BadRequestException("Target does not belong to this battle");
@@ -661,14 +854,15 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ACTIVE, "Actions can only be spent in an active battle");
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
         if (combatants.isEmpty()) {
             throw new BadRequestException("Battle has no combatants");
         }
-        BattleCombatant combatant = combatantRepository.findById(combatantId)
+        // Lock the combatant row so the duplicate-slot check below can't race with a concurrent spend.
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
         if (!combatant.getBattle().getId().equals(battleId)) {
             throw new BadRequestException("Combatant does not belong to this battle");
@@ -721,10 +915,11 @@ public class BattleService {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceGmOrAdmin(campaign, user);
-        Battle battle = findBattle(battleId, campaignId);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
         requireStatus(battle, BattleStatus.ACTIVE, "HP can only be adjusted in an active battle");
 
-        BattleCombatant combatant = combatantRepository.findById(combatantId)
+        // Lock the combatant row so a manual HP edit and an attack on the same target accumulate.
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
         if (!combatant.getBattle().getId().equals(battleId)) {
             throw new BadRequestException("Combatant does not belong to this battle");
@@ -749,6 +944,48 @@ public class BattleService {
      * to hit); it stays null for ordinary attack-roll strikes.
      */
     private record AttackOption(String name, int attackBonus, String damage, String damageType, Integer saveDc) {
+    }
+
+    /** The two dice considered and the single die selected for the attack per its roll mode. */
+    private record RollResolution(Integer d20A, Integer d20B, int effectiveD20) {
+    }
+
+    /**
+     * Turns the request's roll mode and dice into the effective d20. Manual dice for
+     * ADVANTAGE/DISADVANTAGE must come as a {@code d20A}/{@code d20B} pair (the server keeps the
+     * higher / lower); a lone legacy {@code d20} is accepted only for NORMAL. When no dice are
+     * supplied the server rolls virtually: one die for NORMAL, two (keep higher/lower) otherwise.
+     * Policy: advantage/disadvantage with a single manual value is rejected for strictness.
+     */
+    private RollResolution resolveAttackRoll(BattleAttackRequest request) {
+        AttackRollMode mode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
+        Integer a = request.getD20A();
+        Integer b = request.getD20B();
+        Integer single = request.getD20();
+
+        if ((a == null) != (b == null)) {
+            throw new BadRequestException("Provide both d20A and d20B together, or neither");
+        }
+        boolean hasPair = a != null;
+
+        if (mode == AttackRollMode.NORMAL) {
+            if (hasPair) {
+                throw new BadRequestException("A NORMAL roll expects a single d20, not a d20A/d20B pair");
+            }
+            int value = single != null ? single : diceRoller.rollD20();
+            return new RollResolution(value, null, value);
+        }
+
+        // ADVANTAGE / DISADVANTAGE
+        if (!hasPair) {
+            if (single != null) {
+                throw new BadRequestException(mode + " requires both d20A and d20B (two dice)");
+            }
+            a = diceRoller.rollD20();
+            b = diceRoller.rollD20();
+        }
+        int effective = mode == AttackRollMode.ADVANTAGE ? Math.max(a, b) : Math.min(a, b);
+        return new RollResolution(a, b, effective);
     }
 
     /**
@@ -946,9 +1183,99 @@ public class BattleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Battle not found"));
     }
 
+    /**
+     * Row-locking battle load (SELECT ... FOR UPDATE) for every mutating combat action. It both
+     * serializes concurrent mutations on the same battle and fixes the lock order (battle first,
+     * then combatant/item rows) so the per-combatant locks below cannot deadlock.
+     */
+    private Battle findBattleForUpdate(UUID battleId, UUID campaignId) {
+        return battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Battle not found"));
+    }
+
     private User getUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    // ====================== Map-service integration contracts ======================
+
+    /**
+     * Read-only projection of what a given user may do in a battle, for service-to-service callers
+     * (map-service) that must authorize token control without touching the core DB or duplicating
+     * combat permission rules. GM/admin manage the battle and control any combatant; a player can
+     * only control their own character combatants; a non-member sees {@code canView=false}.
+     */
+    @Transactional(readOnly = true)
+    public BattleAccessResponse getBattleAccess(UUID campaignId, UUID battleId, UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        campaignService.findCampaign(campaignId);
+        findBattle(battleId, campaignId);
+
+        boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, userId);
+        boolean canView = gm || campaignService.isMemberOfCampaign(campaignId, userId);
+
+        List<UUID> controllableCombatantIds = new ArrayList<>();
+        List<UUID> controllableCharacterIds = new ArrayList<>();
+        if (canView) {
+            for (BattleCombatant c : orderedCombatants(battleId)) {
+                boolean owns = c.getType() == CombatantType.CHARACTER && c.getCharacter() != null
+                        && c.getCharacter().getOwner() != null
+                        && c.getCharacter().getOwner().getId().equals(userId);
+                if (gm || owns) {
+                    controllableCombatantIds.add(c.getId());
+                    if (c.getType() == CombatantType.CHARACTER && c.getCharacter() != null) {
+                        controllableCharacterIds.add(c.getCharacter().getId());
+                    }
+                }
+            }
+        }
+
+        return BattleAccessResponse.builder()
+                .battleId(battleId)
+                .campaignId(campaignId)
+                .userId(userId)
+                .canView(canView)
+                .canManageBattle(gm)
+                .canControlAnyCombatant(gm)
+                .controllableCombatantIds(controllableCombatantIds)
+                .controllableCharacterIds(controllableCharacterIds)
+                .build();
+    }
+
+    /**
+     * Minimal, safe identity of one combatant for map-service to create a token-combat link from.
+     * Deliberately omits private character-sheet data; token footprint defaults to 1x1 because
+     * spatial sizing is owned by map-service, not core BE.
+     */
+    @Transactional(readOnly = true)
+    public CombatantReferenceResponse getCombatantReference(UUID campaignId, UUID battleId, UUID combatantId) {
+        campaignService.findCampaign(campaignId);
+        Battle battle = findBattle(battleId, campaignId);
+        BattleCombatant c = combatantRepository.findById(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!c.getBattle().getId().equals(battleId)) {
+            throw new ResourceNotFoundException("Combatant does not belong to this battle");
+        }
+
+        return CombatantReferenceResponse.builder()
+                .battleId(battleId)
+                .campaignId(campaignId)
+                .combatantId(c.getId())
+                .type(c.getType().name())
+                .displayName(c.getDisplayName())
+                .characterId(c.getCharacter() != null ? c.getCharacter().getId() : null)
+                .monsterId(c.getMonster() != null ? c.getMonster().getId() : null)
+                .ownerUserId(c.getCharacter() != null && c.getCharacter().getOwner() != null
+                        ? c.getCharacter().getOwner().getId() : null)
+                .currentHp(c.getCurrentHp())
+                .maxHp(c.getMaxHp())
+                .turnOrder(c.getTurnOrder())
+                .currentTurn(toCombatantResponse(c, battle).isCurrentTurn())
+                .widthCells(1)
+                .heightCells(1)
+                .build();
     }
 
     // ================================ Mapping ================================

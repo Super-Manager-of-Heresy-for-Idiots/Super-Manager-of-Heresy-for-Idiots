@@ -24,7 +24,20 @@ public class BattleActionResultResponse {
     private String targetName;
 
     private String attackName;
+
+    /** The effective d20 actually used to resolve the attack (kept for backward compatibility). */
     private Integer d20;
+
+    /** Roll mode used: NORMAL | ADVANTAGE | DISADVANTAGE. */
+    private String rollMode;
+    /** The two dice for ADVANTAGE/DISADVANTAGE (or the single die under NORMAL in {@code d20A}). */
+    private Integer d20A;
+    private Integer d20B;
+    /** The die selected per the roll mode (max for advantage, min for disadvantage). */
+    private Integer effectiveD20;
+    /** Frontend-supplied advantage reason, recorded as-is (not validated by core BE this phase). */
+    private String advantageReason;
+
     private Integer attackBonus;
     private Integer total;
     private Integer targetAc;
