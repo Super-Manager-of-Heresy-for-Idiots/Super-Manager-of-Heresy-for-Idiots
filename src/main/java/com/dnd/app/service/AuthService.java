@@ -172,8 +172,8 @@ public class AuthService {
             refreshTokenRepository.save(previous);
         }
 
-        String access = tokenProvider.generateToken(user.getUsername(), role);
-        String refresh = tokenProvider.generateRefreshToken(user.getUsername(), role, newJti.toString());
+        String access = tokenProvider.generateToken(user.getUsername(), role, user.getId());
+        String refresh = tokenProvider.generateRefreshToken(user.getUsername(), role, user.getId(), newJti.toString());
         return new IssuedTokens(
                 access,
                 refresh,

@@ -104,8 +104,8 @@ class AuthServiceTest {
         User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
         stubSaveAssignsId();
-        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("access-token");
-        when(tokenProvider.generateRefreshToken(anyString(), anyString(), anyString())).thenReturn("refresh-token");
+        when(tokenProvider.generateToken("user1", "PLAYER", user.getId())).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken(eq("user1"), eq("PLAYER"), eq(user.getId()), anyString())).thenReturn("refresh-token");
         when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
         when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
         when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().username("user1").build());
@@ -148,8 +148,8 @@ class AuthServiceTest {
         when(refreshTokenRepository.findByJti(jti)).thenReturn(Optional.of(row));
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         stubSaveAssignsId();
-        when(tokenProvider.generateToken("user1", "PLAYER")).thenReturn("new-access");
-        when(tokenProvider.generateRefreshToken(anyString(), anyString(), anyString())).thenReturn("new-refresh");
+        when(tokenProvider.generateToken("user1", "PLAYER", user.getId())).thenReturn("new-access");
+        when(tokenProvider.generateRefreshToken(eq("user1"), eq("PLAYER"), eq(user.getId()), anyString())).thenReturn("new-refresh");
         when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
         when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
         when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().username("user1").build());

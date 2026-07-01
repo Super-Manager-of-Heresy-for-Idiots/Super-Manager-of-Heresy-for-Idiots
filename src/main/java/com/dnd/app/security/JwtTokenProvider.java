@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -21,6 +22,7 @@ public class JwtTokenProvider {
     private static final String CLAIM_TYPE = "tt";
     private static final String CLAIM_ROLE = "role";
     private static final String CLAIM_JTI = "jti";
+    private static final String CLAIM_USER_ID = "user_id";
 
     private final SecretKey key;
     private final long expirationMs;
@@ -38,7 +40,11 @@ public class JwtTokenProvider {
 
     /** Access token: presented on every API/WS call, short TTL. */
     public String generateToken(String username, String role) {
-        return build(username, role, TYPE_ACCESS, expirationMs);
+        return generateToken(username, role, null);
+    }
+
+    public String generateToken(String username, String role, UUID userId) {
+        return build(username, role, TYPE_ACCESS, expirationMs, userId, null);
     }
 
     /**
@@ -47,30 +53,41 @@ public class JwtTokenProvider {
      * rotated and revoked; reuse of a rotated jti is the theft signal.
      */
     public String generateRefreshToken(String username, String role, String jti) {
+        return generateRefreshToken(username, role, null, jti);
+    }
+
+    public String generateRefreshToken(String username, String role, UUID userId, String jti) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + refreshExpirationMs);
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
                 .claim(CLAIM_ROLE, role)
                 .claim(CLAIM_TYPE, TYPE_REFRESH)
                 .claim(CLAIM_JTI, jti)
                 .issuedAt(now)
-                .expiration(expiry)
-                .signWith(key)
-                .compact();
+                .expiration(expiry);
+        if (userId != null) {
+            builder.claim(CLAIM_USER_ID, userId.toString());
+        }
+        return builder.signWith(key, Jwts.SIG.HS256).compact();
     }
 
-    private String build(String username, String role, String type, long ttlMs) {
+    private String build(String username, String role, String type, long ttlMs, UUID userId, String jti) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + ttlMs);
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
                 .claim(CLAIM_ROLE, role)
                 .claim(CLAIM_TYPE, type)
                 .issuedAt(now)
-                .expiration(expiry)
-                .signWith(key)
-                .compact();
+                .expiration(expiry);
+        if (userId != null) {
+            builder.claim(CLAIM_USER_ID, userId.toString());
+        }
+        if (jti != null) {
+            builder.claim(CLAIM_JTI, jti);
+        }
+        return builder.signWith(key, Jwts.SIG.HS256).compact();
     }
 
     public String getUsernameFromToken(String token) {
