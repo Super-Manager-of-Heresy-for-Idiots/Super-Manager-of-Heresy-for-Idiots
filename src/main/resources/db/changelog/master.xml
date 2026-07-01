@@ -31,4 +31,7 @@
     <!-- Server-side refresh-token sessions: rotation + reuse detection. -->
     <include file="db/changelog/053-refresh-token-sessions.xml"/>
 
+    <!-- Item instance -> buff/debuff links for instance-specific item effects. -->
+    <include file="db/changelog/054-item-instance-buffs.xml"/>
+
 </databaseChangeLog>
