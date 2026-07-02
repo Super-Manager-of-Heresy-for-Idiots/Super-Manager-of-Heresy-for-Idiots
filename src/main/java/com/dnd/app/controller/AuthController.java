@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +35,11 @@ public class AuthController {
     private final AuthService authService;
     private final AuthCookieService cookieService;
     private final Executor controllerTaskExecutor;
+
+    @GetMapping("/csrf")
+    public ResponseEntity<ApiResponse<Void>> csrf() {
+        return ResponseEntity.ok(ApiResponse.ok(null, "CSRF initialized"));
+    }
 
     @PostMapping("/register")
     public CompletableFuture<ResponseEntity<ApiResponse<UserResponse>>> register(@Valid @RequestBody RegisterRequest request) {

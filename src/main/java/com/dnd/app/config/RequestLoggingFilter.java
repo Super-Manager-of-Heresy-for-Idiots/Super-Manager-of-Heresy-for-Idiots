@@ -28,6 +28,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
+        response.setHeader("X-Correlation-Id", requestId);
         String path = buildPath(request);
         String routeType = request.getRequestURI().startsWith("/api/") ? "api" : "non-api";
         String remoteAddress = forwardedFor(request);

@@ -3,6 +3,8 @@ package com.dnd.app.config;
 import com.dnd.app.security.AuthRateLimitFilter;
 import com.dnd.app.security.InternalApiKeyFilter;
 import com.dnd.app.security.JwtAuthenticationFilter;
+import com.dnd.app.dto.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -10,14 +12,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,6 +37,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 
 @Configuration
 @EnableWebSecurity
@@ -43,6 +50,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final InternalApiKeyFilter internalApiKeyFilter;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public FilterRegistrationBean<AuthRateLimitFilter> authRateLimitFilterRegistration(AuthRateLimitFilter filter) {
@@ -83,22 +91,36 @@ public class SecurityConfig {
                     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                     String username = authentication != null ? authentication.getName() : "anonymous";
                     Object authorities = authentication != null ? authentication.getAuthorities() : "[]";
+                    String requestId = requestId(request);
+                    String reason = securityDenialReason(accessDeniedException, authentication);
 
                     log.warn(
-                            "Access denied: method={}, path={}, user={}, authorities={}, remote={}, referer='{}', userAgent='{}', reason='{}'",
+                            "Security access denied: id={}, reasonCode={}, method={}, path={}, user={}, authorities={}, remote={}, referer='{}', origin='{}', userAgent='{}', exception={}, message='{}'",
+                            requestId,
+                            reason,
                             request.getMethod(),
-                            request.getRequestURI(),
+                            buildPath(request),
                             username,
                             authorities,
                             request.getRemoteAddr(),
                             request.getHeader("Referer"),
+                            request.getHeader("Origin"),
                             request.getHeader("User-Agent"),
+                            accessDeniedException.getClass().getSimpleName(),
                             accessDeniedException.getMessage()
                     );
 
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    if (!response.isCommitted()) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        response.setHeader("X-Correlation-Id", requestId);
+                        objectMapper.writeValue(response.getWriter(),
+                                ApiResponse.error(reason, securityDenialMessage(reason)));
+                    }
                 }))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bug-reports").permitAll()
@@ -116,6 +138,42 @@ public class SecurityConfig {
                 .addFilterBefore(internalApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private String securityDenialReason(
+            org.springframework.security.access.AccessDeniedException exception,
+            Authentication authentication) {
+        if (exception instanceof MissingCsrfTokenException) {
+            return "CSRF_MISSING";
+        }
+        if (exception instanceof InvalidCsrfTokenException) {
+            return "CSRF_INVALID";
+        }
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return "AUTHENTICATION_REQUIRED";
+        }
+        return "ACCESS_DENIED";
+    }
+
+    private String securityDenialMessage(String reason) {
+        return switch (reason) {
+            case "CSRF_MISSING" -> "CSRF token is missing";
+            case "CSRF_INVALID" -> "CSRF token is invalid";
+            case "AUTHENTICATION_REQUIRED" -> "Authentication required";
+            default -> "Access denied";
+        };
+    }
+
+    private String requestId(jakarta.servlet.http.HttpServletRequest request) {
+        Object requestId = request.getAttribute(RequestLoggingFilter.REQUEST_ID_ATTRIBUTE);
+        return requestId == null ? "-" : requestId.toString();
+    }
+
+    private String buildPath(jakarta.servlet.http.HttpServletRequest request) {
+        String query = request.getQueryString();
+        return query == null ? request.getRequestURI() : request.getRequestURI() + "?" + query;
     }
 
     @Bean
