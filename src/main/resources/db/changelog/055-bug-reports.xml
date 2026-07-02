@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="055-bug-reports" author="codex">
+        <createTable tableName="bug_reports">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="uuid"/>
+            <column name="user_description" type="text"/>
+            <column name="severity" type="text"/>
+            <column name="source" type="text"/>
+            <column name="error_name" type="text"/>
+            <column name="error_message" type="text"/>
+            <column name="error_stack" type="text"/>
+            <column name="url" type="text"/>
+            <column name="route" type="text"/>
+            <column name="app_version" type="text"/>
+            <column name="client_timestamp" type="text"/>
+            <column name="user_agent" type="text"/>
+            <column name="ip" type="text"/>
+            <column name="console_logs_json" type="text"/>
+            <column name="network_logs_json" type="text"/>
+            <column name="service_logs_json" type="text"/>
+            <column name="device_json" type="text"/>
+            <column name="performance_json" type="text"/>
+            <column name="breadcrumbs_json" type="text"/>
+            <column name="extra_json" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="bug_reports"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_bug_reports_user"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="bug_reports" indexName="idx_bug_reports_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="bug_reports" indexName="idx_bug_reports_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

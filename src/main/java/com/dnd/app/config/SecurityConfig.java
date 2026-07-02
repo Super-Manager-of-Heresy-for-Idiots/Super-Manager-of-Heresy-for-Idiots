@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/api/auth/login", "/api/auth/register",
                                 "/api/auth/refresh", "/api/auth/logout",
+                                "/api/bug-reports",
                                 // Service-to-service calls authenticate with X-Internal-Api-Key,
                                 // not the SPA cookie, so they can't carry a CSRF token.
                                 "/api/internal/**",
@@ -100,6 +101,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bug-reports").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").hasRole("ADMIN")
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")

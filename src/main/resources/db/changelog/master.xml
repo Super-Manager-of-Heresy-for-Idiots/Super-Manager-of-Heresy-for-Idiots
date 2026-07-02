@@ -34,4 +34,7 @@
     <!-- Item instance -> buff/debuff links for instance-specific item effects. -->
     <include file="db/changelog/054-item-instance-buffs.xml"/>
 
+    <!-- User-submitted frontend diagnostics and optional bug descriptions. -->
+    <include file="db/changelog/055-bug-reports.xml"/>
+
 </databaseChangeLog>

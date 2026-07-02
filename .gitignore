@@ -50,3 +50,12 @@ out/
 *.key
 secrets/
 
+# Codex / project memory files
+AGENTS.md
+PROJECT_MAP.md
+docs/architecture.md
+docs/known-issues.md
+docs/tooling-serena.md
+.agents/
+.serena/
+
