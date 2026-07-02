@@ -3,6 +3,8 @@ package com.dnd.app.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
@@ -43,8 +45,11 @@ public class Skill {
     @Builder.Default
     private Integer damageBonus = 0;
 
+    // Dangling damage_type_id (missing damage_type row) resolves to null instead of throwing
+    // EntityNotFoundException on lazy init, which otherwise 500s the skills listing / weapon attacks.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "damage_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
     private DamageType damageType;
 
     @OneToMany(mappedBy = "skill", cascade = CascadeType.ALL, orphanRemoval = true)

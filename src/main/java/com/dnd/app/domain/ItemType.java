@@ -3,6 +3,8 @@ package com.dnd.app.domain;
 import com.dnd.app.domain.enums.SkillActivation;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.util.UUID;
 
@@ -40,8 +42,12 @@ public class ItemType {
     @Builder.Default
     private Integer damageBonus = 0;
 
+    // Legacy seeds can leave a dangling damage_type_id (no matching damage_type row).
+    // NotFoundAction.IGNORE resolves the missing reference to null instead of throwing
+    // EntityNotFoundException on lazy init, which otherwise 500s the whole item-types listing.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "damage_type_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
     private DamageType damageType;
 
     @ManyToOne(fetch = FetchType.LAZY)
