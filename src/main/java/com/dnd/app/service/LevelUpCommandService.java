@@ -161,7 +161,8 @@ public class LevelUpCommandService {
         List<LevelUpResultResponse.AppliedGrant> applied = new ArrayList<>();
         List<LevelUpResultResponse.ManualActionItem> manual = new ArrayList<>();
 
-        applyRewardGroups(character, groups, selectionByGroup, applied, manual);
+        int maxSpellLevel = maxSpellLevelFor(targetClass, newClassLevel);
+        applyRewardGroups(character, groups, selectionByGroup, applied, manual, maxSpellLevel);
 
         // --- class level / total level / HP / proficiency ---
         if (existingLevel.isPresent()) {
@@ -239,7 +240,8 @@ public class LevelUpCommandService {
         List<LevelUpResultResponse.AppliedGrant> applied = new ArrayList<>();
         List<LevelUpResultResponse.ManualActionItem> manual = new ArrayList<>();
 
-        applyRewardGroups(character, groups, selectionByGroup, applied, manual);
+        int maxSpellLevel = maxSpellLevelFor(targetClass, 1);
+        applyRewardGroups(character, groups, selectionByGroup, applied, manual, maxSpellLevel);
 
         return LevelUpResultResponse.builder()
                 .newTotalLevel(character.getTotalLevel())
@@ -265,14 +267,15 @@ public class LevelUpCommandService {
                                    List<ClassLevelRewardGroup> groups,
                                    Map<UUID, LevelUpRequest.GroupSelection> selectionByGroup,
                                    List<LevelUpResultResponse.AppliedGrant> applied,
-                                   List<LevelUpResultResponse.ManualActionItem> manual) {
+                                   List<LevelUpResultResponse.ManualActionItem> manual,
+                                   int maxSpellLevel) {
         for (ClassLevelRewardGroup group : groups) {
             LevelUpRequest.GroupSelection sel = selectionByGroup.get(group.getId());
             if ("CHOICE".equalsIgnoreCase(group.getGroupKind())) {
-                processChoiceGroup(character, group, sel, applied, manual);
+                processChoiceGroup(character, group, sel, applied, manual, maxSpellLevel);
             } else {
                 for (ClassLevelRewardGrant grant : group.getGrants()) {
-                    applyGrant(character, null, grant, null, applied, manual);
+                    applyGrant(character, null, grant, null, applied, manual, maxSpellLevel);
                 }
             }
         }
@@ -281,7 +284,8 @@ public class LevelUpCommandService {
     private void processChoiceGroup(PlayerCharacter character, ClassLevelRewardGroup group,
                                     LevelUpRequest.GroupSelection sel,
                                     List<LevelUpResultResponse.AppliedGrant> applied,
-                                    List<LevelUpResultResponse.ManualActionItem> manual) {
+                                    List<LevelUpResultResponse.ManualActionItem> manual,
+                                    int maxSpellLevel) {
         List<UUID> optionIds = sel != null && sel.getOptionIds() != null ? sel.getOptionIds() : List.of();
         int n = optionIds.size();
         if (n < group.getChooseMin()) {
@@ -318,7 +322,7 @@ public class LevelUpCommandService {
 
             for (ClassLevelRewardGrant grant : option.getGrants()) {
                 applyGrant(character, selection,
-                        grant, sel != null ? sel.getChildSelections() : null, applied, manual);
+                        grant, sel != null ? sel.getChildSelections() : null, applied, manual, maxSpellLevel);
             }
         }
     }
@@ -326,14 +330,15 @@ public class LevelUpCommandService {
     private void applyGrant(PlayerCharacter character, CharacterRewardSelection selection,
                             ClassLevelRewardGrant grant, LevelUpRequest.ChildSelections child,
                             List<LevelUpResultResponse.AppliedGrant> applied,
-                            List<LevelUpResultResponse.ManualActionItem> manual) {
+                            List<LevelUpResultResponse.ManualActionItem> manual,
+                            int maxSpellLevel) {
         GrantType type = GrantType.fromTextOrCustom(grant.getGrantType());
         switch (type) {
             case FEATURE -> applied.add(appliedGrant(grant, "Класс-фича получена"));
             case SUBCLASS -> applied.add(appliedGrant(grant, "Подкласс выбран"));
             case ABILITY_SCORE -> applyAbilityScore(character, selection, grant, child, applied);
             case SKILL_PROFICIENCY -> applySkill(character, selection, grant, child, applied);
-            case SPELL -> applySpell(character, selection, grant, child, applied);
+            case SPELL -> applySpell(character, selection, grant, child, applied, maxSpellLevel);
             case FEAT -> manual.add(manualItem(grant, "Выберите/получите черту вручную"));
             case NUMERIC_MODIFIER -> manual.add(manualItem(grant, "Примените числовой модификатор вручную"));
             case CUSTOM_TEXT -> manual.add(manualItem(grant, "Ручной грант — заполните на листе персонажа"));
@@ -469,7 +474,7 @@ public class LevelUpCommandService {
 
     private void applySpell(PlayerCharacter character, CharacterRewardSelection selection,
                             ClassLevelRewardGrant grant, LevelUpRequest.ChildSelections child,
-                            List<LevelUpResultResponse.AppliedGrant> applied) {
+                            List<LevelUpResultResponse.AppliedGrant> applied, int maxSpellLevel) {
         ClassLevelRewardGrantSpell cfg = spellGrantRepository.findById(grant.getId())
                 .orElseThrow(() -> new UnprocessableEntityException("Нет конфигурации SPELL гранта"));
         List<UUID> spellIds = child != null && child.getSpellIds() != null ? child.getSpellIds() : List.of();
@@ -484,7 +489,7 @@ public class LevelUpCommandService {
         for (UUID spellId : spellIds) {
             Spell spell = spellRepository.findById(spellId)
                     .orElseThrow(() -> new UnprocessableEntityException("Заклинание не найдено"));
-            validateSpellSelectable(spell, cfg, character);
+            validateSpellSelectable(spell, cfg, character, maxSpellLevel);
             if (selection != null) {
                 spellSelectionRepository.save(CharacterRewardSpellSelection.builder()
                         .id(new CharacterRewardSpellSelectionId(selection.getId(), cfg.getId(), spellId))
@@ -504,7 +509,15 @@ public class LevelUpCommandService {
      * The grant filters are only enforced when the author set them, so sparse seed data never
      * blocks a legitimate choice.
      */
-    private void validateSpellSelectable(Spell spell, ClassLevelRewardGrantSpell cfg, PlayerCharacter character) {
+    private void validateSpellSelectable(Spell spell, ClassLevelRewardGrantSpell cfg,
+                                         PlayerCharacter character, int maxSpellLevel) {
+        // A character can never learn a spell of a higher circle than their class level grants
+        // access to. Cantrips (level 0) are always allowed. This mirrors the cap enforced at
+        // character creation in ContentCharacterCreationService#getMaxSpellLevel.
+        if (spell.getLevel() != null && spell.getLevel() > 0 && spell.getLevel() > maxSpellLevel) {
+            throw new BadRequestException("Уровень заклинания (" + spell.getLevel()
+                    + ") превышает максимально доступный на этом уровне класса (" + maxSpellLevel + ")");
+        }
         UUID campaignId = character.getCampaign() != null ? character.getCampaign().getId() : null;
         if (spell.getHomebrew() != null) {
             if (campaignId == null) {
@@ -526,6 +539,21 @@ public class LevelUpCommandService {
                 && !cfg.getSchool().getId().equals(spell.getSchool().getId())) {
             throw new BadRequestException("Школа заклинания не соответствует гранту");
         }
+    }
+
+    /**
+     * Highest spell circle a spell grant may hand out at this class level. Non-spellcasting
+     * classes get no cap ({@link Integer#MAX_VALUE}) since they should not carry spell grants.
+     */
+    private int maxSpellLevelFor(ContentCharacterClass charClass, int classLevel) {
+        if (!Boolean.TRUE.equals(charClass.getSpellcaster())) {
+            return Integer.MAX_VALUE;
+        }
+        return getMaxSpellLevel(classLevel, Boolean.TRUE.equals(charClass.getHalfCaster()));
+    }
+
+    private int getMaxSpellLevel(int level, boolean halfCaster) {
+        return halfCaster ? Math.min(5, (level + 1) / 2) : Math.min(9, (level + 1) / 2);
     }
 
     private LevelUpResultResponse.AppliedGrant appliedGrant(ClassLevelRewardGrant grant, String summary) {

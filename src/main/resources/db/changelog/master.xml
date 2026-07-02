@@ -55,4 +55,10 @@
     <!-- Ability-check resolution (проверка Интеллекта (Расследование)): ability + skill. -->
     <include file="db/changelog/061-spell-check.xml"/>
 
+    <!-- Spell -> buff/debuff links: a spell can apply one or more effects. -->
+    <include file="db/changelog/062-spell-buffs.xml"/>
+
+    <!-- Countable action economy: action/bonus/legendary pools replace the boolean flags. -->
+    <include file="db/changelog/063-combat-action-counts.xml"/>
+
 </databaseChangeLog>

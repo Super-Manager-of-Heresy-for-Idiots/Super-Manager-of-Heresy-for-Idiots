@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Generalises the per-combatant action economy from single boolean flags to countable pools.
+      Actions and bonus actions become (max, spent) pairs so their number can grow with level,
+      spells or GM adjustment; legendary actions are added as a new pool (default 0). The spent
+      counters reset when a combatant's turn begins. Reactions stay a single boolean (reaction_used
+      from 051). The old action_used / bonus_action_used booleans are superseded and dropped.
+    -->
+    <changeSet id="063-combat-action-counts" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="action_max" type="integer" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action_spent" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bonus_action_max" type="integer" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bonus_action_spent" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="legendary_action_max" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="legendary_action_spent" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Carry the old boolean state forward: a spent action/bonus becomes a spent count of 1. -->
+        <update tableName="battle_combatants">
+            <column name="action_spent" valueNumeric="1"/>
+            <where>action_used = true</where>
+        </update>
+        <update tableName="battle_combatants">
+            <column name="bonus_action_spent" valueNumeric="1"/>
+            <where>bonus_action_used = true</where>
+        </update>
+
+        <dropColumn tableName="battle_combatants" columnName="action_used"/>
+        <dropColumn tableName="battle_combatants" columnName="bonus_action_used"/>
+    </changeSet>
+
+</databaseChangeLog>

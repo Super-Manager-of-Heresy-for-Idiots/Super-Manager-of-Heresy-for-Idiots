@@ -49,6 +49,7 @@ class BattleServiceRollModeTest {
     @Mock private ClassAbilityCombatService classAbilityCombatService;
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private SpellRepository spellRepository;
+    @Mock private SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -64,7 +65,7 @@ class BattleServiceRollModeTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, objectMapper);
+                spellRepository, spellSlotService, objectMapper);
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

@@ -50,6 +50,7 @@ class BattleServiceConsistencyTest {
     @Mock private ClassAbilityCombatService classAbilityCombatService;
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private SpellRepository spellRepository;
+    @Mock private SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -67,7 +68,7 @@ class BattleServiceConsistencyTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, objectMapper);
+                spellRepository, spellSlotService, objectMapper);
 
         gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         campaign = Campaign.builder().id(campaignId).build();
@@ -93,7 +94,7 @@ class BattleServiceConsistencyTest {
                 .features(new java.util.ArrayList<>(List.of(bite))).build();
         return BattleCombatant.builder()
                 .id(UUID.randomUUID()).battle(battle).type(CombatantType.MONSTER).monster(monster)
-                .displayName("Гоблин #1").turnOrder(0).currentHp(7).maxHp(7).actionUsed(actionUsed)
+                .displayName("Гоблин #1").turnOrder(0).currentHp(7).maxHp(7).actionSpent(actionUsed ? 1 : 0)
                 .createdAt(Instant.parse("2026-01-01T00:00:00Z")).build();
     }
 
@@ -103,7 +104,7 @@ class BattleServiceConsistencyTest {
                 .currentHp(20).maxHp(20).tempHp(0).armorClass(12).build();
         return BattleCombatant.builder()
                 .id(UUID.randomUUID()).battle(battle).type(CombatantType.CHARACTER).character(character)
-                .displayName("Герой").turnOrder(turnOrder).currentHp(20).maxHp(20).actionUsed(actionUsed)
+                .displayName("Герой").turnOrder(turnOrder).currentHp(20).maxHp(20).actionSpent(actionUsed ? 1 : 0)
                 .createdAt(Instant.parse("2026-01-01T00:00:0" + turnOrder + "Z")).build();
     }
 
@@ -155,7 +156,7 @@ class BattleServiceConsistencyTest {
 
         verify(combatantRepository).findByIdForUpdate(attacker.getId());
         verify(combatantRepository).findByIdForUpdate(target.getId());
-        assertTrue(attacker.getActionUsed(), "действие атакующего помечается потраченным");
+        assertTrue(attacker.getActionSpent() >= attacker.getActionMax(), "действие атакующего помечается потраченным");
     }
 
     @Test

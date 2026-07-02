@@ -51,6 +51,7 @@ class BattleServiceTacticalActionsTest {
     @Mock private ClassAbilityCombatService classAbilityCombatService;
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private SpellRepository spellRepository;
+    @Mock private SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -68,7 +69,7 @@ class BattleServiceTacticalActionsTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, objectMapper);
+                spellRepository, spellSlotService, objectMapper);
 
         gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         campaign = Campaign.builder().id(campaignId).build();

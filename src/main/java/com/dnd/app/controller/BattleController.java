@@ -1,6 +1,7 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
@@ -201,6 +202,19 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.spendAction(campaignId, battleId, combatantId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Action spent"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/action-economy")
+    @Operation(summary = "Adjust a combatant's action / bonus / legendary action maxima — GM only")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> adjustActionEconomy(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody AdjustActionEconomyRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.adjustActionEconomy(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Action economy updated"));
         }, controllerTaskExecutor);
     }
 

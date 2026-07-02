@@ -1,5 +1,6 @@
 package com.dnd.app.service;
 
+import com.dnd.app.domain.BuffDebuff;
 import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.content.SpellDamage;
@@ -8,8 +9,11 @@ import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.dto.content.SpellWarningResponse;
 import com.dnd.app.dto.request.SpellEditRequest;
 import com.dnd.app.dto.request.SpellResolutionRequest;
+import com.dnd.app.dto.response.BuffDebuffResponse;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.mapper.BuffDebuffMapper;
 import com.dnd.app.mapper.SpellMapper;
+import com.dnd.app.repository.BuffDebuffRepository;
 import com.dnd.app.repository.DamageTypeRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.util.Localization;
@@ -18,6 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -37,6 +44,7 @@ public class SpellAdminService {
 
     private final SpellRepository spellRepository;
     private final DamageTypeRepository damageTypeRepository;
+    private final BuffDebuffRepository buffDebuffRepository;
     private final SpellMapper spellMapper;
 
     @Transactional(readOnly = true)
@@ -132,6 +140,39 @@ public class SpellAdminService {
 
         spellRepository.save(spell);
         return spellMapper.toDetail(spell, lang);
+    }
+
+    /** The buffs/debuffs currently linked to a spell, sorted by name for stable display. */
+    @Transactional(readOnly = true)
+    public List<BuffDebuffResponse> getLinkedBuffs(UUID spellId) {
+        Spell spell = spellRepository.findById(spellId)
+                .orElseThrow(() -> new ResourceNotFoundException("Заклинание не найдено: " + spellId));
+        return spell.getLinkedBuffs().stream()
+                .sorted(Comparator.comparing(BuffDebuff::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(BuffDebuffMapper::toResponse)
+                .toList();
+    }
+
+    /**
+     * Replaces the full set of buffs/debuffs linked to a spell. A null/empty list clears the links;
+     * every supplied id must resolve to an existing buff/debuff.
+     */
+    @Transactional
+    public List<BuffDebuffResponse> setLinkedBuffs(UUID spellId, List<UUID> buffIds) {
+        Spell spell = spellRepository.findById(spellId)
+                .orElseThrow(() -> new ResourceNotFoundException("Заклинание не найдено: " + spellId));
+
+        Set<BuffDebuff> resolved = new LinkedHashSet<>();
+        if (buffIds != null) {
+            for (UUID buffId : new LinkedHashSet<>(buffIds)) {
+                BuffDebuff buff = buffDebuffRepository.findById(buffId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден: " + buffId));
+                resolved.add(buff);
+            }
+        }
+        spell.setLinkedBuffs(new HashSet<>(resolved));
+        spellRepository.save(spell);
+        return getLinkedBuffs(spellId);
     }
 
     /** Validates an ability code (STRENGTH..CHARISMA); returns the upper-cased code, or null when blank. */

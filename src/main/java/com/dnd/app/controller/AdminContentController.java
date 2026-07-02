@@ -8,9 +8,11 @@ import com.dnd.app.dto.content.ImportWarningResponse;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.dto.content.SpellWarningResponse;
+import com.dnd.app.dto.request.SetSpellBuffsRequest;
 import com.dnd.app.dto.request.SpellEditRequest;
 import com.dnd.app.dto.request.SpellResolutionRequest;
 import com.dnd.app.dto.response.ApiResponse;
+import com.dnd.app.dto.response.BuffDebuffResponse;
 import com.dnd.app.service.ClassRewardSeedService;
 import com.dnd.app.service.ContentDataAuditService;
 import com.dnd.app.service.ContentReferenceService;
@@ -131,6 +133,27 @@ public class AdminContentController {
             @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(spellAdminService.update(id, request, lang), "Заклинание обновлено")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/spells/{id}/buffs")
+    @Operation(summary = "List the buffs/debuffs linked to a spell")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> getSpellBuffs(
+            @PathVariable UUID id) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(spellAdminService.getLinkedBuffs(id))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/spells/{id}/buffs")
+    @Operation(summary = "Replace the set of buffs/debuffs a spell applies")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> setSpellBuffs(
+            @PathVariable UUID id,
+            @RequestBody SetSpellBuffsRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                spellAdminService.setLinkedBuffs(id, request.getBuffDebuffIds()),
+                                "Эффекты заклинания обновлены")),
                 controllerTaskExecutor);
     }
 

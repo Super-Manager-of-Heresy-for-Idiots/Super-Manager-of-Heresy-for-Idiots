@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Spell -> buff/debuff links. A spell can apply one or more effects (buffs/debuffs); the link
+      is authored in the admin spell editor. Mirrors the item_instance_buffs join table (054).
+    -->
+    <changeSet id="062-spell-buffs" author="claude">
+        <createTable tableName="spell_buffs">
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="buff_debuff_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="spell_buffs" columnNames="spell_id,buff_debuff_id"
+                       constraintName="spell_buffs_pkey"/>
+
+        <createIndex tableName="spell_buffs" indexName="idx_spellbuffs_spell_id">
+            <column name="spell_id"/>
+        </createIndex>
+        <createIndex tableName="spell_buffs" indexName="idx_spellbuffs_buff_debuff_id">
+            <column name="buff_debuff_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint constraintName="fk_spellbuffs_spell"
+                                 baseTableName="spell_buffs"
+                                 baseColumnNames="spell_id"
+                                 referencedTableName="spell"
+                                 referencedColumnNames="spell_id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_spellbuffs_buffdebuff"
+                                 baseTableName="spell_buffs"
+                                 baseColumnNames="buff_debuff_id"
+                                 referencedTableName="buffs_debuffs"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

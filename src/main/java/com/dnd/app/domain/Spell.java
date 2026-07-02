@@ -165,4 +165,18 @@ public class Spell {
     )
     @Builder.Default
     private Set<Monster> summonedMonsters = new HashSet<>();
+
+    /**
+     * Buffs/debuffs this spell applies when cast. Authored in the admin spell editor and stored in
+     * the {@code spell_buffs} join table. Owning side: adding/removing from this set writes the
+     * join rows (no cascade to the {@link BuffDebuff} entities themselves).
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "spell_buffs",
+            joinColumns = @JoinColumn(name = "spell_id"),
+            inverseJoinColumns = @JoinColumn(name = "buff_debuff_id")
+    )
+    @Builder.Default
+    private Set<BuffDebuff> linkedBuffs = new HashSet<>();
 }

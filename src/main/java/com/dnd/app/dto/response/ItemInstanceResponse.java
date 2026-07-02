@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,5 +29,7 @@ public class ItemInstanceResponse {
     private String itemTypeName;
     private String damageDice;
     private String damageType;
+    /** Approximate unit price in gold, resolved from the backing catalog item; null when unknown. */
+    private BigDecimal priceGold;
     private List<EnchantmentResponse> enchantments;
 }

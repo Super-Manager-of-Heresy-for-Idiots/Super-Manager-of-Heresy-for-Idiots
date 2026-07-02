@@ -73,14 +73,35 @@ public class BattleCombatant {
     @Column(name = "max_hp")
     private Integer maxHp;
 
-    /** Action economy for the current turn; reset when this combatant's turn begins. */
-    @Column(name = "action_used", nullable = false)
-    @Builder.Default
-    private Boolean actionUsed = false;
+    // ---- Action economy for the current turn ---------------------------------------------
+    // Actions and bonus actions are pools (a max count and how many have been spent this turn);
+    // the spent counters reset when this combatant's turn begins. Every combatant starts with one
+    // action and one bonus action; the maxima can grow with level, spells or GM adjustment.
+    // Legendary actions default to none. Reactions stay a single per-round flag.
 
-    @Column(name = "bonus_action_used", nullable = false)
+    @Column(name = "action_max", nullable = false)
     @Builder.Default
-    private Boolean bonusActionUsed = false;
+    private Integer actionMax = 1;
+
+    @Column(name = "action_spent", nullable = false)
+    @Builder.Default
+    private Integer actionSpent = 0;
+
+    @Column(name = "bonus_action_max", nullable = false)
+    @Builder.Default
+    private Integer bonusActionMax = 1;
+
+    @Column(name = "bonus_action_spent", nullable = false)
+    @Builder.Default
+    private Integer bonusActionSpent = 0;
+
+    @Column(name = "legendary_action_max", nullable = false)
+    @Builder.Default
+    private Integer legendaryActionMax = 0;
+
+    @Column(name = "legendary_action_spent", nullable = false)
+    @Builder.Default
+    private Integer legendaryActionSpent = 0;
 
     @Column(name = "reaction_used", nullable = false)
     @Builder.Default

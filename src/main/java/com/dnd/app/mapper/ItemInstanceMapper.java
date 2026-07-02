@@ -5,8 +5,11 @@ import com.dnd.app.domain.ItemTemplate;
 import com.dnd.app.domain.content.DiceFormula;
 import com.dnd.app.domain.content.EquipmentItem;
 import com.dnd.app.domain.content.MagicItem;
+import com.dnd.app.domain.content.MoneyValue;
 import com.dnd.app.domain.content.WeaponStat;
 import com.dnd.app.dto.response.ItemInstanceResponse;
+
+import java.math.BigDecimal;
 
 /**
  * Maps an {@link ItemInstance} to its API response, resolving display fields from whichever
@@ -23,6 +26,7 @@ public final class ItemInstanceMapper {
         String itemTypeName = null;
         String damageDice = null;
         String damageType = null;
+        BigDecimal priceGold = null;
 
         if (instance.getTemplate() != null) {
             ItemTemplate t = instance.getTemplate();
@@ -30,6 +34,7 @@ public final class ItemInstanceMapper {
             itemTypeName = t.getItemType() != null ? t.getItemType().getName() : null;
             damageDice = t.getDamageDice();
             damageType = t.getDamageType() != null ? t.getDamageType().getSlug() : null;
+            priceGold = t.getPriceGold();
         } else if (instance.getEquipmentItem() != null) {
             EquipmentItem e = instance.getEquipmentItem();
             itemTypeName = e.getCategory() != null
@@ -40,6 +45,7 @@ public final class ItemInstanceMapper {
                 damageDice = formatDice(ws.getDamageDiceFormula());
                 damageType = ws.getDamageType() != null ? ws.getDamageType().getSlug() : null;
             }
+            priceGold = goldFromCost(e.getCost());
             // mundane equipment carries no rarity
         } else if (instance.getMagicItem() != null) {
             MagicItem m = instance.getMagicItem();
@@ -47,6 +53,7 @@ public final class ItemInstanceMapper {
             itemTypeName = m.getType() != null
                     ? ruFirst(m.getType().getNameRu(), m.getType().getNameEn())
                     : null;
+            priceGold = goldFromCost(m.getCost());
         }
 
         return ItemInstanceResponse.builder()
@@ -63,11 +70,24 @@ public final class ItemInstanceMapper {
                 .itemTypeName(itemTypeName)
                 .damageDice(damageDice)
                 .damageType(damageType)
+                .priceGold(priceGold)
                 .build();
     }
 
     private static String ruFirst(String ru, String en) {
         return ru != null && !ru.isBlank() ? ru : en;
+    }
+
+    /**
+     * Converts a content-model {@link MoneyValue} (stored in copper) to gold. Content items
+     * price everything through their {@code copper_value}; 100 copper = 1 gold, matching the
+     * frontend {@code goldFromCopper} helper. Returns null when no price is known.
+     */
+    private static BigDecimal goldFromCost(MoneyValue cost) {
+        if (cost == null || cost.getCopperValue() == null) {
+            return null;
+        }
+        return cost.getCopperValue().movePointLeft(2);
     }
 
     /** Renders a {@link DiceFormula} as e.g. "1d8", "2d6+1"; prefers its raw text when present. */

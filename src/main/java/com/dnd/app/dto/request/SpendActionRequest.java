@@ -21,6 +21,6 @@ public class SpendActionRequest {
     private Slot slot;
 
     public enum Slot {
-        ACTION, BONUS_ACTION, REACTION
+        ACTION, BONUS_ACTION, LEGENDARY_ACTION, REACTION
     }
 }

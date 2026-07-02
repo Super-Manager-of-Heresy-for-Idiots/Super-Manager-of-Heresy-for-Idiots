@@ -7,6 +7,7 @@ import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
@@ -71,6 +72,7 @@ public class BattleService {
     private final ClassAbilityCombatService classAbilityCombatService;
     private final ItemInstanceRepository itemInstanceRepository;
     private final SpellRepository spellRepository;
+    private final SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper;
 
     // ================================ Lifecycle ================================
@@ -427,10 +429,13 @@ public class BattleService {
                 }
                 characterResponse.setAttacks(derived);
             }
+            SpellSlotsResponse slots = spellSlotService.getSlots(characterId, username);
+            boolean hasSlots = slots != null && slots.getLevels() != null && !slots.getLevels().isEmpty();
             builder.character(characterResponse)
                     .resources(characterResourceService.getResources(characterId, username))
                     .activeEffects(characterEffectService.getActiveEffects(characterId, username))
                     .classAbilities(classAbilityCombatService.listAbilities(current.getCharacter()))
+                    .spellSlots(hasSlots ? slots : null)
                     .tacticalActions(buildCharacterTacticalActions(characterResponse));
         } else if (current.getType() == CombatantType.MONSTER && current.getMonster() != null) {
             boolean gm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
@@ -629,7 +634,7 @@ public class BattleService {
         // multi-attack is not, so a duplicate/racing attack must not spend the action again.
         attacker = combatantRepository.findByIdForUpdate(attacker.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
-        if (Boolean.TRUE.equals(attacker.getActionUsed())) {
+        if (attacker.getActionSpent() >= attacker.getActionMax()) {
             throw new BadRequestException("The action has already been used this turn");
         }
 
@@ -680,7 +685,7 @@ public class BattleService {
             total = effectiveD20 + attack.attackBonus();
         }
 
-        attacker.setActionUsed(true);
+        attacker.setActionSpent(attacker.getActionSpent() + 1);
         combatantRepository.save(attacker);
 
         boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
@@ -754,7 +759,7 @@ public class BattleService {
         // Lock the actor row and reject a second action this turn (using an item spends the action).
         actor = combatantRepository.findByIdForUpdate(actor.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Actor combatant not found"));
-        if (Boolean.TRUE.equals(actor.getActionUsed())) {
+        if (actor.getActionSpent() >= actor.getActionMax()) {
             throw new BadRequestException("The action has already been used this turn");
         }
 
@@ -783,7 +788,7 @@ public class BattleService {
         applyDamageOrHeal(target, healed, user, campaignId);
         consumeOneUnit(item);
 
-        actor.setActionUsed(true);
+        actor.setActionSpent(actor.getActionSpent() + 1);
         combatantRepository.save(actor);
 
         log.info("Item used: battleId={}, actor={}, item='{}', target={}, healed={}, by={}",
@@ -870,7 +875,9 @@ public class BattleService {
         enforceControls(campaignId, user, combatant);
 
         SpendActionRequest.Slot slot = request.getSlot();
-        if (slot != SpendActionRequest.Slot.REACTION) {
+        // Actions and bonus actions are spent on the combatant's own turn. Reactions and legendary
+        // actions are spent in response to other combatants, so they may be spent at any time.
+        if (slot == SpendActionRequest.Slot.ACTION || slot == SpendActionRequest.Slot.BONUS_ACTION) {
             BattleCombatant active = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
             if (!active.getId().equals(combatant.getId())) {
                 throw new BadRequestException("An action or bonus action can only be spent on the combatant's own turn");
@@ -879,16 +886,22 @@ public class BattleService {
 
         switch (slot) {
             case ACTION -> {
-                if (Boolean.TRUE.equals(combatant.getActionUsed())) {
+                if (combatant.getActionSpent() >= combatant.getActionMax()) {
                     throw new BadRequestException("The action has already been used this turn");
                 }
-                combatant.setActionUsed(true);
+                combatant.setActionSpent(combatant.getActionSpent() + 1);
             }
             case BONUS_ACTION -> {
-                if (Boolean.TRUE.equals(combatant.getBonusActionUsed())) {
+                if (combatant.getBonusActionSpent() >= combatant.getBonusActionMax()) {
                     throw new BadRequestException("The bonus action has already been used this turn");
                 }
-                combatant.setBonusActionUsed(true);
+                combatant.setBonusActionSpent(combatant.getBonusActionSpent() + 1);
+            }
+            case LEGENDARY_ACTION -> {
+                if (combatant.getLegendaryActionSpent() >= combatant.getLegendaryActionMax()) {
+                    throw new BadRequestException("No legendary actions remain this turn");
+                }
+                combatant.setLegendaryActionSpent(combatant.getLegendaryActionSpent() + 1);
             }
             case REACTION -> {
                 if (Boolean.TRUE.equals(combatant.getReactionUsed())) {
@@ -935,6 +948,49 @@ public class BattleService {
         payload.put("delta", request.getDelta());
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
 
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * GM adjustment of a combatant's action-economy maxima (action / bonus action / legendary
+     * action). Models the pools growing with level or spells and grants legendary actions. Only the
+     * provided fields change; spent counters are clamped so they never exceed the new maximum.
+     */
+    @Transactional
+    public BattleResponse adjustActionEconomy(UUID campaignId, UUID battleId, UUID combatantId,
+                                              AdjustActionEconomyRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Action economy can only be adjusted in an active battle");
+
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+
+        if (request.getActionMax() != null) {
+            combatant.setActionMax(request.getActionMax());
+            combatant.setActionSpent(Math.min(nz(combatant.getActionSpent()), request.getActionMax()));
+        }
+        if (request.getBonusActionMax() != null) {
+            combatant.setBonusActionMax(request.getBonusActionMax());
+            combatant.setBonusActionSpent(Math.min(nz(combatant.getBonusActionSpent()), request.getBonusActionMax()));
+        }
+        if (request.getLegendaryActionMax() != null) {
+            combatant.setLegendaryActionMax(request.getLegendaryActionMax());
+            combatant.setLegendaryActionSpent(
+                    Math.min(nz(combatant.getLegendaryActionSpent()), request.getLegendaryActionMax()));
+        }
+        combatantRepository.save(combatant);
+
+        log.info("Action economy adjusted: battleId={}, combatant={}, action={}, bonus={}, legendary={}, by={}",
+                battleId, combatant.getDisplayName(), combatant.getActionMax(),
+                combatant.getBonusActionMax(), combatant.getLegendaryActionMax(), username);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId,
+                Map.of("battleId", battleId, "combatantId", combatantId), user.getId());
         return toResponse(battle, orderedCombatants(battleId));
     }
 
@@ -1348,16 +1404,25 @@ public class BattleService {
                 .currentHp(c.getCurrentHp())
                 .maxHp(c.getMaxHp())
                 .currentTurn(currentTurn)
-                .actionUsed(Boolean.TRUE.equals(c.getActionUsed()))
-                .bonusActionUsed(Boolean.TRUE.equals(c.getBonusActionUsed()))
+                .actionMax(nz(c.getActionMax()))
+                .actionSpent(nz(c.getActionSpent()))
+                .bonusActionMax(nz(c.getBonusActionMax()))
+                .bonusActionSpent(nz(c.getBonusActionSpent()))
+                .legendaryActionMax(nz(c.getLegendaryActionMax()))
+                .legendaryActionSpent(nz(c.getLegendaryActionSpent()))
                 .reactionUsed(Boolean.TRUE.equals(c.getReactionUsed()))
                 .build();
     }
 
-    /** Clears a combatant's action economy at the start of their turn. */
+    private static int nz(Integer value) {
+        return value != null ? value : 0;
+    }
+
+    /** Clears a combatant's spent action economy (action / bonus / legendary) at the start of their turn. */
     private void resetActionEconomy(BattleCombatant combatant) {
-        combatant.setActionUsed(false);
-        combatant.setBonusActionUsed(false);
+        combatant.setActionSpent(0);
+        combatant.setBonusActionSpent(0);
+        combatant.setLegendaryActionSpent(0);
         combatant.setReactionUsed(false);
         combatantRepository.save(combatant);
     }

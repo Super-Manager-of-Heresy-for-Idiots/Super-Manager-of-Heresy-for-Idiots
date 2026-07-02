@@ -31,8 +31,13 @@ public class BattleCombatantResponse {
     private Integer maxHp;
     private boolean currentTurn;
 
-    // Action economy for the current turn (true = already spent).
-    private boolean actionUsed;
-    private boolean bonusActionUsed;
+    // Action economy for the current turn. Actions and bonus actions are pools (max + how many
+    // spent this turn); legendary actions default to 0. Reactions stay a single per-round flag.
+    private int actionMax;
+    private int actionSpent;
+    private int bonusActionMax;
+    private int bonusActionSpent;
+    private int legendaryActionMax;
+    private int legendaryActionSpent;
     private boolean reactionUsed;
 }

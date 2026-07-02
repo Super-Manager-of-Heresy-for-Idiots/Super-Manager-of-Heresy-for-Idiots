@@ -47,6 +47,7 @@ class BattleServiceAttackTest {
     @Mock private ClassAbilityCombatService classAbilityCombatService;
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private SpellRepository spellRepository;
+    @Mock private SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -58,7 +59,7 @@ class BattleServiceAttackTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, objectMapper);
+                spellRepository, spellSlotService, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -127,7 +128,7 @@ class BattleServiceAttackTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, objectMapper);
+                spellRepository, spellSlotService, objectMapper);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

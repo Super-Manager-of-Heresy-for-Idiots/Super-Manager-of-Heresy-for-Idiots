@@ -27,6 +27,8 @@ public class CombatantTurnResponse {
     private List<CharacterActiveEffectResponse> activeEffects;
     /** Class features unlocked at the character's current level (progression-based actions). */
     private List<ClassAbilityResponse> classAbilities;
+    /** Spell slots (per level: max / expended / available). Null when the class has no slots. */
+    private SpellSlotsResponse spellSlots;
 
     // Populated when the active combatant is a MONSTER
     private MonsterResponse monster;
