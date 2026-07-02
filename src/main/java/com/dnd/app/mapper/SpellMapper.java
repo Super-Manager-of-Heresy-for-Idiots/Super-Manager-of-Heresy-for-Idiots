@@ -1,10 +1,12 @@
 package com.dnd.app.mapper;
 
+import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.SpellSchool;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSubclass;
 import com.dnd.app.domain.content.SpellComponent;
+import com.dnd.app.domain.content.SpellDamage;
 import com.dnd.app.dto.content.ContentLabelDto;
 import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.util.Localization;
@@ -40,10 +42,13 @@ public class SpellMapper {
                 .durationAmount(s.getDurationAmount())
                 .durationUnit(s.getDurationUnit())
                 .concentration(s.getConcentration())
+                .saveAbility(s.getSaveAbility())
+                .attackRoll(s.getAttackRoll())
                 .description(s.getDescription())
                 .higherLevels(s.getHigherLevels())
                 .packageId(s.getHomebrew() != null ? s.getHomebrew().getId() : null)
                 .components(s.getComponents().stream().map(this::mapComponent).toList())
+                .damage(s.getDamages().stream().map(d -> mapDamage(d, lang)).toList())
                 .classes(s.getClasses().stream()
                         .map(c -> classLabel(c, lang))
                         .sorted(Comparator.comparing(ContentLabelDto::getSlug,
@@ -62,6 +67,27 @@ public class SpellMapper {
                 .component(c.getComponentSlug())
                 .materialText(c.getMaterialText())
                 .consumed(c.getConsumed())
+                .build();
+    }
+
+    private SpellDetailResponse.DamageDto mapDamage(SpellDamage d, String lang) {
+        return SpellDetailResponse.DamageDto.builder()
+                .dice(d.getDice())
+                .damageType(damageTypeLabel(d.getDamageType(), lang))
+                .raw(d.getRaw())
+                .build();
+    }
+
+    private ContentLabelDto damageTypeLabel(DamageType dt, String lang) {
+        if (dt == null) {
+            return null;
+        }
+        return ContentLabelDto.builder()
+                .id(dt.getId())
+                .slug(dt.getSlug())
+                .name(Localization.pick(lang, dt.getNameRu(), dt.getNameEn(), fallback(dt.getNameEn(), dt.getNameRu())))
+                .nameRu(dt.getNameRu())
+                .nameEn(dt.getNameEn())
                 .build();
     }
 

@@ -3,6 +3,7 @@ package com.dnd.app.domain;
 import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSubclass;
 import com.dnd.app.domain.content.SpellComponent;
+import com.dnd.app.domain.content.SpellDamage;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -83,6 +84,20 @@ public class Spell {
     @Builder.Default
     private Boolean concentration = false;
 
+    @Column(name = "save_ability", columnDefinition = "text")
+    private String saveAbility;
+
+    @Column(name = "is_attack_roll", nullable = false)
+    @Builder.Default
+    private Boolean attackRoll = false;
+
+    @Column(name = "is_warning", nullable = false)
+    @Builder.Default
+    private Boolean warning = false;
+
+    @Column(name = "warning_reason", columnDefinition = "text")
+    private String warningReason;
+
     @Column(columnDefinition = "text")
     private String description;
 
@@ -100,6 +115,11 @@ public class Spell {
     @CollectionTable(name = "spell_component", joinColumns = @JoinColumn(name = "spell_id"))
     @Builder.Default
     private List<SpellComponent> components = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "spell_damage", joinColumns = @JoinColumn(name = "spell_id"))
+    @Builder.Default
+    private List<SpellDamage> damages = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

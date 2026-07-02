@@ -6,18 +6,23 @@ import com.dnd.app.dto.content.ContentDataQualityReport;
 import com.dnd.app.dto.content.ContentSeedSummary;
 import com.dnd.app.dto.content.ImportWarningResponse;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
+import com.dnd.app.dto.content.SpellWarningResponse;
+import com.dnd.app.dto.request.SpellResolutionRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.service.ClassRewardSeedService;
 import com.dnd.app.service.ContentDataAuditService;
 import com.dnd.app.service.ContentReferenceService;
 import com.dnd.app.service.RuntimeDataMigrationService;
+import com.dnd.app.service.SpellAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +47,7 @@ public class AdminContentController {
     private final ContentReferenceService contentReferenceService;
     private final ClassRewardSeedService classRewardSeedService;
     private final RuntimeDataMigrationService runtimeDataMigrationService;
+    private final SpellAdminService spellAdminService;
     private final Executor controllerTaskExecutor;
 
     // --- read views (same model runtime uses) ---
@@ -89,6 +95,28 @@ public class AdminContentController {
     public CompletableFuture<ResponseEntity<ApiResponse<List<ImportWarningResponse>>>> importWarnings() {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(contentDataAuditService.listImportWarnings())),
+                controllerTaskExecutor);
+    }
+
+    // --- spell resolution review (data-quality) ---
+
+    @GetMapping("/spell-warnings")
+    @Operation(summary = "List spells flagged for manual resolution review (unparsed save ability, etc.)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<SpellWarningResponse>>>> spellWarnings(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(spellAdminService.listWarnings(lang))),
+                controllerTaskExecutor);
+    }
+
+    @PatchMapping("/spells/{id}/resolution")
+    @Operation(summary = "Apply an admin correction of a spell's save ability / attack roll and clear its warning")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellWarningResponse>>> resolveSpell(
+            @PathVariable UUID id,
+            @RequestBody SpellResolutionRequest request,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(spellAdminService.resolve(id, request, lang))),
                 controllerTaskExecutor);
     }
 

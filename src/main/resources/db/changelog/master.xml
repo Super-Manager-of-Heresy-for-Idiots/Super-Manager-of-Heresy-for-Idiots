@@ -37,4 +37,13 @@
     <!-- User-submitted frontend diagnostics and optional bug descriptions. -->
     <include file="db/changelog/055-bug-reports.xml"/>
 
+    <!-- Structured spell damage (base dice + damage type), seeded from detected_damage[]. -->
+    <include file="db/changelog/056-spell-damage.xml"/>
+
+    <!-- Structured spell save ability + attack-roll flag, parsed from the RU description. -->
+    <include file="db/changelog/057-spell-save.xml"/>
+
+    <!-- Data-quality flag for spells whose auto-derived resolution needs manual review. -->
+    <include file="db/changelog/058-spell-warning.xml"/>
+
 </databaseChangeLog>

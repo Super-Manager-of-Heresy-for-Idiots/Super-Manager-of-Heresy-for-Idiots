@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Data-quality flag: a spell whose auto-derived resolution is uncertain and needs a
+         human to confirm/fix (e.g. the description mentions a saving throw but the ability
+         could not be parsed). warning_reason carries a stable code the admin UI localises.
+         Set once by DndContentLoader; cleared by the admin review console. -->
+    <changeSet id="058-spell-warning" author="claude">
+        <addColumn tableName="spell">
+            <column name="is_warning" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="warning_reason" type="text"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

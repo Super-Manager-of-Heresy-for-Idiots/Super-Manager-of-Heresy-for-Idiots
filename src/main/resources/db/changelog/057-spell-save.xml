@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Structured spell resolution: which ability the target saves with (canonical
+         STRENGTH..CHARISMA code, null when the spell forces no save) and whether the
+         spell uses an attack roll. The DC itself is NOT stored: it is computed per
+         caster (8 + proficiency + spellcasting modifier). Populated idempotently by
+         DndContentLoader from the RU description. -->
+    <changeSet id="057-spell-save-attack" author="claude">
+        <addColumn tableName="spell">
+            <column name="save_ability" type="text"/>
+            <column name="is_attack_roll" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

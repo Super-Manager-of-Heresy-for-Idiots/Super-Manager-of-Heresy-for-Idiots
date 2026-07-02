@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Structured spell damage: base dice + damage type per spell, mirrored from the
+         normalized source's detected_damage[]. Child of spell (@ElementCollection),
+         mirrors the spell_component shape. Populated idempotently by DndContentLoader. -->
+    <changeSet id="056-spell-damage" author="claude">
+        <createTable tableName="spell_damage">
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dice" type="text"/>
+            <column name="damage_type_id" type="uuid"/>
+            <column name="raw" type="text"/>
+        </createTable>
+
+        <createIndex tableName="spell_damage" indexName="idx_spell_damage_spell_id">
+            <column name="spell_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint constraintName="fk_spell_damage_spell"
+                                 baseTableName="spell_damage"
+                                 baseColumnNames="spell_id"
+                                 referencedTableName="spell"
+                                 referencedColumnNames="spell_id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_spell_damage_damage_type"
+                                 baseTableName="spell_damage"
+                                 baseColumnNames="damage_type_id"
+                                 referencedTableName="damage_type"
+                                 referencedColumnNames="damage_type_id"
+                                 onDelete="SET NULL"/>
+    </changeSet>
+</databaseChangeLog>

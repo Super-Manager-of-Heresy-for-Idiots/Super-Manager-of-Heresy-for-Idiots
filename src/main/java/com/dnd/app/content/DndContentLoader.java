@@ -17,9 +17,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * One-time importer for the normalized D&D PHB content bundle in
@@ -38,6 +42,21 @@ public class DndContentLoader implements ApplicationRunner {
 
     private static final String CORE_MOD_SLUG = "phb-2024-core";
     private static final Set<String> SPELL_COMPONENTS = Set.of("verbal", "somatic", "material");
+
+    // Spell resolution parsed from the RU description: the target's saving-throw ability
+    // (genitive stem right after "спасбросок …") and whether an attack roll is used
+    // ("… атаку заклинанием"). The save DC is never parsed — it is derived per caster
+    // (8 + proficiency + spellcasting modifier), so only the ability is structured here.
+    private static final Pattern SPELL_SAVE_PATTERN = Pattern.compile(
+            "спасброс\\p{L}*\\s+(Сил|Ловкост|Телосложени|Интеллект|Мудрост|Харизм)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern SPELL_ATTACK_PATTERN = Pattern.compile(
+            "атак\\p{L}*\\s+заклинани",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    // warning_reason code raised when a spell clearly involves a saving throw but the
+    // target ability could not be parsed automatically — needs a human to set it.
+    private static final String WARN_SAVE_UNRESOLVED = "SAVE_UNRESOLVED";
     private static final Set<String> EQUIPMENT_ENTRY_TYPES =
             Set.of("equipment", "equipment_choice_ref", "currency", "raw");
     private static final Map<String, Integer> RARITY_SORT = Map.of(
@@ -122,6 +141,30 @@ public class DndContentLoader implements ApplicationRunner {
         // row-count guard) so they populate both a fresh import and an existing DB
         // whose base content was loaded before this step existed.
         loadClassMechanics();
+
+        // Backfill structured spell damage (dice + damage type) from the normalized
+        // source's detected_damage[]. Idempotent (own row-count guard) so it populates
+        // both a fresh import and an existing DB whose spells were loaded before this
+        // step existed. Never touches homebrew.
+        try {
+            loadSpellDamage();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped spell damage backfill: operation=spell-damage-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
+
+        // Backfill structured spell resolution (save ability + attack-roll flag) parsed
+        // from the RU description. Idempotent (own guard); never touches homebrew.
+        try {
+            loadSpellSaves();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped spell save backfill: operation=spell-save-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
 
         // Backfill reward groups derivable from the imported data (subclass-choice
         // groups). Idempotent and safe to run on every startup; never touches homebrew.
@@ -492,6 +535,140 @@ public class DndContentLoader implements ApplicationRunner {
             }
         }
         log.info("Loaded {} spells", spells.size());
+    }
+
+    /**
+     * Idempotently seeds {@code spell_damage} from each spell's {@code detected_damage[]}
+     * in the normalized source. Runs on every startup but no-ops once the table has rows,
+     * so it fills a fresh import and back-fills an existing DB. Spell/damage-type ids are
+     * resolved from the in-memory maps when available (fresh import) and fall back to a
+     * slug lookup against the DB (existing import).
+     */
+    private void loadSpellDamage() {
+        Integer existing = jdbc.queryForObject("SELECT count(*) FROM spell_damage", Integer.class);
+        if (existing != null && existing > 0) {
+            return;
+        }
+        int inserted = 0;
+        for (JsonNode spell : read("spells.normalized.json")) {
+            UUID spellId = resolveSpellId(txt(spell, "slug"));
+            if (spellId == null) {
+                continue;
+            }
+            for (JsonNode dmg : array(spell, "detected_damage")) {
+                jdbc.update("INSERT INTO spell_damage(spell_id, dice, damage_type_id, raw) VALUES (?,?,?,?)",
+                        spellId, normDice(txt(dmg, "dice")),
+                        resolveDamageTypeId(txt(dmg, "damage_type_slug")), txt(dmg, "raw"));
+                inserted++;
+            }
+        }
+        log.info("Seeded {} spell_damage rows", inserted);
+    }
+
+    private UUID resolveSpellId(String slug) {
+        if (slug == null) {
+            return null;
+        }
+        UUID cached = spells.get(slug);
+        if (cached != null) {
+            return cached;
+        }
+        List<UUID> ids = jdbc.queryForList("SELECT spell_id FROM spell WHERE slug = ?", UUID.class, slug);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+
+    private UUID resolveDamageTypeId(String slug) {
+        if (slug == null) {
+            return null;
+        }
+        UUID cached = damageTypes.get(slug);
+        if (cached != null) {
+            return cached;
+        }
+        List<UUID> ids = jdbc.queryForList("SELECT damage_type_id FROM damage_type WHERE slug = ?", UUID.class, slug);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+
+    /** Canonicalises Cyrillic dice notation ("1к6") to the language-neutral "1d6" form. */
+    private static String normDice(String dice) {
+        return dice == null ? null : dice.replace('к', 'd').replace('К', 'd');
+    }
+
+    /**
+     * Idempotently backfills each spell's saving-throw ability + attack-roll flag,
+     * parsed from the RU description. No-ops once any spell already carries a save or
+     * attack, so it runs once for a fresh import and once for an existing DB. The save
+     * DC is intentionally not stored — it is derived per caster.
+     */
+    private void loadSpellSaves() {
+        Integer marked = jdbc.queryForObject(
+                "SELECT count(*) FROM spell WHERE save_ability IS NOT NULL OR is_attack_roll = TRUE", Integer.class);
+        if (marked != null && marked > 0) {
+            return;
+        }
+        int saves = 0;
+        int attacks = 0;
+        int warnings = 0;
+        for (JsonNode spell : read("spells.normalized.json")) {
+            String description = txt(spell, "description");
+            String save = detectSaveAbility(description);
+            boolean attack = detectAttackRoll(description);
+            // Flag for manual review: the text clearly names a saving throw but the
+            // ability could not be parsed (the unresolved tail of the heuristic).
+            boolean needsReview = save == null && mentionsSave(description);
+            String reason = needsReview ? WARN_SAVE_UNRESOLVED : null;
+            if (save == null && !attack && !needsReview) {
+                continue;
+            }
+            UUID spellId = resolveSpellId(txt(spell, "slug"));
+            if (spellId == null) {
+                continue;
+            }
+            jdbc.update("UPDATE spell SET save_ability = ?, is_attack_roll = ?, is_warning = ?, warning_reason = ? "
+                            + "WHERE spell_id = ?",
+                    save, attack, needsReview, reason, spellId);
+            if (save != null) {
+                saves++;
+            }
+            if (attack) {
+                attacks++;
+            }
+            if (needsReview) {
+                warnings++;
+            }
+        }
+        log.info("Backfilled spell resolution: {} with save ability, {} with attack roll, {} flagged for review",
+                saves, attacks, warnings);
+    }
+
+    /** True when the text clearly references a saving throw (used to flag unresolved saves). */
+    private static boolean mentionsSave(String description) {
+        return description != null && description.toLowerCase(Locale.ROOT).contains("спасброс");
+    }
+
+    /** Canonical STRENGTH..CHARISMA code of the first saving throw named in the text, or null. */
+    private static String detectSaveAbility(String description) {
+        if (description == null) {
+            return null;
+        }
+        Matcher m = SPELL_SAVE_PATTERN.matcher(description);
+        if (!m.find()) {
+            return null;
+        }
+        return switch (m.group(1).toLowerCase(Locale.ROOT)) {
+            case "сил" -> "STRENGTH";
+            case "ловкост" -> "DEXTERITY";
+            case "телосложени" -> "CONSTITUTION";
+            case "интеллект" -> "INTELLIGENCE";
+            case "мудрост" -> "WISDOM";
+            case "харизм" -> "CHARISMA";
+            default -> null;
+        };
+    }
+
+    /** True when the spell resolves with an attack roll ("… атаку заклинанием"). */
+    private static boolean detectAttackRoll(String description) {
+        return description != null && SPELL_ATTACK_PATTERN.matcher(description).find();
     }
 
     // ------------------------------------------------------------------ species

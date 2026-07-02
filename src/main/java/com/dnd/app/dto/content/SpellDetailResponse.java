@@ -45,6 +45,13 @@ public class SpellDetailResponse {
     private String durationUnit;
     private Boolean concentration;
 
+    @Schema(description = "Ability the target saves with (STRENGTH..CHARISMA); null if the spell forces no save. "
+            + "The DC is not stored — it is computed per caster (8 + proficiency + spellcasting modifier).")
+    private String saveAbility;
+
+    @Schema(description = "True when the spell resolves with an attack roll rather than a saving throw")
+    private Boolean attackRoll;
+
     private String description;
     private String higherLevels;
 
@@ -52,6 +59,9 @@ public class SpellDetailResponse {
     private UUID packageId;
 
     private List<ComponentDto> components;
+
+    @Schema(description = "Structured base damage entries (dice + type) detected for this spell")
+    private List<DamageDto> damage;
 
     @Schema(description = "Classes that have this spell on their list")
     private List<ContentLabelDto> classes;
@@ -69,5 +79,19 @@ public class SpellDetailResponse {
         private String component;
         private String materialText;
         private Boolean consumed;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "SpellDamage", description = "One structured base-damage entry of a spell")
+    public static class DamageDto {
+        @Schema(example = "1d6", description = "Dice formula, canonicalised to NdM")
+        private String dice;
+        @Schema(description = "Damage type reference (null when unresolved)")
+        private ContentLabelDto damageType;
+        @Schema(description = "Original raw damage text from the source")
+        private String raw;
     }
 }

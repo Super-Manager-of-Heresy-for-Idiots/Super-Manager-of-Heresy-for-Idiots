@@ -37,4 +37,13 @@ public interface SpellRepository extends JpaRepository<Spell, UUID> {
                                        @Param("school") String school);
 
     List<Spell> findByIdIn(Set<UUID> ids);
+
+    /** Spells flagged for manual resolution review, school eagerly fetched for the admin list. */
+    @Query("""
+            SELECT s FROM Spell s
+            LEFT JOIN FETCH s.school
+            WHERE s.warning = true
+            ORDER BY s.level ASC, s.nameRu ASC
+            """)
+    List<Spell> findWarnings();
 }
