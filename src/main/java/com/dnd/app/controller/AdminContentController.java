@@ -6,7 +6,9 @@ import com.dnd.app.dto.content.ContentDataQualityReport;
 import com.dnd.app.dto.content.ContentSeedSummary;
 import com.dnd.app.dto.content.ImportWarningResponse;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
+import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.dto.content.SpellWarningResponse;
+import com.dnd.app.dto.request.SpellEditRequest;
 import com.dnd.app.dto.request.SpellResolutionRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.service.ClassRewardSeedService;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -117,6 +120,17 @@ public class AdminContentController {
             @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(spellAdminService.resolve(id, request, lang))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/spells/{id}")
+    @Operation(summary = "Full admin edit of a spell's resolution: damage, healing, save/attack, ability check, warning")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellDetailResponse>>> updateSpell(
+            @PathVariable UUID id,
+            @RequestBody SpellEditRequest request,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(spellAdminService.update(id, request, lang), "Заклинание обновлено")),
                 controllerTaskExecutor);
     }
 

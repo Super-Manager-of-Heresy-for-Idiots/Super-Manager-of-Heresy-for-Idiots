@@ -66,6 +66,12 @@ public class SpellDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    @Schema(description = "True when the spell's auto-derived resolution was flagged for manual admin review")
+    private Boolean warning;
+
+    @Schema(description = "Machine code for why the spell was flagged (e.g. SAVE_UNRESOLVED); null when not flagged")
+    private String warningReason;
+
     private List<ComponentDto> components;
 
     @Schema(description = "Structured base damage entries (dice + type) detected for this spell")

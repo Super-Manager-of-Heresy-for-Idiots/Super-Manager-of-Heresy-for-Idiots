@@ -50,6 +50,8 @@ public class SpellMapper {
                 .description(s.getDescription())
                 .higherLevels(s.getHigherLevels())
                 .packageId(s.getHomebrew() != null ? s.getHomebrew().getId() : null)
+                .warning(s.getWarning())
+                .warningReason(s.getWarningReason())
                 .components(s.getComponents().stream().map(this::mapComponent).toList())
                 .damage(s.getDamages().stream().map(d -> mapDamage(d, lang)).toList())
                 .healing(s.getHealings().stream().map(this::mapHealing).toList())
