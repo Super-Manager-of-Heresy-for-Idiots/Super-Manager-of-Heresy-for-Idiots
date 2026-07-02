@@ -403,6 +403,38 @@ public class CampaignService {
                 .orElse(null);
     }
 
+    /**
+     * Read-only projection for map-service. ADMINs and campaign GMs can manage maps and move any
+     * token; regular campaign members can view maps and move tokens for their own characters.
+     */
+    @Transactional(readOnly = true)
+    public CampaignAccessResponse getCampaignAccess(UUID campaignId, UUID userId) {
+        findCampaign(campaignId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        boolean gm = user.getRole() == Role.ADMIN || isGmInCampaign(campaignId, userId);
+        CampaignMember membership = getMembership(campaignId, userId);
+        boolean canView = gm || membership != null;
+
+        List<UUID> movableCharacterIds = List.of();
+        if (canView && !gm) {
+            movableCharacterIds = playerCharacterRepository.findByCampaignIdAndOwnerId(campaignId, userId)
+                    .stream()
+                    .map(PlayerCharacter::getId)
+                    .toList();
+        }
+
+        return CampaignAccessResponse.builder()
+                .campaignId(campaignId)
+                .userId(userId)
+                .canView(canView)
+                .canManageMaps(gm)
+                .canMoveAnyToken(gm)
+                .movableCharacterIds(movableCharacterIds)
+                .build();
+    }
+
     // --- Access enforcement helpers ---
 
     public void enforceGmOrAdmin(Campaign campaign, User user) {

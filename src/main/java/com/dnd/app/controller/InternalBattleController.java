@@ -1,6 +1,5 @@
 package com.dnd.app.controller;
 
-import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleAccessResponse;
 import com.dnd.app.dto.response.CombatantReferenceResponse;
 import com.dnd.app.service.BattleService;
@@ -34,21 +33,21 @@ public class InternalBattleController {
 
     @GetMapping("/access")
     @Operation(summary = "What a user may do in this battle (for map-service token control)")
-    public ResponseEntity<ApiResponse<BattleAccessResponse>> getBattleAccess(
+    public ResponseEntity<BattleAccessResponse> getBattleAccess(
             @PathVariable UUID campaignId,
             @PathVariable UUID battleId,
             @RequestParam UUID userId) {
         BattleAccessResponse data = battleService.getBattleAccess(campaignId, battleId, userId);
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return ResponseEntity.ok(data);
     }
 
     @GetMapping("/combatants/{combatantId}/reference")
     @Operation(summary = "Safe combatant identity to create a token-combat link from")
-    public ResponseEntity<ApiResponse<CombatantReferenceResponse>> getCombatantReference(
+    public ResponseEntity<CombatantReferenceResponse> getCombatantReference(
             @PathVariable UUID campaignId,
             @PathVariable UUID battleId,
             @PathVariable UUID combatantId) {
         CombatantReferenceResponse data = battleService.getCombatantReference(campaignId, battleId, combatantId);
-        return ResponseEntity.ok(ApiResponse.ok(data));
+        return ResponseEntity.ok(data);
     }
 }

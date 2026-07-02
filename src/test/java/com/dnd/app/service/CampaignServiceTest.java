@@ -377,4 +377,71 @@ class CampaignServiceTest {
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("You have been kicked from this campaign");
     }
+
+    @Test
+    @DisplayName("Map-service access: GM can view, manage maps and move any token")
+    void getCampaignAccess_gmCanManageMaps() {
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creatorUser));
+        when(campaignMemberRepository.findByCampaignIdAndUserId(campaignId, creatorId))
+                .thenReturn(Optional.of(creatorMember));
+
+        CampaignAccessResponse response = campaignService.getCampaignAccess(campaignId, creatorId);
+
+        assertThat(response.getCampaignId()).isEqualTo(campaignId);
+        assertThat(response.getUserId()).isEqualTo(creatorId);
+        assertThat(response.isCanView()).isTrue();
+        assertThat(response.isCanManageMaps()).isTrue();
+        assertThat(response.isCanMoveAnyToken()).isTrue();
+        assertThat(response.getMovableCharacterIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Map-service access: player can view and move own campaign characters only")
+    void getCampaignAccess_playerCanViewAndMoveOwnCharacters() {
+        UUID characterId = UUID.randomUUID();
+        PlayerCharacter character = PlayerCharacter.builder()
+                .id(characterId)
+                .name("Hero")
+                .owner(targetUser)
+                .campaign(campaign)
+                .build();
+
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(targetUser));
+        when(campaignMemberRepository.findByCampaignIdAndUserId(campaignId, targetId))
+                .thenReturn(Optional.of(targetMember));
+        when(playerCharacterRepository.findByCampaignIdAndOwnerId(campaignId, targetId))
+                .thenReturn(List.of(character));
+
+        CampaignAccessResponse response = campaignService.getCampaignAccess(campaignId, targetId);
+
+        assertThat(response.isCanView()).isTrue();
+        assertThat(response.isCanManageMaps()).isFalse();
+        assertThat(response.isCanMoveAnyToken()).isFalse();
+        assertThat(response.getMovableCharacterIds()).containsExactly(characterId);
+    }
+
+    @Test
+    @DisplayName("Map-service access: non-member cannot view or manage maps")
+    void getCampaignAccess_nonMemberCannotView() {
+        User stranger = User.builder()
+                .id(UUID.randomUUID())
+                .username("stranger")
+                .role(Role.PLAYER)
+                .build();
+
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(campaign));
+        when(userRepository.findById(stranger.getId())).thenReturn(Optional.of(stranger));
+        when(campaignMemberRepository.findByCampaignIdAndUserId(campaignId, stranger.getId()))
+                .thenReturn(Optional.empty());
+
+        CampaignAccessResponse response = campaignService.getCampaignAccess(campaignId, stranger.getId());
+
+        assertThat(response.isCanView()).isFalse();
+        assertThat(response.isCanManageMaps()).isFalse();
+        assertThat(response.isCanMoveAnyToken()).isFalse();
+        assertThat(response.getMovableCharacterIds()).isEmpty();
+        verify(playerCharacterRepository, never()).findByCampaignIdAndOwnerId(any(), any());
+    }
 }
