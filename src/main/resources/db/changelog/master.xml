@@ -46,4 +46,13 @@
     <!-- Data-quality flag for spells whose auto-derived resolution needs manual review. -->
     <include file="db/changelog/058-spell-warning.xml"/>
 
+    <!-- Summon-spell -> bestiary statblock links (Find Familiar, Phantom Steed, Summon X). -->
+    <include file="db/changelog/059-spell-summon-monster.xml"/>
+
+    <!-- Structured spell healing (dice / flat HP restored), parsed from the RU description. -->
+    <include file="db/changelog/060-spell-healing.xml"/>
+
+    <!-- Ability-check resolution (проверка Интеллекта (Расследование)): ability + skill. -->
+    <include file="db/changelog/061-spell-check.xml"/>
+
 </databaseChangeLog>

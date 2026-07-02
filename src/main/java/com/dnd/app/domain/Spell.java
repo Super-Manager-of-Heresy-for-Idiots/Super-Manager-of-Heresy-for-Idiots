@@ -4,6 +4,7 @@ import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.content.ContentSubclass;
 import com.dnd.app.domain.content.SpellComponent;
 import com.dnd.app.domain.content.SpellDamage;
+import com.dnd.app.domain.content.SpellHealing;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -91,6 +92,12 @@ public class Spell {
     @Builder.Default
     private Boolean attackRoll = false;
 
+    @Column(name = "check_ability", columnDefinition = "text")
+    private String checkAbility;
+
+    @Column(name = "check_skill", columnDefinition = "text")
+    private String checkSkill;
+
     @Column(name = "is_warning", nullable = false)
     @Builder.Default
     private Boolean warning = false;
@@ -121,6 +128,11 @@ public class Spell {
     @Builder.Default
     private List<SpellDamage> damages = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "spell_healing", joinColumns = @JoinColumn(name = "spell_id"))
+    @Builder.Default
+    private List<SpellHealing> healings = new ArrayList<>();
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "spell_class",
@@ -138,4 +150,19 @@ public class Spell {
     )
     @Builder.Default
     private Set<ContentSubclass> subclasses = new HashSet<>();
+
+    /**
+     * Bestiary statblocks this summon/conjuration spell summons or whose stats it
+     * uses (e.g. Find Familiar's beast forms, Phantom Steed -> Riding Horse). Empty
+     * for non-summon spells. Read-only through the domain model; the join rows and
+     * their provenance columns are populated by the 059 migration, not by JPA.
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "spell_summon_monster",
+            joinColumns = @JoinColumn(name = "spell_id"),
+            inverseJoinColumns = @JoinColumn(name = "monster_id")
+    )
+    @Builder.Default
+    private Set<Monster> summonedMonsters = new HashSet<>();
 }

@@ -1,0 +1,13 @@
+spell_slug,monster_slug,relation_type,source_url,is_optional
+find-familiar,bat,summons_or_uses_statblock,https://next.dnd.su/bestiary/19839-bat,true
+find-familiar,cat,summons_or_uses_statblock,https://next.dnd.su/bestiary/19979-cat,true
+find-familiar,frog,summons_or_uses_statblock,https://next.dnd.su/bestiary/19987-frog,true
+find-familiar,hawk,summons_or_uses_statblock,https://next.dnd.su/bestiary/21391-hawk,true
+find-familiar,lizard,summons_or_uses_statblock,https://next.dnd.su/bestiary/21432-lizard,true
+find-familiar,octopus,summons_or_uses_statblock,https://next.dnd.su/bestiary/21478-octopus,true
+find-familiar,owl,summons_or_uses_statblock,https://next.dnd.su/bestiary/21484-owl,true
+find-familiar,rat,summons_or_uses_statblock,https://next.dnd.su/bestiary/21518-rat,true
+find-familiar,raven,summons_or_uses_statblock,https://next.dnd.su/bestiary/21519-raven,true
+find-familiar,spider,summons_or_uses_statblock,https://next.dnd.su/bestiary/21562-spider,true
+find-familiar,weasel,summons_or_uses_statblock,https://next.dnd.su/bestiary/21620-weasel,true
+phantom-steed,riding-horse,summons_or_uses_statblock,https://next.dnd.su/bestiary/21526-riding-horse,false

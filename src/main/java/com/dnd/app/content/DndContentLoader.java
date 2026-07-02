@@ -54,6 +54,31 @@ public class DndContentLoader implements ApplicationRunner {
             "атак\\p{L}*\\s+заклинани",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
+    // Ability CHECK resolution ("проверке Интеллекта (Расследование)"): the contested
+    // ability (genitive stem) and, optionally, the skill named in parentheses. Unlike a
+    // saving throw, a check benefits from the creature's proficiency/skill bonuses, so the
+    // skill is captured too (raw RU text — it may be a choice, "Восприятие или Выживание").
+    private static final Pattern SPELL_CHECK_PATTERN = Pattern.compile(
+            "проверк\\p{L}*\\s+(Сил|Ловкост|Телосложени|Интеллект|Мудрост|Харизм)\\p{L}*"
+                    + "(?:\\s*\\(([^)]{1,60})\\))?",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    // Healing ("восстанавливает … Хиты"): anchor on the VERB form (…ет/…ют/…я), then read a
+    // short window and pick out a dice formula ("2к8") or a flat amount ("70 Хитов"). The
+    // "+ spellcasting modifier" tail is derived per caster, so it is not stored — only
+    // dice/flat + raw. Restricting to verb forms excludes the participle "восстанавливаемый"
+    // ("restorable", used in crafting costs), and the negation guard below drops anti-heal
+    // clauses ("не может восстанавливать Хиты").
+    private static final Pattern SPELL_HEAL_ANCHOR = Pattern.compile(
+            "восстанавлива(?:ет|ют|я)\\p{L}*",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern HEAL_NEGATION = Pattern.compile(
+            "(?:^|[^\\p{L}])не[^\\p{L}]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern HEAL_DICE = Pattern.compile("(\\d+)\\s*[кКkK]\\s*(\\d+)");
+    private static final Pattern HEAL_FLAT = Pattern.compile(
+            "(\\d+)\\s*Хит", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     // warning_reason code raised when a spell clearly involves a saving throw but the
     // target ability could not be parsed automatically — needs a human to set it.
     private static final String WARN_SAVE_UNRESOLVED = "SAVE_UNRESOLVED";
@@ -162,6 +187,28 @@ public class DndContentLoader implements ApplicationRunner {
         } catch (DataAccessException e) {
             log.warn(
                     "DndContentLoader#run skipped spell save backfill: operation=spell-save-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
+
+        // Backfill structured spell healing (dice / flat HP) parsed from the RU description.
+        // Idempotent (own guard); never touches homebrew.
+        try {
+            loadSpellHealing();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped spell healing backfill: operation=spell-healing-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
+
+        // Backfill ability-check resolution (check ability + skill) parsed from the RU
+        // description. Idempotent (own guard); never touches homebrew.
+        try {
+            loadSpellChecks();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped spell check backfill: operation=spell-check-backfill, modSlug={}",
                     CORE_MOD_SLUG,
                     e);
         }
@@ -652,10 +699,17 @@ public class DndContentLoader implements ApplicationRunner {
             return null;
         }
         Matcher m = SPELL_SAVE_PATTERN.matcher(description);
-        if (!m.find()) {
-            return null;
-        }
-        return switch (m.group(1).toLowerCase(Locale.ROOT)) {
+        return m.find() ? abilityCode(m.group(1)) : null;
+    }
+
+    /** True when the spell resolves with an attack roll ("… атаку заклинанием"). */
+    private static boolean detectAttackRoll(String description) {
+        return description != null && SPELL_ATTACK_PATTERN.matcher(description).find();
+    }
+
+    /** Maps a genitive ability stem ("Интеллект", "Ловкост", …) to its canonical code. */
+    private static String abilityCode(String stem) {
+        return switch (stem.toLowerCase(Locale.ROOT)) {
             case "сил" -> "STRENGTH";
             case "ловкост" -> "DEXTERITY";
             case "телосложени" -> "CONSTITUTION";
@@ -666,9 +720,118 @@ public class DndContentLoader implements ApplicationRunner {
         };
     }
 
-    /** True when the spell resolves with an attack roll ("… атаку заклинанием"). */
-    private static boolean detectAttackRoll(String description) {
-        return description != null && SPELL_ATTACK_PATTERN.matcher(description).find();
+    /**
+     * Idempotently backfills each spell's ability-CHECK resolution (contested ability +
+     * skill) parsed from the RU description, e.g. "проверке Интеллекта (Расследование)".
+     * No-ops once any spell already carries a check ability, so it runs once for a fresh
+     * import and once for an existing DB. The DC is derived per caster, so it is not stored.
+     */
+    private void loadSpellChecks() {
+        Integer marked = jdbc.queryForObject(
+                "SELECT count(*) FROM spell WHERE check_ability IS NOT NULL", Integer.class);
+        if (marked != null && marked > 0) {
+            return;
+        }
+        int checks = 0;
+        for (JsonNode spell : read("spells.normalized.json")) {
+            String[] check = detectCheck(txt(spell, "description"));
+            if (check == null) {
+                continue;
+            }
+            UUID spellId = resolveSpellId(txt(spell, "slug"));
+            if (spellId == null) {
+                continue;
+            }
+            jdbc.update("UPDATE spell SET check_ability = ?, check_skill = ? WHERE spell_id = ?",
+                    check[0], check[1], spellId);
+            checks++;
+        }
+        log.info("Backfilled {} spells with ability-check resolution", checks);
+    }
+
+    /** {ability code, skill raw or null} of the first ability check named in the text, or null. */
+    private static String[] detectCheck(String description) {
+        if (description == null) {
+            return null;
+        }
+        Matcher m = SPELL_CHECK_PATTERN.matcher(description);
+        if (!m.find()) {
+            return null;
+        }
+        String code = abilityCode(m.group(1));
+        if (code == null) {
+            return null;
+        }
+        String skill = m.group(2) != null ? m.group(2).trim() : null;
+        return new String[]{code, skill};
+    }
+
+    /**
+     * Idempotently seeds {@code spell_healing} from each spell's RU description
+     * ("восстанавливает … Хиты"). No-ops once the table has rows, so it fills a fresh
+     * import and back-fills an existing DB. Only the dice formula and/or flat amount are
+     * kept (plus the raw phrase); the per-caster "+ spellcasting modifier" tail is not.
+     */
+    private void loadSpellHealing() {
+        Integer existing = jdbc.queryForObject("SELECT count(*) FROM spell_healing", Integer.class);
+        if (existing != null && existing > 0) {
+            return;
+        }
+        int inserted = 0;
+        for (JsonNode spell : read("spells.normalized.json")) {
+            Object[] heal = detectHealing(txt(spell, "description"));
+            if (heal == null) {
+                continue;
+            }
+            UUID spellId = resolveSpellId(txt(spell, "slug"));
+            if (spellId == null) {
+                continue;
+            }
+            jdbc.update("INSERT INTO spell_healing(spell_id, dice, flat, raw) VALUES (?,?,?,?)",
+                    spellId, (String) heal[0], (Integer) heal[1], (String) heal[2]);
+            inserted++;
+        }
+        log.info("Seeded {} spell_healing rows", inserted);
+    }
+
+    /**
+     * {dice (NdM) or null, flat (Integer) or null, raw phrase} for the first healing clause
+     * in the text, or null when the spell restores no hit points. Anchors on the verb
+     * "восстанавлив…" and requires "Хит" nearby to avoid non-healing uses of the verb.
+     */
+    private static Object[] detectHealing(String description) {
+        if (description == null) {
+            return null;
+        }
+        Matcher anchor = SPELL_HEAL_ANCHOR.matcher(description);
+        while (anchor.find()) {
+            // Skip negated clauses: "… не может восстанавливать Хиты" is anti-heal, not a heal.
+            String before = description.substring(Math.max(0, anchor.start() - 16), anchor.start());
+            if (HEAL_NEGATION.matcher(before).find()) {
+                continue;
+            }
+            int windowEnd = Math.min(description.length(), anchor.end() + 140);
+            String window = description.substring(anchor.end(), windowEnd);
+            if (!window.toLowerCase(Locale.ROOT).contains("хит")) {
+                continue;
+            }
+            String dice = null;
+            Integer flat = null;
+            Matcher dm = HEAL_DICE.matcher(window);
+            if (dm.find()) {
+                dice = dm.group(1) + "d" + dm.group(2);
+            } else {
+                Matcher fm = HEAL_FLAT.matcher(window);
+                if (fm.find()) {
+                    flat = Integer.valueOf(fm.group(1));
+                }
+            }
+            int dot = window.indexOf('.');
+            String tail = dot >= 0 ? window.substring(0, dot) : window;
+            String raw = (description.substring(anchor.start(), anchor.end()) + tail).trim();
+            return new Object[]{dice, flat, raw};
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ species

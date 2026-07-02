@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Structured spell healing: the hit points a spell restores, mirroring spell_damage
+         but with no damage type. A spell can heal via dice ("восстанавливает 2к8 Хитов",
+         stored canonicalised as NdM), a flat amount ("восстанавливая 70 Хитов"), or neither
+         ("восстанавливает все свои Хиты"), in which case only the raw phrase is kept. The
+         "+ spellcasting modifier" tail is NOT stored: like the save DC it is derived per
+         caster. Child of spell (@ElementCollection). Populated idempotently by
+         DndContentLoader from the RU description. Never touches homebrew. -->
+    <changeSet id="060-spell-healing" author="claude">
+        <createTable tableName="spell_healing">
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dice" type="text"/>
+            <column name="flat" type="integer"/>
+            <column name="raw" type="text"/>
+        </createTable>
+
+        <createIndex tableName="spell_healing" indexName="idx_spell_healing_spell_id">
+            <column name="spell_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint constraintName="fk_spell_healing_spell"
+                                 baseTableName="spell_healing"
+                                 baseColumnNames="spell_id"
+                                 referencedTableName="spell"
+                                 referencedColumnNames="spell_id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

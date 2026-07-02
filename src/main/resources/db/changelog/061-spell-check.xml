@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Structured ability-check resolution: some spells are resisted or contested with an
+         ability CHECK (проверка) rather than a saving throw or attack roll, e.g.
+         "преуспев в проверке Интеллекта (Расследование)". Unlike a save, a check benefits
+         from the creature's proficiency/skill bonuses ("баффы от доп статов"), so both the
+         ability (canonical STRENGTH..CHARISMA code) and the associated skill are stored.
+         check_skill keeps the raw RU skill text because it may be a choice
+         ("Восприятие или Выживание"). Populated idempotently by DndContentLoader from the
+         RU description; the DC is derived per caster, so it is not stored. -->
+    <changeSet id="061-spell-check-ability" author="claude">
+        <addColumn tableName="spell">
+            <column name="check_ability" type="text"/>
+            <column name="check_skill" type="text"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

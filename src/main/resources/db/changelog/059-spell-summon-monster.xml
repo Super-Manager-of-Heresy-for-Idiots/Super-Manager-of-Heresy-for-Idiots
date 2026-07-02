@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Summon-spell -> bestiary link.
+
+      A summon/conjuration spell can point at one or more concrete bestiary
+      statblocks that it summons or whose statblock it uses (e.g. Find Familiar
+      offers a choice of small beasts; Phantom Steed uses the Riding Horse block).
+      Modelled as a join table between spell and monsters, mirroring spell_class.
+
+      Extra provenance columns (relation_type, source_url, is_optional, notes) are
+      NOT mapped by JPA today: this content is read-only through the domain model
+      and populated only by this migration. They are kept for traceability and so
+      the read model can surface "one of several options" later without a schema
+      change.
+
+      Seeding is intentionally PARTIAL. Only links whose target monster already
+      exists in the local bestiary are loaded (12 links: Find Familiar's beast
+      forms + Phantom Steed -> Riding Horse). The 2024 "Summon X" spells point at
+      spirit statblocks (Bestial/Fey/Draconic/... Spirit) that are not yet in the
+      DB; their rows drop into spell_summon_monster.csv once those monsters are
+      seeded from a full-content source. The INSERT below is a slug JOIN, so any
+      row whose spell or monster slug is missing is silently skipped rather than
+      failing the migration.
+    -->
+    <changeSet id="059-spell-summon-monster-table" author="claude">
+        <createTable tableName="spell_summon_monster">
+            <column name="spell_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="monster_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="relation_type" type="text"/>
+            <column name="source_url" type="text"/>
+            <column name="is_optional" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="text"/>
+        </createTable>
+
+        <addPrimaryKey tableName="spell_summon_monster"
+                       columnNames="spell_id, monster_id"
+                       constraintName="pk_spell_summon_monster"/>
+
+        <createIndex tableName="spell_summon_monster" indexName="idx_spell_summon_monster_monster_id">
+            <column name="monster_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint constraintName="fk_spell_summon_monster_spell"
+                                 baseTableName="spell_summon_monster"
+                                 baseColumnNames="spell_id"
+                                 referencedTableName="spell"
+                                 referencedColumnNames="spell_id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_spell_summon_monster_monster"
+                                 baseTableName="spell_summon_monster"
+                                 baseColumnNames="monster_id"
+                                 referencedTableName="monsters"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Seed the links via a staging table + slug JOIN (idempotent). -->
+    <changeSet id="059-seed-spell-summon-monster" author="claude">
+        <sql>CREATE TABLE seed_stg_ssm (spell_slug text, monster_slug text, relation_type text, source_url text, is_optional text);</sql>
+        <loadData file="bestiary/spell_summon_monster.csv" relativeToChangelogFile="true"
+                  tableName="seed_stg_ssm" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="spell_slug" type="STRING"/>
+            <column name="monster_slug" type="STRING"/>
+            <column name="relation_type" type="STRING"/>
+            <column name="source_url" type="STRING"/>
+            <column name="is_optional" type="STRING"/>
+        </loadData>
+        <sql><![CDATA[
+            INSERT INTO spell_summon_monster (spell_id, monster_id, relation_type, source_url, is_optional)
+            SELECT sp.spell_id, m.id,
+                   NULLIF(s.relation_type, ''),
+                   NULLIF(s.source_url, ''),
+                   COALESCE(NULLIF(s.is_optional, '')::boolean, false)
+            FROM seed_stg_ssm s
+            JOIN spell sp ON sp.slug = s.spell_slug AND sp.homebrew_id IS NULL
+            JOIN monsters m ON m.slug = s.monster_slug AND m.campaign_id IS NULL AND m.homebrew_id IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM spell_summon_monster j WHERE j.spell_id = sp.spell_id AND j.monster_id = m.id
+            );
+            DROP TABLE seed_stg_ssm;
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

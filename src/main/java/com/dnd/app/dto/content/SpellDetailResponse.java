@@ -52,6 +52,14 @@ public class SpellDetailResponse {
     @Schema(description = "True when the spell resolves with an attack roll rather than a saving throw")
     private Boolean attackRoll;
 
+    @Schema(description = "Ability the target resists with via an ability CHECK (проверка), e.g. INTELLIGENCE. "
+            + "Unlike a save, a check benefits from the creature's proficiency/skill bonuses. Null if none.")
+    private String checkAbility;
+
+    @Schema(description = "Skill named alongside the ability check, raw RU text (may be a choice like "
+            + "'Восприятие или Выживание'). Null when the check names no skill.")
+    private String checkSkill;
+
     private String description;
     private String higherLevels;
 
@@ -63,11 +71,35 @@ public class SpellDetailResponse {
     @Schema(description = "Structured base damage entries (dice + type) detected for this spell")
     private List<DamageDto> damage;
 
+    @Schema(description = "Structured healing entries (dice and/or flat HP restored) detected for this spell")
+    private List<HealingDto> healing;
+
     @Schema(description = "Classes that have this spell on their list")
     private List<ContentLabelDto> classes;
 
     @Schema(description = "Subclasses that grant this spell")
     private List<ContentLabelDto> subclasses;
+
+    @Schema(description = "Bestiary statblocks this summon/conjuration spell summons or whose stats it uses. "
+            + "Empty for non-summon spells. Each entry carries the monster id so the client can link "
+            + "straight to the bestiary detail view.")
+    private List<SummonedMonsterDto> summonedMonsters;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "SummonedMonster", description = "A bestiary statblock referenced by a summon spell")
+    public static class SummonedMonsterDto {
+        @Schema(description = "Monster id — link target for /bestiary/monsters/{id}")
+        private UUID id;
+        private String slug;
+        private String name;
+        private String nameRu;
+        private String nameEn;
+        @Schema(example = "1/4", description = "Challenge rating label")
+        private String crRating;
+    }
 
     @Data
     @Builder
@@ -92,6 +124,20 @@ public class SpellDetailResponse {
         @Schema(description = "Damage type reference (null when unresolved)")
         private ContentLabelDto damageType;
         @Schema(description = "Original raw damage text from the source")
+        private String raw;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "SpellHealing", description = "One structured healing entry of a spell")
+    public static class HealingDto {
+        @Schema(example = "2d8", description = "Dice formula, canonicalised to NdM; null for a flat-only heal")
+        private String dice;
+        @Schema(example = "70", description = "Flat hit points restored; null when the heal is dice-based")
+        private Integer flat;
+        @Schema(description = "Original raw healing text from the source")
         private String raw;
     }
 }

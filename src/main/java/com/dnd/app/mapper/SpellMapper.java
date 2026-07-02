@@ -1,6 +1,7 @@
 package com.dnd.app.mapper;
 
 import com.dnd.app.domain.DamageType;
+import com.dnd.app.domain.Monster;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.SpellSchool;
 import com.dnd.app.domain.content.ContentCharacterClass;
@@ -44,11 +45,14 @@ public class SpellMapper {
                 .concentration(s.getConcentration())
                 .saveAbility(s.getSaveAbility())
                 .attackRoll(s.getAttackRoll())
+                .checkAbility(s.getCheckAbility())
+                .checkSkill(s.getCheckSkill())
                 .description(s.getDescription())
                 .higherLevels(s.getHigherLevels())
                 .packageId(s.getHomebrew() != null ? s.getHomebrew().getId() : null)
                 .components(s.getComponents().stream().map(this::mapComponent).toList())
                 .damage(s.getDamages().stream().map(d -> mapDamage(d, lang)).toList())
+                .healing(s.getHealings().stream().map(this::mapHealing).toList())
                 .classes(s.getClasses().stream()
                         .map(c -> classLabel(c, lang))
                         .sorted(Comparator.comparing(ContentLabelDto::getSlug,
@@ -59,6 +63,23 @@ public class SpellMapper {
                         .sorted(Comparator.comparing(ContentLabelDto::getSlug,
                                 Comparator.nullsLast(Comparator.naturalOrder())))
                         .toList())
+                .summonedMonsters(s.getSummonedMonsters().stream()
+                        .map(m -> summonedMonster(m, lang))
+                        .sorted(Comparator.comparing(SpellDetailResponse.SummonedMonsterDto::getSlug,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .toList())
+                .build();
+    }
+
+    private SpellDetailResponse.SummonedMonsterDto summonedMonster(Monster m, String lang) {
+        return SpellDetailResponse.SummonedMonsterDto.builder()
+                .id(m.getId())
+                .slug(m.getSlug())
+                .name(Localization.pick(lang, m.getNameRusloc(), m.getNameEngloc(),
+                        fallback(m.getNameRusloc(), m.getNameEngloc())))
+                .nameRu(m.getNameRusloc())
+                .nameEn(m.getNameEngloc())
+                .crRating(m.getCrRating())
                 .build();
     }
 
@@ -75,6 +96,14 @@ public class SpellMapper {
                 .dice(d.getDice())
                 .damageType(damageTypeLabel(d.getDamageType(), lang))
                 .raw(d.getRaw())
+                .build();
+    }
+
+    private SpellDetailResponse.HealingDto mapHealing(com.dnd.app.domain.content.SpellHealing h) {
+        return SpellDetailResponse.HealingDto.builder()
+                .dice(h.getDice())
+                .flat(h.getFlat())
+                .raw(h.getRaw())
                 .build();
     }
 
