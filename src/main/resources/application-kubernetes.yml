@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres.dnd-prod.svc.cluster.local:5432/dndapp}
+
+app:
+  websocket:
+    relay:
+      enabled: ${APP_WEBSOCKET_RELAY_ENABLED:true}
+      host: ${APP_WEBSOCKET_RELAY_HOST:rabbitmq.dnd-prod.svc.cluster.local}
+      port: ${APP_WEBSOCKET_RELAY_PORT:61613}
+
