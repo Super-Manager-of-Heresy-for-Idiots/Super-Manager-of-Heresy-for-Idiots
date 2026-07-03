@@ -6,11 +6,23 @@ namespace: dndapp
 resources:
   - ../../base
   - ingress.yaml
+  - pdb.yaml
+  - resourcequota.yaml
+  - networkpolicy.yaml
 
 patches:
   - path: patches/backend-replicas.yaml
+    target:
+      kind: Deployment
+      name: dndapp-backend
   - path: patches/postgres-storage.yaml
+    target:
+      kind: PersistentVolumeClaim
+      name: postgres-data
   - path: patches/app-config.yaml
+    target:
+      kind: ConfigMap
+      name: app-config
 
 images:
   - name: dndapp-backend

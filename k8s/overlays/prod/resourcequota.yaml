@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dndapp-quota
+  namespace: dndapp
+  labels:
+    app.kubernetes.io/part-of: dndapp
+spec:
+  # Caps total resource consumption of the namespace so a runaway/looping pod
+  # cannot starve the rest of the cluster. Sized for the prod workload:
+  # backend (2 x 2cpu/1Gi) + postgres (0.5cpu/0.5Gi) with headroom for rollouts.
+  hard:
+    requests.cpu: "3"
+    requests.memory: 4Gi
+    limits.cpu: "6"
+    limits.memory: 8Gi
+    pods: "20"
+    persistentvolumeclaims: "4"

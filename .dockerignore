@@ -1,0 +1,22 @@
+# Keep the Docker build context lean and reproducible.
+# Local build artifacts and IDE/VCS metadata must not leak into the build stage.
+.git
+.github
+.gradle
+build
+.idea
+*.iml
+
+# Local env / secrets — never copy into an image layer
+.env
+.env.*
+
+# Docs and ops files not needed to compile the jar
+docs
+prompts
+todo
+k8s
+*.md
+docker-compose.yml
+Dockerfile
+.dockerignore

@@ -5,8 +5,11 @@ metadata:
   namespace: argocd
 spec:
   description: D&D Character Management System
+  # Restrict which Git repos this project may deploy from (was "*", which let
+  # ArgoCD sync from ANY repository). Replace YOUR_USERNAME with your real
+  # GitHub org/user — must match the repoURL in app-dev.yaml / app-prod.yaml.
   sourceRepos:
-    - "*"
+    - "https://github.com/YOUR_USERNAME/*"
   destinations:
     - namespace: dndapp
       server: https://kubernetes.default.svc

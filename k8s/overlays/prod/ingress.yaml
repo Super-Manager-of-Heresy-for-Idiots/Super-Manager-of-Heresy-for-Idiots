@@ -7,8 +7,20 @@ metadata:
     app.kubernetes.io/part-of: dndapp
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    # Force HTTPS. Requires the TLS cert below to exist.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Auto-provision a Let's Encrypt cert into the `dndapp-tls` secret.
+    # Requires cert-manager installed and a ClusterIssuer named `letsencrypt-prod`.
+    # If cert-manager is NOT installed, remove this annotation and the tls: block
+    # below (or supply the secret manually) — otherwise the host serves the
+    # ingress-controller's default self-signed cert until the secret exists.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - dndapp.example.com
+      secretName: dndapp-tls
   rules:
     - host: dndapp.example.com
       http:
@@ -20,20 +32,9 @@ spec:
                 name: dndapp-backend
                 port:
                   number: 8080
-          - path: /swagger-ui
-            pathType: Prefix
-            backend:
-              service:
-                name: dndapp-backend
-                port:
-                  number: 8080
-          - path: /v3/api-docs
-            pathType: Prefix
-            backend:
-              service:
-                name: dndapp-backend
-                port:
-                  number: 8080
+          # Swagger UI / OpenAPI (/swagger-ui, /v3/api-docs) НЕ публикуются на проде:
+          # это раскрывает поверхность API. Доступ к ним остаётся внутри кластера
+          # (port-forward к сервису) и ограничен ролью ADMIN на уровне приложения.
           # Когда появится фронтенд:
           # - path: /
           #   pathType: Prefix

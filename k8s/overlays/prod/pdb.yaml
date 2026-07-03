@@ -1,0 +1,16 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dndapp-backend-pdb
+  namespace: dndapp
+  labels:
+    app.kubernetes.io/name: dndapp-backend
+    app.kubernetes.io/part-of: dndapp
+spec:
+  # Prod runs 2 backend replicas; keep at least one serving during voluntary
+  # disruptions (node drain, cluster upgrade). With minAvailable: 1 the cluster
+  # may evict only one pod at a time.
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dndapp-backend
