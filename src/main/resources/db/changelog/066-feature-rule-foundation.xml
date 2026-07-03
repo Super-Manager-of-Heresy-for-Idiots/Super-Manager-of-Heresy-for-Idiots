@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 1 schema foundation. See docs/FEATURE_RULES_RUNTIME_ROADMAP.md and
+      anal-integration/01_STAGE_RULE_SCHEMA_FOUNDATION.md.
+
+      class_feature.description stays the display source of truth. These tables give class-feature
+      mechanics a normalized, reviewable, toggleable home:
+        - feature_rule      : universal attach point + lifecycle (draft/needs_review/approved/disabled)
+        - feature_rule_issue: real issue rows (replaces the single is_warning flag as the tracking model)
+        - reference tables  : controlled vocabularies (rule types, statuses, action/rest/trigger/... types)
+
+      feature_rule / feature_rule_issue use owner_type + owner_id so the same runtime can later be reused
+      for race features, feats, items and homebrew. For now only CLASS_FEATURE is allowed, so owner_id has
+      a real FK to class_feature; when a second owner type is added, that FK is dropped in a later migration
+      and ownership is validated in the app layer instead.
+
+      No runtime executes these rows yet; behavior is gated by app.feature-rules.* flags (all off).
+    -->
+    <changeSet id="066-feature-rule-foundation-ref-tables" author="claude">
+
+        <!-- ── Reference / lookup tables ─────────────────────────────────────── -->
+        <createTable tableName="feature_rule_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(48)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_feature_rule_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="rule_issue_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(48)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_rule_issue_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="review_status">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_review_status_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="action_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_action_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="rest_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_rest_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="trigger_event_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(48)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_trigger_event_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="target_type">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_target_type_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="duration_unit">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)"><constraints nullable="false" unique="true"
+                                                                  uniqueConstraintName="uq_duration_unit_code"/></column>
+            <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <!-- ── Seed reference vocabularies ───────────────────────────────────────── -->
+    <changeSet id="066-feature-rule-foundation-ref-seed" author="claude">
+        <!-- feature_rule_type (16 profiles; mirrors FeatureRuleProfile enum) -->
+        <insert tableName="feature_rule_type"><column name="code" value="action_cost"/><column name="display_name" value="Action cost"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="resource"/><column name="display_name" value="Resource"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="rest_reset"/><column name="display_name" value="Rest reset"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="static_grant"/><column name="display_name" value="Static grant"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="choice"/><column name="display_name" value="Choice"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="formula"/><column name="display_name" value="Formula"/><column name="sort_order" valueNumeric="6"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="active_effect"/><column name="display_name" value="Active effect"/><column name="sort_order" valueNumeric="7"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="end_condition"/><column name="display_name" value="End condition"/><column name="sort_order" valueNumeric="8"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="damage"/><column name="display_name" value="Damage"/><column name="sort_order" valueNumeric="9"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="healing"/><column name="display_name" value="Healing"/><column name="sort_order" valueNumeric="10"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="save_check_attack"/><column name="display_name" value="Save / Check / Attack"/><column name="sort_order" valueNumeric="11"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="spell_grant"/><column name="display_name" value="Spell grant"/><column name="sort_order" valueNumeric="12"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="monster_form"/><column name="display_name" value="Monster form"/><column name="sort_order" valueNumeric="13"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="companion"/><column name="display_name" value="Companion"/><column name="sort_order" valueNumeric="14"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="trigger_reaction"/><column name="display_name" value="Trigger / Reaction"/><column name="sort_order" valueNumeric="15"/></insert>
+        <insert tableName="feature_rule_type"><column name="code" value="manual_adjudication"/><column name="display_name" value="Manual adjudication"/><column name="sort_order" valueNumeric="16"/></insert>
+
+        <!-- rule_issue_type -->
+        <insert tableName="rule_issue_type"><column name="code" value="ambiguous_parse"/><column name="display_name" value="Ambiguous parse"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="rule_issue_type"><column name="code" value="missing_reference"/><column name="display_name" value="Missing reference"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="rule_issue_type"><column name="code" value="unsupported_formula"/><column name="display_name" value="Unsupported formula"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="rule_issue_type"><column name="code" value="unsupported_trigger"/><column name="display_name" value="Unsupported trigger"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="rule_issue_type"><column name="code" value="requires_manual_choice"/><column name="display_name" value="Requires manual choice"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="rule_issue_type"><column name="code" value="conflicting_rules"/><column name="display_name" value="Conflicting rules"/><column name="sort_order" valueNumeric="6"/></insert>
+
+        <!-- review_status (mirrors FeatureReviewStatus enum) -->
+        <insert tableName="review_status"><column name="code" value="draft"/><column name="display_name" value="Draft"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="review_status"><column name="code" value="needs_review"/><column name="display_name" value="Needs review"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="review_status"><column name="code" value="approved"/><column name="display_name" value="Approved"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="review_status"><column name="code" value="disabled"/><column name="display_name" value="Disabled"/><column name="sort_order" valueNumeric="4"/></insert>
+
+        <!-- action_type (minimal set for Stage 1) -->
+        <insert tableName="action_type"><column name="code" value="action"/><column name="display_name" value="Action"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="action_type"><column name="code" value="bonus_action"/><column name="display_name" value="Bonus action"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="action_type"><column name="code" value="reaction"/><column name="display_name" value="Reaction"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="action_type"><column name="code" value="free_action"/><column name="display_name" value="Free action"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="action_type"><column name="code" value="no_action"/><column name="display_name" value="No action"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="action_type"><column name="code" value="special"/><column name="display_name" value="Special"/><column name="sort_order" valueNumeric="6"/></insert>
+
+        <!-- rest_type -->
+        <insert tableName="rest_type"><column name="code" value="short_rest"/><column name="display_name" value="Short rest"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="rest_type"><column name="code" value="long_rest"/><column name="display_name" value="Long rest"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="rest_type"><column name="code" value="dawn"/><column name="display_name" value="Dawn"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="rest_type"><column name="code" value="initiative"/><column name="display_name" value="Initiative"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="rest_type"><column name="code" value="turn_start"/><column name="display_name" value="Turn start"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="rest_type"><column name="code" value="turn_end"/><column name="display_name" value="Turn end"/><column name="sort_order" valueNumeric="6"/></insert>
+        <insert tableName="rest_type"><column name="code" value="manual"/><column name="display_name" value="Manual"/><column name="sort_order" valueNumeric="7"/></insert>
+
+        <!-- trigger_event_type -->
+        <insert tableName="trigger_event_type"><column name="code" value="feature_used"/><column name="display_name" value="Feature used"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="rest_completed"/><column name="display_name" value="Rest completed"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="turn_started"/><column name="display_name" value="Turn started"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="turn_ended"/><column name="display_name" value="Turn ended"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="attack_declared"/><column name="display_name" value="Attack declared"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="attack_resolved"/><column name="display_name" value="Attack resolved"/><column name="sort_order" valueNumeric="6"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="damage_applied"/><column name="display_name" value="Damage applied"/><column name="sort_order" valueNumeric="7"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="healing_applied"/><column name="display_name" value="Healing applied"/><column name="sort_order" valueNumeric="8"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="spell_cast_started"/><column name="display_name" value="Spell cast started"/><column name="sort_order" valueNumeric="9"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="spell_cast_resolved"/><column name="display_name" value="Spell cast resolved"/><column name="sort_order" valueNumeric="10"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="saving_throw_requested"/><column name="display_name" value="Saving throw requested"/><column name="sort_order" valueNumeric="11"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="ability_check_requested"/><column name="display_name" value="Ability check requested"/><column name="sort_order" valueNumeric="12"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="condition_applied"/><column name="display_name" value="Condition applied"/><column name="sort_order" valueNumeric="13"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="condition_removed"/><column name="display_name" value="Condition removed"/><column name="sort_order" valueNumeric="14"/></insert>
+        <insert tableName="trigger_event_type"><column name="code" value="character_hp_reached_zero"/><column name="display_name" value="Character HP reached zero"/><column name="sort_order" valueNumeric="15"/></insert>
+
+        <!-- target_type -->
+        <insert tableName="target_type"><column name="code" value="self"/><column name="display_name" value="Self"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="target_type"><column name="code" value="ally"/><column name="display_name" value="Ally"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="target_type"><column name="code" value="enemy"/><column name="display_name" value="Enemy"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="target_type"><column name="code" value="creature"/><column name="display_name" value="Creature"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="target_type"><column name="code" value="object"/><column name="display_name" value="Object"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="target_type"><column name="code" value="area"/><column name="display_name" value="Area"/><column name="sort_order" valueNumeric="6"/></insert>
+        <insert tableName="target_type"><column name="code" value="spell"/><column name="display_name" value="Spell"/><column name="sort_order" valueNumeric="7"/></insert>
+        <insert tableName="target_type"><column name="code" value="item"/><column name="display_name" value="Item"/><column name="sort_order" valueNumeric="8"/></insert>
+        <insert tableName="target_type"><column name="code" value="monster"/><column name="display_name" value="Monster"/><column name="sort_order" valueNumeric="9"/></insert>
+        <insert tableName="target_type"><column name="code" value="condition"/><column name="display_name" value="Condition"/><column name="sort_order" valueNumeric="10"/></insert>
+
+        <!-- duration_unit -->
+        <insert tableName="duration_unit"><column name="code" value="round"/><column name="display_name" value="Round"/><column name="sort_order" valueNumeric="1"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="minute"/><column name="display_name" value="Minute"/><column name="sort_order" valueNumeric="2"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="hour"/><column name="display_name" value="Hour"/><column name="sort_order" valueNumeric="3"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="day"/><column name="display_name" value="Day"/><column name="sort_order" valueNumeric="4"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="until_rest"/><column name="display_name" value="Until rest"/><column name="sort_order" valueNumeric="5"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="until_condition"/><column name="display_name" value="Until condition"/><column name="sort_order" valueNumeric="6"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="instantaneous"/><column name="display_name" value="Instantaneous"/><column name="sort_order" valueNumeric="7"/></insert>
+        <insert tableName="duration_unit"><column name="code" value="permanent"/><column name="display_name" value="Permanent"/><column name="sort_order" valueNumeric="8"/></insert>
+    </changeSet>
+
+    <!-- ── Core rule + issue tables ──────────────────────────────────────────── -->
+    <changeSet id="066-feature-rule-foundation-core" author="claude">
+        <createTable tableName="feature_rule">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner_type" type="varchar(32)" defaultValue="CLASS_FEATURE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="rule_type" type="varchar(48)"><constraints nullable="false"/></column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="review_status" type="varchar(20)" defaultValue="draft"><constraints nullable="false"/></column>
+            <column name="confidence" type="double precision"/>
+            <column name="source" type="varchar(16)" defaultValue="manual"><constraints nullable="false"/></column>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="notes" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+
+        <!-- Only CLASS_FEATURE ownership exists today, so a real FK protects integrity. Drop this FK when a
+             second owner_type is introduced and validate ownership in the app layer instead. -->
+        <addForeignKeyConstraint baseTableName="feature_rule" baseColumnNames="owner_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_feature_rule_owner_class_feature" onDelete="CASCADE"/>
+
+        <createIndex tableName="feature_rule" indexName="idx_feature_rule_owner">
+            <column name="owner_type"/>
+            <column name="owner_id"/>
+        </createIndex>
+        <createIndex tableName="feature_rule" indexName="idx_feature_rule_type"><column name="rule_type"/></createIndex>
+        <createIndex tableName="feature_rule" indexName="idx_feature_rule_status"><column name="review_status"/></createIndex>
+
+        <createTable tableName="feature_rule_issue">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner_type" type="varchar(32)" defaultValue="CLASS_FEATURE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="feature_rule_id" type="uuid"/>
+            <column name="issue_type" type="varchar(48)"><constraints nullable="false"/></column>
+            <column name="severity" type="varchar(16)"><constraints nullable="false"/></column>
+            <column name="message" type="text"><constraints nullable="false"/></column>
+            <column name="source_text_fragment" type="text"/>
+            <column name="resolved" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="resolved_by" type="uuid"/>
+            <column name="resolved_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="feature_rule_issue" baseColumnNames="owner_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_feature_rule_issue_owner_class_feature" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_issue" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_issue_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_issue" baseColumnNames="resolved_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_issue_resolved_by" onDelete="SET NULL"/>
+
+        <createIndex tableName="feature_rule_issue" indexName="idx_feature_rule_issue_owner">
+            <column name="owner_type"/>
+            <column name="owner_id"/>
+        </createIndex>
+        <createIndex tableName="feature_rule_issue" indexName="idx_feature_rule_issue_rule"><column name="feature_rule_id"/></createIndex>
+        <createIndex tableName="feature_rule_issue" indexName="idx_feature_rule_issue_open">
+            <column name="resolved"/>
+            <column name="severity"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

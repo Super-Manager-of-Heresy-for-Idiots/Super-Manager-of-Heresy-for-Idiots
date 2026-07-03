@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 4: static grants + level-up choices. See
+      anal-integration/04_STAGE_STATIC_GRANTS_AND_LEVEL_UP_CHOICES.md.
+
+      COEXISTENCE DECISION (recorded in docs/FEATURE_RULES_RUNTIME_ROADMAP.md): this is a PARALLEL,
+      flag-gated layer next to the existing ClassLevelReward* system. It only applies during level-up /
+      creation when app.feature-rules is enabled, writes feature-granted skill proficiencies with the new
+      source=FEATURE, and stores its own choices in character_feature_choice. The existing reward flow is
+      untouched when the flag is off. Duplication with reward-group grants is prevented by admin review.
+
+      target_id / target_entity_id / language_id / filter_rule_id are heterogeneous references validated in
+      the app layer (per the Stage 4 recommendation), not by hard FKs; max_choices_formula_id references
+      feature_formula. character_feature_choice.character_id FKs the real characters table for integrity.
+    -->
+    <changeSet id="069-feature-proficiency-grant" author="claude">
+        <createTable tableName="feature_proficiency_grant">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="proficiency_type" type="varchar(24)"><constraints nullable="false"/></column>
+            <column name="target_id" type="uuid"/>
+            <column name="filter_rule_id" type="uuid"/>
+            <column name="expertise" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="grant_timing" type="varchar(24)" defaultValue="level_up"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_proficiency_grant" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_prof_grant_rule" onDelete="CASCADE"/>
+        <createIndex tableName="feature_proficiency_grant" indexName="idx_feature_prof_grant_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="069-feature-language-grant" author="claude">
+        <createTable tableName="feature_language_grant">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="language_id" type="uuid"/>
+            <column name="filter_rule_id" type="uuid"/>
+            <column name="grant_timing" type="varchar(24)" defaultValue="level_up"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_language_grant" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_lang_grant_rule" onDelete="CASCADE"/>
+        <createIndex tableName="feature_language_grant" indexName="idx_feature_lang_grant_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="069-feature-choice-group" author="claude">
+        <createTable tableName="feature_choice_group">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="choice_key" type="varchar(64)"><constraints nullable="false"/></column>
+            <column name="min_choices" type="integer" defaultValueNumeric="1"><constraints nullable="false"/></column>
+            <column name="max_choices_formula_id" type="uuid"/>
+            <column name="choice_timing" type="varchar(24)" defaultValue="level_up"><constraints nullable="false"/></column>
+            <column name="replace_policy" type="varchar(24)" defaultValue="never"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_choice_group" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_choice_group_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_choice_group" baseColumnNames="max_choices_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_choice_group_formula" onDelete="SET NULL"/>
+        <createIndex tableName="feature_choice_group" indexName="idx_feature_choice_group_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="069-feature-choice-option" author="claude">
+        <createTable tableName="feature_choice_option">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="choice_group_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="option_type" type="varchar(24)"><constraints nullable="false"/></column>
+            <column name="target_entity_id" type="uuid"/>
+            <column name="filter_rule_id" type="uuid"/>
+            <column name="sort_order" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_choice_option" baseColumnNames="choice_group_id"
+                                 referencedTableName="feature_choice_group" referencedColumnNames="id"
+                                 constraintName="fk_feature_choice_option_group" onDelete="CASCADE"/>
+        <createIndex tableName="feature_choice_option" indexName="idx_feature_choice_option_group">
+            <column name="choice_group_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="069-character-feature-choice" author="claude">
+        <createTable tableName="character_feature_choice">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="feature_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="choice_group_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="option_type" type="varchar(24)"><constraints nullable="false"/></column>
+            <column name="target_entity_id" type="uuid"/>
+            <column name="chosen_at_level" type="integer"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_feature_choice" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_feature_choice_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_feature_choice" baseColumnNames="feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_character_feature_choice_feature" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_feature_choice" baseColumnNames="choice_group_id"
+                                 referencedTableName="feature_choice_group" referencedColumnNames="id"
+                                 constraintName="fk_character_feature_choice_group" onDelete="CASCADE"/>
+        <createIndex tableName="character_feature_choice" indexName="idx_character_feature_choice_char">
+            <column name="character_id"/>
+        </createIndex>
+        <createIndex tableName="character_feature_choice" indexName="idx_character_feature_choice_group">
+            <column name="character_id"/>
+            <column name="choice_group_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

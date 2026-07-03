@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 2: domain versioning + game source/ruleset scope. See
+      anal-integration/02_STAGE_RULE_VERSIONING_AND_SOURCE_SCOPE.md.
+
+      - feature_rule_revision : immutable snapshots of a rule; approve promotes one revision.
+      - feature_rule gains current_revision_id / approved_revision_id: runtime executes ONLY the
+        approved revision; the current revision may be draft/needs_review without affecting runtime.
+      - ruleset / rule_source : the GAME-facing source scope (D&D 2014/2024, source packs). This is
+        distinct from feature_rule.source, which is the TECHNICAL provenance (manual/parser/seed/migration).
+      - scope columns on feature_rule (ruleset_id, rule_source_id, homebrew_pack_id, campaign_id, priority).
+
+      homebrew_pack_id / campaign_id are scope markers without a hard FK for now (kept decoupled until
+      campaign/homebrew scoping is actually wired in a later stage).
+    -->
+    <changeSet id="067-ruleset-and-source" author="claude">
+        <createTable tableName="ruleset">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="key" type="varchar(48)"><constraints nullable="false" unique="true"
+                                                                 uniqueConstraintName="uq_ruleset_key"/></column>
+            <column name="display_name" type="varchar(120)"><constraints nullable="false"/></column>
+            <column name="edition" type="varchar(16)"/>
+            <column name="enabled" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+        </createTable>
+
+        <createTable tableName="rule_source">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="key" type="varchar(48)"><constraints nullable="false" unique="true"
+                                                                 uniqueConstraintName="uq_rule_source_key"/></column>
+            <column name="display_name" type="varchar(120)"><constraints nullable="false"/></column>
+            <column name="source_type" type="varchar(24)"/>
+            <column name="ruleset_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="rule_source" baseColumnNames="ruleset_id"
+                                 referencedTableName="ruleset" referencedColumnNames="id"
+                                 constraintName="fk_rule_source_ruleset" onDelete="SET NULL"/>
+
+        <!-- Seed the two D&D editions and their core sourcebooks. -->
+        <insert tableName="ruleset"><column name="key" value="dnd_2024"/><column name="display_name" value="D&amp;D 2024"/><column name="edition" value="2024"/><column name="enabled" valueBoolean="true"/></insert>
+        <insert tableName="ruleset"><column name="key" value="dnd_2014"/><column name="display_name" value="D&amp;D 2014"/><column name="edition" value="2014"/><column name="enabled" valueBoolean="true"/></insert>
+
+        <insert tableName="rule_source">
+            <column name="key" value="phb_2024"/>
+            <column name="display_name" value="Player's Handbook (2024)"/>
+            <column name="source_type" value="core"/>
+            <column name="ruleset_id" valueComputed="(select id from ruleset where key = 'dnd_2024')"/>
+        </insert>
+        <insert tableName="rule_source">
+            <column name="key" value="phb_2014"/>
+            <column name="display_name" value="Player's Handbook (2014)"/>
+            <column name="source_type" value="core"/>
+            <column name="ruleset_id" valueComputed="(select id from ruleset where key = 'dnd_2014')"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="067-feature-rule-revision" author="claude">
+        <createTable tableName="feature_rule_revision">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="revision_number" type="integer"><constraints nullable="false"/></column>
+            <column name="status" type="varchar(20)" defaultValue="draft"><constraints nullable="false"/></column>
+            <column name="rule_payload_snapshot" type="text"/>
+            <column name="change_reason" type="text"/>
+            <column name="created_by" type="uuid"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="approved_by" type="uuid"/>
+            <column name="approved_at" type="timestamp with time zone"/>
+            <column name="disabled_by" type="uuid"/>
+            <column name="disabled_at" type="timestamp with time zone"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="feature_rule_revision" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_revision_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_revision" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_revision_created_by" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_revision" baseColumnNames="approved_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_revision_approved_by" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_revision" baseColumnNames="disabled_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_revision_disabled_by" onDelete="SET NULL"/>
+        <addUniqueConstraint tableName="feature_rule_revision"
+                             columnNames="feature_rule_id, revision_number"
+                             constraintName="uq_feature_rule_revision_number"/>
+        <createIndex tableName="feature_rule_revision" indexName="idx_feature_rule_revision_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="067-feature-rule-scope-and-pointers" author="claude">
+        <addColumn tableName="feature_rule">
+            <column name="current_revision_id" type="uuid"/>
+            <column name="approved_revision_id" type="uuid"/>
+            <column name="ruleset_id" type="uuid"/>
+            <column name="rule_source_id" type="uuid"/>
+            <column name="homebrew_pack_id" type="uuid"/>
+            <column name="campaign_id" type="uuid"/>
+            <column name="priority" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addForeignKeyConstraint baseTableName="feature_rule" baseColumnNames="current_revision_id"
+                                 referencedTableName="feature_rule_revision" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_current_revision" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_rule" baseColumnNames="approved_revision_id"
+                                 referencedTableName="feature_rule_revision" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_approved_revision" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_rule" baseColumnNames="ruleset_id"
+                                 referencedTableName="ruleset" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_ruleset" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_rule" baseColumnNames="rule_source_id"
+                                 referencedTableName="rule_source" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_rule_source" onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

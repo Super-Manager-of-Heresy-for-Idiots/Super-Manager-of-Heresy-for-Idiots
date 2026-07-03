@@ -67,4 +67,19 @@
     <!-- Social graph: friend requests, friendships and blocks (user_relationships). -->
     <include file="db/changelog/065-friends.xml"/>
 
+    <!-- Feature rules runtime — Stage 1 foundation: feature_rule, feature_rule_issue + reference vocabularies. -->
+    <include file="db/changelog/066-feature-rule-foundation.xml"/>
+
+    <!-- Feature rules runtime — Stage 2: rule revisions + game source/ruleset scope. -->
+    <include file="db/changelog/067-feature-rule-versioning.xml"/>
+
+    <!-- Feature rules runtime — Stage 3: bounded formula/predicate engine (feature_formula). -->
+    <include file="db/changelog/068-feature-formula.xml"/>
+
+    <!-- Feature rules runtime — Stage 4: static grants + level-up choices (parallel, flag-gated). -->
+    <include file="db/changelog/069-feature-grants-and-choices.xml"/>
+
+    <!-- Feature rules runtime — Stage 5: feature resources, charges and rest recovery. -->
+    <include file="db/changelog/070-feature-resources.xml"/>
+
 </databaseChangeLog>

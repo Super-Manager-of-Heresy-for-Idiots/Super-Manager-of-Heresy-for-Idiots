@@ -4,5 +4,7 @@ public enum SkillProficiencySource {
     CLASS,
     BACKGROUND,
     RACE,
-    MANUAL
+    MANUAL,
+    /** Granted by a class-feature rule (feature-rules runtime, Stage 4). */
+    FEATURE
 }

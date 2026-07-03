@@ -107,6 +107,7 @@ public class LevelUpCommandService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final LevelThresholdService thresholdService;
+    private final CharacterFeatureGrantService characterFeatureGrantService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -186,6 +187,9 @@ public class LevelUpCommandService {
         }
         characterRepository.save(character);
 
+        // Feature-rules runtime (Stage 4): additive, flag-gated. No-op unless app.feature-rules is enabled.
+        characterFeatureGrantService.applyForClassLevel(character, targetClass.getId(), newClassLevel);
+
         log.info("Content level-up committed: characterId={}, classId={}, newClassLevel={}, newTotalLevel={}, "
                         + "applied={}, manual={}, user={}",
                 characterId, targetClass.getId(), newClassLevel, character.getTotalLevel(),
@@ -242,6 +246,9 @@ public class LevelUpCommandService {
 
         int maxSpellLevel = maxSpellLevelFor(targetClass, 1);
         applyRewardGroups(character, groups, selectionByGroup, applied, manual, maxSpellLevel);
+
+        // Feature-rules runtime (Stage 4): additive, flag-gated. No-op unless app.feature-rules is enabled.
+        characterFeatureGrantService.applyForClassLevel(character, targetClass.getId(), 1);
 
         return LevelUpResultResponse.builder()
                 .newTotalLevel(character.getTotalLevel())

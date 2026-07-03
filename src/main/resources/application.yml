@@ -101,6 +101,18 @@ app:
       login: ${APP_WEBSOCKET_RELAY_LOGIN:guest}
       passcode: ${APP_WEBSOCKET_RELAY_PASSCODE:guest}
       virtual-host: ${APP_WEBSOCKET_RELAY_VIRTUAL_HOST:/}
+  feature-rules:
+    # Class-feature rules runtime (see docs/FEATURE_RULES_RUNTIME_ROADMAP.md).
+    # runtime-enabled is the master switch: when false (default) the app behaves exactly as before —
+    # class feature descriptions are shown as text and no structured rule is executed. The per-subsystem
+    # flags below only take effect when runtime-enabled is also true.
+    runtime-enabled: ${APP_FEATURE_RULES_RUNTIME_ENABLED:false}
+    resources-enabled: ${APP_FEATURE_RULES_RESOURCES_ENABLED:false}
+    actions-enabled: ${APP_FEATURE_RULES_ACTIONS_ENABLED:false}
+    effects-enabled: ${APP_FEATURE_RULES_EFFECTS_ENABLED:false}
+    triggers-enabled: ${APP_FEATURE_RULES_TRIGGERS_ENABLED:false}
+    forms-enabled: ${APP_FEATURE_RULES_FORMS_ENABLED:false}
+    spells-enabled: ${APP_FEATURE_RULES_SPELLS_ENABLED:false}
 
 management:
   endpoints:

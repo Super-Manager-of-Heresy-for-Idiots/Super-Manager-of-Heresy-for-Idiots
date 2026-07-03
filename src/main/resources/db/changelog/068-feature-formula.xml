@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 3: bounded formula engine. See
+      anal-integration/03_STAGE_FORMULA_AND_PREDICATE_ENGINE.md.
+
+      feature_formula stores a normalized DSL string that a safe, dependency-free evaluator can validate
+      and compute against a typed character/combat context. Later-stage rules (resource max, duration,
+      DC, dice scaling, eligibility predicates) reference feature_formula.id via *_formula_id columns.
+      The DSL has no access to Java objects/reflection — only an allowlist of functions and context
+      variables — so there is no unsafe eval.
+    -->
+    <changeSet id="068-feature-formula" author="claude">
+        <createTable tableName="feature_formula">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="expression" type="text"><constraints nullable="false"/></column>
+            <!-- scalar | predicate | dice — how the expression is intended to be used -->
+            <column name="expression_type" type="varchar(24)"/>
+            <!-- integer | decimal | boolean | duration | dice | modifier -->
+            <column name="result_type" type="varchar(16)"><constraints nullable="false"/></column>
+            <!-- floor | ceil | nearest | none -->
+            <column name="rounding_mode" type="varchar(16)" defaultValue="none"><constraints nullable="false"/></column>
+            <column name="min_value" type="double precision"/>
+            <column name="max_value" type="double precision"/>
+            <!-- JSON array of context variable/function names the expression needs -->
+            <column name="context_requirements" type="text"/>
+            <!-- valid | invalid | unknown -->
+            <column name="validation_status" type="varchar(16)" defaultValue="unknown"><constraints nullable="false"/></column>
+            <column name="validation_message" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

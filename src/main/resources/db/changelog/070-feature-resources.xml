@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 5: feature resources, charges and rest recovery. See
+      anal-integration/05_STAGE_RESOURCES_AND_REST.md.
+
+      feature_resource_definition describes a resource (max/reset/spend via feature_formula, reset window via
+      rest_type or trigger_event_type). character_feature_resource is the per-character live state, linked to
+      the DEFINITION (per the Stage 5 recommendation) plus a shared_pool_key so Channel-Divinity-like shared
+      pools resolve to a single row per character. Everything is flag-gated (app.feature-rules.resources).
+    -->
+    <changeSet id="070-feature-resource-definition" author="claude">
+        <createTable tableName="feature_resource_definition">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="resource_key" type="varchar(64)"><constraints nullable="false"/></column>
+            <column name="display_name" type="varchar(120)"/>
+            <column name="max_formula_id" type="uuid"/>
+            <column name="reset_rest_type_id" type="uuid"/>
+            <column name="reset_event_type_id" type="uuid"/>
+            <column name="reset_amount_formula_id" type="uuid"/>
+            <column name="spend_per_use_formula_id" type="uuid"/>
+            <column name="allow_negative" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="shared_pool_key" type="varchar(64)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="max_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_max_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="reset_amount_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_reset_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="spend_per_use_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_spend_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="reset_rest_type_id"
+                                 referencedTableName="rest_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_rest_type" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_resource_definition" baseColumnNames="reset_event_type_id"
+                                 referencedTableName="trigger_event_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_resource_def_event_type" onDelete="SET NULL"/>
+        <createIndex tableName="feature_resource_definition" indexName="idx_feature_resource_def_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="070-character-feature-resource" author="claude">
+        <createTable tableName="character_feature_resource">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="resource_definition_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="shared_pool_key" type="varchar(64)"/>
+            <column name="current_value" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="max_value_snapshot" type="integer"/>
+            <column name="last_reset_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_feature_resource" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_feature_resource_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_feature_resource" baseColumnNames="resource_definition_id"
+                                 referencedTableName="feature_resource_definition" referencedColumnNames="id"
+                                 constraintName="fk_character_feature_resource_def" onDelete="CASCADE"/>
+        <createIndex tableName="character_feature_resource" indexName="idx_character_feature_resource_char">
+            <column name="character_id"/>
+        </createIndex>
+        <createIndex tableName="character_feature_resource" indexName="idx_character_feature_resource_pool">
+            <column name="character_id"/>
+            <column name="shared_pool_key"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
