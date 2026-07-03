@@ -100,6 +100,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("PRECONDITION_FAILED", ex.getMessage()));
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTooManyRequests(
+            TooManyRequestsException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", ex, request, null);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error("RATE_LIMITED", ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", ex, request, "bad credentials");

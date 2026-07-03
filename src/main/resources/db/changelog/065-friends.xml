@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Social graph: one row per unordered user pair, normalized so user_a_id < user_b_id (PostgreSQL
+      uuid byte ordering). status carries PENDING | FRIENDS | BLOCKED; requester_id/blocked_by_id keep
+      the direction. See TZ_FRIENDS_AND_MESSENGER.md section 3.2.
+    -->
+    <changeSet id="065-friends" author="codex">
+        <createTable tableName="user_relationships">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_a_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_b_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requester_id" type="uuid"/>
+            <column name="blocked_by_id" type="uuid"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="user_relationships"
+                             columnNames="user_a_id, user_b_id"
+                             constraintName="uq_user_relationships_pair"/>
+
+        <sql>alter table user_relationships add constraint chk_user_rel_pair_order check (user_a_id &lt; user_b_id)</sql>
+
+        <addForeignKeyConstraint baseTableName="user_relationships" baseColumnNames="user_a_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_rel_user_a" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="user_relationships" baseColumnNames="user_b_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_rel_user_b" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="user_relationships" baseColumnNames="requester_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_rel_requester" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="user_relationships" baseColumnNames="blocked_by_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_rel_blocked_by" onDelete="SET NULL"/>
+
+        <createIndex tableName="user_relationships" indexName="idx_user_rel_a_status">
+            <column name="user_a_id"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="user_relationships" indexName="idx_user_rel_b_status">
+            <column name="user_b_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

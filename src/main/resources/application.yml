@@ -70,12 +70,19 @@ app:
     # Shared secret for service-to-service calls (e.g. map-service -> core BE) on /api/internal/**,
     # presented in the X-Internal-Api-Key header. When blank, all internal endpoints are rejected.
     api-key: ${INTERNAL_API_KEY:}
+  messenger:
+    # Core -> messenger notifier for block/unfriend (best-effort close-by-pair). Disabled locally by
+    # default; the messenger's relationship cache is the fallback when this call is missed.
+    http-client-enabled: ${MESSENGER_HTTP_CLIENT_ENABLED:false}
+    base-url: ${MESSENGER_BASE_URL:http://localhost:8082}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   ratelimit:
     login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
     register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
     refresh-per-minute: ${APP_RATELIMIT_REFRESH_PER_MIN:20}
+    friend-requests-per-day: ${APP_RATELIMIT_FRIEND_REQUESTS_PER_DAY:30}
+    user-search-per-minute: ${APP_RATELIMIT_USER_SEARCH_PER_MIN:30}
   security:
     # Number of reverse proxies (e.g. nginx) in front of the app. Used to pick the trusted hop from
     # X-Forwarded-For so the client IP cannot be spoofed to bypass auth rate limiting. Set to 0 if the

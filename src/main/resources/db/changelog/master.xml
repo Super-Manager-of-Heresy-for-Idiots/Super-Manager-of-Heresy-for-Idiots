@@ -64,4 +64,7 @@
     <!-- Structured class-feature mechanics parsed from descriptions + admin warning flags. -->
     <include file="db/changelog/064-class-feature-mechanics.xml"/>
 
+    <!-- Social graph: friend requests, friendships and blocks (user_relationships). -->
+    <include file="db/changelog/065-friends.xml"/>
+
 </databaseChangeLog>
