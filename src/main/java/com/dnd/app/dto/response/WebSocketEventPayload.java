@@ -19,4 +19,5 @@ public class WebSocketEventPayload {
     private Object data;
     private Instant timestamp;
     private UUID triggeredBy;
+    private String triggeredByName;
 }

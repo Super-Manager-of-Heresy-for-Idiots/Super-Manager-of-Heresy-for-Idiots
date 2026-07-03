@@ -4,6 +4,7 @@ import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.response.WebSocketEventPayload;
 import com.dnd.app.event.WsCampaignBroadcastEvent;
 import com.dnd.app.event.WsUserBroadcastEvent;
+import com.dnd.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -35,6 +36,7 @@ import java.util.UUID;
 public class WebSocketEventService {
 
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
 
     public void sendCampaignEvent(WebSocketEventType type, UUID campaignId, UUID characterId,
                                    Object data, UUID triggeredBy) {
@@ -48,6 +50,7 @@ public class WebSocketEventService {
                 .data(data)
                 .timestamp(Instant.now())
                 .triggeredBy(triggeredBy)
+                .triggeredByName(resolveTriggeredByName(triggeredBy))
                 .build();
 
         eventPublisher.publishEvent(
@@ -69,10 +72,20 @@ public class WebSocketEventService {
                 .data(data)
                 .timestamp(Instant.now())
                 .triggeredBy(triggeredBy)
+                .triggeredByName(resolveTriggeredByName(triggeredBy))
                 .build();
 
         eventPublisher.publishEvent(
                 new WsUserBroadcastEvent(username, "/queue/notifications", payload));
         log.debug("WebSocket user event queued: type={}, user={}", type, username);
+    }
+
+    private String resolveTriggeredByName(UUID triggeredBy) {
+        if (triggeredBy == null) {
+            return null;
+        }
+        return userRepository.findById(triggeredBy)
+                .map(user -> user.getUsername())
+                .orElse(null);
     }
 }

@@ -74,8 +74,12 @@ public class XpService {
                 campaignId, target, targets.size(), request.getAmount(), username);
 
         List<UUID> affectedCharacterIds = targets.stream().map(PlayerCharacter::getId).toList();
+        List<UUID> affectedOwnerIds = targets.stream()
+                .map(pc -> pc.getOwner().getId())
+                .distinct()
+                .toList();
         webSocketEventService.sendCampaignEvent(WebSocketEventType.XP_GRANTED, campaignId,
-                Map.of("amount", request.getAmount(), "characterIds", affectedCharacterIds),
+                Map.of("amount", request.getAmount(), "characterIds", affectedCharacterIds, "ownerIds", affectedOwnerIds),
                 user.getId());
 
         return Map.of(
