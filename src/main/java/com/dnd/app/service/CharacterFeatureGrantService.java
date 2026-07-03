@@ -54,6 +54,7 @@ public class CharacterFeatureGrantService {
     private final FeatureProficiencyGrantRepository proficiencyGrantRepository;
     private final CharacterSkillProficiencyRepository skillProficiencyRepository;
     private final ContentSkillRepository contentSkillRepository;
+    private final FeatureResourceService featureResourceService;
 
     /** Apply feature-rule static grants for the base-class features gained at {@code classLevel}. */
     @Transactional
@@ -96,6 +97,10 @@ public class CharacterFeatureGrantService {
                 log.info("Applied {} feature-rule skill grant(s) to character {} at class {} level {}",
                         applied, character.getId(), classId, classLevel);
             }
+
+            // Stage 5: create resource state for newly-gained features and refresh maxima (both gated internally).
+            featureResourceService.ensureResourcesForRules(character, ruleIds);
+            featureResourceService.recalcMax(character);
         } catch (RuntimeException e) {
             log.warn("Feature-rule grant application skipped for character {} (class {}, level {}): {}",
                     character.getId(), classId, classLevel, e.getMessage());

@@ -92,6 +92,7 @@ class LevelUpCommandServiceTest {
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
     @Mock private CampaignService campaignService;
     @Mock private LevelThresholdService thresholdService;
+    @Mock private CharacterFeatureGrantService characterFeatureGrantService;
     @Mock private EntityManager entityManager;
 
     @InjectMocks private LevelUpCommandService service;

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 6: action costs + feature use. See
+      anal-integration/06_STAGE_ACTION_COSTS_AND_FEATURE_USE.md.
+
+      feature_action_cost = the action-economy cost to use a feature (action/bonus/reaction/…, from
+      action_type; optional condition_formula). feature_use_log = an audit trail of feature uses (the full
+      typed gameplay-event bus + reactions arrives in Stage 11; this is the Stage 6 audit/combat log entry).
+      Gated by app.feature-rules.actions.
+    -->
+    <changeSet id="071-feature-action-cost" author="claude">
+        <createTable tableName="feature_action_cost">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="action_type_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="amount" type="integer" defaultValueNumeric="1"><constraints nullable="false"/></column>
+            <column name="condition_formula_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_action_cost" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_action_cost_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_action_cost" baseColumnNames="action_type_id"
+                                 referencedTableName="action_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_action_cost_action_type"/>
+        <addForeignKeyConstraint baseTableName="feature_action_cost" baseColumnNames="condition_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_action_cost_condition" onDelete="SET NULL"/>
+        <createIndex tableName="feature_action_cost" indexName="idx_feature_action_cost_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="071-feature-use-log" author="claude">
+        <createTable tableName="feature_use_log">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="feature_id" type="uuid"/>
+            <column name="feature_rule_id" type="uuid"/>
+            <column name="combat_id" type="uuid"/>
+            <column name="action_type" type="varchar(24)"/>
+            <column name="resource_spent" type="integer"/>
+            <column name="detail" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_use_log" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_feature_use_log_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_use_log" baseColumnNames="feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_feature_use_log_feature" onDelete="SET NULL"/>
+        <createIndex tableName="feature_use_log" indexName="idx_feature_use_log_character">
+            <column name="character_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

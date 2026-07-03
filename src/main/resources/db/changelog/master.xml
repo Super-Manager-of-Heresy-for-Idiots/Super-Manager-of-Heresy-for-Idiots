@@ -82,4 +82,7 @@
     <!-- Feature rules runtime — Stage 5: feature resources, charges and rest recovery. -->
     <include file="db/changelog/070-feature-resources.xml"/>
 
+    <!-- Feature rules runtime — Stage 6: feature action costs + feature-use audit log. -->
+    <include file="db/changelog/071-feature-action-costs.xml"/>
+
 </databaseChangeLog>
