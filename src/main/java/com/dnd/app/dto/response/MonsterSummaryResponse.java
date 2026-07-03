@@ -17,6 +17,7 @@ import java.util.UUID;
 public class MonsterSummaryResponse {
     private UUID id;
     private String slug;
+    private String name;
     private String nameRusloc;
     private String nameEngloc;
     private MonsterResponse.DictionaryRef size;

@@ -46,9 +46,10 @@ public class BestiaryController {
     @GetMapping("/monsters")
     @Operation(summary = "List system monsters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listSystemMonsters(
-            Authentication auth) {
+            Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            List<MonsterSummaryResponse> data = monsterService.listSystemMonsters(auth.getName());
+            List<MonsterSummaryResponse> data = monsterService.listSystemMonsters(auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -56,9 +57,10 @@ public class BestiaryController {
     @GetMapping("/monsters/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
-            @PathVariable UUID id, Authentication auth) {
+            @PathVariable UUID id, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.getMonster(id, auth.getName());
+            MonsterResponse data = monsterService.getMonster(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }

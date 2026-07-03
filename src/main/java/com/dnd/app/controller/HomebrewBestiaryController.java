@@ -93,9 +93,10 @@ public class HomebrewBestiaryController {
     @GetMapping("/monsters")
     @Operation(summary = "List homebrew monsters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
-            @PathVariable UUID packageId, Authentication auth) {
+            @PathVariable UUID packageId, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            List<MonsterSummaryResponse> data = monsterService.listHomebrewMonsters(packageId, auth.getName());
+            List<MonsterSummaryResponse> data = monsterService.listHomebrewMonsters(packageId, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -104,9 +105,10 @@ public class HomebrewBestiaryController {
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
             @PathVariable UUID packageId,
-            @PathVariable UUID id, Authentication auth) {
+            @PathVariable UUID id, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.getMonster(id, auth.getName());
+            MonsterResponse data = monsterService.getMonster(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -115,9 +117,10 @@ public class HomebrewBestiaryController {
     @Operation(summary = "Create homebrew monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
             @PathVariable UUID packageId,
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.createHomebrewMonster(packageId, request, auth.getName());
+            MonsterResponse data = monsterService.createHomebrewMonster(packageId, request, auth.getName(), lang);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(data, "Monster created"));
         }, controllerTaskExecutor);
     }
@@ -126,9 +129,10 @@ public class HomebrewBestiaryController {
     @Operation(summary = "Duplicate a system or homebrew monster into this package")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> duplicateMonster(
             @PathVariable UUID packageId,
-            @PathVariable UUID sourceId, Authentication auth) {
+            @PathVariable UUID sourceId, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.duplicateMonsterIntoHomebrew(packageId, sourceId, auth.getName());
+            MonsterResponse data = monsterService.duplicateMonsterIntoHomebrew(packageId, sourceId, auth.getName(), lang);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(data, "Monster duplicated"));
         }, controllerTaskExecutor);
     }
@@ -138,9 +142,10 @@ public class HomebrewBestiaryController {
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
             @PathVariable UUID packageId,
             @PathVariable UUID id,
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.updateHomebrewMonster(packageId, id, request, auth.getName());
+            MonsterResponse data = monsterService.updateHomebrewMonster(packageId, id, request, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data, "Monster updated"));
         }, controllerTaskExecutor);
     }

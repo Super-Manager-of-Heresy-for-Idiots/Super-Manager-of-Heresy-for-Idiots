@@ -36,9 +36,10 @@ public class CampaignMonsterController {
     @GetMapping
     @Operation(summary = "List campaign monsters (GM sees all, players see visible only)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
-            @PathVariable UUID campaignId, Authentication auth) {
+            @PathVariable UUID campaignId, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            List<MonsterSummaryResponse> data = monsterService.listCampaignMonsters(campaignId, auth.getName());
+            List<MonsterSummaryResponse> data = monsterService.listCampaignMonsters(campaignId, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -47,9 +48,10 @@ public class CampaignMonsterController {
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
             @PathVariable UUID campaignId,
-            @PathVariable UUID id, Authentication auth) {
+            @PathVariable UUID id, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.getMonster(id, auth.getName());
+            MonsterResponse data = monsterService.getMonster(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -58,9 +60,10 @@ public class CampaignMonsterController {
     @Operation(summary = "Create a campaign monster (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
             @PathVariable UUID campaignId,
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.createCampaignMonster(campaignId, request, auth.getName());
+            MonsterResponse data = monsterService.createCampaignMonster(campaignId, request, auth.getName(), lang);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(data, "Monster created"));
         }, controllerTaskExecutor);
     }
@@ -69,9 +72,10 @@ public class CampaignMonsterController {
     @Operation(summary = "Clone a system, homebrew, or campaign monster into this campaign (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> cloneMonster(
             @PathVariable UUID campaignId,
-            @PathVariable UUID sourceId, Authentication auth) {
+            @PathVariable UUID sourceId, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.cloneMonsterIntoCampaign(campaignId, sourceId, auth.getName());
+            MonsterResponse data = monsterService.cloneMonsterIntoCampaign(campaignId, sourceId, auth.getName(), lang);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(data, "Monster cloned"));
         }, controllerTaskExecutor);
     }
@@ -81,9 +85,10 @@ public class CampaignMonsterController {
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
             @PathVariable UUID campaignId,
             @PathVariable UUID id,
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.updateCampaignMonster(id, request, auth.getName());
+            MonsterResponse data = monsterService.updateCampaignMonster(id, request, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data, "Monster updated"));
         }, controllerTaskExecutor);
     }
@@ -92,9 +97,10 @@ public class CampaignMonsterController {
     @Operation(summary = "Reveal or hide a campaign monster from players (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> toggleVisibility(
             @PathVariable UUID campaignId,
-            @PathVariable UUID id, Authentication auth) {
+            @PathVariable UUID id, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.toggleCampaignMonsterVisibility(id, auth.getName());
+            MonsterResponse data = monsterService.toggleCampaignMonsterVisibility(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data, "Visibility toggled"));
         }, controllerTaskExecutor);
     }

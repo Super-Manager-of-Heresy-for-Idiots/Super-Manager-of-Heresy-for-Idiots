@@ -87,9 +87,11 @@ public class AdminBestiaryController {
 
     @GetMapping("/monsters")
     @Operation(summary = "List system monsters")
-    public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(Authentication auth) {
+    public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
+            Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            List<MonsterSummaryResponse> data = monsterService.listSystemMonsters(auth.getName());
+            List<MonsterSummaryResponse> data = monsterService.listSystemMonsters(auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -97,9 +99,10 @@ public class AdminBestiaryController {
     @GetMapping("/monsters/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
-            @PathVariable UUID id, Authentication auth) {
+            @PathVariable UUID id, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.getMonster(id, auth.getName());
+            MonsterResponse data = monsterService.getMonster(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -107,9 +110,10 @@ public class AdminBestiaryController {
     @PostMapping("/monsters")
     @Operation(summary = "Create system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.createSystemMonster(request, auth.getName());
+            MonsterResponse data = monsterService.createSystemMonster(request, auth.getName(), lang);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(data, "Monster created"));
         }, controllerTaskExecutor);
     }
@@ -118,9 +122,10 @@ public class AdminBestiaryController {
     @Operation(summary = "Update system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
             @PathVariable UUID id,
-            @Valid @RequestBody MonsterRequest request, Authentication auth) {
+            @Valid @RequestBody MonsterRequest request, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.updateSystemMonster(id, request, auth.getName());
+            MonsterResponse data = monsterService.updateSystemMonster(id, request, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data, "Monster updated"));
         }, controllerTaskExecutor);
     }
@@ -129,9 +134,10 @@ public class AdminBestiaryController {
     @Operation(summary = "Activate or deactivate a system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> setActive(
             @PathVariable UUID id,
-            @RequestParam boolean active, Authentication auth) {
+            @RequestParam boolean active, Authentication auth,
+            @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() -> {
-            MonsterResponse data = monsterService.setSystemMonsterActive(id, active, auth.getName());
+            MonsterResponse data = monsterService.setSystemMonsterActive(id, active, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data, "Monster active flag updated"));
         }, controllerTaskExecutor);
     }

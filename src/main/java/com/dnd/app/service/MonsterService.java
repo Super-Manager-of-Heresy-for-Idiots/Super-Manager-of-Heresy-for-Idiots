@@ -10,6 +10,7 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
+import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,21 +60,36 @@ public class MonsterService {
 
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listSystemMonsters(String username) {
+        return listSystemMonsters(username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MonsterSummaryResponse> listSystemMonsters(String username, String lang) {
         User user = getUser(username);
         List<Monster> list = user.getRole() == Role.ADMIN
                 ? monsterRepository.findAllByCampaignIsNullAndHomebrewIsNull()
                 : monsterRepository.findAllByCampaignIsNullAndHomebrewIsNullAndIsActiveTrue();
-        return list.stream().map(this::toSummary).toList();
+        return list.stream().map(m -> toSummary(m, lang)).toList();
     }
 
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listHomebrewMonsters(UUID packageId, String username) {
+        return listHomebrewMonsters(packageId, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MonsterSummaryResponse> listHomebrewMonsters(UUID packageId, String username, String lang) {
         getUser(username);
-        return monsterRepository.findAllByHomebrewId(packageId).stream().map(this::toSummary).toList();
+        return monsterRepository.findAllByHomebrewId(packageId).stream().map(m -> toSummary(m, lang)).toList();
     }
 
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listCampaignMonsters(UUID campaignId, String username) {
+        return listCampaignMonsters(campaignId, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MonsterSummaryResponse> listCampaignMonsters(UUID campaignId, String username, String lang) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
@@ -81,15 +97,20 @@ public class MonsterService {
         List<Monster> list = gm
                 ? monsterRepository.findAllByCampaignId(campaignId)
                 : monsterRepository.findAllByCampaignIdAndIsVisibleToPlayersTrue(campaignId);
-        return list.stream().map(this::toSummary).toList();
+        return list.stream().map(m -> toSummary(m, lang)).toList();
     }
 
     @Transactional(readOnly = true)
     public MonsterResponse getMonster(UUID id, String username) {
+        return getMonster(id, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional(readOnly = true)
+    public MonsterResponse getMonster(UUID id, String username, String lang) {
         User user = getUser(username);
         Monster monster = findMonster(id);
         enforceCanRead(monster, user);
-        return toResponse(monster);
+        return toResponse(monster, lang);
     }
 
     /**
@@ -111,31 +132,46 @@ public class MonsterService {
 
     @Transactional
     public MonsterResponse createSystemMonster(MonsterRequest request, String username) {
+        return createSystemMonster(request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse createSystemMonster(MonsterRequest request, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
         Monster monster = new Monster();
         applyRequest(monster, request, admin, null, null);
         Monster saved = monsterRepository.save(monster);
         log.info("System monster created: id={}, slug='{}', by={}", saved.getId(), saved.getSlug(), username);
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
     public MonsterResponse updateSystemMonster(UUID id, MonsterRequest request, String username) {
+        return updateSystemMonster(id, request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse updateSystemMonster(UUID id, MonsterRequest request, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
         Monster monster = findMonster(id);
         requireScope(monster, "SYSTEM");
         applyRequest(monster, request, admin, null, null);
-        return toResponse(monsterRepository.save(monster));
+        return toResponse(monsterRepository.save(monster), lang);
     }
 
     @Transactional
     public MonsterResponse setSystemMonsterActive(UUID id, boolean active, String username) {
+        return setSystemMonsterActive(id, active, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse setSystemMonsterActive(UUID id, boolean active, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
         Monster monster = findMonster(id);
         requireScope(monster, "SYSTEM");
         monster.setIsActive(active);
         monster.setUpdatedBy(admin);
-        return toResponse(monsterRepository.save(monster));
+        return toResponse(monsterRepository.save(monster), lang);
     }
 
     @Transactional
@@ -151,6 +187,11 @@ public class MonsterService {
 
     @Transactional
     public MonsterResponse createHomebrewMonster(UUID packageId, MonsterRequest request, String username) {
+        return createHomebrewMonster(packageId, request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse createHomebrewMonster(UUID packageId, MonsterRequest request, String username, String lang) {
         User gm = requireGameMaster(username);
         HomebrewPackage pkg = getEditablePackage(packageId, gm);
         Monster monster = new Monster();
@@ -158,17 +199,22 @@ public class MonsterService {
         Monster saved = monsterRepository.save(monster);
         attachToPackage(pkg, saved.getId());
         log.info("Homebrew monster created: packageId={}, id={}, by={}", packageId, saved.getId(), username);
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
     public MonsterResponse updateHomebrewMonster(UUID packageId, UUID id, MonsterRequest request, String username) {
+        return updateHomebrewMonster(packageId, id, request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse updateHomebrewMonster(UUID packageId, UUID id, MonsterRequest request, String username, String lang) {
         User gm = requireGameMaster(username);
         HomebrewPackage pkg = getEditablePackage(packageId, gm);
         Monster monster = findMonster(id);
         requireSameHomebrew(monster, pkg);
         applyRequest(monster, request, gm, pkg, null);
-        return toResponse(monsterRepository.save(monster));
+        return toResponse(monsterRepository.save(monster), lang);
     }
 
     @Transactional
@@ -186,6 +232,11 @@ public class MonsterService {
 
     @Transactional
     public MonsterResponse duplicateMonsterIntoHomebrew(UUID packageId, UUID sourceId, String username) {
+        return duplicateMonsterIntoHomebrew(packageId, sourceId, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse duplicateMonsterIntoHomebrew(UUID packageId, UUID sourceId, String username, String lang) {
         User gm = requireGameMaster(username);
         HomebrewPackage pkg = getEditablePackage(packageId, gm);
         Monster source = findMonster(sourceId);
@@ -199,13 +250,18 @@ public class MonsterService {
         attachToPackage(pkg, saved.getId());
         log.info("Monster duplicated into homebrew: sourceId={}, newId={}, packageId={}, by={}",
                 sourceId, saved.getId(), packageId, username);
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     // ========================= Campaign (master) CRUD =========================
 
     @Transactional
     public MonsterResponse createCampaignMonster(UUID campaignId, MonsterRequest request, String username) {
+        return createCampaignMonster(campaignId, request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse createCampaignMonster(UUID campaignId, MonsterRequest request, String username, String lang) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceGmOrAdmin(campaign, user);
@@ -216,11 +272,16 @@ public class MonsterService {
         if (Boolean.TRUE.equals(saved.getIsVisibleToPlayers())) {
             emitVisibilityEvent(saved, true, user);
         }
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
     public MonsterResponse cloneMonsterIntoCampaign(UUID campaignId, UUID sourceId, String username) {
+        return cloneMonsterIntoCampaign(campaignId, sourceId, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse cloneMonsterIntoCampaign(UUID campaignId, UUID sourceId, String username, String lang) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceGmOrAdmin(campaign, user);
@@ -233,11 +294,16 @@ public class MonsterService {
         Monster saved = monsterRepository.save(copy);
         log.info("Monster cloned into campaign: campaignId={}, sourceId={}, newId={}, by={}",
                 campaignId, sourceId, saved.getId(), username);
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
     public MonsterResponse updateCampaignMonster(UUID id, MonsterRequest request, String username) {
+        return updateCampaignMonster(id, request, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse updateCampaignMonster(UUID id, MonsterRequest request, String username, String lang) {
         User user = getUser(username);
         Monster monster = findMonster(id);
         requireScope(monster, "CAMPAIGN");
@@ -249,11 +315,16 @@ public class MonsterService {
         if (nowVisible != wasVisible) {
             emitVisibilityEvent(saved, nowVisible, user);
         }
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
     public MonsterResponse toggleCampaignMonsterVisibility(UUID id, String username) {
+        return toggleCampaignMonsterVisibility(id, username, Localization.DEFAULT_LANG);
+    }
+
+    @Transactional
+    public MonsterResponse toggleCampaignMonsterVisibility(UUID id, String username, String lang) {
         User user = getUser(username);
         Monster monster = findMonster(id);
         requireScope(monster, "CAMPAIGN");
@@ -264,7 +335,7 @@ public class MonsterService {
         log.info("Campaign monster visibility toggled: id={}, visible={}, by={}",
                 id, saved.getIsVisibleToPlayers(), username);
         emitVisibilityEvent(saved, Boolean.TRUE.equals(saved.getIsVisibleToPlayers()), user);
-        return toResponse(saved);
+        return toResponse(saved, lang);
     }
 
     @Transactional
@@ -586,13 +657,14 @@ public class MonsterService {
 
     // ================================ Responses ================================
 
-    private MonsterSummaryResponse toSummary(Monster m) {
+    private MonsterSummaryResponse toSummary(Monster m, String lang) {
         return MonsterSummaryResponse.builder()
                 .id(m.getId())
                 .slug(m.getSlug())
+                .name(localizedName(lang, m.getNameRusloc(), m.getNameEngloc()))
                 .nameRusloc(m.getNameRusloc())
                 .nameEngloc(m.getNameEngloc())
-                .size(m.getSize() != null ? ref(m.getSize()) : null)
+                .size(m.getSize() != null ? ref(m.getSize(), lang) : null)
                 .crRating(m.getCrRating())
                 .crValue(m.getCrValue())
                 .scope(scopeOf(m))
@@ -604,17 +676,22 @@ public class MonsterService {
     }
 
     private MonsterResponse toResponse(Monster m) {
+        return toResponse(m, Localization.DEFAULT_LANG);
+    }
+
+    private MonsterResponse toResponse(Monster m, String lang) {
         return MonsterResponse.builder()
                 .id(m.getId())
                 .sourceExternalId(m.getSourceExternalId())
                 .slug(m.getSlug())
+                .name(localizedName(lang, m.getNameRusloc(), m.getNameEngloc()))
                 .nameRusloc(m.getNameRusloc())
                 .nameEngloc(m.getNameEngloc())
-                .alignment(m.getAlignment() != null ? ref(m.getAlignment()) : null)
-                .size(m.getSize() != null ? ref(m.getSize()) : null)
-                .sizeSecondary(m.getSizeSecondary() != null ? ref(m.getSizeSecondary()) : null)
+                .alignment(m.getAlignment() != null ? ref(m.getAlignment(), lang) : null)
+                .size(m.getSize() != null ? ref(m.getSize(), lang) : null)
+                .sizeSecondary(m.getSizeSecondary() != null ? ref(m.getSizeSecondary(), lang) : null)
                 .isSwarm(m.getIsSwarm())
-                .swarmSize(m.getSwarmSize() != null ? ref(m.getSwarmSize()) : null)
+                .swarmSize(m.getSwarmSize() != null ? ref(m.getSwarmSize(), lang) : null)
                 .armorClass(m.getArmorClass())
                 .armorClassText(m.getArmorClassText())
                 .initiativeBonus(m.getInitiativeBonus())
@@ -653,43 +730,47 @@ public class MonsterService {
                 .updatedByUsername(m.getUpdatedBy() != null ? m.getUpdatedBy().getUsername() : null)
                 .createdAt(m.getCreatedAt())
                 .updatedAt(m.getUpdatedAt())
-                .creatureTypes(refList(m.getCreatureTypes()))
-                .languages(refList(m.getLanguages()))
-                .conditionImmunities(refList(m.getConditionImmunities()))
-                .habitats(refList(m.getHabitats()))
-                .treasureTags(refList(m.getTreasureTags()))
-                .sources(refList(m.getSources()))
+                .creatureTypes(refList(m.getCreatureTypes(), lang))
+                .languages(refList(m.getLanguages(), lang))
+                .conditionImmunities(refList(m.getConditionImmunities(), lang))
+                .habitats(refList(m.getHabitats(), lang))
+                .treasureTags(refList(m.getTreasureTags(), lang))
+                .sources(refList(m.getSources(), lang))
                 .speeds(m.getSpeeds().stream().map(s -> MonsterResponse.SpeedView.builder()
-                        .id(s.getId()).movementType(ref(s.getMovementType())).ft(s.getFt()).hover(s.getHover()).build()).toList())
+                        .id(s.getId()).movementType(ref(s.getMovementType(), lang)).ft(s.getFt()).hover(s.getHover()).build()).toList())
                 .senses(m.getSenses().stream().map(s -> MonsterResponse.SenseView.builder()
-                        .id(s.getId()).senseType(ref(s.getSenseType())).ft(s.getFt()).build()).toList())
+                        .id(s.getId()).senseType(ref(s.getSenseType(), lang)).ft(s.getFt()).build()).toList())
                 .savingThrows(m.getSavingThrows().stream().map(s -> MonsterResponse.SavingThrowView.builder()
-                        .id(s.getId()).ability(s.getAbility() != null ? ref(s.getAbility()) : null).bonus(s.getBonus()).build()).toList())
+                        .id(s.getId()).ability(s.getAbility() != null ? ref(s.getAbility(), lang) : null).bonus(s.getBonus()).build()).toList())
                 .skillProficiencies(m.getSkillProficiencies().stream().map(s -> MonsterResponse.SkillProficiencyView.builder()
                         .id(s.getId()).proficiencySkillId(s.getProficiencySkill().getId())
-                        .skillName(s.getProficiencySkill().getName()).bonus(s.getBonus()).build()).toList())
+                        .skillName(Localization.pick(lang, s.getProficiencySkill().getNameRusloc(),
+                                s.getProficiencySkill().getNameEngloc(), s.getProficiencySkill().getName()))
+                        .bonus(s.getBonus()).build()).toList())
                 .damageResistances(m.getDamageResistances().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType(), lang) : null).note(d.getNote()).build()).toList())
                 .damageImmunities(m.getDamageImmunities().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType(), lang) : null).note(d.getNote()).build()).toList())
                 .damageVulnerabilities(m.getDamageVulnerabilities().stream().map(d -> MonsterResponse.DamageView.builder()
-                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null).note(d.getNote()).build()).toList())
+                        .id(d.getId()).damageType(d.getDamageType() != null ? ref(d.getDamageType(), lang) : null).note(d.getNote()).build()).toList())
                 .gear(m.getGear().stream().map(g -> MonsterResponse.GearView.builder()
-                        .id(g.getId()).item(ref(g.getItem())).qty(g.getQty()).build()).toList())
-                .features(m.getFeatures().stream().map(this::featureView).toList())
+                        .id(g.getId()).item(ref(g.getItem(), lang)).qty(g.getQty()).build()).toList())
+                .features(m.getFeatures().stream().map(f -> featureView(f, lang)).toList())
                 .build();
     }
 
-    private MonsterResponse.FeatureView featureView(MonsterFeature f) {
+    private MonsterResponse.FeatureView featureView(MonsterFeature f, String lang) {
         return MonsterResponse.FeatureView.builder()
                 .id(f.getId())
                 .section(f.getSection())
                 .sortOrder(f.getSortOrder())
+                .name(localizedName(lang, f.getNameRusloc(), f.getNameEngloc()))
                 .nameRusloc(f.getNameRusloc())
                 .nameEngloc(f.getNameEngloc())
                 .kind(f.getKind())
                 .rechargeMin(f.getRechargeMin())
                 .rechargeMax(f.getRechargeMax())
+                .description(localizedText(lang, f.getDescriptionRusloc(), f.getDescriptionEngloc()))
                 .descriptionRusloc(f.getDescriptionRusloc())
                 .descriptionEngloc(f.getDescriptionEngloc())
                 .attackType(f.getAttackType())
@@ -697,27 +778,36 @@ public class MonsterService {
                 .reachFt(f.getReachFt())
                 .rangeFt(f.getRangeFt())
                 .rangeLongFt(f.getRangeLongFt())
-                .saveAbility(f.getSaveAbility() != null ? ref(f.getSaveAbility()) : null)
+                .saveAbility(f.getSaveAbility() != null ? ref(f.getSaveAbility(), lang) : null)
                 .saveDc(f.getSaveDc())
                 .damages(f.getDamages().stream().map(d -> MonsterResponse.FeatureDamageView.builder()
                         .id(d.getId()).sortOrder(d.getSortOrder()).average(d.getAverage())
-                        .dice(d.getDice()).damageType(d.getDamageType() != null ? ref(d.getDamageType()) : null)
+                        .dice(d.getDice()).damageType(d.getDamageType() != null ? ref(d.getDamageType(), lang) : null)
                         .note(d.getNote()).build()).toList())
                 .build();
     }
 
-    private MonsterResponse.DictionaryRef ref(DictionaryEntry e) {
+    private MonsterResponse.DictionaryRef ref(DictionaryEntry e, String lang) {
         return MonsterResponse.DictionaryRef.builder()
                 .id(e.getId()).code(e.getCode())
+                .name(localizedName(lang, e.getNameRusloc(), e.getNameEngloc()))
                 .nameRusloc(e.getNameRusloc()).nameEngloc(e.getNameEngloc())
                 .homebrewId(e.getHomebrew() != null ? e.getHomebrew().getId() : null)
                 .build();
     }
 
-    private List<MonsterResponse.DictionaryRef> refList(Set<? extends DictionaryEntry> set) {
-        return set.stream().map(this::ref)
+    private List<MonsterResponse.DictionaryRef> refList(Set<? extends DictionaryEntry> set, String lang) {
+        return set.stream().map(e -> ref(e, lang))
                 .sorted((a, b) -> a.getCode().compareToIgnoreCase(b.getCode()))
                 .collect(Collectors.toList());
+    }
+
+    private String localizedName(String lang, String rusloc, String engloc) {
+        return Localization.pick(lang, rusloc, engloc, rusloc);
+    }
+
+    private String localizedText(String lang, String rusloc, String engloc) {
+        return Localization.pick(lang, rusloc, engloc, rusloc);
     }
 
     // ================================ Helpers ================================

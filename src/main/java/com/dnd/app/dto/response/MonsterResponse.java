@@ -21,6 +21,7 @@ public class MonsterResponse {
     private UUID id;
     private Long sourceExternalId;
     private String slug;
+    private String name;
     private String nameRusloc;
     private String nameEngloc;
 
@@ -101,6 +102,7 @@ public class MonsterResponse {
     public static class DictionaryRef {
         private UUID id;
         private String code;
+        private String name;
         private String nameRusloc;
         private String nameEngloc;
         private UUID homebrewId;
@@ -183,11 +185,13 @@ public class MonsterResponse {
         private UUID id;
         private String section;
         private Integer sortOrder;
+        private String name;
         private String nameRusloc;
         private String nameEngloc;
         private String kind;
         private Short rechargeMin;
         private Short rechargeMax;
+        private String description;
         private String descriptionRusloc;
         private String descriptionEngloc;
         private String attackType;
