@@ -4,15 +4,18 @@ import com.dnd.app.dto.content.ContentClassDetailResponse;
 import com.dnd.app.dto.content.ContentDataAuditReport;
 import com.dnd.app.dto.content.ContentDataQualityReport;
 import com.dnd.app.dto.content.ContentSeedSummary;
+import com.dnd.app.dto.content.ClassFeatureWarningResponse;
 import com.dnd.app.dto.content.ImportWarningResponse;
 import com.dnd.app.dto.content.RuntimeMigrationReport;
 import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.dto.content.SpellWarningResponse;
+import com.dnd.app.dto.request.ClassFeatureResolutionRequest;
 import com.dnd.app.dto.request.SetSpellBuffsRequest;
 import com.dnd.app.dto.request.SpellEditRequest;
 import com.dnd.app.dto.request.SpellResolutionRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BuffDebuffResponse;
+import com.dnd.app.service.ClassFeatureAdminService;
 import com.dnd.app.service.ClassRewardSeedService;
 import com.dnd.app.service.ContentDataAuditService;
 import com.dnd.app.service.ContentReferenceService;
@@ -53,6 +56,7 @@ public class AdminContentController {
     private final ClassRewardSeedService classRewardSeedService;
     private final RuntimeDataMigrationService runtimeDataMigrationService;
     private final SpellAdminService spellAdminService;
+    private final ClassFeatureAdminService classFeatureAdminService;
     private final Executor controllerTaskExecutor;
 
     // --- read views (same model runtime uses) ---
@@ -114,6 +118,15 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    @GetMapping("/class-feature-warnings")
+    @Operation(summary = "List class features flagged for manual mechanics review")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ClassFeatureWarningResponse>>>> classFeatureWarnings(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(classFeatureAdminService.listWarnings(lang))),
+                controllerTaskExecutor);
+    }
+
     @PatchMapping("/spells/{id}/resolution")
     @Operation(summary = "Apply an admin correction of a spell's save ability / attack roll and clear its warning")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellWarningResponse>>> resolveSpell(
@@ -122,6 +135,17 @@ public class AdminContentController {
             @RequestParam(defaultValue = "en") String lang) {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(spellAdminService.resolve(id, request, lang))),
+                controllerTaskExecutor);
+    }
+
+    @PatchMapping("/class-features/{id}/resolution")
+    @Operation(summary = "Apply an admin correction of a class feature's parsed mechanics and clear its warning")
+    public CompletableFuture<ResponseEntity<ApiResponse<ClassFeatureWarningResponse>>> resolveClassFeature(
+            @PathVariable UUID id,
+            @RequestBody ClassFeatureResolutionRequest request,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(classFeatureAdminService.resolve(id, request, lang))),
                 controllerTaskExecutor);
     }
 

@@ -40,4 +40,33 @@ public class ClassFeature {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @Column(name = "activation_type", length = 32)
+    private String activationType;
+
+    @Column(name = "is_attack_roll", nullable = false)
+    @Builder.Default
+    private Boolean attackRoll = false;
+
+    @Column(name = "save_ability", length = 32)
+    private String saveAbility;
+
+    @Column(name = "damage_dice", length = 40)
+    private String damageDice;
+
+    @Column(name = "damage_type", length = 32)
+    private String damageType;
+
+    @Column(name = "healing_dice", length = 40)
+    private String healingDice;
+
+    @Column(name = "healing_flat")
+    private Integer healingFlat;
+
+    @Column(name = "is_warning", nullable = false)
+    @Builder.Default
+    private Boolean warning = false;
+
+    @Column(name = "warning_reason", columnDefinition = "text")
+    private String warningReason;
 }

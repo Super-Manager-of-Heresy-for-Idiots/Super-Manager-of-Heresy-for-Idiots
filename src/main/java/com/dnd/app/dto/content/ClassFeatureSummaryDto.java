@@ -41,4 +41,15 @@ public class ClassFeatureSummaryDto {
     private String title;
 
     private String description;
+
+    @Schema(description = "Parsed activation type: PASSIVE, ACTION, BONUS_ACTION, or REACTION")
+    private String activationType;
+    private Boolean attackRoll;
+    private String saveAbility;
+    private String damageDice;
+    private String damageType;
+    private String healingDice;
+    private Integer healingFlat;
+    private Boolean warning;
+    private String warningReason;
 }

@@ -48,14 +48,23 @@ public class ClassAbilityCombatService {
                 if (featureLevel > classLevel) {
                     continue; // not yet unlocked
                 }
-                String damage = AttackResolver.extractDamageExpression(f.getDescription());
+                String damage = f.getDamageDice() != null && !f.getDamageDice().isBlank()
+                        ? f.getDamageDice()
+                        : AttackResolver.extractDamageExpression(f.getDescription());
                 result.add(ClassAbilityResponse.builder()
                         .name(f.getTitle())
                         .level(featureLevel)
                         .className(className)
                         .description(f.getDescription())
+                        .activationType(f.getActivationType())
+                        .attackRoll(Boolean.TRUE.equals(f.getAttackRoll()))
+                        .saveAbility(f.getSaveAbility())
                         .usableAsAttack(damage != null)
                         .damage(damage)
+                        .damageType(f.getDamageType())
+                        .healingDice(f.getHealingDice())
+                        .healingFlat(f.getHealingFlat())
+                        .warning(Boolean.TRUE.equals(f.getWarning()))
                         .build());
             }
         }
@@ -77,7 +86,7 @@ public class ClassAbilityCombatService {
                     .name(ability.getName())
                     .attackBonus(signed(attackBonus))
                     .damage(ability.getDamage())
-                    .damageType(null)
+                    .damageType(ability.getDamageType())
                     .category("CLASS")
                     .source("CLASS")
                     .build());

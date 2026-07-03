@@ -234,6 +234,17 @@ public class DndContentLoader implements ApplicationRunner {
                     CORE_MOD_SLUG,
                     e);
         }
+
+        // Backfill structured class-feature mechanics from feature descriptions. Idempotent;
+        // fills existing DBs whose class_feature rows predate these columns.
+        try {
+            loadClassFeatureMechanics();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped class feature mechanics backfill: operation=class-feature-mechanics-backfill, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
     }
 
     // ------------------------------------------------------------------ references / dictionaries
@@ -747,6 +758,54 @@ public class DndContentLoader implements ApplicationRunner {
             checks++;
         }
         log.info("Backfilled {} spells with ability-check resolution", checks);
+    }
+
+    private void loadClassFeatureMechanics() {
+        Integer remaining = jdbc.queryForObject(
+                "SELECT count(*) FROM class_feature WHERE activation_type IS NULL", Integer.class);
+        if (remaining == null || remaining == 0) {
+            return;
+        }
+
+        int[] updated = {0};
+        int[] warnings = {0};
+        jdbc.query("""
+                        SELECT class_feature_id, title, description
+                        FROM class_feature
+                        WHERE activation_type IS NULL
+                        """,
+                (RowCallbackHandler) rs -> {
+                    ClassFeatureMechanicParser.Result parsed = ClassFeatureMechanicParser.parse(
+                            rs.getString("title"), rs.getString("description"));
+                    jdbc.update("""
+                                    UPDATE class_feature
+                                    SET activation_type = ?,
+                                        is_attack_roll = ?,
+                                        save_ability = ?,
+                                        damage_dice = ?,
+                                        damage_type = ?,
+                                        healing_dice = ?,
+                                        healing_flat = ?,
+                                        is_warning = ?,
+                                        warning_reason = ?
+                                    WHERE class_feature_id = ?
+                                    """,
+                            parsed.activationType(),
+                            parsed.attackRoll(),
+                            parsed.saveAbility(),
+                            parsed.damageDice(),
+                            parsed.damageType(),
+                            parsed.healingDice(),
+                            parsed.healingFlat(),
+                            parsed.warning(),
+                            parsed.warningReason(),
+                            (UUID) rs.getObject("class_feature_id"));
+                    updated[0]++;
+                    if (parsed.warning()) {
+                        warnings[0]++;
+                    }
+                });
+        log.info("Backfilled class feature mechanics: {} updated, {} flagged for review", updated[0], warnings[0]);
     }
 
     /** {ability code, skill raw or null} of the first ability check named in the text, or null. */

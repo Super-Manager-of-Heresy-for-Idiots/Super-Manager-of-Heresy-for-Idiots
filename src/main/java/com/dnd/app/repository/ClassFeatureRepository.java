@@ -16,4 +16,14 @@ public interface ClassFeatureRepository extends JpaRepository<ClassFeature, UUID
     List<ClassFeature> findAllByCharacterClassIdOrderByLevelAscSortOrderAsc(UUID classId);
 
     List<ClassFeature> findAllBySubclassIdOrderByLevelAscSortOrderAsc(UUID subclassId);
+
+    /** Class features whose parsed mechanics need admin review. */
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT f FROM ClassFeature f
+            LEFT JOIN FETCH f.characterClass
+            LEFT JOIN FETCH f.subclass
+            WHERE f.warning = true
+            ORDER BY f.level ASC, f.title ASC
+            """)
+    List<ClassFeature> findWarnings();
 }

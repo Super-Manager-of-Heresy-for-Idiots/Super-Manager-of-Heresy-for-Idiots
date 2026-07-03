@@ -148,6 +148,15 @@ public class ContentClassMapper {
                 .sortOrder(f.getSortOrder())
                 .title(f.getTitle())
                 .description(f.getDescription())
+                .activationType(f.getActivationType())
+                .attackRoll(f.getAttackRoll())
+                .saveAbility(f.getSaveAbility())
+                .damageDice(f.getDamageDice())
+                .damageType(f.getDamageType())
+                .healingDice(f.getHealingDice())
+                .healingFlat(f.getHealingFlat())
+                .warning(f.getWarning())
+                .warningReason(f.getWarningReason())
                 .build();
     }
 

@@ -61,4 +61,7 @@
     <!-- Countable action economy: action/bonus/legendary pools replace the boolean flags. -->
     <include file="db/changelog/063-combat-action-counts.xml"/>
 
+    <!-- Structured class-feature mechanics parsed from descriptions + admin warning flags. -->
+    <include file="db/changelog/064-class-feature-mechanics.xml"/>
+
 </databaseChangeLog>
