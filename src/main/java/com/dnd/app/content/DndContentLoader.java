@@ -167,6 +167,17 @@ public class DndContentLoader implements ApplicationRunner {
         // whose base content was loaded before this step existed.
         loadClassMechanics();
 
+        // Bind vanilla class resources (Rage, Ki, …) to their class. Idempotent and self-contained, so it
+        // runs on every startup and also fills an existing DB whose classes were imported earlier.
+        try {
+            linkClassResources();
+        } catch (DataAccessException e) {
+            log.warn(
+                    "DndContentLoader#run skipped class resource linking: operation=class-resource-link, modSlug={}",
+                    CORE_MOD_SLUG,
+                    e);
+        }
+
         // Backfill structured spell damage (dice + damage type) from the normalized
         // source's detected_damage[]. Idempotent (own row-count guard) so it populates
         // both a fresh import and an existing DB whose spells were loaded before this
@@ -1221,6 +1232,42 @@ public class DndContentLoader implements ApplicationRunner {
             updated++;
         }
         log.info("Seeded mechanics for {} classes", updated);
+    }
+
+    /**
+     * Binds the seeded vanilla class resources (Rage, Ki, Sorcery Points, …) to their class by slug, so that a
+     * character of that class auto-provisions them ({@code CharacterResourceService.getResources}). Idempotent
+     * and self-contained (looks up class ids by slug), so it runs on EVERY startup — including an existing DB
+     * whose classes were imported before this step existed. Superiority Dice (Battle Master subclass) and Luck
+     * Points (Lucky feat) are intentionally NOT class-bound here.
+     */
+    private void linkClassResources() {
+        String[][] binds = {
+                {"695421f3-aa9a-409f-8599-8948081af57f", "barbarian"}, // Rage
+                {"30728c99-399b-47ff-a697-fbe3089a2d93", "monk"},      // Ki
+                {"836144ed-bbbb-43ec-bc9c-17a6483b091e", "sorcerer"},  // Sorcery Points
+                {"9999d62a-5670-41a9-b8b2-1f412a969e6c", "bard"},      // Bardic Inspiration
+                {"4a0cc5d8-3b76-49f2-88b5-4e5bdde7ffe9", "cleric"},    // Channel Divinity
+                {"3c657b6b-b26f-4704-a1b2-3c5b9addeb7d", "druid"},     // Wild Shape
+                {"4f933b40-55ed-4cdf-9866-b1abf3270847", "paladin"},   // Lay on Hands
+                {"ef106b7a-1b1b-4b14-baf0-8fefcdec8d72", "rogue"},     // Sneak Attack Dice
+        };
+        int linked = 0;
+        for (String[] b : binds) {
+            List<UUID> ids = jdbc.queryForList(
+                    "SELECT class_id FROM character_class WHERE slug = ? AND homebrew_id IS NULL LIMIT 1",
+                    UUID.class, b[1]);
+            if (ids.isEmpty()) {
+                continue;
+            }
+            linked += jdbc.update(
+                    "UPDATE custom_resource_types SET class_bound_id = ? "
+                            + "WHERE id = ? AND homebrew_id IS NULL AND class_bound_id IS NULL",
+                    ids.get(0), UUID.fromString(b[0]));
+        }
+        if (linked > 0) {
+            log.info("Linked {} class resources to their classes", linked);
+        }
     }
 
     private void insertClassAbilities(UUID classId, Map<String, UUID> abilityBySlug,

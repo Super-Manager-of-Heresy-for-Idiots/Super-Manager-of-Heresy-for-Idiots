@@ -27,15 +27,44 @@ public class CharacterResourceService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ResourceResponse> getResources(UUID characterId, String username) {
         User user = getUser(username);
         PlayerCharacter character = findCharacter(characterId);
         enforceViewAccess(character, user);
 
+        provisionClassResources(character);
+
         return characterResourceRepository.findByCharacterId(characterId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /**
+     * Ensures the character has the resources bound to its class(es) (Rage for Barbarian, Ki for Monk, …).
+     * Idempotent self-heal: creates only the missing rows, starting full. Resource→class binding lives on
+     * {@code custom_resource_types.class_bound_id} (populated by the content import). Non-class resources
+     * (e.g. Luck Points from the Lucky feat) are not provisioned here.
+     */
+    private void provisionClassResources(PlayerCharacter character) {
+        List<UUID> classIds = character.getClassLevels().stream()
+                .map(CharacterClassLevel::getClassId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (classIds.isEmpty()) {
+            return;
+        }
+        for (CustomResourceType type : customResourceTypeRepository.findByClassBound_IdIn(classIds)) {
+            boolean present = characterResourceRepository
+                    .findByCharacterIdAndResourceTypeId(character.getId(), type.getId()).isPresent();
+            if (!present) {
+                characterResourceRepository.save(CharacterResource.builder()
+                        .character(character)
+                        .resourceType(type)
+                        .currentValue(type.getMaxValue() != null ? type.getMaxValue() : 0)
+                        .build());
+            }
+        }
     }
 
     @Transactional
