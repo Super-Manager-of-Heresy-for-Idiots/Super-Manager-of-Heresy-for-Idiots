@@ -85,4 +85,19 @@
     <!-- Feature rules runtime — Stage 6: feature action costs + feature-use audit log. -->
     <include file="db/changelog/071-feature-action-costs.xml"/>
 
+    <!-- Feature rules runtime — Stage 7: active effects, modifiers, end conditions (separate, flag-gated). -->
+    <include file="db/changelog/072-feature-effects.xml"/>
+
+    <!-- Feature rules runtime — Stage 8: structured combat resolution (damage/healing/save/attack rules). -->
+    <include file="db/changelog/073-feature-combat-rules.xml"/>
+
+    <!-- Feature rules runtime — Stage 9: feature spell grants/filters (additive over the spell model). -->
+    <include file="db/changelog/074-feature-spell-grants.xml"/>
+
+    <!-- Feature rules runtime — Stage 10: forms/transformations/companions (Wild Shape-like, flag-gated). -->
+    <include file="db/changelog/075-feature-forms-companions.xml"/>
+
+    <!-- Feature rules runtime — Stage 11: triggers, reactions, durable gameplay prompts. -->
+    <include file="db/changelog/076-feature-triggers.xml"/>
+
 </databaseChangeLog>

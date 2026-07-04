@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 11: triggers, reactions, durable prompts. See
+      anal-integration/11_STAGE_TRIGGERS_REACTIONS_AND_DURABLE_PROMPTS.md.
+
+      feature_trigger binds a feature rule to a gameplay event with a predicate + reaction/resource cost.
+      gameplay_event is a persisted, typed event (so a prompt can reference it). pending_gameplay_prompt is
+      DURABLE in the DB (per the stage guidance: a reaction prompt must survive a client reload / backend
+      restart). Optional triggers create prompts; automatic triggers are applied immediately. Gated by
+      app.feature-rules.triggers.
+    -->
+    <changeSet id="076-feature-trigger" author="claude">
+        <createTable tableName="feature_trigger">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="event_type_id" type="uuid"/>
+            <column name="timing" type="varchar(16)"/>
+            <column name="predicate_formula_id" type="uuid"/>
+            <column name="requires_player_confirmation" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="consumes_reaction" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="consumes_resource_definition_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_trigger" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_trigger_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_trigger" baseColumnNames="event_type_id"
+                                 referencedTableName="trigger_event_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_trigger_event_type" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_trigger" baseColumnNames="predicate_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_trigger_predicate" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_trigger" baseColumnNames="consumes_resource_definition_id"
+                                 referencedTableName="feature_resource_definition" referencedColumnNames="id"
+                                 constraintName="fk_feature_trigger_resource" onDelete="SET NULL"/>
+        <createIndex tableName="feature_trigger" indexName="idx_feature_trigger_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+        <createIndex tableName="feature_trigger" indexName="idx_feature_trigger_event">
+            <column name="event_type_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="076-gameplay-event" author="claude">
+        <createTable tableName="gameplay_event">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="event_type" type="varchar(48)"><constraints nullable="false"/></column>
+            <column name="combat_id" type="uuid"/>
+            <column name="actor_character_id" type="uuid"/>
+            <column name="payload_json" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="gameplay_event" indexName="idx_gameplay_event_type_created">
+            <column name="event_type"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="076-pending-gameplay-prompt" author="claude">
+        <createTable tableName="pending_gameplay_prompt">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="combat_id" type="uuid"/>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source_feature_id" type="uuid"/>
+            <column name="trigger_event_id" type="uuid"/>
+            <column name="feature_trigger_id" type="uuid"/>
+            <column name="prompt_type" type="varchar(32)"/>
+            <column name="expires_at" type="timestamp with time zone"/>
+            <column name="status" type="varchar(16)" defaultValue="pending"><constraints nullable="false"/></column>
+            <column name="payload_json" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="resolved_at" type="timestamp with time zone"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="pending_gameplay_prompt" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_pending_prompt_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="pending_gameplay_prompt" baseColumnNames="source_feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_pending_prompt_feature" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="pending_gameplay_prompt" baseColumnNames="trigger_event_id"
+                                 referencedTableName="gameplay_event" referencedColumnNames="id"
+                                 constraintName="fk_pending_prompt_event" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="pending_gameplay_prompt" baseColumnNames="feature_trigger_id"
+                                 referencedTableName="feature_trigger" referencedColumnNames="id"
+                                 constraintName="fk_pending_prompt_trigger" onDelete="SET NULL"/>
+        <createIndex tableName="pending_gameplay_prompt" indexName="idx_pending_prompt_char_status">
+            <column name="character_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

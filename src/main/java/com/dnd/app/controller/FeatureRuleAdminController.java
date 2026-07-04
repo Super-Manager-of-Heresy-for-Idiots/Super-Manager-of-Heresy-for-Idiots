@@ -8,6 +8,9 @@ import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateRequest;
 import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateResponse;
 import com.dnd.app.dto.featurerule.FeatureFormulaValidateRequest;
 import com.dnd.app.dto.featurerule.FeatureFormulaValidationResponse;
+import com.dnd.app.dto.featurerule.FeatureMaintenanceResult;
+import com.dnd.app.dto.featurerule.FeatureRuleBackfillResult;
+import com.dnd.app.dto.featurerule.FeatureRuleCoverageReport;
 import com.dnd.app.dto.featurerule.FeatureRuleMetadataResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleRevisionResponse;
@@ -20,8 +23,11 @@ import com.dnd.app.dto.featurerule.UpdateFeatureRuleRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureRuleAdminService;
+import com.dnd.app.service.FeatureRuleBackfillService;
+import com.dnd.app.service.FeatureRuleCoverageService;
 import com.dnd.app.service.FeatureRuleIssueService;
 import com.dnd.app.service.FeatureRuleRevisionService;
+import com.dnd.app.service.FeatureRuntimeMaintenanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -56,6 +62,9 @@ public class FeatureRuleAdminController {
     private final FeatureRuleIssueService featureRuleIssueService;
     private final FeatureRuleRevisionService featureRuleRevisionService;
     private final FeatureFormulaService featureFormulaService;
+    private final FeatureRuleBackfillService featureRuleBackfillService;
+    private final FeatureRuleCoverageService featureRuleCoverageService;
+    private final FeatureRuntimeMaintenanceService featureRuntimeMaintenanceService;
     private final Executor controllerTaskExecutor;
 
     private static String usernameOf(Authentication authentication) {
@@ -272,6 +281,46 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureRuleIssueService.resolve(id, username, lang), "Проблема закрыта")),
+                controllerTaskExecutor);
+    }
+
+    // ── Backfill, coverage & bulk review (Stage 12) ─────────────────────────
+
+    @GetMapping("/feature-rules/coverage")
+    @Operation(summary = "Coverage of the runtime features by the feature-rules model")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleCoverageReport>>> coverage(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureRuleCoverageService.report(lang))),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/feature-rules/backfill")
+    @Operation(summary = "Backfill structured rules for the 305 runtime features (dry-run unless apply=true)")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleBackfillResult>>> backfill(
+            @RequestParam(defaultValue = "false") boolean apply) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureRuleBackfillService.backfill(apply),
+                                apply ? "Бэкфилл применён" : "Пробный прогон")),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/feature-rules/batch-approve")
+    @Operation(summary = "Batch-approve valid needs_review rules of a low-risk type")
+    public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> batchApprove(
+            @RequestParam String ruleType, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureRuleAdminService.batchApproveLowRisk(ruleType, username), "Массовое утверждение")),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/feature-rules/maintenance/cleanup")
+    @Operation(summary = "Cleanup: expire due effects, expire pending prompts, end stale transformations")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureMaintenanceResult>>> cleanup() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureRuntimeMaintenanceService.runCleanup(), "Очистка выполнена")),
                 controllerTaskExecutor);
     }
 

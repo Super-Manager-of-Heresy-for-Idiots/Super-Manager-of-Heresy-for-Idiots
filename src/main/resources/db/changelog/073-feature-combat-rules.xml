@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 8: structured combat resolution (damage, healing, temp HP, saves,
+      checks, attacks). See anal-integration/08_STAGE_COMBAT_RESOLUTION_DAMAGE_HEALING_SAVES.md.
+
+      These rows let the runtime COMPUTE a feature's combat outcome from formulas + the actor's context
+      (dice/flat damage, healing, DC, save/check/attack requirements) instead of hardcoding it. Cross-rule
+      references (save_rule_id, on_success/failure_rule_id, damage_override_rule_id, weapon filter) and
+      ability/skill/damage_type are plain uuids validated in the app layer, per the established pattern.
+      Deep integration into the core BattleService flow is deferred (see roadmap); gated by app.feature-rules.
+    -->
+    <changeSet id="073-feature-resolution-rule" author="claude">
+        <createTable tableName="feature_resolution_rule">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="resolution_type" type="varchar(24)"><constraints nullable="false"/></column>
+            <column name="ability_id" type="uuid"/>
+            <column name="skill_id" type="uuid"/>
+            <column name="dc_formula_id" type="uuid"/>
+            <column name="on_success_rule_id" type="uuid"/>
+            <column name="on_failure_rule_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_resolution_rule" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_resolution_rule_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_resolution_rule" baseColumnNames="dc_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_resolution_dc_formula" onDelete="SET NULL"/>
+        <createIndex tableName="feature_resolution_rule" indexName="idx_feature_resolution_rule_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="073-feature-damage-rule" author="claude">
+        <createTable tableName="feature_damage_rule">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="dice_formula_id" type="uuid"/>
+            <column name="flat_amount_formula_id" type="uuid"/>
+            <column name="damage_type_id" type="uuid"/>
+            <column name="target_type_id" type="uuid"/>
+            <column name="requires_attack_hit" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="requires_save" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="half_on_save" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="save_rule_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_damage_rule" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_damage_rule_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_damage_rule" baseColumnNames="dice_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_damage_dice_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_damage_rule" baseColumnNames="flat_amount_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_damage_flat_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_damage_rule" baseColumnNames="target_type_id"
+                                 referencedTableName="target_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_damage_target_type" onDelete="SET NULL"/>
+        <createIndex tableName="feature_damage_rule" indexName="idx_feature_damage_rule_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="073-feature-healing-rule" author="claude">
+        <createTable tableName="feature_healing_rule">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="amount_formula_id" type="uuid"/>
+            <column name="target_type_id" type="uuid"/>
+            <column name="is_temp_hp" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="can_revive_from_zero" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_healing_rule" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_healing_rule_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_healing_rule" baseColumnNames="amount_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_healing_amount_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_healing_rule" baseColumnNames="target_type_id"
+                                 referencedTableName="target_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_healing_target_type" onDelete="SET NULL"/>
+        <createIndex tableName="feature_healing_rule" indexName="idx_feature_healing_rule_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="073-feature-attack-rule" author="claude">
+        <createTable tableName="feature_attack_rule">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="attack_kind" type="varchar(24)"><constraints nullable="false"/></column>
+            <column name="extra_attack_count_formula_id" type="uuid"/>
+            <column name="allowed_weapon_filter_id" type="uuid"/>
+            <column name="damage_override_rule_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_attack_rule" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_attack_rule_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_attack_rule" baseColumnNames="extra_attack_count_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_attack_extra_formula" onDelete="SET NULL"/>
+        <createIndex tableName="feature_attack_rule" indexName="idx_feature_attack_rule_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

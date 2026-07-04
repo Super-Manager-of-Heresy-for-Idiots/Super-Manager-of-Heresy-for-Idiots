@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 10: forms, transformations, companions. See
+      anal-integration/10_STAGE_FORMS_TRANSFORMATIONS_COMPANIONS_AND_MAP.md.
+
+      Wild Shape-like mechanics: monster eligibility filters, a character's known forms (with GM approval), an
+      active transformation (linked to a Stage 7 active effect via active_effect_id as the lifecycle container),
+      and feature companions. monster_id references a bestiary monster but is a plain uuid validated in the app
+      layer (heterogeneous-ref pattern); the map-service receives a tactical snapshot/events, it does not read
+      these tables. Gated by app.feature-rules.forms.
+    -->
+    <changeSet id="075-feature-allowed-monster-filter" author="claude">
+        <createTable tableName="feature_allowed_monster_filter">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="creature_type" type="varchar(32)"/>
+            <column name="max_cr_formula_id" type="uuid"/>
+            <column name="movement_restriction" type="varchar(24)"/>
+            <column name="size_filter" type="varchar(24)"/>
+            <column name="source_filter" type="varchar(64)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_allowed_monster_filter" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_monster_filter_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_allowed_monster_filter" baseColumnNames="max_cr_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_monster_filter_cr_formula" onDelete="SET NULL"/>
+        <createIndex tableName="feature_allowed_monster_filter" indexName="idx_feature_monster_filter_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="075-character-known-form" author="claude">
+        <createTable tableName="character_known_form">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="monster_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source_feature_id" type="uuid"/>
+            <column name="learned_at_level" type="integer"/>
+            <column name="approved_by_dm" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_known_form" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_known_form_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_known_form" baseColumnNames="source_feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_character_known_form_feature" onDelete="SET NULL"/>
+        <createIndex tableName="character_known_form" indexName="idx_character_known_form_char">
+            <column name="character_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="075-character-transformation" author="claude">
+        <createTable tableName="character_transformation">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source_feature_id" type="uuid"/>
+            <column name="monster_id" type="uuid"/>
+            <column name="active_effect_id" type="uuid"/>
+            <column name="started_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="expires_at" type="timestamp with time zone"/>
+            <column name="transformation_policy_id" type="uuid"/>
+            <column name="hp_mode" type="varchar(24)"/>
+            <column name="retained_traits_policy" type="varchar(24)"/>
+            <column name="status" type="varchar(16)" defaultValue="active"><constraints nullable="false"/></column>
+            <column name="state_json" type="text"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_transformation" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_transformation_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_transformation" baseColumnNames="source_feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_character_transformation_feature" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_transformation" baseColumnNames="active_effect_id"
+                                 referencedTableName="character_active_effect" referencedColumnNames="id"
+                                 constraintName="fk_character_transformation_effect" onDelete="SET NULL"/>
+        <createIndex tableName="character_transformation" indexName="idx_character_transformation_char">
+            <column name="character_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="075-character-feature-companion" author="claude">
+        <createTable tableName="character_feature_companion">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source_feature_id" type="uuid"/>
+            <column name="monster_id" type="uuid"/>
+            <column name="custom_name" type="varchar(120)"/>
+            <column name="hp_formula_id" type="uuid"/>
+            <column name="ac_formula_id" type="uuid"/>
+            <column name="attack_bonus_formula_id" type="uuid"/>
+            <column name="state" type="varchar(16)" defaultValue="active"><constraints nullable="false"/></column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_feature_companion" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_companion_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_feature_companion" baseColumnNames="source_feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_character_companion_feature" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_feature_companion" baseColumnNames="hp_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_character_companion_hp_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_feature_companion" baseColumnNames="ac_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_character_companion_ac_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_feature_companion" baseColumnNames="attack_bonus_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_character_companion_atk_formula" onDelete="SET NULL"/>
+        <createIndex tableName="character_feature_companion" indexName="idx_character_companion_char">
+            <column name="character_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

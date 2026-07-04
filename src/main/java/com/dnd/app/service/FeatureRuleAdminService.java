@@ -324,6 +324,28 @@ public class FeatureRuleAdminService {
         return toResponse(rule, issuesForRuleOwner(rule));
     }
 
+    /** Batch-approve all valid, needs_review rules of a low-risk type (Stage 12 policy). Returns count. */
+    @Transactional
+    public int batchApproveLowRisk(String ruleType, String actingUsername) {
+        java.util.Set<String> lowRisk = java.util.Set.of(
+                FeatureRuleProfile.STATIC_GRANT.getCode());
+        if (!lowRisk.contains(ruleType)) {
+            throw new BadRequestException("Тип не входит в low-risk для массового утверждения: " + ruleType);
+        }
+        List<FeatureRule> candidates = ruleRepository.findByOwnerType(OWNER).stream()
+                .filter(r -> ruleType.equals(r.getRuleType()))
+                .filter(r -> FeatureReviewStatus.NEEDS_REVIEW.getCode().equals(r.getReviewStatus()))
+                .filter(FeatureRule::isEnabled)
+                .filter(r -> validator.validate(r).isValid())
+                .toList();
+        int approved = 0;
+        for (FeatureRule rule : candidates) {
+            revisionService.approveCurrent(rule.getId(), "batch approve (low-risk)", actingUsername);
+            approved++;
+        }
+        return approved;
+    }
+
     // ── Problem features list ───────────────────────────────────────────────
 
     @Transactional(readOnly = true)

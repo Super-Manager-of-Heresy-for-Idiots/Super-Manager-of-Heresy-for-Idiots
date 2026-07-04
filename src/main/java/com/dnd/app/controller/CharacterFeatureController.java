@@ -3,20 +3,32 @@ package com.dnd.app.controller;
 import com.dnd.app.domain.PlayerCharacter;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.dto.featurerule.ActiveEffectResponse;
 import com.dnd.app.dto.featurerule.AvailableFeatureAction;
 import com.dnd.app.dto.featurerule.CharacterFeatureResourceResponse;
+import com.dnd.app.dto.featurerule.FeatureApplyRequest;
+import com.dnd.app.dto.featurerule.FeatureApplyResult;
+import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
+import com.dnd.app.dto.featurerule.FeatureSpellCastResult;
+import com.dnd.app.dto.featurerule.FeatureSpellGrantResponse;
 import com.dnd.app.dto.featurerule.FeatureUseRequest;
 import com.dnd.app.dto.featurerule.FeatureUseResult;
+import com.dnd.app.dto.featurerule.PendingPromptResponse;
 import com.dnd.app.dto.featurerule.RestResourcePreview;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.service.ActiveEffectQueryService;
 import com.dnd.app.service.CampaignService;
+import com.dnd.app.service.CombatFeatureExecutionService;
+import com.dnd.app.service.EffectExpirationService;
 import com.dnd.app.service.FeatureActionService;
 import com.dnd.app.service.FeatureResourceService;
+import com.dnd.app.service.FeatureSpellGrantService;
 import com.dnd.app.service.FeatureUseService;
+import com.dnd.app.service.PendingGameplayPromptService;
 import com.dnd.app.service.RestFeatureRuntimeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,6 +63,11 @@ public class CharacterFeatureController {
     private final RestFeatureRuntimeService restFeatureRuntimeService;
     private final FeatureActionService featureActionService;
     private final FeatureUseService featureUseService;
+    private final ActiveEffectQueryService activeEffectQueryService;
+    private final EffectExpirationService effectExpirationService;
+    private final CombatFeatureExecutionService combatFeatureExecutionService;
+    private final FeatureSpellGrantService featureSpellGrantService;
+    private final PendingGameplayPromptService pendingGameplayPromptService;
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
@@ -114,6 +131,125 @@ public class CharacterFeatureController {
             PlayerCharacter character = requireCharacter(characterId, username);
             return ResponseEntity.ok(ApiResponse.ok(
                     featureUseService.use(character, featureId, request), "Умение использовано"));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/{featureId}/plan")
+    @Operation(summary = "Compute a feature's structured combat resolution (damage/DC/save/attack)")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureExecutionPlan>>> plan(
+            @PathVariable UUID characterId, @PathVariable UUID featureId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerCharacter actor = requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(combatFeatureExecutionService.plan(actor, featureId)));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{featureId}/apply")
+    @Operation(summary = "Apply a rolled feature outcome (damage/healing) to a target character")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureApplyResult>>> apply(
+            @PathVariable UUID characterId, @PathVariable UUID featureId,
+            @RequestBody FeatureApplyRequest request, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerCharacter actor = requireCharacter(characterId, username);
+            PlayerCharacter target = requireCharacter(request.getTargetCharacterId(), username);
+            return ResponseEntity.ok(ApiResponse.ok(combatFeatureExecutionService.applyToTarget(
+                    actor, featureId, target, request.getDamage(), request.getHealing()), "Применено"));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/pending-prompts")
+    @Operation(summary = "List a character's pending gameplay prompts (reactions/optional triggers)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<PendingPromptResponse>>>> pendingPrompts(
+            @PathVariable UUID characterId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(pendingGameplayPromptService.listPending(characterId)));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/pending-prompts/{promptId}/resolve")
+    @Operation(summary = "Resolve a pending prompt (spend reaction/resource and apply)")
+    public CompletableFuture<ResponseEntity<ApiResponse<PendingPromptResponse>>> resolvePrompt(
+            @PathVariable UUID characterId, @PathVariable UUID promptId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    pendingGameplayPromptService.resolve(characterId, promptId), "Реакция применена"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/pending-prompts/{promptId}/decline")
+    @Operation(summary = "Decline a pending prompt")
+    public CompletableFuture<ResponseEntity<ApiResponse<PendingPromptResponse>>> declinePrompt(
+            @PathVariable UUID characterId, @PathVariable UUID promptId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    pendingGameplayPromptService.decline(characterId, promptId), "Отклонено"));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/spells")
+    @Operation(summary = "List spells a character's features grant (with prepared/known/free-cast flags)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureSpellGrantResponse>>>> spells(
+            @PathVariable UUID characterId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerCharacter character = requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(featureSpellGrantService.listGrantedSpells(character)));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/spell-grants/{grantId}/cast")
+    @Operation(summary = "Cast a spell via a feature grant (free cast / resource spend)")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureSpellCastResult>>> castViaFeature(
+            @PathVariable UUID characterId, @PathVariable UUID grantId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerCharacter character = requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    featureSpellGrantService.castViaFeature(character, grantId), "Каст выполнен"));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/effects")
+    @Operation(summary = "List a character's active feature effects with modifiers")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ActiveEffectResponse>>>> effects(
+            @PathVariable UUID characterId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(activeEffectQueryService.listActive(characterId)));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/effects/{effectId}/end")
+    @Operation(summary = "GM: end an active feature effect")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> endEffect(
+            @PathVariable UUID characterId, @PathVariable UUID effectId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            effectExpirationService.gmEnd(effectId);
+            return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Эффект завершён"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/effects/{effectId}/rounds")
+    @Operation(summary = "GM: set the remaining rounds of an active feature effect")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> setEffectRounds(
+            @PathVariable UUID characterId, @PathVariable UUID effectId,
+            @RequestParam int value, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            effectExpirationService.gmSetRounds(effectId, value);
+            return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Длительность обновлена"));
         }, controllerTaskExecutor);
     }
 

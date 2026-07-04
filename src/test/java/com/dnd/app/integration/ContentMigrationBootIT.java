@@ -18,8 +18,12 @@ import com.dnd.app.repository.ContentSkillRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.dto.featurerule.FeatureRuleBackfillResult;
+import com.dnd.app.dto.featurerule.FeatureRuleCoverageReport;
 import com.dnd.app.service.ContentCharacterCreationService;
 import com.dnd.app.service.ContentReferenceService;
+import com.dnd.app.service.FeatureRuleBackfillService;
+import com.dnd.app.service.FeatureRuleCoverageService;
 import com.dnd.app.service.ReferenceDataService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,11 +88,35 @@ class ContentMigrationBootIT {
     @Autowired private CharacterStatRepository characterStatRepository;
     @Autowired private CharacterClassLevelRepository classLevelRepository;
     @Autowired private CharacterSkillProficiencyRepository skillProficiencyRepository;
+    @Autowired private FeatureRuleBackfillService featureRuleBackfillService;
+    @Autowired private FeatureRuleCoverageService featureRuleCoverageService;
 
     @Test
     void contextBootsLiquibaseValidatesAndContentLoaderRuns() {
         // Reaching here means the full changelog applied, ddl-auto=validate passed against
         // every entity, and the content loader ran — the deploy-time failure surface.
+    }
+
+    @Test
+    @Transactional
+    void featureRuleBackfillCreatesRulesForRuntimeFeaturesAndCoverageReports() {
+        FeatureRuleCoverageReport before = featureRuleCoverageService.report("en");
+        assertThat(before.getRuntimeFeatures()).isGreaterThan(0); // the 305 runtime features
+
+        FeatureRuleBackfillResult first = featureRuleBackfillService.backfill(true);
+        assertThat(first.isApplied()).isTrue();
+        assertThat(first.getRuntimeFeatures()).isEqualTo(before.getRuntimeFeatures());
+        assertThat(first.getRulesCreated()).isGreaterThan(0);
+
+        FeatureRuleCoverageReport after = featureRuleCoverageService.report("en");
+        assertThat(after.getFeaturesWithRules()).isGreaterThan(0);
+        assertThat(after.getRulesByType()).isNotEmpty();
+        assertThat(after.getTotalRules()).isGreaterThanOrEqualTo(first.getRulesCreated());
+
+        // idempotent: a second run skips already-backfilled features and creates nothing new
+        FeatureRuleBackfillResult second = featureRuleBackfillService.backfill(true);
+        assertThat(second.getFeaturesSkipped()).isGreaterThan(0);
+        assertThat(second.getRulesCreated()).isZero();
     }
 
     @Test

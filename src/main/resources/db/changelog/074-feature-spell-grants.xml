@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 9: spell/feature integration. See
+      anal-integration/09_STAGE_SPELL_FEATURE_INTEGRATION.md.
+
+      An ADDITIVE layer over the existing spell model (per the stage guidance: don't duplicate spellcasting —
+      add grants/overrides/exceptions on top). feature_spell_grant says a feature grants a spell (or a filtered
+      set) with flags: always_prepared, counts_against_known, cast_without_slot, a resource for free casts, and
+      a spellcasting-ability override. spell_id / school_id / class_id / ability override are plain uuids
+      validated in the app layer. Gated by app.feature-rules.spells.
+    -->
+    <changeSet id="074-feature-spell-filter" author="claude">
+        <createTable tableName="feature_spell_filter">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="class_id" type="uuid"/>
+            <column name="school_id" type="uuid"/>
+            <column name="max_spell_level_formula_id" type="uuid"/>
+            <column name="tag" type="varchar(32)"/>
+            <column name="source_filter" type="varchar(64)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_spell_filter" baseColumnNames="max_spell_level_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_spell_filter_formula" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="074-feature-spell-grant" author="claude">
+        <createTable tableName="feature_spell_grant">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="spell_id" type="uuid"/>
+            <column name="spell_filter_id" type="uuid"/>
+            <column name="counts_against_known" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="always_prepared" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="cast_without_slot" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="uses_resource_definition_id" type="uuid"/>
+            <column name="spellcasting_ability_override_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_spell_grant" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_spell_grant_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_spell_grant" baseColumnNames="spell_filter_id"
+                                 referencedTableName="feature_spell_filter" referencedColumnNames="id"
+                                 constraintName="fk_feature_spell_grant_filter" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_spell_grant" baseColumnNames="uses_resource_definition_id"
+                                 referencedTableName="feature_resource_definition" referencedColumnNames="id"
+                                 constraintName="fk_feature_spell_grant_resource" onDelete="SET NULL"/>
+        <createIndex tableName="feature_spell_grant" indexName="idx_feature_spell_grant_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

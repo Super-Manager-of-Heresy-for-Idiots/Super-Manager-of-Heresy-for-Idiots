@@ -43,6 +43,7 @@ public class RestFeatureRuntimeService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
+    private final EffectExpirationService effectExpirationService;
 
     @Transactional(readOnly = true)
     public List<RestResourcePreview> preview(PlayerCharacter character, String restTypeCode) {
@@ -51,7 +52,10 @@ public class RestFeatureRuntimeService {
 
     @Transactional
     public List<RestResourcePreview> complete(PlayerCharacter character, String restTypeCode) {
-        return compute(character, restTypeCode, true);
+        List<RestResourcePreview> restored = compute(character, restTypeCode, true);
+        // Stage 7: end effects that expire on this rest (gated: no-op if no effect data / flag off).
+        effectExpirationService.endOnRest(character, restTypeCode);
+        return restored;
     }
 
     private List<RestResourcePreview> compute(PlayerCharacter character, String restTypeCode, boolean apply) {

@@ -1,0 +1,45 @@
+package com.dnd.app.domain.featurerule;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.UUID;
+
+/** A single stat modifier an effect applies (ac_bonus, resistance, advantage, temp_hp, …). */
+@Entity
+@Table(name = "feature_effect_modifier")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class FeatureEffectModifier {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "effect_definition_id", nullable = false)
+    private UUID effectDefinitionId;
+
+    @Column(name = "modifier_type", nullable = false, length = 32)
+    private String modifierType;
+
+    @Column(name = "target_selector_id")
+    private UUID targetSelectorId;
+
+    @Column(name = "value_formula_id")
+    private UUID valueFormulaId;
+
+    @Column(name = "damage_type_id")
+    private UUID damageTypeId;
+
+    @Column(name = "ability_id")
+    private UUID abilityId;
+
+    @Column(name = "skill_id")
+    private UUID skillId;
+
+    @Column(name = "condition_id")
+    private UUID conditionId;
+}

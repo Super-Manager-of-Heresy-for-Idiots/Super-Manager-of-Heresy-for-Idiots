@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feature rules runtime — Stage 7: active effects, conditions, modifiers, expiration. See
+      anal-integration/07_STAGE_ACTIVE_EFFECTS_CONDITIONS_AND_MODIFIERS.md.
+
+      COEXISTENCE: the existing item/spell buff system uses table `character_active_effects` (plural). These
+      NEW tables (`character_active_effect` singular, etc.) are a separate, flag-gated layer for class-feature
+      effects and do not touch the existing effect system. Heterogeneous references (damage_type/ability/skill/
+      condition/target_selector) are plain uuids validated in the app layer, per the established pattern.
+    -->
+    <changeSet id="072-feature-effect-definition" author="claude">
+        <createTable tableName="feature_effect_definition">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="effect_key" type="varchar(64)"><constraints nullable="false"/></column>
+            <column name="display_name" type="varchar(120)"/>
+            <column name="duration_formula_id" type="uuid"/>
+            <column name="duration_unit_id" type="uuid"/>
+            <column name="concentration_required" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="stacking_policy" type="varchar(32)" defaultValue="stack"><constraints nullable="false"/></column>
+            <column name="active_effect_group" type="varchar(64)"/>
+            <column name="target_type_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_effect_definition" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_def_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_definition" baseColumnNames="duration_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_def_duration_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_definition" baseColumnNames="duration_unit_id"
+                                 referencedTableName="duration_unit" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_def_duration_unit" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_definition" baseColumnNames="target_type_id"
+                                 referencedTableName="target_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_def_target_type" onDelete="SET NULL"/>
+        <createIndex tableName="feature_effect_definition" indexName="idx_feature_effect_def_rule">
+            <column name="feature_rule_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="072-feature-effect-modifier" author="claude">
+        <createTable tableName="feature_effect_modifier">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="effect_definition_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="modifier_type" type="varchar(32)"><constraints nullable="false"/></column>
+            <column name="target_selector_id" type="uuid"/>
+            <column name="value_formula_id" type="uuid"/>
+            <column name="damage_type_id" type="uuid"/>
+            <column name="ability_id" type="uuid"/>
+            <column name="skill_id" type="uuid"/>
+            <column name="condition_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_effect_modifier" baseColumnNames="effect_definition_id"
+                                 referencedTableName="feature_effect_definition" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_modifier_def" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_modifier" baseColumnNames="value_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_modifier_formula" onDelete="SET NULL"/>
+        <createIndex tableName="feature_effect_modifier" indexName="idx_feature_effect_modifier_def">
+            <column name="effect_definition_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="072-feature-effect-end-condition" author="claude">
+        <createTable tableName="feature_effect_end_condition">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="effect_definition_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="trigger_event_type_id" type="uuid"/>
+            <column name="condition_id" type="uuid"/>
+            <column name="same_feature_reuse" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="rest_type_id" type="uuid"/>
+            <column name="predicate_formula_id" type="uuid"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_effect_end_condition" baseColumnNames="effect_definition_id"
+                                 referencedTableName="feature_effect_definition" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_end_def" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_end_condition" baseColumnNames="trigger_event_type_id"
+                                 referencedTableName="trigger_event_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_end_event" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_end_condition" baseColumnNames="rest_type_id"
+                                 referencedTableName="rest_type" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_end_rest" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_effect_end_condition" baseColumnNames="predicate_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_effect_end_predicate" onDelete="SET NULL"/>
+        <createIndex tableName="feature_effect_end_condition" indexName="idx_feature_effect_end_def">
+            <column name="effect_definition_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="072-character-active-effect" author="claude">
+        <createTable tableName="character_active_effect">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source_character_id" type="uuid"/>
+            <column name="source_feature_id" type="uuid"/>
+            <column name="effect_definition_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="started_at" type="timestamp with time zone" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="expires_at" type="timestamp with time zone"/>
+            <column name="remaining_rounds" type="integer"/>
+            <column name="state_json" type="text"/>
+            <column name="status" type="varchar(16)" defaultValue="active"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_active_effect" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_active_effect_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_active_effect" baseColumnNames="source_character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_active_effect_source_char" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_active_effect" baseColumnNames="source_feature_id"
+                                 referencedTableName="class_feature" referencedColumnNames="class_feature_id"
+                                 constraintName="fk_character_active_effect_feature" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="character_active_effect" baseColumnNames="effect_definition_id"
+                                 referencedTableName="feature_effect_definition" referencedColumnNames="id"
+                                 constraintName="fk_character_active_effect_def" onDelete="CASCADE"/>
+        <createIndex tableName="character_active_effect" indexName="idx_character_active_effect_char">
+            <column name="character_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -47,6 +47,8 @@ public class FeatureUseService {
     private final CharacterFeatureResourceRepository resourceRepository;
     private final FeatureResourceService featureResourceService;
     private final FeatureActionService featureActionService;
+    private final FeatureEffectService featureEffectService;
+    private final GameplayEventService gameplayEventService;
     private final CharacterFormulaContextFactory contextFactory;
     private final FeatureUseLogRepository useLogRepository;
 
@@ -92,7 +94,14 @@ public class FeatureUseService {
             resourceKey = def.getResourceKey();
         }
 
+        // Stage 7: create any active effects the feature applies (gated internally by app.feature-rules.effects).
+        featureEffectService.applyForFeatureUse(character, feature.getId());
+
         UUID combatId = request != null ? request.getCombatId() : null;
+
+        // Stage 11: publish a FeatureUsed gameplay event (gated internally by app.feature-rules.triggers).
+        gameplayEventService.publish(character, "feature_used", combatId,
+                "{\"featureId\":\"" + feature.getId() + "\"}");
         FeatureUseLog logEntry = useLogRepository.save(FeatureUseLog.builder()
                 .characterId(character.getId())
                 .featureId(feature.getId())
