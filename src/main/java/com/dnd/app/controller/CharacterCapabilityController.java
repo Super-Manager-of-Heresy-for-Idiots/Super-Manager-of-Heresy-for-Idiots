@@ -1,5 +1,6 @@
 package com.dnd.app.controller;
 
+import com.dnd.app.dto.content.CharacterClassFeatureResponse;
 import com.dnd.app.dto.featurerule.CapabilityProfileResponse;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.security.CharacterAccessGuard;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -42,6 +44,17 @@ public class CharacterCapabilityController {
         return CompletableFuture.supplyAsync(() -> {
             accessGuard.require(characterId, username);
             return ResponseEntity.ok(ApiResponse.ok(capabilityProfileService.build(characterId)));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/{characterId}/class-features")
+    @Operation(summary = "Get a character's structured class features (the real abilities, for the Features tab)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassFeatureResponse>>>> classFeatures(
+            @PathVariable UUID characterId, Authentication authentication) {
+        final String username = authentication != null ? authentication.getName() : null;
+        return CompletableFuture.supplyAsync(() -> {
+            accessGuard.require(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(capabilityProfileService.listClassFeatures(characterId)));
         }, controllerTaskExecutor);
     }
 }

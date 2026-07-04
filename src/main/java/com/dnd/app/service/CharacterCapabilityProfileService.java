@@ -10,6 +10,7 @@ import com.dnd.app.domain.content.ContentCharacterClass;
 import com.dnd.app.domain.featurerule.ActiveEffectStatus;
 import com.dnd.app.domain.featurerule.FeatureChoiceGroup;
 import com.dnd.app.domain.featurerule.FeatureRule;
+import com.dnd.app.dto.content.CharacterClassFeatureResponse;
 import com.dnd.app.dto.featurerule.CapabilityProfileResponse;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CharacterFeatureChoiceRepository;
@@ -144,6 +145,26 @@ public class CharacterCapabilityProfileService {
         }
 
         return out.build();
+    }
+
+    /**
+     * The character's structured class features (base-class, feature level ≤ its class level) for the folio
+     * "Features" tab — the real class abilities (Reckless Attack, Wild Shape, …), not a prose blob. Available
+     * for every class independent of the runtime flags. (Subclass features are a follow-up.)
+     */
+    @Transactional(readOnly = true)
+    public List<CharacterClassFeatureResponse> listClassFeatures(UUID characterId) {
+        return featureResolver.knownBaseClassFeatures(characterId).stream()
+                .map(f -> CharacterClassFeatureResponse.builder()
+                        .id(f.getId())
+                        .classId(f.getCharacterClass() != null ? f.getCharacterClass().getId() : null)
+                        .className(f.getCharacterClass() != null ? f.getCharacterClass().getNameRu() : null)
+                        .level(f.getLevel())
+                        .title(f.getTitle())
+                        .description(f.getDescription())
+                        .activationType(f.getActivationType())
+                        .build())
+                .toList();
     }
 
     private CapabilityProfileResponse.SpellcastingCapability buildSpellcasting(
