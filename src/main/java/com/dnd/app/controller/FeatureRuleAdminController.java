@@ -16,6 +16,8 @@ import com.dnd.app.dto.featurerule.FeatureRuleResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleRevisionResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleValidationResponse;
 import com.dnd.app.dto.featurerule.ProblemFeatureSummaryResponse;
+import com.dnd.app.dto.featurerule.ResourceDefinitionAdminResponse;
+import com.dnd.app.dto.featurerule.ResourceDefinitionEditRequest;
 import com.dnd.app.dto.featurerule.RevisionActionRequest;
 import com.dnd.app.dto.featurerule.RuleSourceResponse;
 import com.dnd.app.dto.featurerule.RulesetResponse;
@@ -25,6 +27,7 @@ import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureRuleAdminService;
 import com.dnd.app.service.FeatureRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
+import com.dnd.app.service.FeatureResourceDefinitionAdminService;
 import com.dnd.app.service.FeatureRuleIssueService;
 import com.dnd.app.service.FeatureRuleRevisionService;
 import com.dnd.app.service.FeatureRuntimeMaintenanceService;
@@ -64,6 +67,7 @@ public class FeatureRuleAdminController {
     private final FeatureFormulaService featureFormulaService;
     private final FeatureRuleBackfillService featureRuleBackfillService;
     private final FeatureRuleCoverageService featureRuleCoverageService;
+    private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
     private final FeatureRuntimeMaintenanceService featureRuntimeMaintenanceService;
     private final Executor controllerTaskExecutor;
 
@@ -140,6 +144,25 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureRuleAdminService.updateRule(id, request, username), "Правило обновлено")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/resource-definition")
+    @Operation(summary = "Get a RESOURCE rule's definition (resource key, max formula, reset) for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<ResourceDefinitionAdminResponse>>> getResourceDefinition(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureResourceDefinitionAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/resource-definition")
+    @Operation(summary = "Create/update a RESOURCE rule's definition (key, max formula, reset window)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ResourceDefinitionAdminResponse>>> upsertResourceDefinition(
+            @PathVariable UUID ruleId, @Valid @RequestBody ResourceDefinitionEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureResourceDefinitionAdminService.upsert(ruleId, request), "Ресурс сохранён")),
                 controllerTaskExecutor);
     }
 
