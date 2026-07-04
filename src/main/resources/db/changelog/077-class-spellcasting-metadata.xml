@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Class-aware UI rework (see docs/FEATURE_RULES_FRONTEND_REWORK_PLAN.md §6): richer per-class spellcasting
+      metadata so the capability profile is correct for EVERY class, not just full/half casters.
+
+      The existing is_spellcaster/is_half_caster/has_cantrips only distinguish FULL vs HALF. They cannot express
+      PACT (Warlock) or the prepared-vs-known / spellbook distinctions, so those showed wrong (e.g. Warlock read
+      as a full caster). These nullable columns add that nuance; they are populated for the vanilla base classes
+      below (well-known 5e data, English slugs, homebrew_id IS NULL). Homebrew/unknown classes keep NULL and the
+      capability service falls back to the FULL/HALF derivation. THIRD casters (Eldritch Knight / Arcane Trickster)
+      are subclass features, not base-class, so they are out of scope here (base Fighter/Rogue stay non-casters).
+    -->
+    <changeSet id="077-class-spellcasting-columns" author="claude">
+        <addColumn tableName="character_class">
+            <column name="caster_type" type="varchar(16)"/>
+            <column name="preparation" type="varchar(16)"/>
+            <column name="uses_spellbook" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ritual_casting" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="077-class-spellcasting-seed-vanilla" author="claude">
+        <sql splitStatements="true" endDelimiter=";">
+            UPDATE character_class SET caster_type='HALF', preparation='PREPARED'
+                WHERE slug='artificer' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='FULL', preparation='KNOWN', ritual_casting=true
+                WHERE slug='bard' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='FULL', preparation='PREPARED', ritual_casting=true
+                WHERE slug='cleric' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='FULL', preparation='PREPARED', ritual_casting=true
+                WHERE slug='druid' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='HALF', preparation='PREPARED'
+                WHERE slug='paladin' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='HALF', preparation='KNOWN'
+                WHERE slug='ranger' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='FULL', preparation='KNOWN'
+                WHERE slug='sorcerer' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='PACT', preparation='KNOWN'
+                WHERE slug='warlock' AND homebrew_id IS NULL;
+            UPDATE character_class SET caster_type='FULL', preparation='PREPARED', uses_spellbook=true, ritual_casting=true
+                WHERE slug='wizard' AND homebrew_id IS NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

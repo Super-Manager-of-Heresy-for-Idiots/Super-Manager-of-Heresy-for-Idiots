@@ -67,6 +67,24 @@ public class ContentCharacterClass {
     @JoinColumn(name = "spellcasting_ability_id")
     private StatType spellcastingAbility;
 
+    /** Caster progression: FULL | HALF | THIRD | PACT | NONE. Null => derive from spellcaster/halfCaster. */
+    @Column(name = "caster_type", length = 16)
+    private String casterType;
+
+    /** Spell preparation model: PREPARED | KNOWN. Null for non-casters / unknown. */
+    @Column(name = "preparation", length = 16)
+    private String preparation;
+
+    /** True when the class records spells in a spellbook (Wizard). */
+    @Column(name = "uses_spellbook", nullable = false)
+    @Builder.Default
+    private Boolean usesSpellbook = false;
+
+    /** True when the class can ritual-cast. */
+    @Column(name = "ritual_casting", nullable = false)
+    @Builder.Default
+    private Boolean ritualCasting = false;
+
     @Column(name = "skill_choice_count", nullable = false)
     @Builder.Default
     private Integer skillChoiceCount = 0;

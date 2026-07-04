@@ -8,6 +8,7 @@ import com.dnd.app.dto.featurerule.AvailableFeatureAction;
 import com.dnd.app.dto.featurerule.CharacterFeatureResourceResponse;
 import com.dnd.app.dto.featurerule.FeatureApplyRequest;
 import com.dnd.app.dto.featurerule.FeatureApplyResult;
+import com.dnd.app.dto.featurerule.FeatureChoiceGroupResponse;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.FeatureSpellCastResult;
 import com.dnd.app.dto.featurerule.FeatureSpellGrantResponse;
@@ -22,6 +23,7 @@ import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.service.ActiveEffectQueryService;
 import com.dnd.app.service.CampaignService;
+import com.dnd.app.service.CharacterFeatureChoiceService;
 import com.dnd.app.service.CombatFeatureExecutionService;
 import com.dnd.app.service.EffectExpirationService;
 import com.dnd.app.service.FeatureActionService;
@@ -35,6 +37,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -68,6 +71,7 @@ public class CharacterFeatureController {
     private final CombatFeatureExecutionService combatFeatureExecutionService;
     private final FeatureSpellGrantService featureSpellGrantService;
     private final PendingGameplayPromptService pendingGameplayPromptService;
+    private final CharacterFeatureChoiceService featureChoiceService;
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
@@ -191,6 +195,43 @@ public class CharacterFeatureController {
             requireCharacter(characterId, username);
             return ResponseEntity.ok(ApiResponse.ok(
                     pendingGameplayPromptService.decline(characterId, promptId), "Отклонено"));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/choices")
+    @Operation(summary = "List a character's feature choices (Fighting Style, Expertise, Metamagic…)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureChoiceGroupResponse>>>> choices(
+            @PathVariable UUID characterId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(featureChoiceService.list(characterId)));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/choices/{groupId}")
+    @Operation(summary = "Record a feature choice selection (applies skills; other types recorded)")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureChoiceGroupResponse>>> chooseFeature(
+            @PathVariable UUID characterId, @PathVariable UUID groupId,
+            @RequestParam String optionType, @RequestParam(required = false) UUID targetEntityId,
+            Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    featureChoiceService.choose(characterId, groupId, optionType, targetEntityId), "Выбор сохранён"));
+        }, controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/choices/{choiceId}")
+    @Operation(summary = "Remove a feature choice selection")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeChoice(
+            @PathVariable UUID characterId, @PathVariable UUID choiceId, Authentication authentication) {
+        final String username = usernameOf(authentication);
+        return CompletableFuture.supplyAsync(() -> {
+            requireCharacter(characterId, username);
+            featureChoiceService.unchoose(characterId, choiceId);
+            return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Выбор удалён"));
         }, controllerTaskExecutor);
     }
 

@@ -100,4 +100,7 @@
     <!-- Feature rules runtime — Stage 11: triggers, reactions, durable gameplay prompts. -->
     <include file="db/changelog/076-feature-triggers.xml"/>
 
+    <!-- Class-aware UI: per-class spellcasting metadata (caster type, prepared/known, spellbook, ritual). -->
+    <include file="db/changelog/077-class-spellcasting-metadata.xml"/>
+
 </databaseChangeLog>

@@ -121,10 +121,15 @@ public class ContentClassMapper {
             return null;
         }
         StatType ability = c.getSpellcastingAbility();
+        String casterProgression = c.getCasterType() != null && !c.getCasterType().isBlank()
+                ? c.getCasterType()
+                : (Boolean.TRUE.equals(c.getHalfCaster()) ? "HALF" : "FULL");
         return SpellcastingDto.builder()
-                .casterProgression(Boolean.TRUE.equals(c.getHalfCaster()) ? "HALF" : "FULL")
+                .casterProgression(casterProgression)
                 .spellcastingAbilityId(ability != null ? ability.getId() : null)
                 .spellcastingAbility(ability != null ? abilityLabel(ability, lang) : null)
+                .preparation(c.getPreparation())
+                .ritualCasting(c.getRitualCasting())
                 .hasCantrips(c.getHasCantrips())
                 .halfCaster(c.getHalfCaster())
                 .build();
