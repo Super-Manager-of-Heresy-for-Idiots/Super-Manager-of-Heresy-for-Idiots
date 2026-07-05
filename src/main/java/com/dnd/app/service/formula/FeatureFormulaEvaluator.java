@@ -29,6 +29,25 @@ public class FeatureFormulaEvaluator {
     private static final Set<String> MATH_FUNCTIONS = Set.of("floor", "ceil", "round", "abs", "min", "max");
     private static final String STEP_FUNCTION = "step";
 
+    /** The bare context scalars the DSL allows (source of truth for admin autocomplete). */
+    public static Set<String> scalarNames() {
+        return new TreeSet<>(SCALARS);
+    }
+
+    /** Keyed functions taking a string argument (class_level, ability_mod, …). */
+    public static Set<String> keyedFunctionNames() {
+        return new TreeSet<>(KEYED_FUNCTIONS);
+    }
+
+    /** Every callable function name in the DSL allowlist (math + keyed + step + dice). */
+    public static Set<String> functionNames() {
+        Set<String> out = new TreeSet<>(MATH_FUNCTIONS);
+        out.addAll(KEYED_FUNCTIONS);
+        out.add(STEP_FUNCTION);
+        out.add("dice");
+        return out;
+    }
+
     /** Evaluate an expression against a context. Returns Double, Boolean, or {@link DiceValue}. */
     public Object evaluate(String expression, FormulaContext ctx) {
         return eval(parse(expression), ctx);

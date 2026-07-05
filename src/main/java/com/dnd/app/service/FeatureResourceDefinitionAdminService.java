@@ -43,6 +43,12 @@ public class FeatureResourceDefinitionAdminService {
                 .orElse(null);
     }
 
+    /** Distinct resource keys already defined — powers the workbench autocomplete for keys and formula args. */
+    @Transactional(readOnly = true)
+    public java.util.List<String> listResourceKeys() {
+        return definitionRepository.findDistinctResourceKeys();
+    }
+
     @Transactional
     public ResourceDefinitionAdminResponse upsert(UUID ruleId, ResourceDefinitionEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

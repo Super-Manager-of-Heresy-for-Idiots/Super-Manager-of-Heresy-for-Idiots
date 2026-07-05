@@ -43,7 +43,9 @@ import com.dnd.app.dto.featurerule.RuleSourceResponse;
 import com.dnd.app.dto.featurerule.RulesetResponse;
 import com.dnd.app.dto.featurerule.UpdateFeatureRuleRequest;
 import com.dnd.app.dto.response.ApiResponse;
+import com.dnd.app.dto.featurerule.FormulaVocabularyResponse;
 import com.dnd.app.service.FeatureFormulaService;
+import com.dnd.app.service.FeatureFormulaVocabularyService;
 import com.dnd.app.service.FeatureRuleAdminService;
 import com.dnd.app.service.FeatureRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
@@ -91,6 +93,7 @@ public class FeatureRuleAdminController {
     private final FeatureRuleIssueService featureRuleIssueService;
     private final FeatureRuleRevisionService featureRuleRevisionService;
     private final FeatureFormulaService featureFormulaService;
+    private final FeatureFormulaVocabularyService featureFormulaVocabularyService;
     private final FeatureRuleBackfillService featureRuleBackfillService;
     private final FeatureRuleCoverageService featureRuleCoverageService;
     private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
@@ -176,6 +179,14 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureRuleAdminService.updateRule(id, request, username), "Правило обновлено")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/resource-keys")
+    @Operation(summary = "List distinct resource keys already defined (for workbench autocomplete)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<String>>>> resourceKeys() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureResourceDefinitionAdminService.listResourceKeys())),
                 controllerTaskExecutor);
     }
 
@@ -564,6 +575,15 @@ public class FeatureRuleAdminController {
     }
 
     // ── Formulas (Stage 3) ──────────────────────────────────────────────────
+
+    @GetMapping("/feature-formulas/vocabulary")
+    @Operation(summary = "DSL vocabulary (functions + scalars) for the formula autocomplete; names from the evaluator allowlist")
+    public CompletableFuture<ResponseEntity<ApiResponse<FormulaVocabularyResponse>>> formulaVocabulary(
+            @RequestParam(name = "lang", required = false) String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureFormulaVocabularyService.vocabulary(lang))),
+                controllerTaskExecutor);
+    }
 
     @PostMapping("/feature-formulas/validate")
     @Operation(summary = "Validate a DSL expression against a declared result type")
