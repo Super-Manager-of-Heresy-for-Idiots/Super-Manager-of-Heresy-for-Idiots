@@ -32,10 +32,28 @@ public class CustomResourceType {
     @Column(name = "max_formula", columnDefinition = "text")
     private String maxFormula;
 
-    /** Rest that refills this resource to its max: {@code none} | {@code short_rest} | {@code long_rest}. */
+    /** Rest that refills this resource to its max: {@code none} | {@code short_rest} | {@code long_rest}. Deprecated — superseded by the per-window recovery fields; kept for back-compat. */
     @Column(name = "reset_on", nullable = false, length = 16)
     @Builder.Default
     private String resetOn = "none";
+
+    /** How much this resource recovers on a short rest: {@code none} | {@code full} | {@code formula}. */
+    @Column(name = "short_rest_recovery", nullable = false, length = 16)
+    @Builder.Default
+    private String shortRestRecovery = "none";
+
+    /** DSL formula for the number of charges restored on a short rest, when {@code shortRestRecovery=formula}. */
+    @Column(name = "short_rest_formula", columnDefinition = "text")
+    private String shortRestFormula;
+
+    /** How much this resource recovers on a long rest: {@code none} | {@code full} | {@code formula}. */
+    @Column(name = "long_rest_recovery", nullable = false, length = 16)
+    @Builder.Default
+    private String longRestRecovery = "none";
+
+    /** DSL formula for the number of charges restored on a long rest, when {@code longRestRecovery=formula}. */
+    @Column(name = "long_rest_formula", columnDefinition = "text")
+    private String longRestFormula;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")

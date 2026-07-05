@@ -26,5 +26,9 @@ public class CustomResourceTypeAdminResponse {
     private UUID featBoundId;
     private String featName;
     private String resetOn;
+    private String shortRestRecovery;
+    private String shortRestFormula;
+    private String longRestRecovery;
+    private String longRestFormula;
     private boolean homebrew;
 }

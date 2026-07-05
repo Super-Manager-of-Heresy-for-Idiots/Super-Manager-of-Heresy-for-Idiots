@@ -145,8 +145,9 @@ public class CharacterResourceService {
     }
 
     /**
-     * Refills resources that reset on the given rest back to their (formula-evaluated) max. A short rest refills
-     * only {@code short_rest} resources; a long rest refills both {@code short_rest} and {@code long_rest} ones.
+     * Applies the given rest's recovery to every resource. Each resource declares an independent recovery mode
+     * for the short and the long rest ({@code none} | {@code full} | {@code formula}); {@code full} restores to
+     * the (formula-evaluated) max, {@code formula} adds a DSL-computed number of charges capped at the max.
      */
     @Transactional
     public List<ResourceResponse> restReset(UUID characterId, String restType, String username) {
@@ -158,18 +159,44 @@ public class CharacterResourceService {
         FormulaContext ctx = formulaContextFactory.build(character);
 
         for (CharacterResource r : characterResourceRepository.findByCharacterId(characterId)) {
-            String resetOn = r.getResourceType().getResetOn();
-            boolean refill = "short_rest".equals(resetOn) || (longRest && "long_rest".equals(resetOn));
-            if (refill) {
-                Integer max = effectiveMax(r.getResourceType(), ctx);
-                r.setCurrentValue(max != null ? max : 0);
-                characterResourceRepository.save(r);
+            CustomResourceType type = r.getResourceType();
+            String mode = longRest ? type.getLongRestRecovery() : type.getShortRestRecovery();
+            String formula = longRest ? type.getLongRestFormula() : type.getShortRestFormula();
+            if (mode == null || "none".equals(mode)) {
+                continue;
             }
+            int max = orZero(effectiveMax(type, ctx));
+            if ("full".equals(mode)) {
+                r.setCurrentValue(max);
+            } else if ("formula".equals(mode)) {
+                int amount = evalAmount(formula, ctx);
+                int restored = orZero(r.getCurrentValue()) + amount;
+                r.setCurrentValue(Math.min(max, restored));
+            }
+            characterResourceRepository.save(r);
         }
         log.info("Rest reset: characterId={}, restType={}, by={}", characterId, longRest ? "long_rest" : "short_rest", username);
         return characterResourceRepository.findByCharacterId(characterId).stream()
                 .map(r -> toResponse(r, ctx))
                 .toList();
+    }
+
+    private static int orZero(Integer v) {
+        return v != null ? v : 0;
+    }
+
+    /** Evaluate a recovery-amount DSL formula to a non-negative integer; 0 on any error or blank. */
+    private int evalAmount(String expr, FormulaContext ctx) {
+        if (expr == null || expr.isBlank() || ctx == null) {
+            return 0;
+        }
+        try {
+            Integer v = featureFormulaService.evaluateInteger(expr, ctx, FormulaRoundingMode.FLOOR, 0.0, null);
+            return v != null ? Math.max(0, v) : 0;
+        } catch (RuntimeException e) {
+            log.warn("Resource recovery formula failed: {}", e.getMessage());
+            return 0;
+        }
     }
 
     // --- Private helpers ---

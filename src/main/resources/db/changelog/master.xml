@@ -112,4 +112,7 @@
     <!-- Feat-bound resources: feat_bound_id on custom_resource_types (feat-granted resources, e.g. Luck Points). -->
     <include file="db/changelog/080-resource-feat-bound.xml"/>
 
+    <!-- Rich rest recovery: independent short/long-rest recovery (none|full|formula) on custom_resource_types. -->
+    <include file="db/changelog/081-resource-rest-recovery.xml"/>
+
 </databaseChangeLog>

@@ -36,7 +36,23 @@ public class CustomResourceTypeRequest {
     /** Feat this resource is granted by (e.g. Lucky → Luck Points); null = not feat-granted. */
     private UUID featBoundId;
 
-    /** Rest that refills this resource: {@code none} | {@code short_rest} | {@code long_rest}. */
+    /** Rest that refills this resource: {@code none} | {@code short_rest} | {@code long_rest}. Deprecated — use the per-window fields. */
     @Size(max = 16)
     private String resetOn;
+
+    /** Short-rest recovery mode: {@code none} | {@code full} | {@code formula}. */
+    @Size(max = 16)
+    private String shortRestRecovery;
+
+    /** Charges restored on a short rest (DSL formula) when {@code shortRestRecovery=formula}. */
+    @Size(max = 2000)
+    private String shortRestFormula;
+
+    /** Long-rest recovery mode: {@code none} | {@code full} | {@code formula}. */
+    @Size(max = 16)
+    private String longRestRecovery;
+
+    /** Charges restored on a long rest (DSL formula) when {@code longRestRecovery=formula}. */
+    @Size(max = 2000)
+    private String longRestFormula;
 }

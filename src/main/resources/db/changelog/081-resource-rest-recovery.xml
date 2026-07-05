@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Richer rest recovery: a resource can recover independently on a short rest and on a long rest, and the
+      amount can be partial. Each window has a mode (none | full | formula); `formula` restores a DSL-computed
+      number of charges (added, capped at max). Replaces the single `reset_on` (kept for now, no longer read).
+      D&D rule of thumb "recovers on short OR long rest" = short=full AND long=full; "partial on short, full on
+      long" = short=formula, long=full.
+    -->
+    <changeSet id="081-resource-rest-recovery" author="claude">
+        <addColumn tableName="custom_resource_types">
+            <column name="short_rest_recovery" type="varchar(16)" defaultValue="none">
+                <constraints nullable="false"/>
+            </column>
+            <column name="short_rest_formula" type="text"/>
+            <column name="long_rest_recovery" type="varchar(16)" defaultValue="none">
+                <constraints nullable="false"/>
+            </column>
+            <column name="long_rest_formula" type="text"/>
+        </addColumn>
+
+        <!-- Migrate the old single reset_on. A short-rest resource also recovers on a long rest. -->
+        <update tableName="custom_resource_types">
+            <column name="short_rest_recovery" value="full"/>
+            <column name="long_rest_recovery" value="full"/>
+            <where>reset_on = 'short_rest'</where>
+        </update>
+        <update tableName="custom_resource_types">
+            <column name="long_rest_recovery" value="full"/>
+            <where>reset_on = 'long_rest'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

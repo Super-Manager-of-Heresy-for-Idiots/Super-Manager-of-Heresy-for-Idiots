@@ -74,6 +74,10 @@ public class CustomResourceTypeAdminService {
         type.setMaxValue(req.getMaxValue());
         type.setMaxFormula(blankToNull(req.getMaxFormula()));
         type.setResetOn(normalizeReset(req.getResetOn()));
+        type.setShortRestRecovery(normalizeRecovery(req.getShortRestRecovery()));
+        type.setShortRestFormula(blankToNull(req.getShortRestFormula()));
+        type.setLongRestRecovery(normalizeRecovery(req.getLongRestRecovery()));
+        type.setLongRestFormula(blankToNull(req.getLongRestFormula()));
         if (req.getClassBoundId() != null) {
             ContentCharacterClass clazz = classRepository.findById(req.getClassBoundId())
                     .orElseThrow(() -> new BadRequestException("Класс не найден"));
@@ -113,6 +117,10 @@ public class CustomResourceTypeAdminService {
                 .featBoundId(feat != null ? feat.getId() : null)
                 .featName(feat != null ? feat.getNameRu() : null)
                 .resetOn(type.getResetOn())
+                .shortRestRecovery(type.getShortRestRecovery())
+                .shortRestFormula(type.getShortRestFormula())
+                .longRestRecovery(type.getLongRestRecovery())
+                .longRestFormula(type.getLongRestFormula())
                 .homebrew(type.getHomebrew() != null)
                 .build();
     }
@@ -128,5 +136,14 @@ public class CustomResourceTypeAdminService {
         }
         String v = s.trim().toLowerCase();
         return (v.equals("short_rest") || v.equals("long_rest")) ? v : "none";
+    }
+
+    /** Recovery mode per rest window: {@code full}/{@code formula} accepted, anything else means {@code none}. */
+    private static String normalizeRecovery(String s) {
+        if (s == null) {
+            return "none";
+        }
+        String v = s.trim().toLowerCase();
+        return (v.equals("full") || v.equals("formula")) ? v : "none";
     }
 }
