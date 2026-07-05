@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Rest reset for the unified resource system. `reset_on` records the rest that refills a resource back to
+      its (formula-evaluated) max: none | short_rest | long_rest. A long rest also refills short-rest resources.
+      Existing rows default to 'none' (no automatic reset), preserving current behaviour.
+    -->
+    <changeSet id="079-resource-reset-on" author="claude">
+        <addColumn tableName="custom_resource_types">
+            <column name="reset_on" type="varchar(16)" defaultValue="none">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

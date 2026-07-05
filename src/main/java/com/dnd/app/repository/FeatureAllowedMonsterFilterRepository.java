@@ -9,4 +9,5 @@ import java.util.UUID;
 
 public interface FeatureAllowedMonsterFilterRepository extends JpaRepository<FeatureAllowedMonsterFilter, UUID> {
     List<FeatureAllowedMonsterFilter> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    List<FeatureAllowedMonsterFilter> findByFeatureRuleId(UUID featureRuleId);
 }

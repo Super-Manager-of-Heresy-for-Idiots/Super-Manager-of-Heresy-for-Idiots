@@ -9,4 +9,5 @@ import java.util.UUID;
 
 public interface FeatureTriggerRepository extends JpaRepository<FeatureTrigger, UUID> {
     List<FeatureTrigger> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    List<FeatureTrigger> findByFeatureRuleId(UUID featureRuleId);
 }

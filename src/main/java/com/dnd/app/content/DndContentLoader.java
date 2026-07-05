@@ -1268,6 +1268,22 @@ public class DndContentLoader implements ApplicationRunner {
         if (linked > 0) {
             log.info("Linked {} class resources to their classes", linked);
         }
+
+        // Seed scaling max formulas where a clean 5e formula exists (idempotent: only when empty).
+        // Rage / Channel Divinity / Wild Shape use per-level tables, so they stay a fixed max_value.
+        String[][] formulas = {
+                {"30728c99-399b-47ff-a697-fbe3089a2d93", "class_level(\"monk\")"},            // Ki
+                {"836144ed-bbbb-43ec-bc9c-17a6483b091e", "class_level(\"sorcerer\")"},        // Sorcery Points
+                {"4f933b40-55ed-4cdf-9866-b1abf3270847", "5 * class_level(\"paladin\")"},     // Lay on Hands
+                {"ef106b7a-1b1b-4b14-baf0-8fefcdec8d72", "ceil(class_level(\"rogue\") / 2)"}, // Sneak Attack dice
+                {"9999d62a-5670-41a9-b8b2-1f412a969e6c", "max(1, ability_mod(\"CHA\"))"},     // Bardic Inspiration
+        };
+        for (String[] f : formulas) {
+            jdbc.update(
+                    "UPDATE custom_resource_types SET max_formula = ? "
+                            + "WHERE id = ? AND homebrew_id IS NULL AND (max_formula IS NULL OR max_formula = '')",
+                    f[1], UUID.fromString(f[0]));
+        }
     }
 
     private void insertClassAbilities(UUID classId, Map<String, UUID> abilityBySlug,

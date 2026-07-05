@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Resource-system unification: make the existing custom_resource_types the single, canonical resource
+      system by giving it a bounded-DSL max formula (evaluated per character), so a resource's maximum can
+      scale with level / ability modifier (e.g. Ki = class_level("monk"), Bardic Inspiration = ability_mod("CHA")).
+      This subsumes the parallel feature-rules resource sub-system for the player-facing sheet. Nullable; a null
+      formula keeps the fixed max_value.
+    -->
+    <changeSet id="078-resource-max-formula" author="claude">
+        <addColumn tableName="custom_resource_types">
+            <column name="max_formula" type="text"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

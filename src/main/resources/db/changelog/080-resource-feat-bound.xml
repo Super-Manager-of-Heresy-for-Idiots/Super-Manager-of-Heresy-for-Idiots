@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Feat-bound resources: some resources are granted by a FEAT rather than a class (e.g. the Lucky feat's
+      Luck Points), and any class can have them if the character takes that feat. `feat_bound_id` binds a
+      resource template to a feat, mirroring the existing `class_bound_id`. Nullable; ON DELETE SET NULL so
+      removing a feat doesn't cascade-delete the resource template. Auto-provisioning is intentionally NOT
+      wired (the character-feat model spans reward/background/race paths) — a GM/player adds the resource
+      manually; the binding just documents WHICH feat it belongs to and powers the admin picker.
+    -->
+    <changeSet id="080-resource-feat-bound" author="claude">
+        <addColumn tableName="custom_resource_types">
+            <column name="feat_bound_id" type="uuid"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="custom_resource_types" baseColumnNames="feat_bound_id"
+                                 referencedTableName="feat" referencedColumnNames="feat_id"
+                                 constraintName="fk_custom_resource_feat_bound" onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

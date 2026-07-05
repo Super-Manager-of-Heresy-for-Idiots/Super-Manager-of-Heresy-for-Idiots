@@ -12,4 +12,6 @@ public interface CharacterResourceRepository extends JpaRepository<CharacterReso
     List<CharacterResource> findByCharacterId(UUID characterId);
 
     Optional<CharacterResource> findByCharacterIdAndResourceTypeId(UUID characterId, UUID resourceTypeId);
+
+    long deleteByResourceTypeId(UUID resourceTypeId);
 }

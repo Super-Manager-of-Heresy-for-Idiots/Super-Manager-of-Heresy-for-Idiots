@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface FeatureHealingRuleRepository extends JpaRepository<FeatureHealingRule, UUID> {
     List<FeatureHealingRule> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+
+    List<FeatureHealingRule> findByFeatureRuleId(UUID featureRuleId);
 }

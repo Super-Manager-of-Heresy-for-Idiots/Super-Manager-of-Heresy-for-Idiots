@@ -12,7 +12,7 @@ import java.util.TreeSet;
  *
  * <p>Supported: decimal numbers; dice literals {@code NdM}; arithmetic {@code + - * /} with parentheses;
  * comparisons {@code < <= > >= == !=}; logic {@code && || !}; boolean literals; an allowlist of functions
- * ({@code floor ceil round abs min max dice class_level ability_mod feature_resource_count
+ * ({@code floor ceil round abs min max step dice class_level ability_mod feature_resource_count
  * target_condition}); and the bare context scalars {@code character_level proficiency_bonus
  * spell_slot_level monster_cr combat_round}.</p>
  *
@@ -27,6 +27,7 @@ public class FeatureFormulaEvaluator {
     private static final Set<String> KEYED_FUNCTIONS = Set.of(
             "class_level", "ability_mod", "feature_resource_count", "target_condition");
     private static final Set<String> MATH_FUNCTIONS = Set.of("floor", "ceil", "round", "abs", "min", "max");
+    private static final String STEP_FUNCTION = "step";
 
     /** Evaluate an expression against a context. Returns Double, Boolean, or {@link DiceValue}. */
     public Object evaluate(String expression, FormulaContext ctx) {
@@ -319,7 +320,34 @@ public class FeatureFormulaEvaluator {
         if (MATH_FUNCTIONS.contains(name)) {
             return evalMathFn(name, fn, ctx);
         }
+        if (name.equals(STEP_FUNCTION)) {
+            return evalStep(fn, ctx);
+        }
         throw new FormulaException("Запрещённая функция: " + name);
+    }
+
+    /**
+     * Level-step lookup: {@code step(value, t1, v1, t2, v2, …)} returns the {@code v} of the highest threshold
+     * {@code t} that is {@code <= value} (0 when {@code value} is below every threshold). Models non-linear
+     * class tables like Rage: {@code step(character_level, 1,2, 3,3, 6,4, 12,5, 17,6)}.
+     */
+    private Object evalStep(Fn fn, FormulaContext ctx) {
+        List<Node> args = fn.args();
+        if (args.size() < 3 || args.size() % 2 == 0) {
+            throw new FormulaException("step ожидает значение и пары порог,результат (нечётное число аргументов ≥ 3)");
+        }
+        double value = num(eval(args.get(0), ctx));
+        double result = 0.0;
+        double bestThreshold = Double.NEGATIVE_INFINITY;
+        for (int k = 1; k + 1 < args.size(); k += 2) {
+            double threshold = num(eval(args.get(k), ctx));
+            double v = num(eval(args.get(k + 1), ctx));
+            if (value >= threshold && threshold >= bestThreshold) {
+                bestThreshold = threshold;
+                result = v;
+            }
+        }
+        return result;
     }
 
     private Object evalMathFn(String name, Fn fn, FormulaContext ctx) {

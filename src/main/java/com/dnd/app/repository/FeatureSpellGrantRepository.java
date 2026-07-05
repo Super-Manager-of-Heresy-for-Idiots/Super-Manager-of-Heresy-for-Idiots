@@ -9,4 +9,5 @@ import java.util.UUID;
 
 public interface FeatureSpellGrantRepository extends JpaRepository<FeatureSpellGrant, UUID> {
     List<FeatureSpellGrant> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    List<FeatureSpellGrant> findByFeatureRuleId(UUID featureRuleId);
 }

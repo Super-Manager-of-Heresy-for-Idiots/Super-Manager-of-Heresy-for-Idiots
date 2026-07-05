@@ -56,6 +56,25 @@ class FeatureFormulaEngineTest {
         assertThat(evaluator.evaluate("abs(0 - 5)", ctx())).isEqualTo(5.0);
     }
 
+    // ── step() level tables (Rage 2→6 etc.) ──────────────────────────────────
+
+    @Test
+    void stepLevelTable() {
+        // Rage uses: step(character_level, 1,2, 3,3, 6,4, 12,5, 17,6)
+        String rage = "step(character_level, 1,2, 3,3, 6,4, 12,5, 17,6)";
+        assertThat(evaluator.evaluate(rage, new MapFormulaContext().scalar("character_level", 1))).isEqualTo(2.0);
+        assertThat(evaluator.evaluate(rage, new MapFormulaContext().scalar("character_level", 2))).isEqualTo(2.0);
+        assertThat(evaluator.evaluate(rage, new MapFormulaContext().scalar("character_level", 3))).isEqualTo(3.0);
+        assertThat(evaluator.evaluate(rage, new MapFormulaContext().scalar("character_level", 8))).isEqualTo(4.0);
+        assertThat(evaluator.evaluate(rage, new MapFormulaContext().scalar("character_level", 20))).isEqualTo(6.0);
+        // Below the first threshold → 0.
+        assertThat(evaluator.evaluate("step(character_level, 5,10)", new MapFormulaContext().scalar("character_level", 4)))
+                .isEqualTo(0.0);
+        // Malformed (even arg count) is rejected.
+        assertThatThrownBy(() -> evaluator.evaluate("step(character_level, 1)", ctx()))
+                .isInstanceOf(FormulaException.class);
+    }
+
     // ── Golden scenarios from the plan ───────────────────────────────────────
 
     @Test

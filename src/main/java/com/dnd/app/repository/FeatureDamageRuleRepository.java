@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface FeatureDamageRuleRepository extends JpaRepository<FeatureDamageRule, UUID> {
     List<FeatureDamageRule> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+
+    List<FeatureDamageRule> findByFeatureRuleId(UUID featureRuleId);
 }

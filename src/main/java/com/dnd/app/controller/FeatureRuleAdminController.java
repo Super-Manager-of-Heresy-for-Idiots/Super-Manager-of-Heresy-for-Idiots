@@ -16,6 +16,26 @@ import com.dnd.app.dto.featurerule.FeatureRuleResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleRevisionResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleValidationResponse;
 import com.dnd.app.dto.featurerule.ProblemFeatureSummaryResponse;
+import com.dnd.app.dto.featurerule.ActionCostAdminResponse;
+import com.dnd.app.dto.featurerule.ActionCostEditRequest;
+import com.dnd.app.dto.featurerule.ActionTypeOption;
+import com.dnd.app.dto.featurerule.DamageRuleAdminResponse;
+import com.dnd.app.dto.featurerule.DamageRuleEditRequest;
+import com.dnd.app.dto.featurerule.HealingRuleAdminResponse;
+import com.dnd.app.dto.featurerule.HealingRuleEditRequest;
+import com.dnd.app.dto.featurerule.ActiveEffectAdminResponse;
+import com.dnd.app.dto.featurerule.ActiveEffectEditRequest;
+import com.dnd.app.dto.featurerule.EffectMetadataResponse;
+import com.dnd.app.dto.featurerule.ResolutionMetadataResponse;
+import com.dnd.app.dto.featurerule.ResolutionRuleAdminResponse;
+import com.dnd.app.dto.featurerule.ResolutionRuleEditRequest;
+import com.dnd.app.dto.featurerule.MonsterFormAdminResponse;
+import com.dnd.app.dto.featurerule.MonsterFormEditRequest;
+import com.dnd.app.dto.featurerule.TriggerAdminResponse;
+import com.dnd.app.dto.featurerule.TriggerEditRequest;
+import com.dnd.app.dto.featurerule.SpellGrantAdminResponse;
+import com.dnd.app.dto.featurerule.SpellGrantEditRequest;
+import com.dnd.app.dto.featurerule.TargetTypeOption;
 import com.dnd.app.dto.featurerule.ResourceDefinitionAdminResponse;
 import com.dnd.app.dto.featurerule.ResourceDefinitionEditRequest;
 import com.dnd.app.dto.featurerule.RevisionActionRequest;
@@ -27,6 +47,12 @@ import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureRuleAdminService;
 import com.dnd.app.service.FeatureRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
+import com.dnd.app.service.FeatureActionCostAdminService;
+import com.dnd.app.service.FeatureDamageRuleAdminService;
+import com.dnd.app.service.FeatureHealingRuleAdminService;
+import com.dnd.app.service.FeatureActiveEffectAdminService;
+import com.dnd.app.service.FeatureResolutionRuleAdminService;
+import com.dnd.app.service.FeatureFormsRuleAdminService;
 import com.dnd.app.service.FeatureResourceDefinitionAdminService;
 import com.dnd.app.service.FeatureRuleIssueService;
 import com.dnd.app.service.FeatureRuleRevisionService;
@@ -68,6 +94,12 @@ public class FeatureRuleAdminController {
     private final FeatureRuleBackfillService featureRuleBackfillService;
     private final FeatureRuleCoverageService featureRuleCoverageService;
     private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
+    private final FeatureDamageRuleAdminService featureDamageRuleAdminService;
+    private final FeatureActionCostAdminService featureActionCostAdminService;
+    private final FeatureHealingRuleAdminService featureHealingRuleAdminService;
+    private final FeatureActiveEffectAdminService featureActiveEffectAdminService;
+    private final FeatureResolutionRuleAdminService featureResolutionRuleAdminService;
+    private final FeatureFormsRuleAdminService featureFormsRuleAdminService;
     private final FeatureRuntimeMaintenanceService featureRuntimeMaintenanceService;
     private final Executor controllerTaskExecutor;
 
@@ -163,6 +195,190 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureResourceDefinitionAdminService.upsert(ruleId, request), "Ресурс сохранён")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/damage-rule")
+    @Operation(summary = "Get a DAMAGE rule's definition (dice/flat formula, type, gating) for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<DamageRuleAdminResponse>>> getDamageRule(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureDamageRuleAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/damage-rule")
+    @Operation(summary = "Create/update a DAMAGE rule (dice/flat formula, damage type, attack/save gating)")
+    public CompletableFuture<ResponseEntity<ApiResponse<DamageRuleAdminResponse>>> upsertDamageRule(
+            @PathVariable UUID ruleId, @Valid @RequestBody DamageRuleEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureDamageRuleAdminService.upsert(ruleId, request), "Урон сохранён")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/action-types")
+    @Operation(summary = "List action-economy types (for the action-cost editor)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ActionTypeOption>>>> actionTypes() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureActionCostAdminService.listActionTypes())),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/action-cost")
+    @Operation(summary = "Get an ACTION_COST rule's definition for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<ActionCostAdminResponse>>> getActionCost(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureActionCostAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/action-cost")
+    @Operation(summary = "Create/update an ACTION_COST rule (action type, amount, condition)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ActionCostAdminResponse>>> upsertActionCost(
+            @PathVariable UUID ruleId, @Valid @RequestBody ActionCostEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureActionCostAdminService.upsert(ruleId, request), "Стоимость действия сохранена")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/target-types")
+    @Operation(summary = "List rule-target types (for the healing editor)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<TargetTypeOption>>>> targetTypes() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureHealingRuleAdminService.listTargetTypes())),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/healing-rule")
+    @Operation(summary = "Get a HEALING rule's definition (amount formula, target, temp-HP/revive) for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<HealingRuleAdminResponse>>> getHealingRule(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureHealingRuleAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/healing-rule")
+    @Operation(summary = "Create/update a HEALING rule (amount formula, target, temp-HP / revive flags)")
+    public CompletableFuture<ResponseEntity<ApiResponse<HealingRuleAdminResponse>>> upsertHealingRule(
+            @PathVariable UUID ruleId, @Valid @RequestBody HealingRuleEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureHealingRuleAdminService.upsert(ruleId, request), "Лечение сохранено")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/effect-metadata")
+    @Operation(summary = "Reference vocabularies for the active-effect editor (durations, stacking, targets, triggers)")
+    public CompletableFuture<ResponseEntity<ApiResponse<EffectMetadataResponse>>> effectMetadata() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureActiveEffectAdminService.metadata())),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/active-effect")
+    @Operation(summary = "Get an ACTIVE_EFFECT rule's graph (definition + modifiers + end conditions) for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<ActiveEffectAdminResponse>>> getActiveEffect(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureActiveEffectAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/active-effect")
+    @Operation(summary = "Create/update an ACTIVE_EFFECT rule (definition, stat modifiers, end conditions)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ActiveEffectAdminResponse>>> upsertActiveEffect(
+            @PathVariable UUID ruleId, @Valid @RequestBody ActiveEffectEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureActiveEffectAdminService.upsert(ruleId, request), "Эффект сохранён")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/resolution-metadata")
+    @Operation(summary = "Reference vocabularies for the save/check/attack editor (types, abilities, skills)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ResolutionMetadataResponse>>> resolutionMetadata() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureResolutionRuleAdminService.metadata())),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/resolution-rule")
+    @Operation(summary = "Get a SAVE_CHECK_ATTACK rule's definition (type, ability/skill, DC) for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<ResolutionRuleAdminResponse>>> getResolutionRule(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureResolutionRuleAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/resolution-rule")
+    @Operation(summary = "Create/update a SAVE_CHECK_ATTACK rule (resolution type, ability/skill, DC formula)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ResolutionRuleAdminResponse>>> upsertResolutionRule(
+            @PathVariable UUID ruleId, @Valid @RequestBody ResolutionRuleEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureResolutionRuleAdminService.upsert(ruleId, request), "Проверка сохранена")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/monster-form")
+    @Operation(summary = "Get a MONSTER_FORM (Wild Shape) filter for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<MonsterFormAdminResponse>>> getMonsterForm(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureFormsRuleAdminService.getMonsterForm(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/monster-form")
+    @Operation(summary = "Create/update a MONSTER_FORM filter (creature type, max CR, movement/size/source)")
+    public CompletableFuture<ResponseEntity<ApiResponse<MonsterFormAdminResponse>>> upsertMonsterForm(
+            @PathVariable UUID ruleId, @Valid @RequestBody MonsterFormEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureFormsRuleAdminService.upsertMonsterForm(ruleId, request), "Форма сохранена")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/trigger")
+    @Operation(summary = "Get a TRIGGER_REACTION binding for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<TriggerAdminResponse>>> getTrigger(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureFormsRuleAdminService.getTrigger(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/trigger")
+    @Operation(summary = "Create/update a TRIGGER_REACTION rule (event, timing, predicate, reaction flags)")
+    public CompletableFuture<ResponseEntity<ApiResponse<TriggerAdminResponse>>> upsertTrigger(
+            @PathVariable UUID ruleId, @Valid @RequestBody TriggerEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureFormsRuleAdminService.upsertTrigger(ruleId, request), "Триггер сохранён")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/spell-grant")
+    @Operation(summary = "Get a SPELL_GRANT for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellGrantAdminResponse>>> getSpellGrant(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureFormsRuleAdminService.getSpellGrant(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/spell-grant")
+    @Operation(summary = "Create/update a SPELL_GRANT (spell + prepared/known/free-cast + ability override)")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellGrantAdminResponse>>> upsertSpellGrant(
+            @PathVariable UUID ruleId, @Valid @RequestBody SpellGrantEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureFormsRuleAdminService.upsertSpellGrant(ruleId, request), "Заклинание сохранено")),
                 controllerTaskExecutor);
     }
 

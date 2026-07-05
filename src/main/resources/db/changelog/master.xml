@@ -103,4 +103,13 @@
     <!-- Class-aware UI: per-class spellcasting metadata (caster type, prepared/known, spellbook, ritual). -->
     <include file="db/changelog/077-class-spellcasting-metadata.xml"/>
 
+    <!-- Resource unification: max formula on custom_resource_types (formula/level-scaling maxima). -->
+    <include file="db/changelog/078-resource-max-formula.xml"/>
+
+    <!-- Rest reset: reset_on window on custom_resource_types (short/long rest refill). -->
+    <include file="db/changelog/079-resource-reset-on.xml"/>
+
+    <!-- Feat-bound resources: feat_bound_id on custom_resource_types (feat-granted resources, e.g. Luck Points). -->
+    <include file="db/changelog/080-resource-feat-bound.xml"/>
+
 </databaseChangeLog>

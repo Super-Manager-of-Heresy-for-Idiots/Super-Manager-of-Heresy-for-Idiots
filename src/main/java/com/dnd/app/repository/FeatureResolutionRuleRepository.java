@@ -10,5 +10,6 @@ import java.util.UUID;
 
 public interface FeatureResolutionRuleRepository extends JpaRepository<FeatureResolutionRule, UUID> {
     List<FeatureResolutionRule> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    List<FeatureResolutionRule> findByFeatureRuleId(UUID featureRuleId);
     Optional<FeatureResolutionRule> findById(UUID id);
 }

@@ -369,6 +369,19 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    @PostMapping("/{characterId}/resources/rest")
+    @Operation(summary = "Refill resources that reset on a short/long rest")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ResourceResponse>>>> restResetResources(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @RequestParam(name = "type", defaultValue = "long_rest") String type, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            List<ResourceResponse> resources = characterResourceService.restReset(characterId, type, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(resources, "Resources reset"));
+        }, controllerTaskExecutor);
+    }
+
     // --- HP ---
 
     @PostMapping("/{characterId}/hp")
