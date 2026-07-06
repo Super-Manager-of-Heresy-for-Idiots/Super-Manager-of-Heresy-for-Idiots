@@ -124,4 +124,7 @@
     <!-- Unify the 3 damage-type tables into one canonical damage_type (repoint all FKs, drop the other two). -->
     <include file="db/changelog/084-merge-damage-types.xml"/>
 
+    <!-- Structured per-character hit dice (short-rest spend, long-rest half-restore). -->
+    <include file="db/changelog/085-character-hit-dice.xml"/>
+
 </databaseChangeLog>

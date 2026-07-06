@@ -31,6 +31,7 @@ public class CampaignCharacterController {
     private final CharacterResourceService characterResourceService;
     private final RestOrchestrationService restOrchestrationService;
     private final CharacterFeatService characterFeatService;
+    private final CharacterHitDiceService characterHitDiceService;
     private final Executor controllerTaskExecutor;
 
     // --- Clone from template ---
@@ -446,6 +447,33 @@ public class CampaignCharacterController {
             characterService.enforceCharacterInCampaign(characterId, campaignId);
             characterFeatService.remove(characterId, featId, auth.getName());
             return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Фит удалён"));
+        }, controllerTaskExecutor);
+    }
+
+    // --- Hit dice ---
+
+    @GetMapping("/{characterId}/hit-dice")
+    @Operation(summary = "List a character's hit dice (per die size)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<HitDiceResponse>>>> listHitDice(
+            @PathVariable UUID campaignId, @PathVariable UUID characterId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    characterHitDiceService.listAndProvision(characterId, auth.getName())));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{characterId}/hit-dice/spend")
+    @Operation(summary = "Spend hit dice on a short rest (heal die + CON modifier)")
+    public CompletableFuture<ResponseEntity<ApiResponse<HitDiceSpendResponse>>> spendHitDice(
+            @PathVariable UUID campaignId, @PathVariable UUID characterId,
+            @RequestParam int die, @RequestParam(defaultValue = "1") int count,
+            @RequestParam(defaultValue = "0") int rolledTotal, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    characterHitDiceService.spend(campaignId, characterId, die, count, rolledTotal, auth.getName()),
+                    "Кости хитов потрачены"));
         }, controllerTaskExecutor);
     }
 }

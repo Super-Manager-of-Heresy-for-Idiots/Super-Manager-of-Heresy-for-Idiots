@@ -48,6 +48,7 @@ public class RestOrchestrationService {
     private final RestFeatureRuntimeService restFeatureRuntimeService;
     private final SpellSlotService spellSlotService;
     private final CharacterHpService characterHpService;
+    private final CharacterHitDiceService characterHitDiceService;
 
     @Transactional
     public RestResult rest(UUID campaignId, UUID characterId, String restTypeInput, String username) {
@@ -78,6 +79,10 @@ public class RestOrchestrationService {
         HpChangeResult hp = longRest
                 ? characterHpService.restoreToFull(characterId, campaignId, user.getId())
                 : null;
+        // 5) Hit dice: a long rest regains half (min 1); short-rest spending is a separate player action.
+        if (longRest) {
+            characterHitDiceService.restoreOnLongRest(character);
+        }
 
         log.info("Rest orchestrated: characterId={}, type={}, by={}", characterId, restCode, username);
         return RestResult.builder()

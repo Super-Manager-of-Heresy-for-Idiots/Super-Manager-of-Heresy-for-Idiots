@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Structured hit dice per character (completes the rest orchestrator's HP story). One row per die SIZE
+      (d6/d8/d10/d12), so multiclass characters pool separately. total = sum of class levels of classes with
+      that die; remaining = unspent. Short rest spends them (heal die + CON mod), long rest regains half.
+      Supersedes the legacy free-text character.hit_dice_type / hit_dice_total.
+    -->
+    <changeSet id="085-character-hit-dice" author="claude">
+        <createTable tableName="character_hit_dice">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="die" type="integer"><constraints nullable="false"/></column>
+            <column name="total" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="remaining" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_hit_dice" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_hit_dice_character" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="character_hit_dice" columnNames="character_id, die"
+                             constraintName="uq_character_hit_dice_char_die"/>
+        <createIndex tableName="character_hit_dice" indexName="idx_character_hit_dice_char">
+            <column name="character_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

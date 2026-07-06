@@ -38,6 +38,7 @@ class RestOrchestrationServiceTest {
     @Mock private RestFeatureRuntimeService restFeatureRuntimeService;
     @Mock private SpellSlotService spellSlotService;
     @Mock private CharacterHpService characterHpService;
+    @Mock private CharacterHitDiceService characterHitDiceService;
 
     @InjectMocks private RestOrchestrationService service;
 
