@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Polymorphic feature-rule owner (S1). A feature_rule (and its issues / per-character choices) may now
+      be owned by a class feature, a background or a feat, disambiguated by owner_type + owner_id. The
+      owner_id → class_feature FKs planned in 066 as "drop once a second owner type exists" are dropped
+      here; ownership is validated in the app layer via FeatureRuleOwnerType instead. A composite
+      (owner_type, owner_id) index backs the polymorphic lookup, and character_feature_choice gains
+      owner_type (existing rows default to CLASS_FEATURE) so a choice can belong to a non-class owner.
+    -->
+
+    <changeSet id="082-drop-feature-rule-owner-fk" author="claude">
+        <dropForeignKeyConstraint baseTableName="feature_rule"
+                                  constraintName="fk_feature_rule_owner_class_feature"/>
+    </changeSet>
+
+    <changeSet id="082-drop-feature-rule-issue-owner-fk" author="claude">
+        <dropForeignKeyConstraint baseTableName="feature_rule_issue"
+                                  constraintName="fk_feature_rule_issue_owner_class_feature"/>
+    </changeSet>
+
+    <changeSet id="082-drop-character-feature-choice-feature-fk" author="claude">
+        <dropForeignKeyConstraint baseTableName="character_feature_choice"
+                                  constraintName="fk_character_feature_choice_feature"/>
+    </changeSet>
+
+    <changeSet id="082-feature-rule-owner-composite-index" author="claude">
+        <createIndex tableName="feature_rule" indexName="idx_feature_rule_owner_type_id">
+            <column name="owner_type"/>
+            <column name="owner_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="082-character-feature-choice-owner-type" author="claude">
+        <addColumn tableName="character_feature_choice">
+            <column name="owner_type" type="varchar(32)" defaultValue="CLASS_FEATURE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

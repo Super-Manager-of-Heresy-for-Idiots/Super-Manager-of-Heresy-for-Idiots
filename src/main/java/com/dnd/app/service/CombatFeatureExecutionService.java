@@ -11,6 +11,7 @@ import com.dnd.app.domain.featurerule.FeatureResolutionRule;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FeatureRuleProfile;
 import com.dnd.app.domain.featurerule.FeatureUseLog;
+import com.dnd.app.dto.combat.HpChangeResult;
 import com.dnd.app.dto.featurerule.FeatureApplyResult;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.exception.BadRequestException;
@@ -22,7 +23,6 @@ import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.FeatureHealingRuleRepository;
 import com.dnd.app.repository.FeatureResolutionRuleRepository;
 import com.dnd.app.repository.FeatureUseLogRepository;
-import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.DiceValue;
 import com.dnd.app.service.formula.FormulaContext;
@@ -56,7 +56,8 @@ public class CombatFeatureExecutionService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
-    private final PlayerCharacterRepository characterRepository;
+    private final CharacterHpService hpService;
+    private final ModifierAggregator modifierAggregator;
     private final FeatureUseLogRepository useLogRepository;
 
     @Transactional(readOnly = true)
@@ -104,39 +105,62 @@ public class CombatFeatureExecutionService {
                 .build();
     }
 
-    /** Apply an already-rolled damage/healing outcome to a target character's HP and log it. */
+    /**
+     * Apply an already-rolled damage/healing outcome to a target character's HP and log it. Routed
+     * through {@link CharacterHpService} (the same primitive the core combat flow uses) so temp HP,
+     * the write lock, live-tracker mirroring and {@code HP_CHANGED} all apply — a feature that hits a
+     * character mid-battle is now visible on the combat map instead of writing {@code current_hp}
+     * silently. Damage and healing are separate HP events. {@code campaignId}/{@code actorUserId}
+     * come from the caller so the broadcast is attributed and audience-scoped.
+     */
     @Transactional
     public FeatureApplyResult applyToTarget(PlayerCharacter actor, UUID featureId, PlayerCharacter target,
-                                            Integer damage, Integer healing) {
+                                            Integer damage, Integer healing, UUID damageTypeId,
+                                            UUID campaignId, UUID actorUserId) {
         if (!flags.isRuntimeEnabled()) {
             throw new BadRequestException("Runtime умений отключён");
         }
-        int dmg = damage != null ? Math.max(0, damage) : 0;
+        int rolledDmg = damage != null ? Math.max(0, damage) : 0;
         int heal = healing != null ? Math.max(0, healing) : 0;
 
-        int current = target.getCurrentHp() != null ? target.getCurrentHp() : 0;
-        int after = current - dmg + heal;
-        if (after < 0) {
-            after = 0;
+        // Feature damage carries a structured damage type (feature_damage_rule.damage_type_id), which
+        // shares the reference table that resistances/vulnerabilities key on — so the target's resist
+        // (÷2) / vulnerability (×2) applies cleanly here, unlike the legacy attack path.
+        int appliedDmg = applyResistance(target.getId(), rolledDmg, damageTypeId);
+
+        HpChangeResult result = null;
+        if (appliedDmg > 0) {
+            result = hpService.applyDelta(target.getId(), -appliedDmg, campaignId, actorUserId);
         }
-        if (target.getMaxHp() != null && after > target.getMaxHp()) {
-            after = target.getMaxHp();
+        if (heal > 0) {
+            result = hpService.applyDelta(target.getId(), heal, campaignId, actorUserId);
         }
-        target.setCurrentHp(after);
-        characterRepository.save(target);
+
+        int after = result != null ? result.currentHp()
+                : (target.getCurrentHp() != null ? target.getCurrentHp() : 0);
+        Integer maxHp = result != null && result.maxHp() > 0 ? result.maxHp() : target.getMaxHp();
 
         useLogRepository.save(FeatureUseLog.builder()
                 .characterId(actor.getId())
                 .featureId(featureId)
                 .actionType("combat_resolution")
-                .detail("dmg=" + dmg + ", heal=" + heal + ", target=" + target.getId() + ", hp=" + after)
+                .detail("dmg=" + appliedDmg + ", heal=" + heal + ", target=" + target.getId() + ", hp=" + after)
                 .build());
 
         return FeatureApplyResult.builder()
                 .targetCharacterId(target.getId())
-                .damageApplied(dmg).healingApplied(heal)
-                .targetCurrentHp(after).targetMaxHp(target.getMaxHp())
+                .damageApplied(appliedDmg).healingApplied(heal)
+                .targetCurrentHp(after).targetMaxHp(maxHp)
                 .build();
+    }
+
+    /** Halve on resistance / double on vulnerability (floored), or unchanged when the type is unknown. */
+    private int applyResistance(UUID targetCharacterId, int damage, UUID damageTypeId) {
+        if (damage <= 0 || damageTypeId == null) {
+            return Math.max(0, damage);
+        }
+        double multiplier = modifierAggregator.damageMultiplier(targetCharacterId, damageTypeId);
+        return (int) Math.floor(damage * multiplier);
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────

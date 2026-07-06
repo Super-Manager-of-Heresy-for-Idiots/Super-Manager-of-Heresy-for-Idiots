@@ -23,6 +23,7 @@ public class PendingGameplayPromptService {
     private final PendingGameplayPromptRepository promptRepository;
     private final FeatureTriggerRepository triggerRepository;
     private final GameplayEventService gameplayEventService;
+    private final CombatActionEconomyService economyService;
 
     @Transactional(readOnly = true)
     public List<PendingPromptResponse> listPending(UUID characterId) {
@@ -40,6 +41,12 @@ public class PendingGameplayPromptService {
         if (prompt.getFeatureTriggerId() != null) {
             FeatureTrigger trigger = triggerRepository.findById(prompt.getFeatureTriggerId()).orElse(null);
             if (trigger != null) {
+                // A reaction trigger costs the character's one reaction for the round. Spend it FIRST:
+                // if it is already used this throws and the resolve rolls back (RAW "one reaction per
+                // round"), so the resource below is not consumed either.
+                if (trigger.isConsumesReaction() && prompt.getCombatId() != null) {
+                    economyService.spend(prompt.getCombatId(), characterId, "reaction");
+                }
                 gameplayEventService.spendResource(characterId, trigger.getConsumesResourceDefinitionId());
             }
         }

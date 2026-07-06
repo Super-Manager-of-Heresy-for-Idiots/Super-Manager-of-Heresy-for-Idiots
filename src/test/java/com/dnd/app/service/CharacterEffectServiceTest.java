@@ -28,6 +28,7 @@ class CharacterEffectServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private CampaignService campaignService;
     @Mock private CampaignMemberRepository campaignMemberRepository;
+    @Mock private ModifierAggregator modifierAggregator;
 
     @InjectMocks private CharacterEffectService characterEffectService;
 

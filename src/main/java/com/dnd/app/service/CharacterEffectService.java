@@ -4,6 +4,7 @@ import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
+import com.dnd.app.dto.combat.ModifierTarget;
 import com.dnd.app.dto.request.ApplyEffectRequest;
 import com.dnd.app.dto.response.AbilityCheckResponse;
 import com.dnd.app.dto.response.CharacterActiveEffectResponse;
@@ -32,6 +33,7 @@ public class CharacterEffectService {
     private final CampaignService campaignService;
     private final CampaignMemberRepository campaignMemberRepository;
     private final WebSocketEventService webSocketEventService;
+    private final ModifierAggregator modifierAggregator;
 
     @Transactional
     public CharacterActiveEffectResponse applyEffect(UUID campaignId, UUID characterId,
@@ -149,7 +151,15 @@ public class CharacterEffectService {
             }
         }
 
-        int totalModifier = baseModifier + buffTotal - debuffTotal;
+        String statSlug = character.getStats().stream()
+                .filter(s -> s.getStatType().getId().equals(statTypeId))
+                .findFirst()
+                .map(s -> s.getStatType().getSlug())
+                .orElse(null);
+        // Feature-effect contributions (formula-evaluated) added on top of the legacy buff/debuff sum.
+        int featureBonus = modifierAggregator.featureTotal(characterId, ModifierTarget.statCheck(statTypeId, statSlug));
+        int buffBonus = buffTotal - debuffTotal + featureBonus;
+        int totalModifier = baseModifier + buffBonus;
 
         String statName = character.getStats().stream()
                 .filter(s -> s.getStatType().getId().equals(statTypeId))
@@ -161,7 +171,7 @@ public class CharacterEffectService {
                 .statName(statName)
                 .baseValue(baseValue)
                 .modifier(baseModifier)
-                .buffBonus(buffTotal - debuffTotal)
+                .buffBonus(buffBonus)
                 .equipmentBonus(0)
                 .totalModifier(totalModifier)
                 .build();

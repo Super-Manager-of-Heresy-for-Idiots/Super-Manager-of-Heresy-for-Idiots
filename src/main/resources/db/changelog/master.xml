@@ -115,4 +115,7 @@
     <!-- Rich rest recovery: independent short/long-rest recovery (none|full|formula) on custom_resource_types. -->
     <include file="db/changelog/081-resource-rest-recovery.xml"/>
 
+    <!-- Polymorphic feature-rule owner (S1): drop owner→class_feature FKs, composite owner index, choice owner_type. -->
+    <include file="db/changelog/082-feature-rule-polymorphic-owner.xml"/>
+
 </databaseChangeLog>

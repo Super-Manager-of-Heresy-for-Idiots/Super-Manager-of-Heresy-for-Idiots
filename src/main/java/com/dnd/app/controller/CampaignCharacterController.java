@@ -29,6 +29,7 @@ public class CampaignCharacterController {
     private final CharacterEffectService characterEffectService;
     private final WalletService walletService;
     private final CharacterResourceService characterResourceService;
+    private final RestOrchestrationService restOrchestrationService;
     private final Executor controllerTaskExecutor;
 
     // --- Clone from template ---
@@ -379,6 +380,20 @@ public class CampaignCharacterController {
             characterService.enforceCharacterInCampaign(characterId, campaignId);
             List<ResourceResponse> resources = characterResourceService.restReset(characterId, type, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(resources, "Resources reset"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{characterId}/rest")
+    @Operation(summary = "Rest (long/short): one transactional call restoring resources, "
+            + "feature resources, spell slots and HP")
+    public CompletableFuture<ResponseEntity<ApiResponse<RestResult>>> rest(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @RequestParam(name = "type", defaultValue = "long") String type, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            RestResult result = restOrchestrationService.rest(campaignId, characterId, type, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(result, "Отдых применён"));
         }, controllerTaskExecutor);
     }
 

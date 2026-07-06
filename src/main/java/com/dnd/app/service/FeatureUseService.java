@@ -6,6 +6,7 @@ import com.dnd.app.domain.content.ClassFeature;
 import com.dnd.app.domain.featurerule.ActionType;
 import com.dnd.app.domain.featurerule.CharacterFeatureResource;
 import com.dnd.app.domain.featurerule.FeatureActionCost;
+import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureResourceDefinition;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FeatureUseLog;
@@ -15,10 +16,12 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.repository.ActionTypeRepository;
 import com.dnd.app.repository.CharacterFeatureResourceRepository;
 import com.dnd.app.repository.FeatureActionCostRepository;
+import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.FeatureResourceDefinitionRepository;
 import com.dnd.app.repository.FeatureUseLogRepository;
 import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.FormulaContext;
+import com.dnd.app.service.formula.FormulaException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,6 +53,9 @@ public class FeatureUseService {
     private final FeatureEffectService featureEffectService;
     private final GameplayEventService gameplayEventService;
     private final CharacterFormulaContextFactory contextFactory;
+    private final CombatActionEconomyService economyService;
+    private final FeatureFormulaService formulaService;
+    private final FeatureFormulaRepository formulaRepository;
     private final FeatureUseLogRepository useLogRepository;
 
     @Transactional
@@ -75,6 +81,14 @@ public class FeatureUseService {
         FeatureActionCost cost = costs.get(0);
         ActionType actionType = actionTypeRepository.findById(cost.getActionTypeId()).orElse(null);
 
+        UUID combatId = request != null ? request.getCombatId() : null;
+        if (combatId != null && actionType != null && costApplies(cost, character)) {
+            // Spend the declared combat slot FIRST: if it is already used this turn this throws and
+            // the whole use() rolls back, so the resource below is not consumed for an action the
+            // character cannot actually take. Out of combat (combatId == null) nothing changes.
+            economyService.spend(combatId, character.getId(), actionType.getCode());
+        }
+
         Integer spent = null;
         Integer remaining = null;
         String resourceKey = null;
@@ -96,8 +110,6 @@ public class FeatureUseService {
 
         // Stage 7: create any active effects the feature applies (gated internally by app.feature-rules.effects).
         featureEffectService.applyForFeatureUse(character, feature.getId());
-
-        UUID combatId = request != null ? request.getCombatId() : null;
 
         // Stage 11: publish a FeatureUsed gameplay event (gated internally by app.feature-rules.triggers).
         gameplayEventService.publish(character, "feature_used", combatId,
@@ -122,6 +134,23 @@ public class FeatureUseService {
                 .logId(logEntry.getId())
                 .message("Умение использовано")
                 .build();
+    }
+
+    /** Whether an action cost applies in the current context (an absent or true predicate means it does). */
+    private boolean costApplies(FeatureActionCost cost, PlayerCharacter character) {
+        if (cost.getConditionFormulaId() == null) {
+            return true;
+        }
+        FeatureFormula formula = formulaRepository.findById(cost.getConditionFormulaId()).orElse(null);
+        if (formula == null) {
+            return true;
+        }
+        try {
+            return formulaService.evaluateBoolean(formula, contextFactory.build(character));
+        } catch (FormulaException e) {
+            log.warn("Action-cost condition formula failed for {}: {}", cost.getId(), e.getMessage());
+            return true; // fail safe: apply the cost rather than granting a free action
+        }
     }
 
     private CharacterFeatureResource findResource(UUID characterId, FeatureResourceDefinition def) {

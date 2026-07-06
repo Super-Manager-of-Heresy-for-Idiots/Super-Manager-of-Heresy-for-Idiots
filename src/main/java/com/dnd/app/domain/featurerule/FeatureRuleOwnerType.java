@@ -6,13 +6,17 @@ import java.util.Optional;
 /**
  * What a {@code feature_rule} / {@code feature_rule_issue} is attached to.
  *
- * <p>Only {@link #CLASS_FEATURE} is allowed today (first wave). The {@code owner_type}/{@code owner_id}
- * shape exists so the same rules runtime can later be reused for race features, feats, items and
+ * <p>{@link #CLASS_FEATURE} was the only wired owner in the first wave; {@link #BACKGROUND} and
+ * {@link #FEAT} extend the same rules runtime to those owners (the {@code owner_id → class_feature}
+ * FK is dropped once a second owner type exists — see migration 082). The {@code owner_type}/
+ * {@code owner_id} shape exists so the runtime can be reused for race features, feats, items and
  * homebrew without reshaping the tables — see {@code anal-integration/01_STAGE_RULE_SCHEMA_FOUNDATION.md}.</p>
  */
 public enum FeatureRuleOwnerType {
 
-    CLASS_FEATURE("CLASS_FEATURE");
+    CLASS_FEATURE("CLASS_FEATURE"),
+    BACKGROUND("BACKGROUND"),
+    FEAT("FEAT");
 
     private final String code;
 

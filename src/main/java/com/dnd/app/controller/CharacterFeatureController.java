@@ -158,8 +158,11 @@ public class CharacterFeatureController {
         return CompletableFuture.supplyAsync(() -> {
             PlayerCharacter actor = requireCharacter(characterId, username);
             PlayerCharacter target = requireCharacter(request.getTargetCharacterId(), username);
+            UUID campaignId = target.getCampaign() != null ? target.getCampaign().getId() : null;
+            UUID actorUserId = userRepository.findByUsername(username).map(User::getId).orElse(null);
             return ResponseEntity.ok(ApiResponse.ok(combatFeatureExecutionService.applyToTarget(
-                    actor, featureId, target, request.getDamage(), request.getHealing()), "Применено"));
+                    actor, featureId, target, request.getDamage(), request.getHealing(),
+                    request.getDamageTypeId(), campaignId, actorUserId), "Применено"));
         }, controllerTaskExecutor);
     }
 

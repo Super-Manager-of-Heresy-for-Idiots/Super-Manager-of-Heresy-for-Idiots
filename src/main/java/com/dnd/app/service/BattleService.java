@@ -6,6 +6,8 @@ import com.dnd.app.domain.enums.BattleStatus;
 import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
+import com.dnd.app.dto.combat.HpChangeResult;
+import com.dnd.app.dto.combat.ModifierTarget;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
 import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
@@ -74,6 +76,9 @@ public class BattleService {
     private final SpellRepository spellRepository;
     private final SpellSlotService spellSlotService;
     private final ObjectMapper objectMapper;
+    private final CharacterHpService characterHpService;
+    private final ModifierAggregator modifierAggregator;
+    private final EffectExpirationService effectExpirationService;
 
     // ================================ Lifecycle ================================
 
@@ -374,10 +379,13 @@ public class BattleService {
         if (nextIndex >= combatants.size()) {
             nextIndex = 0;
             battle.setRoundNumber(battle.getRoundNumber() + 1);
-            // New round: tick down timed effects on every joined character
+            // New round: tick down timed effects on every joined character — BOTH systems, from the one
+            // place a round advances. Legacy buffs (decrementRounds) and feature effects (tickRounds)
+            // previously only the former was wired here; the latter ticked solely from its controller.
             for (BattleCombatant c : combatants) {
                 if (c.getType() == CombatantType.CHARACTER && c.getCharacter() != null) {
                     characterEffectService.decrementRounds(c.getCharacter().getId());
+                    effectExpirationService.tickRounds(c.getCharacter().getId());
                 }
             }
         }
@@ -656,6 +664,16 @@ public class BattleService {
         int effectiveD20 = roll.effectiveD20();
         AttackRollMode rollMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
 
+        // Feature-effect bonuses for a character attacker (to-hit and damage); 0 for monsters and when
+        // no active effect contributes — additive, so existing behaviour is unchanged without them.
+        int attackRollBonus = 0;
+        int damageBonus = 0;
+        if (attacker.getType() == CombatantType.CHARACTER && attacker.getCharacter() != null) {
+            UUID attackerCharId = attacker.getCharacter().getId();
+            attackRollBonus = modifierAggregator.totalFor(attackerCharId, ModifierTarget.attackRoll());
+            damageBonus = modifierAggregator.totalFor(attackerCharId, ModifierTarget.damageDealt());
+        }
+
         Integer damage = null;
         Integer targetAc = null;
         Integer attackBonusOut = null;
@@ -666,7 +684,7 @@ public class BattleService {
             // Save-based attack (e.g. a monster's breath weapon): the target rolls the supplied d20
             // against the save DC. A success halves the damage, a failure takes it in full.
             AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, 0, attack.saveDc());
-            int rolled = diceRoller.rollDamage(attack.damage(), false);
+            int rolled = Math.max(0, diceRoller.rollDamage(attack.damage(), false) + damageBonus);
             damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
             if (damage > 0) {
                 applyDamageOrHeal(target, -damage, user, campaignId);
@@ -675,14 +693,16 @@ public class BattleService {
             total = effectiveD20;
         } else {
             targetAc = resolveTargetAc(target);
-            AttackResolver.Outcome outcome = AttackResolver.resolve(effectiveD20, attack.attackBonus(), targetAc);
+            int effectiveAttackBonus = attack.attackBonus() + attackRollBonus;
+            AttackResolver.Outcome outcome = AttackResolver.resolve(effectiveD20, effectiveAttackBonus, targetAc);
             if (outcome.dealsDamage()) {
-                damage = diceRoller.rollDamage(attack.damage(), outcome == AttackResolver.Outcome.CRIT);
+                damage = Math.max(0, diceRoller.rollDamage(attack.damage(),
+                        outcome == AttackResolver.Outcome.CRIT) + damageBonus);
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = outcome.name();
-            attackBonusOut = attack.attackBonus();
-            total = effectiveD20 + attack.attackBonus();
+            attackBonusOut = effectiveAttackBonus;
+            total = effectiveD20 + effectiveAttackBonus;
         }
 
         attacker.setActionSpent(attacker.getActionSpent() + 1);
@@ -1114,7 +1134,11 @@ public class BattleService {
         }
         if (target.getType() == CombatantType.CHARACTER && target.getCharacter() != null
                 && target.getCharacter().getArmorClass() != null) {
-            return target.getCharacter().getArmorClass();
+            // Static sheet AC plus any AC modifiers from active effects (Shield of Faith, Mage Armour…),
+            // aggregated across both effect systems. Legacy buffs contribute nothing to AC today, so this
+            // is additive with no change to existing behaviour.
+            return target.getCharacter().getArmorClass()
+                    + modifierAggregator.totalFor(target.getCharacter().getId(), ModifierTarget.ac());
         }
         return 10;
     }
@@ -1127,26 +1151,16 @@ public class BattleService {
      */
     private void applyDamageOrHeal(BattleCombatant combatant, int delta, User actor, UUID campaignId) {
         if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
-            // Re-load under a pessimistic write lock so simultaneous attacks / manual HP edits on the
-            // same character accumulate instead of overwriting one another (deltas, not last-write-wins).
-            PlayerCharacter character = characterRepository.findByIdForUpdate(combatant.getCharacter().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Character not found"));
-            int maxHp = character.getMaxHp() != null ? character.getMaxHp()
-                    : (combatant.getMaxHp() != null ? combatant.getMaxHp() : 0);
-
-            character.applyHpDelta(delta, maxHp);
-            characterRepository.save(character);
-
-            int currentHp = character.getCurrentHp();
-            int tempHp = character.getTempHp();
-            combatant.setCurrentHp(currentHp);
-            combatant.setMaxHp(maxHp > 0 ? maxHp : combatant.getMaxHp());
+            // Character HP goes through the single shared primitive (pessimistic lock, temp-HP
+            // absorption, tracker mirroring and HP_CHANGED all live there). Mirror the authoritative
+            // result back onto this combatant row so the action response reflects the change.
+            HpChangeResult result = characterHpService.applyDelta(
+                    combatant.getCharacter().getId(), delta, campaignId, actor.getId());
+            combatant.setCurrentHp(result.currentHp());
+            if (result.maxHp() > 0) {
+                combatant.setMaxHp(result.maxHp());
+            }
             combatantRepository.save(combatant);
-
-            webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
-                    character.getId(),
-                    Map.of("currentHp", currentHp, "tempHp", tempHp, "maxHp", maxHp),
-                    actor.getId());
         } else {
             int maxHp = combatant.getMaxHp() != null ? combatant.getMaxHp() : 0;
             int currentHp = combatant.getCurrentHp() != null ? combatant.getCurrentHp() : 0;
@@ -1210,6 +1224,9 @@ public class BattleService {
                 total += Boolean.TRUE.equals(bd.getIsBuff()) ? bd.getModifierValue() : -bd.getModifierValue();
             }
         }
+        // Feature-effect contributions to initiative / Dexterity (formula-evaluated); additive with the
+        // legacy buffs summed above.
+        total += modifierAggregator.featureTotal(character.getId(), ModifierTarget.initiative(DEX_CODE));
         return total;
     }
 

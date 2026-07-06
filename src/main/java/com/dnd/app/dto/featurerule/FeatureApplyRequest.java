@@ -23,4 +23,10 @@ public class FeatureApplyRequest {
 
     /** Rolled/adjudicated healing to apply (0 if none). */
     private Integer healing;
+
+    /**
+     * Damage type of the rolled damage (from the feature's {@code plan()} → {@code damage.damageTypeId}).
+     * When set, the target's resistance/vulnerability to that type is applied to the damage.
+     */
+    private UUID damageTypeId;
 }

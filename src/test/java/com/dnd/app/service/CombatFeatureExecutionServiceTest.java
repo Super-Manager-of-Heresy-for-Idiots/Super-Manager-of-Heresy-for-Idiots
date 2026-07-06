@@ -6,6 +6,7 @@ import com.dnd.app.domain.content.ClassFeature;
 import com.dnd.app.domain.featurerule.FeatureDamageRule;
 import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureRule;
+import com.dnd.app.dto.combat.HpChangeResult;
 import com.dnd.app.dto.featurerule.FeatureApplyResult;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.repository.ClassFeatureRepository;
@@ -15,7 +16,6 @@ import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.FeatureHealingRuleRepository;
 import com.dnd.app.repository.FeatureResolutionRuleRepository;
 import com.dnd.app.repository.FeatureUseLogRepository;
-import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.DiceValue;
 import com.dnd.app.service.formula.FormulaContext;
@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +49,8 @@ class CombatFeatureExecutionServiceTest {
     @Mock private FeatureFormulaRepository formulaRepository;
     @Mock private FeatureFormulaService formulaService;
     @Mock private CharacterFormulaContextFactory contextFactory;
-    @Mock private PlayerCharacterRepository characterRepository;
+    @Mock private CharacterHpService hpService;
+    @Mock private ModifierAggregator modifierAggregator;
     @Mock private FeatureUseLogRepository useLogRepository;
 
     @InjectMocks private CombatFeatureExecutionService service;
@@ -96,20 +98,51 @@ class CombatFeatureExecutionServiceTest {
     }
 
     @Test
-    void applyToTargetReducesHpByDamageAndClamps() {
+    void applyToTargetRoutesDamageThroughHpService() {
         when(flags.isRuntimeEnabled()).thenReturn(true);
-        when(characterRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(useLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
+        UUID campaignId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
         PlayerCharacter actor = PlayerCharacter.builder().id(UUID.randomUUID()).build();
-        PlayerCharacter target = PlayerCharacter.builder().id(UUID.randomUUID()).currentHp(10).maxHp(20).build();
+        PlayerCharacter target = PlayerCharacter.builder().id(targetId).currentHp(10).maxHp(20).build();
 
-        FeatureApplyResult result = service.applyToTarget(actor, featureId, target, 5, 0);
+        // Damage must flow through the shared HP primitive (temp HP, lock, tracker sync, HP_CHANGED),
+        // not be written to current_hp here. The service maps the primitive's result into the DTO.
+        when(hpService.applyDelta(targetId, -5, campaignId, actorUserId))
+                .thenReturn(new HpChangeResult(targetId, 5, 0, 20, false));
+
+        FeatureApplyResult result =
+                service.applyToTarget(actor, featureId, target, 5, 0, null, campaignId, actorUserId);
+
+        assertThat(result.getDamageApplied()).isEqualTo(5);
         assertThat(result.getTargetCurrentHp()).isEqualTo(5);
-        assertThat(target.getCurrentHp()).isEqualTo(5);
+        assertThat(result.getTargetMaxHp()).isEqualTo(20);
+        verify(hpService).applyDelta(targetId, -5, campaignId, actorUserId);
+    }
 
-        // Overkill clamps to 0
-        FeatureApplyResult result2 = service.applyToTarget(actor, featureId, target, 999, 0);
-        assertThat(result2.getTargetCurrentHp()).isZero();
+    @Test
+    void applyToTargetHalvesResistedDamage() {
+        when(flags.isRuntimeEnabled()).thenReturn(true);
+        when(useLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        UUID campaignId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        UUID fireTypeId = UUID.randomUUID();
+        PlayerCharacter actor = PlayerCharacter.builder().id(UUID.randomUUID()).build();
+        PlayerCharacter target = PlayerCharacter.builder().id(targetId).currentHp(20).maxHp(20).build();
+
+        when(modifierAggregator.damageMultiplier(targetId, fireTypeId)).thenReturn(0.5);
+        when(hpService.applyDelta(targetId, -4, campaignId, actorUserId))
+                .thenReturn(new HpChangeResult(targetId, 16, 0, 20, false));
+
+        // 9 fire damage against resistance → floor(9 * 0.5) = 4 actually applied.
+        FeatureApplyResult result =
+                service.applyToTarget(actor, featureId, target, 9, 0, fireTypeId, campaignId, actorUserId);
+
+        assertThat(result.getDamageApplied()).isEqualTo(4);
+        verify(hpService).applyDelta(targetId, -4, campaignId, actorUserId);
     }
 }

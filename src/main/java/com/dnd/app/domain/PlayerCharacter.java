@@ -191,4 +191,20 @@ public class PlayerCharacter {
         this.currentHp = curHp;
         this.tempHp = tmpHp;
     }
+
+    /**
+     * Grants temporary hit points. Temp HP does not stack (D&D rule): the character keeps whichever
+     * pool is larger, so a smaller grant is ignored and a larger one replaces the current temp HP.
+     * A non-positive amount is a no-op. Callers must hold the same pessimistic write lock as
+     * {@link #applyHpDelta(int, int)} so concurrent grants/damage stay consistent.
+     */
+    public void grantTempHp(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        int tmp = tempHp != null ? tempHp : 0;
+        if (amount > tmp) {
+            this.tempHp = amount;
+        }
+    }
 }

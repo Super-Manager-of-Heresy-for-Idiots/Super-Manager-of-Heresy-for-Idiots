@@ -1,5 +1,6 @@
 package com.dnd.app.service;
 
+import com.dnd.app.domain.featurerule.FeatureTrigger;
 import com.dnd.app.domain.featurerule.PendingGameplayPrompt;
 import com.dnd.app.dto.featurerule.PendingPromptResponse;
 import com.dnd.app.exception.BadRequestException;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +27,7 @@ class PendingGameplayPromptServiceTest {
     @Mock private PendingGameplayPromptRepository promptRepository;
     @Mock private FeatureTriggerRepository triggerRepository;
     @Mock private GameplayEventService gameplayEventService;
+    @Mock private CombatActionEconomyService economyService;
 
     @InjectMocks private PendingGameplayPromptService service;
 
@@ -54,6 +57,24 @@ class PendingGameplayPromptServiceTest {
     void resolveRejectsWrongCharacter() {
         when(promptRepository.findById(promptId)).thenReturn(Optional.of(prompt("pending", UUID.randomUUID())));
         assertThatThrownBy(() -> service.resolve(charId, promptId)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void resolveSpendsReactionWhenTriggerConsumesReaction() {
+        UUID combatId = UUID.randomUUID();
+        UUID triggerId = UUID.randomUUID();
+        PendingGameplayPrompt p = PendingGameplayPrompt.builder()
+                .id(promptId).characterId(charId).status("pending")
+                .combatId(combatId).featureTriggerId(triggerId).build();
+        when(promptRepository.findById(promptId)).thenReturn(Optional.of(p));
+        when(promptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(triggerRepository.findById(triggerId)).thenReturn(Optional.of(
+                FeatureTrigger.builder().id(triggerId).consumesReaction(true).build()));
+
+        service.resolve(charId, promptId);
+
+        // The character's one reaction for the round must be consumed on resolve.
+        verify(economyService).spend(combatId, charId, "reaction");
     }
 
     @Test

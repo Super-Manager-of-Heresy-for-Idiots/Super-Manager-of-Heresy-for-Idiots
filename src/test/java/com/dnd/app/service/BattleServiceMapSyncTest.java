@@ -47,6 +47,9 @@ class BattleServiceMapSyncTest {
     @Mock private ItemInstanceRepository itemInstanceRepository;
     @Mock private SpellRepository spellRepository;
     @Mock private SpellSlotService spellSlotService;
+    @Mock private GameplayEventService gameplayEventService;
+    @Mock private ModifierAggregator modifierAggregator;
+    @Mock private EffectExpirationService effectExpirationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -62,7 +65,10 @@ class BattleServiceMapSyncTest {
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
                 diceRoller, weaponAttackService, classAbilityCombatService, itemInstanceRepository,
-                spellRepository, spellSlotService, objectMapper);
+                spellRepository, spellSlotService, objectMapper,
+                new CharacterHpService(characterRepository, combatantRepository,
+                        webSocketEventService, gameplayEventService),
+                modifierAggregator, effectExpirationService);
         campaign = Campaign.builder().id(campaignId).build();
         battle = Battle.builder()
                 .id(battleId).campaign(campaign).status(BattleStatus.ACTIVE)
