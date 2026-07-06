@@ -89,7 +89,7 @@ public class CharacterFeatureGrantService {
 
             int applied = 0;
             for (FeatureProficiencyGrant grant : grants) {
-                if (applySkill(character, grant.getTargetId(), grant.isExpertise())) {
+                if (applySkill(character, grant.getTargetId(), grant.isExpertise(), SkillProficiencySource.FEATURE)) {
                     applied++;
                 }
             }
@@ -107,7 +107,51 @@ public class CharacterFeatureGrantService {
         }
     }
 
-    private boolean applySkill(PlayerCharacter character, UUID skillId, boolean expertise) {
+    /**
+     * Apply a background's approved static skill grants to a character (S1 polymorphic owner). Mirrors
+     * {@link #applyForClassLevel}: same hard flag-gate and swallow-on-failure, but resolves rules owned by
+     * {@code owner_type = BACKGROUND} and tags the resulting proficiencies as {@link SkillProficiencySource#BACKGROUND}.
+     * Call at character creation once the background is known.
+     */
+    @Transactional
+    public void applyForBackground(PlayerCharacter character, UUID backgroundId) {
+        if (!flags.isRuntimeEnabled() || backgroundId == null) {
+            return; // hard no-op: existing creation flow unaffected
+        }
+        try {
+            List<FeatureRule> approvedRules = ruleRepository
+                    .findByOwnerTypeAndOwnerIdIn(FeatureRuleOwnerType.BACKGROUND.getCode(), List.of(backgroundId)).stream()
+                    .filter(FeatureRule::isEnabled)
+                    .filter(r -> APPROVED.equals(r.getReviewStatus()) && r.getApprovedRevisionId() != null)
+                    .toList();
+            if (approvedRules.isEmpty()) {
+                return;
+            }
+            List<UUID> ruleIds = approvedRules.stream().map(FeatureRule::getId).toList();
+
+            List<FeatureProficiencyGrant> grants = proficiencyGrantRepository.findByFeatureRuleIdIn(ruleIds).stream()
+                    .filter(g -> g.getTargetId() != null)
+                    .filter(g -> FeatureProficiencyType.SKILL.getCode().equals(g.getProficiencyType()))
+                    .toList();
+
+            int applied = 0;
+            for (FeatureProficiencyGrant grant : grants) {
+                if (applySkill(character, grant.getTargetId(), grant.isExpertise(), SkillProficiencySource.BACKGROUND)) {
+                    applied++;
+                }
+            }
+            if (applied > 0) {
+                log.info("Applied {} background skill grant(s) to character {} (background {})",
+                        applied, character.getId(), backgroundId);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Background grant application skipped for character {} (background {}): {}",
+                    character.getId(), backgroundId, e.getMessage());
+        }
+    }
+
+    private boolean applySkill(PlayerCharacter character, UUID skillId, boolean expertise,
+                               SkillProficiencySource source) {
         Optional<CharacterSkillProficiency> existing =
                 skillProficiencyRepository.findByCharacterIdAndSkillId(character.getId(), skillId);
 
@@ -131,7 +175,7 @@ public class CharacterFeatureGrantService {
         skillProficiencyRepository.save(CharacterSkillProficiency.builder()
                 .character(character)
                 .skill(skill)
-                .source(SkillProficiencySource.FEATURE)
+                .source(source)
                 .proficiencyLevel(SkillProficiencyLevel.PROFICIENT)
                 .build());
         return true;

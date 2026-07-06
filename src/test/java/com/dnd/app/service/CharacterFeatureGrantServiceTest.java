@@ -121,4 +121,33 @@ class CharacterFeatureGrantServiceTest {
 
         verify(skillProficiencyRepository, never()).save(any());
     }
+
+    @Test
+    void applyForBackgroundGrantsSkillsWithBackgroundSource() {
+        when(flags.isRuntimeEnabled()).thenReturn(true);
+        UUID backgroundId = UUID.randomUUID();
+
+        FeatureRule rule = FeatureRule.builder()
+                .id(UUID.randomUUID()).ownerType("BACKGROUND").ownerId(backgroundId)
+                .ruleType("static_grant").enabled(true).reviewStatus("approved")
+                .approvedRevisionId(UUID.randomUUID()).build();
+        when(ruleRepository.findByOwnerTypeAndOwnerIdIn(eq("BACKGROUND"), anyList()))
+                .thenReturn(List.of(rule));
+
+        FeatureProficiencyGrant grant = FeatureProficiencyGrant.builder()
+                .id(UUID.randomUUID()).featureRuleId(rule.getId())
+                .proficiencyType("skill").targetId(skillId).expertise(false).grantTiming("always").build();
+        when(proficiencyGrantRepository.findByFeatureRuleIdIn(anyList())).thenReturn(List.of(grant));
+
+        when(skillProficiencyRepository.findByCharacterIdAndSkillId(any(), eq(skillId)))
+                .thenReturn(Optional.empty());
+        when(contentSkillRepository.findById(skillId)).thenReturn(Optional.of(new ContentSkill()));
+
+        service.applyForBackground(PlayerCharacter.builder().id(UUID.randomUUID()).build(), backgroundId);
+
+        // Background-granted skills are tagged with the BACKGROUND source (not the class FEATURE source).
+        ArgumentCaptor<CharacterSkillProficiency> captor = ArgumentCaptor.forClass(CharacterSkillProficiency.class);
+        verify(skillProficiencyRepository).save(captor.capture());
+        assertThat(captor.getValue().getSource()).isEqualTo(SkillProficiencySource.BACKGROUND);
+    }
 }

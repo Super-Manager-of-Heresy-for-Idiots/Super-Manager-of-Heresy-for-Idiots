@@ -89,6 +89,7 @@ public class ContentCharacterCreationService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final SpeciesService speciesService;
     private final LevelUpCommandService levelUpCommandService;
+    private final CharacterFeatureGrantService characterFeatureGrantService;
     private final LevelThresholdService levelThresholdService;
     private final ObjectMapper objectMapper;
 
@@ -270,6 +271,10 @@ public class ContentCharacterCreationService {
 
         levelUpCommandService.applyInitialRewardSelections(
                 character, charClass, req.getInitialRewardSelections(), "ru");
+
+        // S1 (polymorphic owner): materialise the background's static skill grants. Hard-gated inside
+        // (no-op unless app.feature-rules.runtime-enabled), so the existing creation flow is unaffected.
+        characterFeatureGrantService.applyForBackground(character, background.getId());
 
         log.info("Content character created: id={}, name='{}', classId={}, createdLevel={}, targetLevel={}, "
                         + "experience={}, owner={}, campaign={}",

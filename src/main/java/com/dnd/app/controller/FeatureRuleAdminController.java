@@ -47,6 +47,7 @@ import com.dnd.app.dto.featurerule.FormulaVocabularyResponse;
 import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureFormulaVocabularyService;
 import com.dnd.app.service.FeatureRuleAdminService;
+import com.dnd.app.service.BackgroundProficiencyBackfillService;
 import com.dnd.app.service.FeatureRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
 import com.dnd.app.service.FeatureActionCostAdminService;
@@ -96,6 +97,7 @@ public class FeatureRuleAdminController {
     private final FeatureFormulaVocabularyService featureFormulaVocabularyService;
     private final FeatureRuleBackfillService featureRuleBackfillService;
     private final FeatureRuleCoverageService featureRuleCoverageService;
+    private final BackgroundProficiencyBackfillService backgroundProficiencyBackfillService;
     private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
     private final FeatureDamageRuleAdminService featureDamageRuleAdminService;
     private final FeatureActionCostAdminService featureActionCostAdminService;
@@ -552,6 +554,16 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(featureRuleBackfillService.backfill(apply),
                                 apply ? "Бэкфилл применён" : "Пробный прогон")),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/feature-rules/backfill-backgrounds")
+    @Operation(summary = "Backfill static skill-grant rules for backgrounds (S1; dry-run unless apply=true)")
+    public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> backfillBackgrounds(
+            @RequestParam(defaultValue = "false") boolean apply) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(backgroundProficiencyBackfillService.backfill(apply),
+                                apply ? "Бэкфилл предысторий применён" : "Пробный прогон")),
                 controllerTaskExecutor);
     }
 
