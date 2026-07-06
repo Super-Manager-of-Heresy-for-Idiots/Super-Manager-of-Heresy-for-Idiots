@@ -1,5 +1,6 @@
 package com.dnd.app.service.formula;
 
+import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateRequest;
 import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateResponse;
 import com.dnd.app.dto.featurerule.FeatureFormulaValidationResponse;
@@ -40,6 +41,21 @@ class FeatureFormulaEngineTest {
         assertThat(evaluator.evaluate("class_level(\"Druid\")", ctx())).isEqualTo(9.0);
         assertThat(evaluator.evaluate("ability_mod(\"CHA\")", ctx())).isEqualTo(4.0);
         assertThat(evaluator.evaluate("feature_resource_count(\"rage\")", ctx())).isEqualTo(3.0);
+    }
+
+    @Test
+    void spellDcFormulaUsesTheSpellcastingAbilityScalar() {
+        // The stored spell save DC of the S2 backfill: 8 + proficiency + the caster's casting stat.
+        MapFormulaContext ctx = ctx().scalar("spellcasting_ability_mod", 4);
+        assertThat(evaluator.evaluate("8 + proficiency_bonus + spellcasting_ability_mod", ctx)).isEqualTo(15.0);
+    }
+
+    @Test
+    void diceMixedWithFlatEvaluatesToIntegerViaAverage() {
+        // spell_healing rows can carry dice AND flat ("2d4 + 2"): average(2d4)=5, +2 → 7 (floored).
+        FeatureFormula healing = FeatureFormula.builder()
+                .expression("2d4 + 2").resultType("integer").roundingMode("none").build();
+        assertThat(service.evaluateInteger(healing, ctx())).isEqualTo(7);
     }
 
     // ── Arithmetic, rounding, min/max ────────────────────────────────────────

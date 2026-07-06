@@ -10,6 +10,7 @@ import com.dnd.app.dto.featurerule.FeatureFormulaValidateRequest;
 import com.dnd.app.dto.featurerule.FeatureFormulaValidationResponse;
 import com.dnd.app.dto.featurerule.FeatureMaintenanceResult;
 import com.dnd.app.dto.featurerule.FeatureRuleBackfillResult;
+import com.dnd.app.dto.featurerule.SpellRuleBackfillResult;
 import com.dnd.app.dto.featurerule.FeatureRuleCoverageReport;
 import com.dnd.app.dto.featurerule.FeatureRuleMetadataResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleResponse;
@@ -49,6 +50,7 @@ import com.dnd.app.service.FeatureFormulaVocabularyService;
 import com.dnd.app.service.FeatureRuleAdminService;
 import com.dnd.app.service.BackgroundProficiencyBackfillService;
 import com.dnd.app.service.FeatureRuleBackfillService;
+import com.dnd.app.service.SpellRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
 import com.dnd.app.service.FeatureActionCostAdminService;
 import com.dnd.app.service.FeatureDamageRuleAdminService;
@@ -98,6 +100,7 @@ public class FeatureRuleAdminController {
     private final FeatureRuleBackfillService featureRuleBackfillService;
     private final FeatureRuleCoverageService featureRuleCoverageService;
     private final BackgroundProficiencyBackfillService backgroundProficiencyBackfillService;
+    private final SpellRuleBackfillService spellRuleBackfillService;
     private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
     private final FeatureDamageRuleAdminService featureDamageRuleAdminService;
     private final FeatureActionCostAdminService featureActionCostAdminService;
@@ -564,6 +567,16 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(backgroundProficiencyBackfillService.backfill(apply),
                                 apply ? "Бэкфилл предысторий применён" : "Пробный прогон")),
+                controllerTaskExecutor);
+    }
+
+    @PostMapping("/feature-rules/backfill-spells")
+    @Operation(summary = "Backfill spell mechanics (056–062) into SPELL-owned rules (S2; dry-run unless apply=true)")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellRuleBackfillResult>>> backfillSpells(
+            @RequestParam(defaultValue = "false") boolean apply) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(spellRuleBackfillService.backfill(apply),
+                                apply ? "Бэкфилл заклинаний применён" : "Пробный прогон")),
                 controllerTaskExecutor);
     }
 

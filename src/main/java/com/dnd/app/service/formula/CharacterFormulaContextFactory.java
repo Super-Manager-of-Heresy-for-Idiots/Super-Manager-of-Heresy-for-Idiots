@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -30,6 +32,8 @@ import java.util.stream.Collectors;
  *
  * <p>Registered keys:
  * {@code character_level}, {@code proficiency_bonus};
+ * {@code spellcasting_ability_mod} (highest modifier of the spellcasting abilities of the
+ * character's classes; absent for non-casters);
  * {@code class_level("<name>")} by English/Russian class name (any case);
  * {@code ability_mod("<key>")} by 3-letter code (STR/DEX/…) and English/Russian ability name;
  * {@code feature_resource_count("<resourceKey>")}.</p>
@@ -54,6 +58,7 @@ public class CharacterFormulaContextFactory {
         ctx.scalar("proficiency_bonus", ((Math.max(1, totalLevel) - 1) / 4) + 2);
 
         // class levels, keyed by class name (en/ru, any case)
+        List<ContentCharacterClass> characterClasses = new ArrayList<>();
         List<CharacterClassLevel> classLevels = classLevelRepository.findAllByCharacterId(characterId);
         if (!classLevels.isEmpty()) {
             List<UUID> classIds = classLevels.stream().map(CharacterClassLevel::getClassId).toList();
@@ -63,24 +68,36 @@ public class CharacterFormulaContextFactory {
                 ContentCharacterClass clazz = classes.get(ccl.getClassId());
                 int lvl = ccl.getClassLevel() != null ? ccl.getClassLevel() : 0;
                 if (clazz != null) {
+                    characterClasses.add(clazz);
                     registerKeys(clazz.getNameEn(), clazz.getNameRu(), key -> ctx.classLevel(key, lvl));
                 }
             }
         }
 
         // ability modifiers, keyed by 3-letter code + full name
+        Map<UUID, Integer> modByStatId = new HashMap<>();
         for (CharacterStat stat : characterStatRepository.findAllByCharacterId(characterId)) {
             StatType type = stat.getStatType();
             if (type == null || stat.getValue() == null) {
                 continue;
             }
             int mod = AbilityScores.modifier(stat.getValue());
+            modByStatId.put(type.getId(), mod);
             String nameEn = type.getNameEn();
             if (nameEn != null && nameEn.length() >= 3) {
                 ctx.abilityMod(nameEn.substring(0, 3).toUpperCase(Locale.ROOT), mod);
             }
             registerKeys(nameEn, type.getNameRu(), key -> ctx.abilityMod(key, mod));
         }
+
+        // spellcasting ability modifier: the highest across the character's caster classes. Exact for
+        // single-class casters; a deliberate approximation for multiclass (feeds spell DC formulas).
+        characterClasses.stream()
+                .map(ContentCharacterClass::getSpellcastingAbility)
+                .filter(a -> a != null && modByStatId.containsKey(a.getId()))
+                .map(a -> modByStatId.get(a.getId()))
+                .max(Integer::compareTo)
+                .ifPresent(mod -> ctx.scalar("spellcasting_ability_mod", mod));
 
         // feature resource counts, keyed by resource_key
         List<CharacterFeatureResource> resources = resourceRepository.findByCharacterId(characterId);

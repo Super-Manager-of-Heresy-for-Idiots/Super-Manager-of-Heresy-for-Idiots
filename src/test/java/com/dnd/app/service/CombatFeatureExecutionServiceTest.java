@@ -32,6 +32,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -120,6 +121,77 @@ class CombatFeatureExecutionServiceTest {
         assertThat(result.getTargetCurrentHp()).isEqualTo(5);
         assertThat(result.getTargetMaxHp()).isEqualTo(20);
         verify(hpService).applyDelta(targetId, -5, campaignId, actorUserId);
+    }
+
+    @Test
+    void planForSpellFeedsSlotLevelIntoFormulasAndUsesSpellRules() {
+        when(flags.isRuntimeEnabled()).thenReturn(true);
+        UUID spellId = UUID.randomUUID();
+        com.dnd.app.domain.Spell spell = com.dnd.app.domain.Spell.builder()
+                .id(spellId).slug("fireball").nameRu("Огненный шар").level(3).build();
+        FeatureRule rule = FeatureRule.builder().id(UUID.randomUUID()).build();
+        when(resolver.approvedEnabledRules(
+                org.mockito.ArgumentMatchers.eq(com.dnd.app.domain.featurerule.FeatureRuleOwnerType.SPELL),
+                anyList()))
+                .thenReturn(List.of(rule));
+        // The character snapshot itself knows no slot level — the overlay must supply it.
+        FormulaContext base = org.mockito.Mockito.mock(FormulaContext.class);
+        when(contextFactory.build(any())).thenReturn(base);
+
+        UUID dcFormulaId = UUID.randomUUID();
+        when(damageRepository.findByFeatureRuleIdIn(anyList())).thenReturn(List.of());
+        when(healingRepository.findByFeatureRuleIdIn(anyList())).thenReturn(List.of());
+        when(resolutionRepository.findByFeatureRuleIdIn(anyList())).thenReturn(List.of(
+                com.dnd.app.domain.featurerule.FeatureResolutionRule.builder()
+                        .id(UUID.randomUUID()).featureRuleId(rule.getId())
+                        .resolutionType("saving_throw").dcFormulaId(dcFormulaId).build()));
+        when(attackRepository.findByFeatureRuleIdIn(anyList())).thenReturn(List.of());
+        when(formulaRepository.findById(dcFormulaId)).thenReturn(Optional.of(
+                FeatureFormula.builder().id(dcFormulaId).expression("8 + proficiency_bonus").build()));
+
+        org.mockito.ArgumentCaptor<FormulaContext> ctx =
+                org.mockito.ArgumentCaptor.forClass(FormulaContext.class);
+        when(formulaService.evaluateInteger(any(FeatureFormula.class), ctx.capture())).thenReturn(15);
+
+        FeatureExecutionPlan plan = service.planForSpell(
+                PlayerCharacter.builder().id(UUID.randomUUID()).build(), spell, 3);
+
+        assertThat(plan.getFeatureName()).isEqualTo("Огненный шар");
+        assertThat(plan.getResolutions()).hasSize(1);
+        assertThat(plan.getResolutions().get(0).getDc()).isEqualTo(15);
+        assertThat(ctx.getValue().scalar("spell_slot_level")).isEqualTo(3.0);
+    }
+
+    @Test
+    void applySpellToTargetLogsSpellWithoutClassFeatureId() {
+        when(flags.isRuntimeEnabled()).thenReturn(true);
+        UUID spellId = UUID.randomUUID();
+        com.dnd.app.domain.Spell spell = com.dnd.app.domain.Spell.builder()
+                .id(spellId).slug("fireball").nameRu("Огненный шар").level(3).build();
+        FeatureRule spellRule = FeatureRule.builder().id(UUID.randomUUID()).build();
+        when(resolver.approvedEnabledRules(
+                org.mockito.ArgumentMatchers.eq(com.dnd.app.domain.featurerule.FeatureRuleOwnerType.SPELL),
+                anyList()))
+                .thenReturn(List.of(spellRule));
+
+        UUID targetId = UUID.randomUUID();
+        PlayerCharacter target = PlayerCharacter.builder().id(targetId).currentHp(20).maxHp(20).build();
+        when(hpService.applyDelta(eq(targetId), eq(-7), any(), any()))
+                .thenReturn(new HpChangeResult(targetId, 13, 0, 20, false));
+
+        org.mockito.ArgumentCaptor<com.dnd.app.domain.featurerule.FeatureUseLog> log =
+                org.mockito.ArgumentCaptor.forClass(com.dnd.app.domain.featurerule.FeatureUseLog.class);
+        when(useLogRepository.save(log.capture())).thenAnswer(i -> i.getArgument(0));
+
+        FeatureApplyResult result = service.applySpellToTarget(
+                PlayerCharacter.builder().id(UUID.randomUUID()).build(), spell, target,
+                7, 0, null, UUID.randomUUID(), UUID.randomUUID());
+
+        assertThat(result.getDamageApplied()).isEqualTo(7);
+        // feature_use_log.feature_id has an FK to class_feature — a spell must never be written there.
+        assertThat(log.getValue().getFeatureId()).isNull();
+        assertThat(log.getValue().getFeatureRuleId()).isEqualTo(spellRule.getId());
+        assertThat(log.getValue().getActionType()).isEqualTo("spell_resolution");
     }
 
     @Test

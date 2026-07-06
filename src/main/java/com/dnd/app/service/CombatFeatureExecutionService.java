@@ -2,13 +2,13 @@ package com.dnd.app.service;
 
 import com.dnd.app.config.FeatureRulesProperties;
 import com.dnd.app.domain.PlayerCharacter;
+import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.content.ClassFeature;
-import com.dnd.app.domain.featurerule.FeatureAttackRule;
 import com.dnd.app.domain.featurerule.FeatureDamageRule;
 import com.dnd.app.domain.featurerule.FeatureFormula;
-import com.dnd.app.domain.featurerule.FeatureHealingRule;
 import com.dnd.app.domain.featurerule.FeatureResolutionRule;
 import com.dnd.app.domain.featurerule.FeatureRule;
+import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.domain.featurerule.FeatureRuleProfile;
 import com.dnd.app.domain.featurerule.FeatureUseLog;
 import com.dnd.app.dto.combat.HpChangeResult;
@@ -27,6 +27,7 @@ import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.DiceValue;
 import com.dnd.app.service.formula.FormulaContext;
 import com.dnd.app.service.formula.FormulaException;
+import com.dnd.app.service.formula.ScalarOverlayContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,10 @@ import java.util.UUID;
  * requirements) from the feature's rules + the actor's context, and applies an already-rolled outcome to a
  * target character's HP. Actual dice rolls happen at the client/GM. Deep integration into the core
  * BattleService flow is intentionally deferred; this stays additive and flag-gated.
+ *
+ * <p>S2 (spell-stack absorption): the same engine now also executes rules owned by a SPELL
+ * ({@link #planForSpell}, {@link #applySpellToTarget}) — there is deliberately no separate spell runner.
+ * Cast-time slot level flows into formulas as the {@code spell_slot_level} scalar.</p>
  */
 @Slf4j
 @Service
@@ -64,27 +69,47 @@ public class CombatFeatureExecutionService {
     public FeatureExecutionPlan plan(PlayerCharacter actor, UUID featureId) {
         ClassFeature feature = classFeatureRepository.findById(featureId)
                 .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + featureId));
+        List<FeatureRule> rules = resolver.approvedEnabledRules(List.of(featureId));
+        return planForRules(actor, featureId, feature.getTitle(), rules, null);
+    }
 
+    /**
+     * The same structured plan for a spell (rules with {@code owner_type = SPELL}). {@code slotLevel} is
+     * the slot the spell is being cast with (null for cantrips/out-of-slot casts) and is exposed to the
+     * rule formulas as the {@code spell_slot_level} scalar.
+     */
+    @Transactional(readOnly = true)
+    public FeatureExecutionPlan planForSpell(PlayerCharacter actor, Spell spell, Integer slotLevel) {
+        List<FeatureRule> rules =
+                resolver.approvedEnabledRules(FeatureRuleOwnerType.SPELL, List.of(spell.getId()));
+        return planForRules(actor, spell.getId(), spell.getNameRu(), rules, slotLevel);
+    }
+
+    private FeatureExecutionPlan planForRules(PlayerCharacter actor, UUID ownerId, String displayName,
+                                              List<FeatureRule> rules, Integer spellSlotLevel) {
         FeatureExecutionPlan.FeatureExecutionPlanBuilder plan = FeatureExecutionPlan.builder()
-                .featureId(featureId).featureName(feature.getTitle())
+                .featureId(ownerId).featureName(displayName)
                 .damages(List.of()).healings(List.of()).resolutions(List.of()).attacks(List.of())
                 .requiresManualAdjudication(false);
 
-        List<FeatureRule> rules = resolver.approvedEnabledRules(List.of(featureId));
         if (!flags.isRuntimeEnabled() || rules.isEmpty()) {
             return plan.build();
         }
         List<UUID> ruleIds = rules.stream().map(FeatureRule::getId).toList();
         FormulaContext ctx = contextFactory.build(actor);
+        if (spellSlotLevel != null) {
+            ctx = new ScalarOverlayContext(ctx).scalar("spell_slot_level", spellSlotLevel);
+        }
+        final FormulaContext evalCtx = ctx;
 
         boolean manual = rules.stream()
                 .anyMatch(r -> FeatureRuleProfile.MANUAL_ADJUDICATION.getCode().equals(r.getRuleType()));
 
         List<FeatureExecutionPlan.Damage> damages = damageRepository.findByFeatureRuleIdIn(ruleIds).stream()
-                .map(dr -> toDamage(dr, ctx)).toList();
+                .map(dr -> toDamage(dr, evalCtx)).toList();
         List<FeatureExecutionPlan.Healing> healings = healingRepository.findByFeatureRuleIdIn(ruleIds).stream()
                 .map(hr -> FeatureExecutionPlan.Healing.builder()
-                        .amount(evalInt(hr.getAmountFormulaId(), ctx))
+                        .amount(evalInt(hr.getAmountFormulaId(), evalCtx))
                         .tempHp(hr.isTempHp())
                         .canReviveFromZero(hr.isCanReviveFromZero())
                         .build()).toList();
@@ -92,12 +117,12 @@ public class CombatFeatureExecutionService {
                 .map(rr -> FeatureExecutionPlan.Resolution.builder()
                         .resolutionType(rr.getResolutionType())
                         .abilityId(rr.getAbilityId()).skillId(rr.getSkillId())
-                        .dc(evalInt(rr.getDcFormulaId(), ctx))
+                        .dc(evalInt(rr.getDcFormulaId(), evalCtx))
                         .build()).toList();
         List<FeatureExecutionPlan.Attack> attacks = attackRepository.findByFeatureRuleIdIn(ruleIds).stream()
                 .map(ar -> FeatureExecutionPlan.Attack.builder()
                         .attackKind(ar.getAttackKind())
-                        .extraAttackCount(evalInt(ar.getExtraAttackCountFormulaId(), ctx))
+                        .extraAttackCount(evalInt(ar.getExtraAttackCountFormulaId(), evalCtx))
                         .build()).toList();
 
         return plan.requiresManualAdjudication(manual)
@@ -117,15 +142,52 @@ public class CombatFeatureExecutionService {
     public FeatureApplyResult applyToTarget(PlayerCharacter actor, UUID featureId, PlayerCharacter target,
                                             Integer damage, Integer healing, UUID damageTypeId,
                                             UUID campaignId, UUID actorUserId) {
+        FeatureApplyResult result = applyOutcome(target, damage, healing, damageTypeId, campaignId, actorUserId);
+        useLogRepository.save(FeatureUseLog.builder()
+                .characterId(actor.getId())
+                .featureId(featureId)
+                .actionType("combat_resolution")
+                .detail("dmg=" + result.getDamageApplied() + ", heal=" + result.getHealingApplied()
+                        + ", target=" + target.getId() + ", hp=" + result.getTargetCurrentHp())
+                .build());
+        return result;
+    }
+
+    /**
+     * Spell counterpart of {@link #applyToTarget}. The use log carries the spell through
+     * {@code feature_rule_id} (owner SPELL) and the detail text — {@code feature_id} must stay null
+     * because its FK points at {@code class_feature}.
+     */
+    @Transactional
+    public FeatureApplyResult applySpellToTarget(PlayerCharacter actor, Spell spell, PlayerCharacter target,
+                                                 Integer damage, Integer healing, UUID damageTypeId,
+                                                 UUID campaignId, UUID actorUserId) {
+        FeatureApplyResult result = applyOutcome(target, damage, healing, damageTypeId, campaignId, actorUserId);
+        UUID spellRuleId = resolver.approvedEnabledRules(FeatureRuleOwnerType.SPELL, List.of(spell.getId())).stream()
+                .map(FeatureRule::getId)
+                .findFirst().orElse(null);
+        useLogRepository.save(FeatureUseLog.builder()
+                .characterId(actor.getId())
+                .featureRuleId(spellRuleId)
+                .actionType("spell_resolution")
+                .detail("spell=" + spell.getSlug() + ", dmg=" + result.getDamageApplied()
+                        + ", heal=" + result.getHealingApplied()
+                        + ", target=" + target.getId() + ", hp=" + result.getTargetCurrentHp())
+                .build());
+        return result;
+    }
+
+    private FeatureApplyResult applyOutcome(PlayerCharacter target, Integer damage, Integer healing,
+                                            UUID damageTypeId, UUID campaignId, UUID actorUserId) {
         if (!flags.isRuntimeEnabled()) {
             throw new BadRequestException("Runtime умений отключён");
         }
         int rolledDmg = damage != null ? Math.max(0, damage) : 0;
         int heal = healing != null ? Math.max(0, healing) : 0;
 
-        // Feature damage carries a structured damage type (feature_damage_rule.damage_type_id), which
-        // shares the reference table that resistances/vulnerabilities key on — so the target's resist
-        // (÷2) / vulnerability (×2) applies cleanly here, unlike the legacy attack path.
+        // Structured damage carries a damage type from the shared reference table that resistances/
+        // vulnerabilities key on — so the target's resist (÷2) / vulnerability (×2) applies cleanly here,
+        // unlike the legacy attack path.
         int appliedDmg = applyResistance(target.getId(), rolledDmg, damageTypeId);
 
         HpChangeResult result = null;
@@ -139,13 +201,6 @@ public class CombatFeatureExecutionService {
         int after = result != null ? result.currentHp()
                 : (target.getCurrentHp() != null ? target.getCurrentHp() : 0);
         Integer maxHp = result != null && result.maxHp() > 0 ? result.maxHp() : target.getMaxHp();
-
-        useLogRepository.save(FeatureUseLog.builder()
-                .characterId(actor.getId())
-                .featureId(featureId)
-                .actionType("combat_resolution")
-                .detail("dmg=" + appliedDmg + ", heal=" + heal + ", target=" + target.getId() + ", hp=" + after)
-                .build());
 
         return FeatureApplyResult.builder()
                 .targetCharacterId(target.getId())

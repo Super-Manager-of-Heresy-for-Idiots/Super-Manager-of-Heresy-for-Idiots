@@ -45,6 +45,20 @@ public class SpellSlotService {
     private static final String SLOT_COLUMN_PREFIX = "yacheyki-zaklinaniy-level";
     private static final int MAX_SPELL_LEVEL = 9;
 
+    /**
+     * Reserved shared-pool key format for referencing a slot level from the feature-rules resource
+     * layer (S2 decision): a resource definition with {@code shared_pool_key = "spell_slot_L{n}"} means
+     * "draws from the level-n spell slots of this service". Slot state itself deliberately STAYS in
+     * {@code character_spell_slot_usage} (single source of truth); modelling the nine pools as Stage-5
+     * resources is optional later work and must go through this key format.
+     */
+    public static final String SHARED_POOL_KEY_FORMAT = "spell_slot_L%d";
+
+    /** The reserved {@code shared_pool_key} for the given slot level (see {@link #SHARED_POOL_KEY_FORMAT}). */
+    public static String sharedPoolKey(int spellLevel) {
+        return String.format(SHARED_POOL_KEY_FORMAT, spellLevel);
+    }
+
     private final JdbcTemplate jdbc;
     private final PlayerCharacterRepository characterRepository;
     private final UserRepository userRepository;
@@ -61,6 +75,21 @@ public class SpellSlotService {
     @Transactional
     public SpellSlotsResponse expend(UUID characterId, String username, int spellLevel) {
         loadAndAuthorize(characterId, username, true);
+        expendCore(characterId, spellLevel);
+        return buildResponse(characterId);
+    }
+
+    /**
+     * Spend one slot on behalf of an already-authorized flow (the feature-rules cast path, which does
+     * its own owner/GM access check on the caster). Same availability rules as {@link #expend}.
+     */
+    @Transactional
+    public SpellSlotsResponse expendInternal(UUID characterId, int spellLevel) {
+        expendCore(characterId, spellLevel);
+        return buildResponse(characterId);
+    }
+
+    private void expendCore(UUID characterId, int spellLevel) {
         if (spellLevel < 1 || spellLevel > MAX_SPELL_LEVEL) {
             throw new BadRequestException("Уровень ячейки должен быть от 1 до 9");
         }
@@ -78,7 +107,6 @@ public class SpellSlotService {
         }
         usage.setExpendedCount(usage.getExpendedCount() + 1);
         usageRepository.save(usage);
-        return buildResponse(characterId);
     }
 
     @Transactional

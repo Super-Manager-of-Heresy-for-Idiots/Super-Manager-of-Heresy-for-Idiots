@@ -9,6 +9,7 @@ import com.dnd.app.domain.featurerule.FeatureEffectDefinition;
 import com.dnd.app.domain.featurerule.FeatureEffectEndCondition;
 import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureRule;
+import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.repository.DurationUnitRepository;
 import com.dnd.app.repository.FeatureActiveEffectRepository;
 import com.dnd.app.repository.FeatureEffectDefinitionRepository;
@@ -54,9 +55,30 @@ public class FeatureEffectService {
     @Transactional
     public int applyForFeatureUse(PlayerCharacter character, UUID featureId) {
         if (!flags.effectsActive()) {
-            return 0;
+            return 0; // gate before any resolution work: disabled must stay a strict no-op
         }
         List<FeatureRule> rules = resolver.approvedEnabledRules(List.of(featureId));
+        return applyRules(character, character, featureId, rules);
+    }
+
+    /**
+     * Create active effects of a cast spell (rules with {@code owner_type = SPELL}) on {@code target}.
+     * The duration formulas run in the CASTER's context (the caster's power drives the effect), while the
+     * effect itself lands on the target. {@code source_feature_id} stays null — its FK points at
+     * {@code class_feature}; the spell is traceable through the definition's rule (owner SPELL).
+     */
+    @Transactional
+    public int applyForSpellCast(PlayerCharacter caster, PlayerCharacter target, UUID spellId) {
+        if (!flags.effectsActive()) {
+            return 0;
+        }
+        List<FeatureRule> rules =
+                resolver.approvedEnabledRules(FeatureRuleOwnerType.SPELL, List.of(spellId));
+        return applyRules(target, caster, null, rules);
+    }
+
+    private int applyRules(PlayerCharacter target, PlayerCharacter source, UUID sourceFeatureId,
+                           List<FeatureRule> rules) {
         if (rules.isEmpty()) {
             return 0;
         }
@@ -65,15 +87,15 @@ public class FeatureEffectService {
         if (defs.isEmpty()) {
             return 0;
         }
-        FormulaContext ctx = contextFactory.build(character);
+        FormulaContext ctx = contextFactory.build(source);
         int created = 0;
         for (FeatureEffectDefinition def : defs) {
             // same-feature reuse ends the previous instance
             List<FeatureEffectEndCondition> ends = endConditionRepository.findByEffectDefinitionId(def.getId());
             if (ends.stream().anyMatch(FeatureEffectEndCondition::isSameFeatureReuse)) {
-                endActiveOfDefinition(character.getId(), def.getId());
+                endActiveOfDefinition(target.getId(), def.getId());
             }
-            applyStacking(character.getId(), def);
+            applyStacking(target.getId(), def);
 
             Instant expiresAt = null;
             Integer remainingRounds = null;
@@ -90,9 +112,9 @@ public class FeatureEffectService {
             }
 
             activeRepository.save(FeatureActiveEffect.builder()
-                    .characterId(character.getId())
-                    .sourceCharacterId(character.getId())
-                    .sourceFeatureId(featureId)
+                    .characterId(target.getId())
+                    .sourceCharacterId(source.getId())
+                    .sourceFeatureId(sourceFeatureId)
                     .effectDefinitionId(def.getId())
                     .expiresAt(expiresAt)
                     .remainingRounds(remainingRounds)

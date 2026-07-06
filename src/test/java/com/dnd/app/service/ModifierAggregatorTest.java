@@ -120,6 +120,38 @@ class ModifierAggregatorTest {
     }
 
     @Test
+    void bridgedSpellBuffDoesNotStackWithTheSameLegacyBuff() {
+        // The same "+2 STR" buff is active twice: applied by an item through the legacy system AND by a
+        // cast spell through the backfilled feature effect ("buff:<name>" effect key). The bridged stack
+        // key must collapse them to the max (+2), not sum to +4.
+        when(characterActiveEffectRepository.findByCharacterId(characterId))
+                .thenReturn(List.of(buff("Bull's Strength", true, 2)));
+
+        UUID defId = UUID.randomUUID();
+        UUID formulaId = UUID.randomUUID();
+        FeatureActiveEffect effect = FeatureActiveEffect.builder()
+                .id(UUID.randomUUID()).characterId(characterId).effectDefinitionId(defId).status("active").build();
+        FeatureEffectModifier mod = FeatureEffectModifier.builder()
+                .id(UUID.randomUUID()).effectDefinitionId(defId).modifierType("stat_bonus")
+                .abilityId(strStatId).valueFormulaId(formulaId).build();
+        FeatureEffectDefinition def = FeatureEffectDefinition.builder()
+                .id(defId).effectKey("buff:Bull's Strength").stackingPolicy("replace_same_feature").build();
+        when(featureActiveEffectRepository.findByCharacterIdAndStatus(characterId, "active")).thenReturn(List.of(effect));
+        when(featureEffectModifierRepository.findByEffectDefinitionIdIn(any())).thenReturn(List.of(mod));
+        when(featureEffectDefinitionRepository.findAllById(any())).thenReturn(List.of(def));
+        when(characterRepository.findById(characterId))
+                .thenReturn(Optional.of(PlayerCharacter.builder().id(characterId).build()));
+        when(contextFactory.build(any())).thenReturn(mock(FormulaContext.class));
+        when(formulaRepository.findById(formulaId))
+                .thenReturn(Optional.of(FeatureFormula.builder().id(formulaId).expression("2").build()));
+        when(formulaService.evaluateInteger(any(FeatureFormula.class), any())).thenReturn(2);
+
+        int total = aggregator.totalFor(characterId, ModifierTarget.statCheck(strStatId, "str"));
+
+        assertThat(total).isEqualTo(2);
+    }
+
+    @Test
     void featureTotalReadsFeatureSourceOnly() {
         when(featureActiveEffectRepository.findByCharacterIdAndStatus(characterId, "active")).thenReturn(List.of());
 

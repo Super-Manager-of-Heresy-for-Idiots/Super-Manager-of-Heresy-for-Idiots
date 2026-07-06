@@ -7,7 +7,10 @@ package com.dnd.app.service.formula;
  */
 public interface FormulaContext {
 
-    /** Bare scalars: character_level, proficiency_bonus, spell_slot_level, monster_cr, combat_round. */
+    /**
+     * Bare scalars: character_level, proficiency_bonus, spell_slot_level, spellcasting_ability_mod,
+     * monster_cr, combat_round.
+     */
     Double scalar(String name);
 
     /** class_level("Druid"). */

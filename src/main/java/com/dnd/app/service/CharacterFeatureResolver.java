@@ -45,10 +45,16 @@ public class CharacterFeatureResolver {
     /** Approved, enabled, runtime-eligible rules (with an approved revision) for the given features. */
     @Transactional(readOnly = true)
     public List<FeatureRule> approvedEnabledRules(Collection<UUID> featureIds) {
-        if (featureIds.isEmpty()) {
+        return approvedEnabledRules(FeatureRuleOwnerType.CLASS_FEATURE, featureIds);
+    }
+
+    /** Same runtime-eligibility filter for any rule owner (class feature, background, feat, spell). */
+    @Transactional(readOnly = true)
+    public List<FeatureRule> approvedEnabledRules(FeatureRuleOwnerType ownerType, Collection<UUID> ownerIds) {
+        if (ownerIds.isEmpty()) {
             return List.of();
         }
-        return ruleRepository.findByOwnerTypeAndOwnerIdIn(OWNER, featureIds).stream()
+        return ruleRepository.findByOwnerTypeAndOwnerIdIn(ownerType.getCode(), ownerIds).stream()
                 .filter(FeatureRule::isEnabled)
                 .filter(r -> APPROVED.equals(r.getReviewStatus()) && r.getApprovedRevisionId() != null)
                 .toList();

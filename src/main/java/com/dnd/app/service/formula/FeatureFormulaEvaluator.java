@@ -14,7 +14,7 @@ import java.util.TreeSet;
  * comparisons {@code < <= > >= == !=}; logic {@code && || !}; boolean literals; an allowlist of functions
  * ({@code floor ceil round abs min max step dice class_level ability_mod feature_resource_count
  * target_condition}); and the bare context scalars {@code character_level proficiency_bonus
- * spell_slot_level monster_cr combat_round}.</p>
+ * spell_slot_level spellcasting_ability_mod monster_cr combat_round}.</p>
  *
  * <p>There is NO access to Java objects, fields, reflection, or arbitrary names — anything outside the
  * allowlist raises {@link FormulaException}. Division by zero and type mismatches also raise it.</p>
@@ -23,7 +23,8 @@ import java.util.TreeSet;
 public class FeatureFormulaEvaluator {
 
     private static final Set<String> SCALARS = Set.of(
-            "character_level", "proficiency_bonus", "spell_slot_level", "monster_cr", "combat_round");
+            "character_level", "proficiency_bonus", "spell_slot_level", "spellcasting_ability_mod",
+            "monster_cr", "combat_round");
     private static final Set<String> KEYED_FUNCTIONS = Set.of(
             "class_level", "ability_mod", "feature_resource_count", "target_condition");
     private static final Set<String> MATH_FUNCTIONS = Set.of("floor", "ceil", "round", "abs", "min", "max");

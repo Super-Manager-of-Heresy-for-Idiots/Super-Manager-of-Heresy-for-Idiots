@@ -8,15 +8,19 @@ import java.util.Optional;
  *
  * <p>{@link #CLASS_FEATURE} was the only wired owner in the first wave; {@link #BACKGROUND} and
  * {@link #FEAT} extend the same rules runtime to those owners (the {@code owner_id → class_feature}
- * FK is dropped once a second owner type exists — see migration 082). The {@code owner_type}/
- * {@code owner_id} shape exists so the runtime can be reused for race features, feats, items and
- * homebrew without reshaping the tables — see {@code anal-integration/01_STAGE_RULE_SCHEMA_FOUNDATION.md}.</p>
+ * FK is dropped once a second owner type exists — see migration 082). {@link #SPELL} absorbs the
+ * legacy spell mechanics (056–062): rules owned by a {@code spell.spell_id} carry the spell's damage,
+ * healing, save/check/attack resolution, action cost and applied effects, so casting runs through the
+ * same runtime as features instead of a parallel spell stack. The {@code owner_type}/{@code owner_id}
+ * shape exists so the runtime can be reused for race features, items and homebrew without reshaping
+ * the tables — see {@code anal-integration/01_STAGE_RULE_SCHEMA_FOUNDATION.md}.</p>
  */
 public enum FeatureRuleOwnerType {
 
     CLASS_FEATURE("CLASS_FEATURE"),
     BACKGROUND("BACKGROUND"),
-    FEAT("FEAT");
+    FEAT("FEAT"),
+    SPELL("SPELL");
 
     private final String code;
 

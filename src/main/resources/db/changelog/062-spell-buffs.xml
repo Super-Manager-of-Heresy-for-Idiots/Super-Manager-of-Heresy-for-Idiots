@@ -8,6 +8,17 @@
     <!--
       Spell -> buff/debuff links. A spell can apply one or more effects (buffs/debuffs); the link
       is authored in the admin spell editor. Mirrors the item_instance_buffs join table (054).
+
+      ============================== МОРАТОРИЙ / MORATORIUM (S2, 2026-07-06) ==============================
+      062 is the LAST migration of the legacy spell-mechanics stack (056-062: spell_damage, spell save/
+      check/warning columns, spell_summon_monster, spell_healing, spell_buffs). Do NOT add new spell
+      mechanics to these tables/columns: every mechanic here is a strict subset of the feature-rules
+      model (066+), and the data is absorbed into rules with owner_type = SPELL by
+      SpellRuleBackfillService (/api/admin/feature-rules/backfill-spells). New spell mechanics must be
+      authored as feature rules. The 056-062 tables stay as the read model for the folio/battle DTOs
+      (dual-read period) and must not be dropped until every reader is moved to the rules.
+      See FEATURE_RULES_INTEGRATION_SEAMS_2026-07-06.md, Шаг 6 (S2).
+      =====================================================================================================
     -->
     <changeSet id="062-spell-buffs" author="claude">
         <createTable tableName="spell_buffs">

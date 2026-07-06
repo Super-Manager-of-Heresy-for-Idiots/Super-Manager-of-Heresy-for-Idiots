@@ -259,7 +259,12 @@ public class ModifierAggregator {
     private String featureStackKey(ModifierTarget target, FeatureEffectDefinition def, FeatureActiveEffect effect) {
         String defKey = def != null && def.getEffectKey() != null
                 ? def.getEffectKey() : String.valueOf(effect.getEffectDefinitionId());
-        String base = target.kind() + "|" + scopeKey(target) + "|feature:" + defKey;
+        // Effects bridged from the legacy buff dictionary (spell-buff backfill) carry a "buff:<name>"
+        // effect key. Using it verbatim makes their stack key IDENTICAL to the legacy source's key for
+        // the same buff, so "+2 STR from an item" and "+2 STR from the spell that applies the same buff"
+        // collapse to the max instead of summing across the two effect systems.
+        String sourceKey = defKey.startsWith("buff:") ? defKey : "feature:" + defKey;
+        String base = target.kind() + "|" + scopeKey(target) + "|" + sourceKey;
         boolean stacks = def != null && EffectStackingPolicy.STACK.getCode().equalsIgnoreCase(def.getStackingPolicy());
         // Stacking effects each get a unique key (they sum); non-stacking share a key (max wins).
         return stacks ? base + "|" + effect.getId() : base;
