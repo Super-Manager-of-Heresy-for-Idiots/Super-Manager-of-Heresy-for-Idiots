@@ -36,6 +36,14 @@ import com.dnd.app.dto.featurerule.TriggerAdminResponse;
 import com.dnd.app.dto.featurerule.TriggerEditRequest;
 import com.dnd.app.dto.featurerule.SpellGrantAdminResponse;
 import com.dnd.app.dto.featurerule.SpellGrantEditRequest;
+import com.dnd.app.dto.featurerule.StaticGrantAdminResponse;
+import com.dnd.app.dto.featurerule.StaticGrantEditRequest;
+import com.dnd.app.dto.featurerule.ChoiceRuleAdminResponse;
+import com.dnd.app.dto.featurerule.ChoiceRuleEditRequest;
+import com.dnd.app.dto.featurerule.GenericFormulaRuleAdminResponse;
+import com.dnd.app.dto.featurerule.GenericFormulaRuleEditRequest;
+import com.dnd.app.dto.featurerule.CompanionDefinitionAdminResponse;
+import com.dnd.app.dto.featurerule.CompanionDefinitionEditRequest;
 import com.dnd.app.dto.featurerule.TargetTypeOption;
 import com.dnd.app.dto.featurerule.ResourceDefinitionAdminResponse;
 import com.dnd.app.dto.featurerule.ResourceDefinitionEditRequest;
@@ -58,6 +66,10 @@ import com.dnd.app.service.FeatureHealingRuleAdminService;
 import com.dnd.app.service.FeatureActiveEffectAdminService;
 import com.dnd.app.service.FeatureResolutionRuleAdminService;
 import com.dnd.app.service.FeatureFormsRuleAdminService;
+import com.dnd.app.service.FeatureStaticGrantAdminService;
+import com.dnd.app.service.FeatureChoiceRuleAdminService;
+import com.dnd.app.service.FeatureGenericFormulaRuleAdminService;
+import com.dnd.app.service.FeatureCompanionDefinitionAdminService;
 import com.dnd.app.service.FeatureResourceDefinitionAdminService;
 import com.dnd.app.service.FeatureRuleIssueService;
 import com.dnd.app.service.FeatureRuleRevisionService;
@@ -108,6 +120,10 @@ public class FeatureRuleAdminController {
     private final FeatureActiveEffectAdminService featureActiveEffectAdminService;
     private final FeatureResolutionRuleAdminService featureResolutionRuleAdminService;
     private final FeatureFormsRuleAdminService featureFormsRuleAdminService;
+    private final FeatureStaticGrantAdminService featureStaticGrantAdminService;
+    private final FeatureChoiceRuleAdminService featureChoiceRuleAdminService;
+    private final FeatureGenericFormulaRuleAdminService featureGenericFormulaRuleAdminService;
+    private final FeatureCompanionDefinitionAdminService featureCompanionDefinitionAdminService;
     private final FeatureRuntimeMaintenanceService featureRuntimeMaintenanceService;
     private final Executor controllerTaskExecutor;
 
@@ -395,6 +411,82 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureFormsRuleAdminService.upsertSpellGrant(ruleId, request), "Заклинание сохранено")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/static-grants")
+    @Operation(summary = "Get STATIC_GRANT rule details for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<StaticGrantAdminResponse>>> getStaticGrants(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureStaticGrantAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/static-grants")
+    @Operation(summary = "Replace STATIC_GRANT proficiency/language grants")
+    public CompletableFuture<ResponseEntity<ApiResponse<StaticGrantAdminResponse>>> replaceStaticGrants(
+            @PathVariable UUID ruleId, @Valid @RequestBody StaticGrantEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureStaticGrantAdminService.replace(ruleId, request), "Static grants saved")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/choice-groups")
+    @Operation(summary = "Get CHOICE rule groups/options for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<ChoiceRuleAdminResponse>>> getChoiceGroups(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureChoiceRuleAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/choice-groups")
+    @Operation(summary = "Replace CHOICE rule groups/options")
+    public CompletableFuture<ResponseEntity<ApiResponse<ChoiceRuleAdminResponse>>> replaceChoiceGroups(
+            @PathVariable UUID ruleId, @Valid @RequestBody ChoiceRuleEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureChoiceRuleAdminService.replace(ruleId, request), "Choices saved")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/generic-formulas")
+    @Operation(summary = "Get FORMULA/manual helper formulas for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<GenericFormulaRuleAdminResponse>>> getGenericFormulas(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureGenericFormulaRuleAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/generic-formulas")
+    @Operation(summary = "Replace FORMULA/manual helper formula rows")
+    public CompletableFuture<ResponseEntity<ApiResponse<GenericFormulaRuleAdminResponse>>> replaceGenericFormulas(
+            @PathVariable UUID ruleId, @Valid @RequestBody GenericFormulaRuleEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureGenericFormulaRuleAdminService.replace(ruleId, request), "Formulas saved")),
+                controllerTaskExecutor);
+    }
+
+    @GetMapping("/feature-rules/{ruleId}/companion-definitions")
+    @Operation(summary = "Get COMPANION rule definitions for editing")
+    public CompletableFuture<ResponseEntity<ApiResponse<CompanionDefinitionAdminResponse>>> getCompanionDefinitions(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureCompanionDefinitionAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    @PutMapping("/feature-rules/{ruleId}/companion-definitions")
+    @Operation(summary = "Replace COMPANION rule definitions")
+    public CompletableFuture<ResponseEntity<ApiResponse<CompanionDefinitionAdminResponse>>> replaceCompanionDefinitions(
+            @PathVariable UUID ruleId, @Valid @RequestBody CompanionDefinitionEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureCompanionDefinitionAdminService.replace(ruleId, request), "Companion definitions saved")),
                 controllerTaskExecutor);
     }
 

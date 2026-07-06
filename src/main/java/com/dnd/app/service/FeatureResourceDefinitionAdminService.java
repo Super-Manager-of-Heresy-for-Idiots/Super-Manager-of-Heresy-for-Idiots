@@ -4,7 +4,6 @@ import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureResourceDefinition;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FormulaResultType;
-import com.dnd.app.domain.featurerule.FormulaRoundingMode;
 import com.dnd.app.domain.featurerule.RestType;
 import com.dnd.app.dto.featurerule.ResourceDefinitionAdminResponse;
 import com.dnd.app.dto.featurerule.ResourceDefinitionEditRequest;
@@ -34,6 +33,7 @@ public class FeatureResourceDefinitionAdminService {
     private final FeatureFormulaRepository formulaRepository;
     private final RestTypeRepository restTypeRepository;
     private final FeatureFormulaService formulaService;
+    private final FeatureFormulaAdminHelper formulaHelper;
 
     @Transactional(readOnly = true)
     public ResourceDefinitionAdminResponse get(UUID ruleId) {
@@ -68,22 +68,12 @@ public class FeatureResourceDefinitionAdminService {
         def.setAllowNegative(req.isAllowNegative());
         def.setSharedPoolKey(blankToNull(req.getSharedPoolKey()));
 
-        // Max value formula: create/update the FeatureFormula (validated + stamped), or clear it.
-        String expr = req.getMaxFormula() != null ? req.getMaxFormula().trim() : null;
-        if (expr != null && !expr.isBlank()) {
-            FeatureFormula formula = def.getMaxFormulaId() != null
-                    ? formulaRepository.findById(def.getMaxFormulaId()).orElseGet(FeatureFormula::new)
-                    : new FeatureFormula();
-            formula.setExpression(expr);
-            formula.setResultType(FormulaResultType.INTEGER.getCode());
-            if (formula.getRoundingMode() == null) {
-                formula.setRoundingMode(FormulaRoundingMode.NONE.getCode());
-            }
-            formulaService.validateAndStamp(formula);
-            def.setMaxFormulaId(formulaRepository.save(formula).getId());
-        } else {
-            def.setMaxFormulaId(null);
-        }
+        def.setMaxFormulaId(formulaHelper.upsert(def.getMaxFormulaId(), req.getMaxFormula(),
+                FormulaResultType.INTEGER.getCode()));
+        def.setResetAmountFormulaId(formulaHelper.upsert(def.getResetAmountFormulaId(),
+                req.getResetAmountFormula(), FormulaResultType.INTEGER.getCode()));
+        def.setSpendPerUseFormulaId(formulaHelper.upsert(def.getSpendPerUseFormulaId(),
+                req.getSpendPerUseFormula(), FormulaResultType.INTEGER.getCode()));
 
         // Reset window (rest type code -> id).
         if (req.getResetRestType() != null && !req.getResetRestType().isBlank()) {
@@ -97,17 +87,9 @@ public class FeatureResourceDefinitionAdminService {
     }
 
     private ResourceDefinitionAdminResponse toResponse(FeatureResourceDefinition def) {
-        String expr = null;
-        String status = null;
-        String message = null;
-        if (def.getMaxFormulaId() != null) {
-            FeatureFormula f = formulaRepository.findById(def.getMaxFormulaId()).orElse(null);
-            if (f != null) {
-                expr = f.getExpression();
-                status = f.getValidationStatus();
-                message = f.getValidationMessage();
-            }
-        }
+        FeatureFormula max = formulaHelper.find(def.getMaxFormulaId());
+        FeatureFormula reset = formulaHelper.find(def.getResetAmountFormulaId());
+        FeatureFormula spend = formulaHelper.find(def.getSpendPerUseFormulaId());
         String restCode = def.getResetRestTypeId() == null ? null
                 : restTypeRepository.findById(def.getResetRestTypeId()).map(RestType::getCode).orElse(null);
 
@@ -116,10 +98,16 @@ public class FeatureResourceDefinitionAdminService {
                 .featureRuleId(def.getFeatureRuleId())
                 .resourceKey(def.getResourceKey())
                 .displayName(def.getDisplayName())
-                .maxFormula(expr)
-                .maxFormulaStatus(status)
-                .maxFormulaMessage(message)
+                .maxFormula(max != null ? max.getExpression() : null)
+                .maxFormulaStatus(max != null ? max.getValidationStatus() : null)
+                .maxFormulaMessage(max != null ? max.getValidationMessage() : null)
                 .resetRestType(restCode)
+                .resetAmountFormula(reset != null ? reset.getExpression() : null)
+                .resetAmountFormulaStatus(reset != null ? reset.getValidationStatus() : null)
+                .resetAmountFormulaMessage(reset != null ? reset.getValidationMessage() : null)
+                .spendPerUseFormula(spend != null ? spend.getExpression() : null)
+                .spendPerUseFormulaStatus(spend != null ? spend.getValidationStatus() : null)
+                .spendPerUseFormulaMessage(spend != null ? spend.getValidationMessage() : null)
                 .allowNegative(def.isAllowNegative())
                 .sharedPoolKey(def.getSharedPoolKey())
                 .build();

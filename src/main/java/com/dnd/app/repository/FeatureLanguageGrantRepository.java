@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface FeatureLanguageGrantRepository extends JpaRepository<FeatureLanguageGrant, UUID> {
     List<FeatureLanguageGrant> findByFeatureRuleId(UUID featureRuleId);
     List<FeatureLanguageGrant> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    void deleteByFeatureRuleId(UUID featureRuleId);
 }

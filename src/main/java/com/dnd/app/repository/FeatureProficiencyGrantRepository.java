@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface FeatureProficiencyGrantRepository extends JpaRepository<FeatureProficiencyGrant, UUID> {
     List<FeatureProficiencyGrant> findByFeatureRuleId(UUID featureRuleId);
     List<FeatureProficiencyGrant> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    void deleteByFeatureRuleId(UUID featureRuleId);
 }

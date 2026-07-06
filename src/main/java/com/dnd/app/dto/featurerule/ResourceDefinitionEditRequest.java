@@ -31,6 +31,14 @@ public class ResourceDefinitionEditRequest {
     @Size(max = 32)
     private String resetRestType;
 
+    /** Optional partial-rest recovery formula. Blank means reset fully restores to max. */
+    @Size(max = 2000)
+    private String resetAmountFormula;
+
+    /** Optional spend-per-use formula for action integrations. */
+    @Size(max = 2000)
+    private String spendPerUseFormula;
+
     private boolean allowNegative;
 
     @Size(max = 64)

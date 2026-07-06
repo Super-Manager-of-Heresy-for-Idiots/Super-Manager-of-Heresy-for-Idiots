@@ -127,4 +127,7 @@
     <!-- Structured per-character hit dice (short-rest spend, long-rest half-restore). -->
     <include file="db/changelog/085-character-hit-dice.xml"/>
 
+    <!-- Rule Workbench: typed editors for standalone formulas and companion definitions. -->
+    <include file="db/changelog/086-rule-workbench-generic-editors.xml"/>
+
 </databaseChangeLog>

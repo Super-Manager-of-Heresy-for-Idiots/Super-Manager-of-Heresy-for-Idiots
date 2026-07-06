@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Rule Workbench: typed storage for FORMULA and COMPANION rule editors. -->
+    <changeSet id="086-feature-rule-formula" author="codex">
+        <createTable tableName="feature_rule_formula">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="formula_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="formula_key" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="label" type="varchar(120)"/>
+            <column name="sort_order" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_rule_formula" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_formula_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_rule_formula" baseColumnNames="formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_rule_formula_formula" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="feature_rule_formula" columnNames="feature_rule_id, formula_key"
+                             constraintName="uk_feature_rule_formula_key"/>
+        <createIndex tableName="feature_rule_formula" indexName="idx_feature_rule_formula_rule">
+            <column name="feature_rule_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="086-feature-companion-definition" author="codex">
+        <createTable tableName="feature_companion_definition">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="companion_key" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="monster_id" type="uuid"/>
+            <column name="name_template" type="varchar(120)"/>
+            <column name="hp_formula_id" type="uuid"/>
+            <column name="ac_formula_id" type="uuid"/>
+            <column name="attack_bonus_formula_id" type="uuid"/>
+            <column name="summon_timing" type="varchar(32)"/>
+            <column name="sort_order" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="text"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_companion_definition" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_companion_def_rule" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="feature_companion_definition" baseColumnNames="hp_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_companion_def_hp_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_companion_definition" baseColumnNames="ac_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_companion_def_ac_formula" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="feature_companion_definition" baseColumnNames="attack_bonus_formula_id"
+                                 referencedTableName="feature_formula" referencedColumnNames="id"
+                                 constraintName="fk_feature_companion_def_atk_formula" onDelete="SET NULL"/>
+        <addUniqueConstraint tableName="feature_companion_definition" columnNames="feature_rule_id, companion_key"
+                             constraintName="uk_feature_companion_def_key"/>
+        <createIndex tableName="feature_companion_definition" indexName="idx_feature_companion_def_rule">
+            <column name="feature_rule_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

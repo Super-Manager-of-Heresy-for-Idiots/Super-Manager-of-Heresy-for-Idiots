@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface FeatureChoiceGroupRepository extends JpaRepository<FeatureChoiceGroup, UUID> {
     List<FeatureChoiceGroup> findByFeatureRuleId(UUID featureRuleId);
     List<FeatureChoiceGroup> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);
+    void deleteByFeatureRuleId(UUID featureRuleId);
 }

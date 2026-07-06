@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface FeatureChoiceOptionRepository extends JpaRepository<FeatureChoiceOption, UUID> {
     List<FeatureChoiceOption> findByChoiceGroupIdOrderBySortOrderAsc(UUID choiceGroupId);
     List<FeatureChoiceOption> findByChoiceGroupIdIn(Collection<UUID> choiceGroupIds);
+    void deleteByChoiceGroupIdIn(Collection<UUID> choiceGroupIds);
 }

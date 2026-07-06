@@ -22,6 +22,12 @@ public class ResourceDefinitionAdminResponse {
     private String maxFormulaStatus;
     private String maxFormulaMessage;
     private String resetRestType;
+    private String resetAmountFormula;
+    private String resetAmountFormulaStatus;
+    private String resetAmountFormulaMessage;
+    private String spendPerUseFormula;
+    private String spendPerUseFormulaStatus;
+    private String spendPerUseFormulaMessage;
     private boolean allowNegative;
     private String sharedPoolKey;
 }
