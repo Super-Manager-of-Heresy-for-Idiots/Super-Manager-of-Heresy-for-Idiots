@@ -80,6 +80,7 @@ class SpellCastRuntimeIT {
     @Autowired private ClassLevelRewardGroupRepository rewardGroupRepository;
     @Autowired private PlayerCharacterRepository characterRepository;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private jakarta.persistence.EntityManager entityManager;
 
     @Test
     @Transactional
@@ -107,6 +108,7 @@ class SpellCastRuntimeIT {
                 .as("the backfilled damage rule reaches the plan")
                 .isNotEmpty();
         assertThat(result.getPlan().getDamages().get(0).getDiceExpression()).isNotBlank();
+        entityManager.flush(); // the use log is written via JPA but counted via plain SQL below
         assertThat(useLogCount(characterId)).isEqualTo(1);
     }
 

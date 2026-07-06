@@ -94,6 +94,7 @@ class ContentMigrationBootIT {
     @Autowired private FeatureRuleCoverageService featureRuleCoverageService;
     @Autowired private SpellRuleBackfillService spellRuleBackfillService;
     @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @Autowired private jakarta.persistence.EntityManager entityManager;
 
     @Test
     void contextBootsLiquibaseValidatesAndContentLoaderRuns() {
@@ -127,6 +128,10 @@ class ContentMigrationBootIT {
     @Transactional
     void spellRuleBackfillAbsorbsTheLegacySpellStackWithReconciledCounts() {
         SpellRuleBackfillResult first = spellRuleBackfillService.backfill(true);
+        // The reconciliation below reads through JdbcTemplate (plain SQL, no persistence context), so
+        // the JPA writes of the backfill must be flushed first — in production the service commit does
+        // this; here the test transaction is still open.
+        entityManager.flush();
         assertThat(first.isApplied()).isTrue();
         assertThat(first.getSpellsTotal()).isGreaterThan(0);
 
@@ -150,12 +155,15 @@ class ContentMigrationBootIT {
                 + first.getResolution().getRulesCreated()
                 + first.getActionCost().getRulesCreated()
                 + first.getEffects().getRulesCreated());
-        assertThat(countInt("SELECT COUNT(*) FROM feature_rule WHERE owner_type = 'SPELL' "
-                + "AND review_status = 'approved' AND approved_revision_id IS NOT NULL"))
-                .isEqualTo(spellRules);
+        // Все правила авто-утверждены; при расхождении покажем сами строки-нарушители.
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT owner_id, rule_type, review_status FROM feature_rule WHERE owner_type = 'SPELL' "
+                        + "AND (review_status <> 'approved' OR approved_revision_id IS NULL)"))
+                .isEmpty();
 
         // Идемпотентность: второй прогон ничего не создаёт, всё уже существует.
         SpellRuleBackfillResult second = spellRuleBackfillService.backfill(true);
+        entityManager.flush();
         assertThat(second.getDamage().getRulesCreated()).isZero();
         assertThat(second.getHealing().getRulesCreated()).isZero();
         assertThat(second.getResolution().getRulesCreated()).isZero();
