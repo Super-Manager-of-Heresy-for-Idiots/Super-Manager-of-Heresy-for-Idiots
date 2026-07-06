@@ -90,6 +90,7 @@ public class ContentCharacterCreationService {
     private final SpeciesService speciesService;
     private final LevelUpCommandService levelUpCommandService;
     private final CharacterFeatureGrantService characterFeatureGrantService;
+    private final CharacterFeatService characterFeatService;
     private final LevelThresholdService levelThresholdService;
     private final ObjectMapper objectMapper;
 
@@ -275,6 +276,12 @@ public class ContentCharacterCreationService {
         // S1 (polymorphic owner): materialise the background's static skill grants. Hard-gated inside
         // (no-op unless app.feature-rules.runtime-enabled), so the existing creation flow is unaffected.
         characterFeatureGrantService.applyForBackground(character, background.getId());
+
+        // S1 (FEAT owner): a background may grant a fixed feat — record it structurally (also
+        // auto-provisions any feat-bound resources). Idempotent and swallow-on-failure.
+        if (background.getGrantedFeat() != null) {
+            characterFeatService.grantFromSource(character, background.getGrantedFeat().getId(), "background");
+        }
 
         log.info("Content character created: id={}, name='{}', classId={}, createdLevel={}, targetLevel={}, "
                         + "experience={}, owner={}, campaign={}",

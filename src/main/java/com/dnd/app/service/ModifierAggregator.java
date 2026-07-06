@@ -4,6 +4,10 @@ import com.dnd.app.domain.BuffDebuff;
 import com.dnd.app.domain.CharacterActiveEffect;
 import com.dnd.app.domain.PlayerCharacter;
 import com.dnd.app.domain.StatType;
+import com.dnd.app.domain.content.SpeciesTraitEffect;
+import com.dnd.app.dto.response.CharacterRaceSnapshotResponse;
+import com.dnd.app.repository.SpeciesTraitEffectRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dnd.app.domain.featurerule.ActiveEffectStatus;
 import com.dnd.app.domain.featurerule.EffectStackingPolicy;
 import com.dnd.app.domain.featurerule.FeatureActiveEffect;
@@ -63,6 +67,8 @@ public class ModifierAggregator {
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
     private final PlayerCharacterRepository characterRepository;
+    private final SpeciesTraitEffectRepository speciesTraitEffectRepository;
+    private final ObjectMapper objectMapper;
 
     /** Every modifier (both sources) contributing to {@code target}, before the stacking rule. */
     @Transactional(readOnly = true)
@@ -89,9 +95,10 @@ public class ModifierAggregator {
     }
 
     /**
-     * Damage multiplier from feature resistances/vulnerabilities for an incoming damage type:
-     * {@code 0.5} if resistant, {@code 2.0} if vulnerable, {@code 1.0} if neither or both (they cancel
-     * per RAW). A resistance/vulnerability with no damage type applies to all types.
+     * Damage multiplier for an incoming damage type from feature resistances/vulnerabilities AND the
+     * character's racial resistances ({@code species_trait_effect}): {@code 0.5} if resistant, {@code 2.0}
+     * if vulnerable, {@code 1.0} if neither or both (they cancel per RAW). A feature resistance/vulnerability
+     * with no damage type applies to all types.
      */
     @Transactional(readOnly = true)
     public double damageMultiplier(UUID characterId, UUID damageTypeId) {
@@ -109,10 +116,48 @@ public class ModifierAggregator {
                 vulnerable = true;
             }
         }
+        if (!resist && hasRaceResistance(characterId, damageTypeId)) {
+            resist = true; // Source C: racial resistance
+        }
         if (resist == vulnerable) {
             return 1.0; // neither, or both cancel
         }
         return resist ? 0.5 : 2.0;
+    }
+
+    /**
+     * Whether the character's species grants resistance to the given damage type (Source C). The species is
+     * read from the character's race snapshot ({@code raceId}); its {@code resistance} trait effects are
+     * matched by the reference damage type — the same table feature resistances use, so no bridge is needed.
+     */
+    private boolean hasRaceResistance(UUID characterId, UUID damageTypeId) {
+        if (damageTypeId == null) {
+            return false;
+        }
+        PlayerCharacter character = characterRepository.findById(characterId).orElse(null);
+        if (character == null || character.getRaceSnapshotJson() == null
+                || character.getRaceSnapshotJson().isBlank()) {
+            return false;
+        }
+        UUID speciesId;
+        try {
+            CharacterRaceSnapshotResponse snapshot = objectMapper.readValue(
+                    character.getRaceSnapshotJson(), CharacterRaceSnapshotResponse.class);
+            speciesId = snapshot.getRaceId();
+        } catch (Exception e) {
+            log.warn("Race snapshot parse failed for character {}: {}", characterId, e.getMessage());
+            return false;
+        }
+        if (speciesId == null) {
+            return false;
+        }
+        for (SpeciesTraitEffect effect
+                : speciesTraitEffectRepository.findBySpeciesIdAndEffectType(speciesId, "resistance")) {
+            if (effect.getDamageType() != null && damageTypeId.equals(effect.getDamageType().getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ── Source A: legacy buffs_debuffs ────────────────────────────────────────

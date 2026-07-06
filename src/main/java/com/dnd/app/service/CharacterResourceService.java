@@ -74,6 +74,31 @@ public class CharacterResourceService {
         }
     }
 
+    /**
+     * Ensures the character has the resources bound to the given feats (e.g. Luck Points from the Lucky
+     * feat), auto-provisioned when a feat is added — previously such resources had to be attached by hand
+     * because there was no character↔feat table. Idempotent: creates only the missing rows, starting full.
+     */
+    @Transactional
+    public void provisionFeatResources(PlayerCharacter character, java.util.Collection<UUID> featIds) {
+        if (featIds == null || featIds.isEmpty()) {
+            return;
+        }
+        FormulaContext ctx = formulaContextFactory.build(character);
+        for (CustomResourceType type : customResourceTypeRepository.findByFeatBound_IdIn(featIds)) {
+            boolean present = characterResourceRepository
+                    .findByCharacterIdAndResourceTypeId(character.getId(), type.getId()).isPresent();
+            if (!present) {
+                Integer max = effectiveMax(type, ctx);
+                characterResourceRepository.save(CharacterResource.builder()
+                        .character(character)
+                        .resourceType(type)
+                        .currentValue(max != null ? max : 0)
+                        .build());
+            }
+        }
+    }
+
     /** Effective max: the character-evaluated {@code max_formula} when present, else the fixed max_value. */
     private Integer effectiveMax(CustomResourceType type, FormulaContext ctx) {
         String expr = type.getMaxFormula();

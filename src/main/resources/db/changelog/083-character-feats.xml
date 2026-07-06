@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Per-character feats (S1, FEAT owner). The character↔feat relationship had no table — feats lived only
+      in the free-text `character.features` blob — which blocked both feature-rule owner_type=FEAT and the
+      auto-provisioning of feat-bound resources (080's feat_bound_id, until now manual). This structured
+      table unblocks both. Unique per (character, feat); source records where the feat came from.
+    -->
+    <changeSet id="083-character-feats" author="claude">
+        <createTable tableName="character_feats">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="feat_id" type="uuid"><constraints nullable="false"/></column>
+            <column name="source" type="varchar(24)" defaultValue="manual"><constraints nullable="false"/></column>
+            <column name="granted_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="character_feats" baseColumnNames="character_id"
+                                 referencedTableName="characters" referencedColumnNames="id"
+                                 constraintName="fk_character_feats_character" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="character_feats" baseColumnNames="feat_id"
+                                 referencedTableName="feat" referencedColumnNames="feat_id"
+                                 constraintName="fk_character_feats_feat" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="character_feats" columnNames="character_id, feat_id"
+                             constraintName="uq_character_feats_char_feat"/>
+        <createIndex tableName="character_feats" indexName="idx_character_feats_char">
+            <column name="character_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -13,4 +13,7 @@ public interface CustomResourceTypeRepository extends JpaRepository<CustomResour
 
     /** Resources bound to any of the given classes (custom_resource_types.class_bound_id). */
     List<CustomResourceType> findByClassBound_IdIn(Collection<UUID> classIds);
+
+    /** Resources bound to any of the given feats (custom_resource_types.feat_bound_id). */
+    List<CustomResourceType> findByFeatBound_IdIn(Collection<UUID> featIds);
 }

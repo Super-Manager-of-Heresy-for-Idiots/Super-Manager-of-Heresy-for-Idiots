@@ -80,6 +80,7 @@ class ContentCharacterCreationServiceTest {
     @Mock private SpeciesService speciesService;
     @Mock private LevelUpCommandService levelUpCommandService;
     @Mock private CharacterFeatureGrantService characterFeatureGrantService;
+    @Mock private CharacterFeatService characterFeatService;
     @Mock private LevelThresholdService levelThresholdService;
     @Mock private EntityManager entityManager;
     @org.mockito.Spy private com.fasterxml.jackson.databind.ObjectMapper objectMapper =

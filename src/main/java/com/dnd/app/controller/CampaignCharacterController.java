@@ -30,6 +30,7 @@ public class CampaignCharacterController {
     private final WalletService walletService;
     private final CharacterResourceService characterResourceService;
     private final RestOrchestrationService restOrchestrationService;
+    private final CharacterFeatService characterFeatService;
     private final Executor controllerTaskExecutor;
 
     // --- Clone from template ---
@@ -409,6 +410,42 @@ public class CampaignCharacterController {
             characterService.enforceCharacterInCampaign(characterId, campaignId);
             CharacterResponse response = characterService.modifyHp(campaignId, characterId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(response, "HP modified"));
+        }, controllerTaskExecutor);
+    }
+
+    // --- Feats (S1) ---
+
+    @GetMapping("/{characterId}/feats")
+    @Operation(summary = "List a character's feats")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterFeatResponse>>>> listFeats(
+            @PathVariable UUID campaignId, @PathVariable UUID characterId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            return ResponseEntity.ok(ApiResponse.ok(characterFeatService.list(characterId, auth.getName())));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{characterId}/feats")
+    @Operation(summary = "Add a feat to a character (auto-provisions feat-bound resources)")
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterFeatResponse>>> addFeat(
+            @PathVariable UUID campaignId, @PathVariable UUID characterId,
+            @RequestParam UUID featId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            return ResponseEntity.ok(ApiResponse.ok(
+                    characterFeatService.add(characterId, featId, auth.getName()), "Фит добавлен"));
+        }, controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/{characterId}/feats/{featId}")
+    @Operation(summary = "Remove a feat from a character")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeFeat(
+            @PathVariable UUID campaignId, @PathVariable UUID characterId,
+            @PathVariable UUID featId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            characterFeatService.remove(characterId, featId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Фит удалён"));
         }, controllerTaskExecutor);
     }
 }

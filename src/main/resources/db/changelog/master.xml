@@ -118,4 +118,7 @@
     <!-- Polymorphic feature-rule owner (S1): drop owner→class_feature FKs, composite owner index, choice owner_type. -->
     <include file="db/changelog/082-feature-rule-polymorphic-owner.xml"/>
 
+    <!-- Per-character feats (S1, FEAT owner): structured character↔feat table replacing the features text blob. -->
+    <include file="db/changelog/083-character-feats.xml"/>
+
 </databaseChangeLog>

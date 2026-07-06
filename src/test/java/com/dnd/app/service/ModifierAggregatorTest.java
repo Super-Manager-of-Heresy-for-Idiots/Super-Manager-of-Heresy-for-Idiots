@@ -2,8 +2,10 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.BuffDebuff;
 import com.dnd.app.domain.CharacterActiveEffect;
+import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.PlayerCharacter;
 import com.dnd.app.domain.StatType;
+import com.dnd.app.domain.content.SpeciesTraitEffect;
 import com.dnd.app.domain.featurerule.FeatureActiveEffect;
 import com.dnd.app.domain.featurerule.FeatureEffectDefinition;
 import com.dnd.app.domain.featurerule.FeatureEffectModifier;
@@ -15,12 +17,15 @@ import com.dnd.app.repository.FeatureEffectDefinitionRepository;
 import com.dnd.app.repository.FeatureEffectModifierRepository;
 import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
+import com.dnd.app.repository.SpeciesTraitEffectRepository;
 import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.FormulaContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -45,6 +50,8 @@ class ModifierAggregatorTest {
     @Mock private FeatureFormulaService formulaService;
     @Mock private CharacterFormulaContextFactory contextFactory;
     @Mock private PlayerCharacterRepository characterRepository;
+    @Mock private SpeciesTraitEffectRepository speciesTraitEffectRepository;
+    @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks private ModifierAggregator aggregator;
 
@@ -120,5 +127,21 @@ class ModifierAggregatorTest {
 
         assertThat(total).isZero();
         verifyNoInteractions(characterActiveEffectRepository); // must not consult the legacy source
+    }
+
+    @Test
+    void racialResistanceHalvesMatchingDamageType() {
+        UUID speciesId = UUID.randomUUID();
+        UUID fireId = UUID.randomUUID();
+        // No feature effects — the resistance comes purely from the species (Source C).
+        when(featureActiveEffectRepository.findByCharacterIdAndStatus(characterId, "active")).thenReturn(List.of());
+        when(characterRepository.findById(characterId)).thenReturn(Optional.of(
+                PlayerCharacter.builder().id(characterId)
+                        .raceSnapshotJson("{\"raceId\":\"" + speciesId + "\"}").build()));
+        when(speciesTraitEffectRepository.findBySpeciesIdAndEffectType(speciesId, "resistance"))
+                .thenReturn(List.of(SpeciesTraitEffect.builder()
+                        .effectType("resistance").damageType(DamageType.builder().id(fireId).build()).build()));
+
+        assertThat(aggregator.damageMultiplier(characterId, fireId)).isEqualTo(0.5);
     }
 }
