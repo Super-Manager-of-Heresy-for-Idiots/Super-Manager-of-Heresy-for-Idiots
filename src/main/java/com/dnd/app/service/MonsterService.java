@@ -47,7 +47,7 @@ public class MonsterService {
     private final SourceRepository sourceRepository;
     private final BestiarySizeRepository bestiarySizeRepository;
     private final BestiaryAbilityRepository bestiaryAbilityRepository;
-    private final BestiaryDamageTypeRepository bestiaryDamageTypeRepository;
+    private final DamageTypeRepository damageTypeRepository;
     private final ProficiencySkillRepository proficiencySkillRepository;
     private final UserRepository userRepository;
     private final HomebrewPackageRepository homebrewPackageRepository;
@@ -920,8 +920,8 @@ public class MonsterService {
                 .orElseThrow(() -> new BadRequestException(label + " not found: " + id));
     }
 
-    private BestiaryDamageType resolveDamageType(UUID id) {
-        return resolveOptional(id, bestiaryDamageTypeRepository::findById, "damageType");
+    private DamageType resolveDamageType(UUID id) {
+        return resolveOptional(id, damageTypeRepository::findById, "damageType");
     }
 
     private String resolveSlug(Monster monster, MonsterRequest request) {

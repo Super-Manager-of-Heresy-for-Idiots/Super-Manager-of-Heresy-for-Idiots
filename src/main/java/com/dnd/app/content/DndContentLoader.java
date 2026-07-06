@@ -296,10 +296,18 @@ public class DndContentLoader implements ApplicationRunner {
         }
 
         for (JsonNode d : array(root, "damage_types")) {
-            UUID id = UUID.randomUUID();
-            jdbc.update("INSERT INTO damage_type(damage_type_id, slug, name_ru, name_en) VALUES (?,?,?,?)",
-                    id, txt(d, "slug"), txt(d, "name_ru"), txt(d, "name_en"));
-            damageTypes.put(txt(d, "slug"), id);
+            String slug = txt(d, "slug");
+            // Idempotent: migration 082-merge seeds damage_type, so reuse the existing row by slug
+            // (avoids duplicates) and only insert genuinely new types. code mirrors the slug (uppercase).
+            List<UUID> existing = jdbc.queryForList(
+                    "SELECT damage_type_id FROM damage_type WHERE slug = ? AND homebrew_id IS NULL",
+                    UUID.class, slug);
+            UUID id = existing.isEmpty() ? UUID.randomUUID() : existing.get(0);
+            if (existing.isEmpty()) {
+                jdbc.update("INSERT INTO damage_type(damage_type_id, slug, code, name_ru, name_en) VALUES (?,?,?,?,?)",
+                        id, slug, slug.toUpperCase(), txt(d, "name_ru"), txt(d, "name_en"));
+            }
+            damageTypes.put(slug, id);
         }
 
         for (JsonNode e : array(root, "equipment_categories")) {

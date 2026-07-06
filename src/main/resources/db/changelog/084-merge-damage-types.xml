@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Unify the three damage-type tables into one canonical `damage_type`. Business-wise a damage type is a
+      single reference; historically it was split across `damage_type` (slug — rules/spells/weapons/species),
+      the orphan `damage_types` (code — items/skills/enchantments) and `bestiary_damage_types` (code — monsters).
+      They hold the same 13 types with `lower(code) == slug`, so this repoints every FK to `damage_type` by that
+      key (no duplicates) and drops the other two. `damage_type` gains `code`/`is_unique`/timestamps so it also
+      serves the bestiary dictionary framework (DamageType now implements DictionaryEntry). This also fixes a
+      latent bug: items/skills/enchantments had FKs to `damage_types` while their JPA entity mapped `damage_type`.
+    -->
+
+    <changeSet id="084-damage-type-add-columns" author="claude">
+        <addColumn tableName="damage_type">
+            <column name="code" type="varchar(60)"/>
+            <column name="is_unique" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="084-damage-type-backfill-and-seed" author="claude">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+            UPDATE damage_type SET code = upper(slug) WHERE code IS NULL;
+
+            INSERT INTO damage_type (damage_type_id, slug, code, name_ru, name_en)
+            SELECT gen_random_uuid(), v.slug, v.code, v.name_ru, v.name_en
+            FROM (VALUES
+                ('slashing','SLASHING','Рубящий','Slashing'),
+                ('piercing','PIERCING','Колющий','Piercing'),
+                ('bludgeoning','BLUDGEONING','Дробящий','Bludgeoning'),
+                ('fire','FIRE','Огонь','Fire'),
+                ('cold','COLD','Холод','Cold'),
+                ('lightning','LIGHTNING','Электричество','Lightning'),
+                ('poison','POISON','Яд','Poison'),
+                ('necrotic','NECROTIC','Некротический','Necrotic'),
+                ('radiant','RADIANT','Излучение','Radiant'),
+                ('psychic','PSYCHIC','Психический','Psychic'),
+                ('force','FORCE','Силовое поле','Force'),
+                ('thunder','THUNDER','Звук','Thunder'),
+                ('acid','ACID','Кислота','Acid')
+            ) AS v(slug, code, name_ru, name_en)
+            WHERE NOT EXISTS (
+                SELECT 1 FROM damage_type d WHERE d.slug = v.slug AND d.homebrew_id IS NULL
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_damage_type_slug_system
+                ON damage_type(slug) WHERE homebrew_id IS NULL;
+        ]]></sql>
+    </changeSet>
+
+    <!-- Repoint items/skills/enchantments off the orphan damage_types(plural) onto damage_type. Order matters:
+         drop the old FK BEFORE repointing (else the old constraint rejects the new damage_type id), null any row
+         that doesn't map, then add the new FK. -->
+    <changeSet id="084-repoint-damage-types-plural" author="claude">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+            ALTER TABLE enchantment_types DROP CONSTRAINT enchantment_types_damage_type_id_fkey;
+            ALTER TABLE item_templates DROP CONSTRAINT item_templates_damage_type_id_fkey;
+            ALTER TABLE item_types DROP CONSTRAINT item_types_damage_type_id_fkey;
+            ALTER TABLE skills DROP CONSTRAINT skills_damage_type_id_fkey;
+
+            UPDATE enchantment_types t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN damage_types old ON lower(old.code) = dt.slug
+                WHERE old.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE item_templates t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN damage_types old ON lower(old.code) = dt.slug
+                WHERE old.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE item_types t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN damage_types old ON lower(old.code) = dt.slug
+                WHERE old.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE skills t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN damage_types old ON lower(old.code) = dt.slug
+                WHERE old.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+
+            UPDATE enchantment_types SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE item_templates SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE item_types SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE skills SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+
+            ALTER TABLE enchantment_types ADD CONSTRAINT enchantment_types_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE item_templates ADD CONSTRAINT item_templates_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE item_types ADD CONSTRAINT item_types_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE skills ADD CONSTRAINT skills_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+        ]]></sql>
+    </changeSet>
+
+    <!-- Repoint monster resistances/immunities/vulnerabilities + monster attack damage off bestiary_damage_types.
+         Same order: drop old FKs, repoint, null unmapped, add new FKs. -->
+    <changeSet id="084-repoint-bestiary-damage-types" author="claude">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+            ALTER TABLE monster_damage_resistances DROP CONSTRAINT monster_damage_resistances_damage_type_id_fkey;
+            ALTER TABLE monster_damage_immunities DROP CONSTRAINT monster_damage_immunities_damage_type_id_fkey;
+            ALTER TABLE monster_damage_vulnerabilities DROP CONSTRAINT monster_damage_vulnerabilities_damage_type_id_fkey;
+            ALTER TABLE feature_damages DROP CONSTRAINT feature_damages_damage_type_id_fkey;
+
+            UPDATE monster_damage_resistances t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN bestiary_damage_types b ON lower(b.code) = dt.slug
+                WHERE b.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE monster_damage_immunities t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN bestiary_damage_types b ON lower(b.code) = dt.slug
+                WHERE b.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE monster_damage_vulnerabilities t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN bestiary_damage_types b ON lower(b.code) = dt.slug
+                WHERE b.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+            UPDATE feature_damages t SET damage_type_id = dt.damage_type_id
+                FROM damage_type dt JOIN bestiary_damage_types b ON lower(b.code) = dt.slug
+                WHERE b.id = t.damage_type_id AND t.damage_type_id IS NOT NULL;
+
+            UPDATE monster_damage_resistances SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE monster_damage_immunities SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE monster_damage_vulnerabilities SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+            UPDATE feature_damages SET damage_type_id = NULL WHERE damage_type_id IS NOT NULL
+                AND damage_type_id NOT IN (SELECT damage_type_id FROM damage_type);
+
+            ALTER TABLE monster_damage_resistances ADD CONSTRAINT monster_damage_resistances_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE monster_damage_immunities ADD CONSTRAINT monster_damage_immunities_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE monster_damage_vulnerabilities ADD CONSTRAINT monster_damage_vulnerabilities_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+            ALTER TABLE feature_damages ADD CONSTRAINT feature_damages_damage_type_id_fkey
+                FOREIGN KEY (damage_type_id) REFERENCES damage_type(damage_type_id);
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="084-drop-redundant-damage-type-tables" author="claude">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+            DROP TABLE damage_types;
+            DROP TABLE bestiary_damage_types;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

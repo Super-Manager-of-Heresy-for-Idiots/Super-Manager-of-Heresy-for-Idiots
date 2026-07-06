@@ -686,6 +686,7 @@ public class BattleService {
             AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, 0, attack.saveDc());
             int rolled = Math.max(0, diceRoller.rollDamage(attack.damage(), false) + damageBonus);
             damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
+            damage = applyTargetResistance(target, damage, attack.damageTypeId());
             if (damage > 0) {
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
@@ -698,6 +699,7 @@ public class BattleService {
             if (outcome.dealsDamage()) {
                 damage = Math.max(0, diceRoller.rollDamage(attack.damage(),
                         outcome == AttackResolver.Outcome.CRIT) + damageBonus);
+                damage = applyTargetResistance(target, damage, attack.damageTypeId());
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = outcome.name();
@@ -1019,7 +1021,8 @@ public class BattleService {
      * only for save-based attacks (the target rolls a saving throw instead of the attacker rolling
      * to hit); it stays null for ordinary attack-roll strikes.
      */
-    private record AttackOption(String name, int attackBonus, String damage, String damageType, Integer saveDc) {
+    private record AttackOption(String name, int attackBonus, String damage, String damageType,
+                                UUID damageTypeId, Integer saveDc) {
     }
 
     /** The two dice considered and the single die selected for the attack per its roll mode. */
@@ -1095,7 +1098,7 @@ public class BattleService {
                     .findFirst()
                     .map(a -> new AttackOption(a.getName(),
                             AttackResolver.parseAttackBonus(a.getAttackBonus()),
-                            a.getDamage(), a.getDamageType(), null))
+                            a.getDamage(), a.getDamageType(), null, null))
                     .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
 
@@ -1114,13 +1117,17 @@ public class BattleService {
             String damageType = primary
                     .map(d -> d.getDamageType() != null ? d.getDamageType().getNameRusloc() : null)
                     .orElse(null);
+            // Structured damage type id (unified damage_type) — lets the target's resistances apply.
+            UUID damageTypeId = primary
+                    .map(d -> d.getDamageType() != null ? d.getDamageType().getId() : null)
+                    .orElse(null);
             // Weapon attacks store their damage inline in the description, not in structured
             // feature_damages rows — fall back to parsing the dice out of the text.
             if (dice == null) {
                 dice = AttackResolver.extractDamageExpression(feature.getDescriptionRusloc());
             }
             Integer saveDc = feature.getSaveDc() != null ? feature.getSaveDc().intValue() : null;
-            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, saveDc);
+            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc);
         }
 
         throw new BadRequestException("This combatant cannot attack");
@@ -1141,6 +1148,20 @@ public class BattleService {
                     + modifierAggregator.totalFor(target.getCharacter().getId(), ModifierTarget.ac());
         }
         return 10;
+    }
+
+    /**
+     * Applies a character target's resistance/vulnerability to typed incoming damage. Because the damage
+     * types are now one unified table, racial ({@code species_trait_effect}) and feature resistances both
+     * count. No-op for monster targets, untyped damage, or when the aggregator reports no modifier.
+     */
+    private int applyTargetResistance(BattleCombatant target, int damage, UUID damageTypeId) {
+        if (damage <= 0 || damageTypeId == null
+                || target.getType() != CombatantType.CHARACTER || target.getCharacter() == null) {
+            return damage;
+        }
+        double multiplier = modifierAggregator.damageMultiplier(target.getCharacter().getId(), damageTypeId);
+        return multiplier > 0 ? (int) Math.floor(damage * multiplier) : damage;
     }
 
     /**

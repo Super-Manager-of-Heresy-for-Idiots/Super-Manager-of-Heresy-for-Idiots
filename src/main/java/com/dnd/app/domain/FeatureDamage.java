@@ -32,7 +32,7 @@ public class FeatureDamage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "damage_type_id")
-    private BestiaryDamageType damageType;
+    private DamageType damageType;
 
     @Column(columnDefinition = "text")
     private String note;
