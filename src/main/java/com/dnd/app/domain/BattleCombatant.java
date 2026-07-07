@@ -107,6 +107,15 @@ public class BattleCombatant {
     @Builder.Default
     private Boolean reactionUsed = false;
 
+    // ---- Movement budget for the current turn --------------------------------------------
+    // Feet already moved on this turn. The spatial cost of a path is computed in map-service; this
+    // authoritative budget is validated against the combatant's speed by the internal movement
+    // endpoint and reset (like the action economy above) when this combatant's turn begins.
+
+    @Column(name = "movement_used_ft", nullable = false)
+    @Builder.Default
+    private Integer movementUsedFt = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

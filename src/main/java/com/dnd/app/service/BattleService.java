@@ -15,6 +15,7 @@ import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
+import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.*;
@@ -58,6 +59,12 @@ public class BattleService {
 
     /** Well-known code of the system Dexterity stat (used for initiative). */
     private static final String DEX_CODE = "dex";
+
+    /** Well-known code of the walking movement type; a monster's walk speed drives its movement budget. */
+    private static final String WALK_CODE = "walk";
+
+    /** Fallback speed (ft) when a character has no sheet speed or a monster has no walk speed. */
+    private static final int DEFAULT_SPEED_FT = 30;
 
     private final BattleRepository battleRepository;
     private final BattleCombatantRepository combatantRepository;
@@ -1456,12 +1463,127 @@ public class BattleService {
         return value != null ? value : 0;
     }
 
-    /** Clears a combatant's spent action economy (action / bonus / legendary) at the start of their turn. */
+    /** Clears a combatant's spent action economy (action / bonus / legendary) and movement budget at the start of their turn. */
     private void resetActionEconomy(BattleCombatant combatant) {
         combatant.setActionSpent(0);
         combatant.setBonusActionSpent(0);
         combatant.setLegendaryActionSpent(0);
         combatant.setReactionUsed(false);
+        combatant.setMovementUsedFt(0);
         combatantRepository.save(combatant);
+    }
+
+    // ============================== Movement budget ============================
+
+    /**
+     * Internal (map-service) contract: validate and commit a combatant's movement spend for the
+     * current turn. The spatial cost ({@code feet}) is computed authoritatively in map-service; the
+     * per-turn budget lives here. Returns an allowed-flag envelope (never a 4xx for a legal "no")
+     * carrying the reason and remaining budget so the caller can react precisely.
+     *
+     * <p>Concurrency: locks the battle row first (serializing all mutations on this battle), then the
+     * combatant row — the established battle→combatant lock order — so two simultaneous moves cannot
+     * drive the budget negative.
+     */
+    @Transactional
+    public MovementResultResponse applyMovement(UUID campaignId, UUID battleId, MovementRequest request) {
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(request.getCombatantId())
+                .filter(c -> c.getBattle().getId().equals(battleId))
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+
+        int speedFt = resolveSpeedFt(combatant);
+        int used = nz(combatant.getMovementUsedFt());
+        int feet = Math.max(0, nz(request.getFeet()));
+
+        if (battle.getStatus() != BattleStatus.ACTIVE) {
+            return movementResult(false, "BATTLE_NOT_ACTIVE", speedFt, used, false, request.isGmOverride());
+        }
+
+        List<BattleCombatant> ordered = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        boolean activeTurn = combatant.getId().equals(activeCombatantId(battle, ordered));
+        boolean withinBudget = used + feet <= speedFt;
+
+        boolean allowed;
+        String reason = null;
+        if (request.isGmOverride()) {
+            allowed = true;
+        } else if (!activeTurn) {
+            allowed = false;
+            reason = "NOT_ACTIVE_TURN";
+        } else if (!withinBudget) {
+            allowed = false;
+            reason = "MOVEMENT_BUDGET_EXCEEDED";
+        } else {
+            allowed = true;
+        }
+
+        if (allowed) {
+            used += feet;
+            combatant.setMovementUsedFt(used);
+            combatantRepository.save(combatant);
+            if (request.isGmOverride()) {
+                log.info("Movement GM override: battleId={}, combatantId={}, feet={}, used={}/{}",
+                        battleId, combatant.getId(), feet, used, speedFt);
+            }
+        }
+        return movementResult(allowed, reason, speedFt, used, withinBudget, request.isGmOverride());
+    }
+
+    private MovementResultResponse movementResult(boolean allowed, String reason, int speedFt, int usedFt,
+                                                  boolean withinBudget, boolean gmOverride) {
+        return MovementResultResponse.builder()
+                .allowed(allowed)
+                .reason(reason)
+                .remainingFt(speedFt - usedFt)
+                .speedFt(speedFt)
+                .withinBudget(withinBudget)
+                .gmOverride(gmOverride)
+                .build();
+    }
+
+    /**
+     * Read-only movement snapshot (active combatant + every combatant's speed/spent) so the tactical
+     * UI (via map) can preview remaining movement without recomputing speed from the character sheet.
+     */
+    @Transactional(readOnly = true)
+    public MovementContextResponse movementContext(UUID campaignId, UUID battleId) {
+        Battle battle = findBattle(battleId, campaignId);
+        List<BattleCombatant> ordered = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        UUID activeId = activeCombatantId(battle, ordered);
+        List<MovementContextResponse.CombatantMovement> entries = new ArrayList<>();
+        for (BattleCombatant c : ordered) {
+            int speed = resolveSpeedFt(c);
+            int usedFt = nz(c.getMovementUsedFt());
+            entries.add(MovementContextResponse.CombatantMovement.builder()
+                    .combatantId(c.getId())
+                    .speedFt(speed)
+                    .movementUsedFt(usedFt)
+                    .remainingFt(speed - usedFt)
+                    .build());
+        }
+        return MovementContextResponse.builder()
+                .activeCombatantId(activeId)
+                .roundNumber(battle.getRoundNumber())
+                .combatants(entries)
+                .build();
+    }
+
+    /** A combatant's walking speed this turn, in feet: the character sheet speed, or the monster's walk speed. */
+    private int resolveSpeedFt(BattleCombatant combatant) {
+        if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
+            Integer speed = combatant.getCharacter().getSpeed();
+            return speed != null && speed > 0 ? speed : DEFAULT_SPEED_FT;
+        }
+        if (combatant.getType() == CombatantType.MONSTER && combatant.getMonster() != null
+                && combatant.getMonster().getSpeeds() != null) {
+            return combatant.getMonster().getSpeeds().stream()
+                    .filter(ms -> ms.getMovementType() != null && WALK_CODE.equals(ms.getMovementType().getCode()))
+                    .map(MonsterSpeed::getFt)
+                    .filter(ft -> ft != null && ft > 0)
+                    .findFirst()
+                    .orElse(DEFAULT_SPEED_FT);
+        }
+        return DEFAULT_SPEED_FT;
     }
 }

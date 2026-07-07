@@ -130,4 +130,7 @@
     <!-- Rule Workbench: typed editors for standalone formulas and companion definitions. -->
     <include file="db/changelog/086-rule-workbench-generic-editors.xml"/>
 
+    <!-- Server-authoritative per-turn movement budget (movement_used_ft), reset on turn start. -->
+    <include file="db/changelog/087-battle-movement-budget.xml"/>
+
 </databaseChangeLog>

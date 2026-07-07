@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Server-authoritative movement budget. Tracks how many feet a combatant has already moved on
+      their current turn so map-service can validate a token move against the combatant's speed via
+      the internal movement endpoint (spatial cost is computed in map, the budget lives here). Resets
+      when the combatant's turn begins — the same place the action economy resets.
+    -->
+    <changeSet id="087-battle-movement-budget" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="movement_used_ft" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
