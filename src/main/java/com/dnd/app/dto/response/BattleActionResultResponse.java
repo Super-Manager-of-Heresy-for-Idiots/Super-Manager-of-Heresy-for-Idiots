@@ -45,12 +45,21 @@ public class BattleActionResultResponse {
     /** Save difficulty class for save-based attacks (target rolls a saving throw); null otherwise. */
     private Integer saveDc;
 
+    /** For save-based attacks: the ability the target saves with (e.g. "Ловкость"), its bonus, and the total rolled. */
+    private String saveAbility;
+    private Integer saveBonus;
+    private Integer saveTotal;
+    /** Save roll mode used (NORMAL | ADVANTAGE | DISADVANTAGE); null for attack-roll strikes. */
+    private String saveRollMode;
+
     /** HIT | MISS | CRIT for attack rolls; SUCCESS | FAIL for saving throws; ITEM_USED for consumables. */
     private String outcome;
 
     /** Damage dealt; null on a miss. */
     private Integer damage;
     private String damageType;
+    /** How the target's defences changed the damage: NONE | RESISTED | IMMUNE | VULNERABLE; null when not applicable. */
+    private String damageModifier;
 
     private Integer targetCurrentHp;
     private Integer targetMaxHp;

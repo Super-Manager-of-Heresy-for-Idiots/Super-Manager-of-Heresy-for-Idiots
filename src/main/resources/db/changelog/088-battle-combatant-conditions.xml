@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Live condition instances on a battle combatant (Blinded, Prone, Poisoned, …). The catalogue stays
+      in bestiary_conditions; this is one row per (combatant, condition) with an optional source note and
+      duration. remaining_rounds null = lasts until removed; it decrements on the round boundary and the
+      row is deleted when it reaches 0. Phase 1.1 — the marker + duration; rule automation is Phase 2.
+    -->
+    <changeSet id="088-battle-combatant-conditions" author="claude">
+        <createTable tableName="battle_combatant_condition">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="combatant_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="condition_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_text" type="varchar(255)"/>
+            <column name="remaining_rounds" type="int"/>
+            <column name="applied_round" type="int"/>
+            <column name="applied_by" type="uuid"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="battle_combatant_condition"
+                             columnNames="combatant_id, condition_id"
+                             constraintName="uq_bcc_combatant_condition"/>
+
+        <addForeignKeyConstraint baseTableName="battle_combatant_condition" baseColumnNames="combatant_id"
+                                 referencedTableName="battle_combatants" referencedColumnNames="id"
+                                 constraintName="fk_bcc_combatant" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="battle_combatant_condition" baseColumnNames="condition_id"
+                                 referencedTableName="bestiary_conditions" referencedColumnNames="id"
+                                 constraintName="fk_bcc_condition" onDelete="CASCADE"/>
+
+        <createIndex tableName="battle_combatant_condition" indexName="idx_bcc_combatant">
+            <column name="combatant_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

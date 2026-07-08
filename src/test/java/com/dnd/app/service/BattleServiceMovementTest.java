@@ -73,7 +73,9 @@ class BattleServiceMovementTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();
@@ -202,6 +204,18 @@ class BattleServiceMovementTest {
         assertEquals(30, m.getSpeedFt());
         assertEquals(10, m.getMovementUsedFt());
         assertEquals(20, m.getRemainingFt());
+    }
+
+    @Test
+    @DisplayName("endBattle возвращает BattleResponse со статусом COMPLETED")
+    void endBattle_returnsCompletedResponse() {
+        lenient().when(battleRepository.findByIdAndCampaignId(battleId, campaignId)).thenReturn(Optional.of(battle));
+
+        com.dnd.app.dto.response.BattleResponse response = battleService.endBattle(campaignId, battleId, username);
+
+        assertEquals(com.dnd.app.domain.enums.BattleStatus.COMPLETED, battle.getStatus());
+        assertNotNull(response);
+        assertEquals("COMPLETED", response.getStatus());
     }
 
     @Test

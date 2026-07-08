@@ -65,7 +65,9 @@ class BattleServiceAttackTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -137,7 +139,9 @@ class BattleServiceAttackTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

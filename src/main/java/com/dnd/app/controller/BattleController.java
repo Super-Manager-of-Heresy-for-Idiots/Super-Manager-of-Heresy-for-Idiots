@@ -1,6 +1,7 @@
 package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.ApplyConditionRequest;
 import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
@@ -12,7 +13,9 @@ import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
 import com.dnd.app.dto.response.BattleResponse;
+import com.dnd.app.dto.response.CombatantConditionResponse;
 import com.dnd.app.dto.response.CombatantTurnResponse;
+import com.dnd.app.integration.map.MapSessionCloser;
 import com.dnd.app.service.BattleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +45,7 @@ public class BattleController {
 
     private final BattleService battleService;
     private final Executor controllerTaskExecutor;
+    private final MapSessionCloser mapSessionCloser;
 
     @PostMapping
     @Operation(summary = "Create a battle in the assembling state (GM only)")
@@ -233,12 +237,42 @@ public class BattleController {
 
     @PostMapping("/{battleId}/end")
     @Operation(summary = "End the battle (GM only)")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> endBattle(
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> endBattle(
             @PathVariable UUID campaignId,
             @PathVariable UUID battleId, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            battleService.endBattle(campaignId, battleId, auth.getName());
-            return ResponseEntity.ok(ApiResponse.ok((Void) null, "Battle ended"));
+            BattleResponse data = battleService.endBattle(campaignId, battleId, auth.getName());
+            // After the battle transaction has committed, best-effort close any linked map sessions.
+            mapSessionCloser.closeSessionsForBattle(battleId);
+            return ResponseEntity.ok(ApiResponse.ok(data, "Battle ended"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/conditions")
+    @Operation(summary = "Apply a condition to a combatant (GM, or the character's owner)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CombatantConditionResponse>>>> addCondition(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody ApplyConditionRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<CombatantConditionResponse> data =
+                    battleService.applyCondition(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Condition applied"));
+        }, controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/{battleId}/combatants/{combatantId}/conditions/{conditionId}")
+    @Operation(summary = "Remove a condition from a combatant (GM, or the character's owner)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CombatantConditionResponse>>>> removeCondition(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @PathVariable UUID conditionId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<CombatantConditionResponse> data =
+                    battleService.removeCondition(campaignId, battleId, combatantId, conditionId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Condition removed"));
         }, controllerTaskExecutor);
     }
 }

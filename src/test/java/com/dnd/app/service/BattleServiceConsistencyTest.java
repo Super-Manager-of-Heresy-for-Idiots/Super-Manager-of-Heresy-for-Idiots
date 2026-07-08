@@ -74,7 +74,9 @@ class BattleServiceConsistencyTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
 
         gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         campaign = Campaign.builder().id(campaignId).build();

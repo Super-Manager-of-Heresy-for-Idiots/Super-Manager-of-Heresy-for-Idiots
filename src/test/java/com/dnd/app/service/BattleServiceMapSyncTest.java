@@ -68,7 +68,9 @@ class BattleServiceMapSyncTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
         campaign = Campaign.builder().id(campaignId).build();
         battle = Battle.builder()
                 .id(battleId).campaign(campaign).status(BattleStatus.ACTIVE)

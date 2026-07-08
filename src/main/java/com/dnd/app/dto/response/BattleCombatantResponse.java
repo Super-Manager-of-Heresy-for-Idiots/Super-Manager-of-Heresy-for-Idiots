@@ -40,4 +40,8 @@ public class BattleCombatantResponse {
     private int legendaryActionMax;
     private int legendaryActionSpent;
     private boolean reactionUsed;
+
+    /** Live conditions on this combatant (Blinded, Prone, …); empty when none. */
+    @Builder.Default
+    private java.util.List<CombatantConditionResponse> conditions = new java.util.ArrayList<>();
 }

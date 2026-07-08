@@ -71,7 +71,9 @@ class BattleServiceRollModeTest {
                 spellRepository, spellSlotService, objectMapper,
                 new CharacterHpService(characterRepository, combatantRepository,
                         webSocketEventService, gameplayEventService),
-                modifierAggregator, effectExpirationService);
+                modifierAggregator, effectExpirationService,
+                new DamageMitigationService(modifierAggregator),
+                org.mockito.Mockito.mock(ConditionService.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

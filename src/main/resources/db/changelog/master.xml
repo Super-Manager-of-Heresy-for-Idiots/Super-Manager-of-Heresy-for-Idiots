@@ -133,4 +133,7 @@
     <!-- Server-authoritative per-turn movement budget (movement_used_ft), reset on turn start. -->
     <include file="db/changelog/087-battle-movement-budget.xml"/>
 
+    <!-- Live condition instances on battle combatants (Blinded/Prone/…), linked to bestiary_conditions. -->
+    <include file="db/changelog/088-battle-combatant-conditions.xml"/>
+
 </databaseChangeLog>

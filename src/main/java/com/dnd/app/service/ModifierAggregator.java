@@ -105,16 +105,24 @@ public class ModifierAggregator {
         List<FeatureEffectModifier> mods = activeFeatureModifiers(characterId);
         boolean resist = false;
         boolean vulnerable = false;
+        boolean immune = false;
         for (FeatureEffectModifier mod : mods) {
             if (!damageTypeApplies(mod, damageTypeId)) {
                 continue;
             }
             String type = normalize(mod.getModifierType());
-            if (isResistance(type)) {
+            if (isImmunity(type)) {
+                immune = true;
+            } else if (isResistance(type)) {
                 resist = true;
             } else if (isVulnerability(type)) {
                 vulnerable = true;
             }
+        }
+        // Immunity wins over everything: 0.0 is a real "no damage of this type" answer, deliberately
+        // distinct from 1.0 ("no modifier") so callers never mistake it for a missing modifier.
+        if (immune) {
+            return 0.0;
         }
         if (!resist && hasRaceResistance(characterId, damageTypeId)) {
             resist = true; // Source C: racial resistance
@@ -363,5 +371,9 @@ public class ModifierAggregator {
 
     private boolean isVulnerability(String type) {
         return "damage_vulnerability".equals(type) || "vulnerability".equals(type) || "vulnerable".equals(type);
+    }
+
+    private boolean isImmunity(String type) {
+        return "damage_immunity".equals(type) || "immunity".equals(type) || "immune".equals(type);
     }
 }

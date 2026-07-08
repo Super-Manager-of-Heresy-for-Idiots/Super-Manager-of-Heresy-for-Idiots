@@ -54,4 +54,24 @@ public class BattleAttackRequest {
 
     /** Frontend-supplied reason, e.g. HIGH_GROUND_RANGED_ATTACK | GM_OVERRIDE | SPELL_EFFECT | OTHER. */
     private String advantageReason;
+
+    // ---- Saving throw (for save-based attacks: the TARGET rolls, not the attacker) --------------
+
+    /** Roll mode for the target's saving throw. Null → NORMAL. Same rules as the attack roll. */
+    private AttackRollMode saveRollMode;
+
+    /** Legacy single manual save d20 (NORMAL). Omit to have the server roll the save virtually. */
+    @Min(value = 1, message = "saveD20 must be between 1 and 20")
+    @Max(value = 20, message = "saveD20 must be between 1 and 20")
+    private Integer saveD20;
+
+    /** First manual save die for ADVANTAGE/DISADVANTAGE. */
+    @Min(value = 1, message = "saveD20A must be between 1 and 20")
+    @Max(value = 20, message = "saveD20A must be between 1 and 20")
+    private Integer saveD20A;
+
+    /** Second manual save die for ADVANTAGE/DISADVANTAGE. */
+    @Min(value = 1, message = "saveD20B must be between 1 and 20")
+    @Max(value = 20, message = "saveD20B must be between 1 and 20")
+    private Integer saveD20B;
 }

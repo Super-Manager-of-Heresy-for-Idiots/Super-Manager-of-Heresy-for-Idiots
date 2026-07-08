@@ -9,6 +9,7 @@ import com.dnd.app.domain.enums.WebSocketEventType;
 import com.dnd.app.dto.combat.HpChangeResult;
 import com.dnd.app.dto.combat.ModifierTarget;
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
+import com.dnd.app.dto.request.ApplyConditionRequest;
 import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
@@ -86,6 +87,8 @@ public class BattleService {
     private final CharacterHpService characterHpService;
     private final ModifierAggregator modifierAggregator;
     private final EffectExpirationService effectExpirationService;
+    private final DamageMitigationService damageMitigationService;
+    private final ConditionService conditionService;
 
     // ================================ Lifecycle ================================
 
@@ -129,7 +132,7 @@ public class BattleService {
     }
 
     @Transactional
-    public void endBattle(UUID campaignId, UUID battleId, String username) {
+    public BattleResponse endBattle(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceGmOrAdmin(campaign, user);
@@ -145,6 +148,42 @@ public class BattleService {
         log.info("Battle ended: id={}, by={}", battleId, username);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ENDED, campaignId,
                 java.util.Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    // ============================== Conditions ==============================
+
+    /** Apply a condition to a combatant. GM applies to anyone; a player only to their own character (like HP delta). */
+    @Transactional
+    public List<CombatantConditionResponse> applyCondition(UUID campaignId, UUID battleId, UUID combatantId,
+                                                           ApplyConditionRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        BattleCombatant combatant = loadCombatantInBattle(battleId, combatantId);
+        enforceControls(campaignId, user, combatant);
+        return conditionService.apply(campaignId, combatant, request.getConditionId(), request.getSourceText(),
+                request.getRemainingRounds(), user.getId(), battle.getRoundNumber());
+    }
+
+    /** Remove a condition from a combatant (same permission rules as applying one). */
+    @Transactional
+    public List<CombatantConditionResponse> removeCondition(UUID campaignId, UUID battleId, UUID combatantId,
+                                                            UUID conditionId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        findBattle(battleId, campaignId);
+        BattleCombatant combatant = loadCombatantInBattle(battleId, combatantId);
+        enforceControls(campaignId, user, combatant);
+        return conditionService.remove(campaignId, combatantId, conditionId, user.getId());
+    }
+
+    private BattleCombatant loadCombatantInBattle(UUID battleId, UUID combatantId) {
+        return combatantRepository.findById(combatantId)
+                .filter(c -> c.getBattle() != null && c.getBattle().getId().equals(battleId))
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
     }
 
     // ============================== Group assembly ==============================
@@ -395,6 +434,8 @@ public class BattleService {
                     effectExpirationService.tickRounds(c.getCharacter().getId());
                 }
             }
+            // Conditions with a finite duration tick down on the round boundary too (Phase 1.1).
+            conditionService.tick(battleId);
         }
         battle.setCurrentTurnIndex(nextIndex);
         battleRepository.save(battle);
@@ -666,11 +707,6 @@ public class BattleService {
 
         AttackOption attack = resolveAttack(attacker, request.getAttackName());
 
-        // Resolve the d20 according to the roll mode (virtual rolls or manual advantage dice).
-        RollResolution roll = resolveAttackRoll(request);
-        int effectiveD20 = roll.effectiveD20();
-        AttackRollMode rollMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
-
         // Feature-effect bonuses for a character attacker (to-hit and damage); 0 for monsters and when
         // no active effect contributes — additive, so existing behaviour is unchanged without them.
         int attackRollBonus = 0;
@@ -686,27 +722,53 @@ public class BattleService {
         Integer attackBonusOut = null;
         Integer total = null;
         String outcomeName;
+        // Saving-throw detail, populated only for save-based attacks.
+        String saveAbilityOut = null;
+        Integer saveBonusOut = null;
+        Integer saveTotalOut = null;
+        String saveRollModeOut = null;
+        String damageModifierOut = null;
+
+        RollResolution roll;
+        AttackRollMode rollMode;
+        int effectiveD20;
 
         if (attack.saveDc() != null) {
-            // Save-based attack (e.g. a monster's breath weapon): the target rolls the supplied d20
-            // against the save DC. A success halves the damage, a failure takes it in full.
-            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, 0, attack.saveDc());
+            // Save-based attack (e.g. a monster's breath weapon): the TARGET rolls a saving throw with
+            // its own bonus (ability modifier + proficiency/statblock save + active effects) against the
+            // DC — the attacker makes no attack roll. Success halves the damage, failure takes it full.
+            rollMode = request.getSaveRollMode() != null ? request.getSaveRollMode() : AttackRollMode.NORMAL;
+            roll = resolveRoll("save", rollMode, request.getSaveD20(), request.getSaveD20A(), request.getSaveD20B());
+            effectiveD20 = roll.effectiveD20();
+            int saveBonus = resolveTargetSaveBonus(target, attack.saveAbilityCode());
+            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, saveBonus, attack.saveDc());
             int rolled = Math.max(0, diceRoller.rollDamage(attack.damage(), false) + damageBonus);
             damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
-            damage = applyTargetResistance(target, damage, attack.damageTypeId());
+            DamageMitigationService.Mitigation saveMit = damageMitigationService.mitigate(target, damage, attack.damageTypeId());
+            damage = saveMit.finalDamage();
+            damageModifierOut = saveMit.modifier().name();
             if (damage > 0) {
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = save.name();
-            total = effectiveD20;
+            total = effectiveD20 + saveBonus;
+            saveAbilityOut = saveAbilityDisplayName(attack.saveAbilityCode());
+            saveBonusOut = saveBonus;
+            saveTotalOut = total;
+            saveRollModeOut = rollMode.name();
         } else {
+            rollMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
+            roll = resolveAttackRoll(request);
+            effectiveD20 = roll.effectiveD20();
             targetAc = resolveTargetAc(target);
             int effectiveAttackBonus = attack.attackBonus() + attackRollBonus;
             AttackResolver.Outcome outcome = AttackResolver.resolve(effectiveD20, effectiveAttackBonus, targetAc);
             if (outcome.dealsDamage()) {
                 damage = Math.max(0, diceRoller.rollDamage(attack.damage(),
                         outcome == AttackResolver.Outcome.CRIT) + damageBonus);
-                damage = applyTargetResistance(target, damage, attack.damageTypeId());
+                DamageMitigationService.Mitigation mit = damageMitigationService.mitigate(target, damage, attack.damageTypeId());
+                damage = mit.finalDamage();
+                damageModifierOut = mit.modifier().name();
                 applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = outcome.name();
@@ -731,6 +793,15 @@ public class BattleService {
         if (damage != null) {
             payload.put("damage", damage);
         }
+        if (damageModifierOut != null && !"NONE".equals(damageModifierOut)) {
+            payload.put("damageModifier", damageModifierOut);
+        }
+        if (attack.saveDc() != null) {
+            payload.put("saveDc", attack.saveDc());
+            payload.put("saveAbility", saveAbilityOut);
+            payload.put("saveBonus", saveBonusOut);
+            payload.put("saveTotal", saveTotalOut);
+        }
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
 
         BattleResponse fresh = toResponse(battle, orderedCombatants(battleId));
@@ -750,9 +821,14 @@ public class BattleService {
                 .total(total)
                 .targetAc(targetAc)
                 .saveDc(attack.saveDc())
+                .saveAbility(saveAbilityOut)
+                .saveBonus(saveBonusOut)
+                .saveTotal(saveTotalOut)
+                .saveRollMode(saveRollModeOut)
                 .outcome(outcomeName)
                 .damage(damage)
                 .damageType(attack.damageType())
+                .damageModifier(damageModifierOut)
                 .targetCurrentHp(target.getCurrentHp())
                 .targetMaxHp(target.getMaxHp())
                 .targetDown(down)
@@ -1029,7 +1105,7 @@ public class BattleService {
      * to hit); it stays null for ordinary attack-roll strikes.
      */
     private record AttackOption(String name, int attackBonus, String damage, String damageType,
-                                UUID damageTypeId, Integer saveDc) {
+                                UUID damageTypeId, Integer saveDc, String saveAbilityCode) {
     }
 
     /** The two dice considered and the single die selected for the attack per its roll mode. */
@@ -1044,34 +1120,148 @@ public class BattleService {
      * Policy: advantage/disadvantage with a single manual value is rejected for strictness.
      */
     private RollResolution resolveAttackRoll(BattleAttackRequest request) {
-        AttackRollMode mode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
-        Integer a = request.getD20A();
-        Integer b = request.getD20B();
-        Integer single = request.getD20();
+        return resolveRoll("attack", request.getRollMode(), request.getD20(), request.getD20A(), request.getD20B());
+    }
 
+    /**
+     * Turns a roll mode and its dice into the effective d20 — shared by attack rolls and saving
+     * throws. Manual ADVANTAGE/DISADVANTAGE needs a {@code d20A}/{@code d20B} pair (the server keeps
+     * the higher/lower); a lone value is accepted only for NORMAL; with no dice the server rolls
+     * virtually (one die for NORMAL, two otherwise). {@code label} only shapes the error messages.
+     */
+    private RollResolution resolveRoll(String label, AttackRollMode mode, Integer single, Integer a, Integer b) {
+        AttackRollMode m = mode != null ? mode : AttackRollMode.NORMAL;
         if ((a == null) != (b == null)) {
-            throw new BadRequestException("Provide both d20A and d20B together, or neither");
+            throw new BadRequestException("Provide both " + label + " dice (d20A and d20B) together, or neither");
         }
         boolean hasPair = a != null;
-
-        if (mode == AttackRollMode.NORMAL) {
+        if (m == AttackRollMode.NORMAL) {
             if (hasPair) {
-                throw new BadRequestException("A NORMAL roll expects a single d20, not a d20A/d20B pair");
+                throw new BadRequestException("A NORMAL " + label + " roll expects a single die, not a d20A/d20B pair");
             }
             int value = single != null ? single : diceRoller.rollD20();
             return new RollResolution(value, null, value);
         }
-
-        // ADVANTAGE / DISADVANTAGE
         if (!hasPair) {
             if (single != null) {
-                throw new BadRequestException(mode + " requires both d20A and d20B (two dice)");
+                throw new BadRequestException(m + " " + label + " requires both d20A and d20B (two dice)");
             }
             a = diceRoller.rollD20();
             b = diceRoller.rollD20();
         }
-        int effective = mode == AttackRollMode.ADVANTAGE ? Math.max(a, b) : Math.min(a, b);
+        int effective = m == AttackRollMode.ADVANTAGE ? Math.max(a, b) : Math.min(a, b);
         return new RollResolution(a, b, effective);
+    }
+
+    // ---- Saving-throw resolution -----------------------------------------------------------------
+
+    /**
+     * The target's saving-throw bonus for the given save ability (a bestiary ability code such as
+     * {@code DEXTERITY}). Monster: its statblock save for that ability if present, else the ability
+     * modifier from its score. Character: ability modifier + proficiency bonus when proficient in
+     * that save + any active-effect save modifiers. Unknown/absent ability → 0.
+     */
+    private int resolveTargetSaveBonus(BattleCombatant target, String abilityCode) {
+        if (abilityCode == null) {
+            return 0;
+        }
+        if (target.getType() == CombatantType.MONSTER && target.getMonster() != null) {
+            Monster monster = target.getMonster();
+            Optional<Short> statblockSave = monster.getSavingThrows().stream()
+                    .filter(st -> st.getAbility() != null && abilityCode.equalsIgnoreCase(st.getAbility().getCode()))
+                    .map(MonsterSavingThrow::getBonus)
+                    .filter(bonus -> bonus != null)
+                    .findFirst();
+            if (statblockSave.isPresent()) {
+                return statblockSave.get().intValue();
+            }
+            Integer score = monsterAbilityScore(monster, abilityCode);
+            return score != null ? CombatCalculator.abilityModifier(score) : 0;
+        }
+        if (target.getType() == CombatantType.CHARACTER && target.getCharacter() != null) {
+            PlayerCharacter character = target.getCharacter();
+            String slug = canonicalAbilitySlug(abilityCode);
+            CharacterStat stat = character.getStats().stream()
+                    .filter(s -> s.getStatType() != null && slug != null
+                            && slug.equalsIgnoreCase(s.getStatType().getSlug()))
+                    .findFirst()
+                    .orElse(null);
+            if (stat == null) {
+                return 0;
+            }
+            int base = stat.getValue() != null ? CombatCalculator.abilityModifier(stat.getValue()) : 0;
+            int proficiency = isProficientSave(character, stat.getStatType().getId())
+                    ? proficiencyBonus(nz(character.getTotalLevel())) : 0;
+            int effects = modifierAggregator.totalFor(character.getId(),
+                    ModifierTarget.save(stat.getStatType().getId(), stat.getStatType().getSlug()));
+            return base + proficiency + effects;
+        }
+        return 0;
+    }
+
+    /** Whether the character is proficient in the save for the given ability stat id. */
+    private boolean isProficientSave(PlayerCharacter character, UUID statTypeId) {
+        String json = character.getSavingThrowProficiencyStatIdsJson();
+        if (json == null || json.isBlank() || statTypeId == null) {
+            return false;
+        }
+        try {
+            List<String> ids = objectMapper.readValue(json, new TypeReference<List<String>>() {});
+            return ids.contains(statTypeId.toString());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** D&D proficiency bonus for a level: 2 + floor((level - 1) / 4). */
+    private static int proficiencyBonus(int level) {
+        return 2 + (Math.max(1, level) - 1) / 4;
+    }
+
+    /** A monster's ability score for a bestiary ability code (its scores live on the statblock). */
+    private static Integer monsterAbilityScore(Monster monster, String abilityCode) {
+        Short score = switch (abilityCode == null ? "" : abilityCode.toUpperCase()) {
+            case "STRENGTH" -> monster.getStrScore();
+            case "DEXTERITY" -> monster.getDexScore();
+            case "CONSTITUTION" -> monster.getConScore();
+            case "INTELLIGENCE" -> monster.getIntScore();
+            case "WISDOM" -> monster.getWisScore();
+            case "CHARISMA" -> monster.getChaScore();
+            default -> null;
+        };
+        return score != null ? score.intValue() : null;
+    }
+
+    /** Maps a bestiary ability code (e.g. {@code DEXTERITY}) to the 3-letter character stat slug ({@code dex}). */
+    private static String canonicalAbilitySlug(String abilityCode) {
+        if (abilityCode == null) {
+            return null;
+        }
+        return switch (abilityCode.toUpperCase()) {
+            case "STRENGTH" -> "str";
+            case "DEXTERITY" -> "dex";
+            case "CONSTITUTION" -> "con";
+            case "INTELLIGENCE" -> "int";
+            case "WISDOM" -> "wis";
+            case "CHARISMA" -> "cha";
+            default -> abilityCode.length() >= 3 ? abilityCode.substring(0, 3).toLowerCase() : abilityCode.toLowerCase();
+        };
+    }
+
+    /** Human-readable Russian ability name for the save log/UI, from a bestiary ability code. */
+    private static String saveAbilityDisplayName(String abilityCode) {
+        if (abilityCode == null) {
+            return null;
+        }
+        return switch (abilityCode.toUpperCase()) {
+            case "STRENGTH" -> "Сила";
+            case "DEXTERITY" -> "Ловкость";
+            case "CONSTITUTION" -> "Телосложение";
+            case "INTELLIGENCE" -> "Интеллект";
+            case "WISDOM" -> "Мудрость";
+            case "CHARISMA" -> "Харизма";
+            default -> abilityCode;
+        };
     }
 
     /**
@@ -1105,7 +1295,7 @@ public class BattleService {
                     .findFirst()
                     .map(a -> new AttackOption(a.getName(),
                             AttackResolver.parseAttackBonus(a.getAttackBonus()),
-                            a.getDamage(), a.getDamageType(), null, null))
+                            a.getDamage(), a.getDamageType(), null, null, null))
                     .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
 
@@ -1134,7 +1324,8 @@ public class BattleService {
                 dice = AttackResolver.extractDamageExpression(feature.getDescriptionRusloc());
             }
             Integer saveDc = feature.getSaveDc() != null ? feature.getSaveDc().intValue() : null;
-            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc);
+            String saveAbilityCode = feature.getSaveAbility() != null ? feature.getSaveAbility().getCode() : null;
+            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc, saveAbilityCode);
         }
 
         throw new BadRequestException("This combatant cannot attack");
@@ -1155,20 +1346,6 @@ public class BattleService {
                     + modifierAggregator.totalFor(target.getCharacter().getId(), ModifierTarget.ac());
         }
         return 10;
-    }
-
-    /**
-     * Applies a character target's resistance/vulnerability to typed incoming damage. Because the damage
-     * types are now one unified table, racial ({@code species_trait_effect}) and feature resistances both
-     * count. No-op for monster targets, untyped damage, or when the aggregator reports no modifier.
-     */
-    private int applyTargetResistance(BattleCombatant target, int damage, UUID damageTypeId) {
-        if (damage <= 0 || damageTypeId == null
-                || target.getType() != CombatantType.CHARACTER || target.getCharacter() == null) {
-            return damage;
-        }
-        double multiplier = modifierAggregator.damageMultiplier(target.getCharacter().getId(), damageTypeId);
-        return multiplier > 0 ? (int) Math.floor(damage * multiplier) : damage;
     }
 
     /**
@@ -1456,6 +1633,7 @@ public class BattleService {
                 .legendaryActionMax(nz(c.getLegendaryActionMax()))
                 .legendaryActionSpent(nz(c.getLegendaryActionSpent()))
                 .reactionUsed(Boolean.TRUE.equals(c.getReactionUsed()))
+                .conditions(conditionService.conditionsForCombatant(c.getId()))
                 .build();
     }
 
