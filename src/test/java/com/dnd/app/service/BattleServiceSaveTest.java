@@ -81,7 +81,8 @@ class BattleServiceSaveTest {
                         webSocketEventService, gameplayEventService),
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
-                org.mockito.Mockito.mock(ConditionService.class));
+                org.mockito.Mockito.mock(ConditionService.class),
+                org.mockito.Mockito.mock(BattleLogService.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

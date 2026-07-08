@@ -2,6 +2,7 @@ package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.AddBattleMonstersRequest;
 import com.dnd.app.dto.request.ApplyConditionRequest;
+import com.dnd.app.dto.request.DeathSaveRequest;
 import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
@@ -12,6 +13,7 @@ import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
+import com.dnd.app.dto.response.BattleLogEntryResponse;
 import com.dnd.app.dto.response.BattleResponse;
 import com.dnd.app.dto.response.CombatantConditionResponse;
 import com.dnd.app.dto.response.CombatantTurnResponse;
@@ -75,6 +77,21 @@ public class BattleController {
             @PathVariable UUID battleId, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.getBattle(campaignId, battleId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    @GetMapping("/{battleId}/log")
+    @Operation(summary = "Combat log for the battle, seq-ordered after afterSeq (members; GM_ONLY hidden from players)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<BattleLogEntryResponse>>>> getBattleLog(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @RequestParam(name = "afterSeq", required = false) Long afterSeq,
+            @RequestParam(name = "limit", required = false) Integer limit,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<BattleLogEntryResponse> data =
+                    battleService.getBattleLog(campaignId, battleId, afterSeq, limit, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
@@ -273,6 +290,44 @@ public class BattleController {
             List<CombatantConditionResponse> data =
                     battleService.removeCondition(campaignId, battleId, combatantId, conditionId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Condition removed"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/death-save")
+    @Operation(summary = "Roll a death saving throw for a dying character (server d20 or manual)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> deathSave(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody(required = false) DeathSaveRequest request, Authentication auth) {
+        Integer roll = request != null ? request.getRoll() : null;
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.rollDeathSave(campaignId, battleId, combatantId, roll, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Death save rolled"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/stabilize")
+    @Operation(summary = "Stabilize a dying character (GM/healer)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> stabilize(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.stabilize(campaignId, battleId, combatantId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Stabilized"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/reroll-initiative")
+    @Operation(summary = "Reroll a combatant's initiative and re-sort the tracker (GM quick tool)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> rerollInitiative(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.rerollInitiative(campaignId, battleId, combatantId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Initiative rerolled"));
         }, controllerTaskExecutor);
     }
 }

@@ -36,6 +36,7 @@ public class ReferenceDataService {
     private final FeatRepository featRepository;
     private final RarityRepository rarityRepository;
     private final DamageTypeRepository damageTypeRepository;
+    private final BestiaryConditionRepository bestiaryConditionRepository;
     private final SpellSchoolRepository spellSchoolRepository;
     private final CreatureSizeRepository creatureSizeRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
@@ -207,6 +208,16 @@ public class ReferenceDataService {
     public List<ContentLabelDto> getDamageTypes(String lang) {
         return damageTypeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
                 .map(d -> label(lang, d.getId(), d.getSlug(), d.getNameRu(), d.getNameEn()))
+                .toList();
+    }
+
+    /** Combat conditions catalogue (Blinded, Prone, …) for the tracker's apply-condition picker (1.1). */
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getConditions(String lang) {
+        return bestiaryConditionRepository.findAll().stream()
+                .filter(c -> c.getHomebrew() == null)
+                .sorted(Comparator.comparing(BestiaryCondition::getNameRusloc, Comparator.nullsLast(String::compareTo)))
+                .map(c -> label(lang, c.getId(), c.getCode(), c.getNameRusloc(), c.getNameEngloc()))
                 .toList();
     }
 

@@ -44,4 +44,12 @@ public class BattleCombatantResponse {
     /** Live conditions on this combatant (Blinded, Prone, …); empty when none. */
     @Builder.Default
     private java.util.List<CombatantConditionResponse> conditions = new java.util.ArrayList<>();
+
+    // Death saves for a dying character (0 HP). Both 0 for monsters and healthy characters.
+    @Builder.Default
+    private int deathSaveSuccesses = 0;
+    @Builder.Default
+    private int deathSaveFailures = 0;
+    /** True when the character is dead (three death-save failures). */
+    private boolean dead;
 }

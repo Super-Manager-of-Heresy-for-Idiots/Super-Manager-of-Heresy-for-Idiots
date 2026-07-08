@@ -53,6 +53,20 @@ public class ConditionService {
         return publish(campaignId, combatant.getId(), actorId);
     }
 
+    /** Apply a catalogue condition by its code (e.g. "unconscious") — used by death saves and, later, feature effects. */
+    @Transactional
+    public void applyByCode(UUID campaignId, BattleCombatant combatant, String code, UUID actorId, int currentRound) {
+        bestiaryConditionRepository.findByCodeAndHomebrewIsNull(code)
+                .ifPresent(cond -> apply(campaignId, combatant, cond.getId(), null, null, actorId, currentRound));
+    }
+
+    /** Remove a catalogue condition by its code (no-op if the code is unknown or not present). */
+    @Transactional
+    public void removeByCode(UUID campaignId, UUID combatantId, String code, UUID actorId) {
+        bestiaryConditionRepository.findByCodeAndHomebrewIsNull(code)
+                .ifPresent(cond -> remove(campaignId, combatantId, cond.getId(), actorId));
+    }
+
     /** Remove a condition from a combatant (no-op if it isn't present). */
     @Transactional
     public List<CombatantConditionResponse> remove(UUID campaignId, UUID combatantId, UUID conditionId, UUID actorId) {

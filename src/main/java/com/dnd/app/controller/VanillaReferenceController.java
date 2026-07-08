@@ -124,6 +124,15 @@ public class VanillaReferenceController {
                 controllerTaskExecutor);
     }
 
+    @GetMapping("/conditions")
+    @Operation(summary = "Get combat conditions (Blinded, Prone, …) for the battle tracker")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getConditions(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getConditions(lang))),
+                controllerTaskExecutor);
+    }
+
     @GetMapping("/spell-schools")
     @Operation(summary = "Get spell schools for spell-authoring/filter dropdowns")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getSpellSchools(

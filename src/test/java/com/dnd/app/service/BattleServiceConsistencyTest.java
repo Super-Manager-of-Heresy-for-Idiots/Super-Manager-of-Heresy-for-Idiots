@@ -76,7 +76,8 @@ class BattleServiceConsistencyTest {
                         webSocketEventService, gameplayEventService),
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
-                org.mockito.Mockito.mock(ConditionService.class));
+                org.mockito.Mockito.mock(ConditionService.class),
+                org.mockito.Mockito.mock(BattleLogService.class));
 
         gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         campaign = Campaign.builder().id(campaignId).build();

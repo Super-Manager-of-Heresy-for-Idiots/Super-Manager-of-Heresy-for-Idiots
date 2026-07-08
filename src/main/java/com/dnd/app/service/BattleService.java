@@ -2,7 +2,10 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.AttackRollMode;
+import com.dnd.app.domain.enums.BattleLogType;
+import com.dnd.app.domain.enums.BattleLogVisibility;
 import com.dnd.app.domain.enums.BattleStatus;
+import com.dnd.app.domain.enums.CharacterStatus;
 import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
@@ -89,6 +92,7 @@ public class BattleService {
     private final EffectExpirationService effectExpirationService;
     private final DamageMitigationService damageMitigationService;
     private final ConditionService conditionService;
+    private final BattleLogService battleLogService;
 
     // ================================ Lifecycle ================================
 
@@ -131,6 +135,22 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /**
+     * Combat log for a battle (Phase 1.2), seq-ordered after {@code afterSeq}. Non-GM callers never
+     * receive GM_ONLY rows (e.g. private death-save pips) — the filter is applied server-side.
+     */
+    @Transactional(readOnly = true)
+    public List<BattleLogEntryResponse> getBattleLog(UUID campaignId, UUID battleId, Long afterSeq,
+                                                     Integer limit, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        findBattle(battleId, campaignId);
+        boolean isGm = user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
+        return battleLogService.list(battleId, afterSeq == null ? 0L : afterSeq,
+                limit == null ? 0 : limit, isGm);
+    }
+
     @Transactional
     public BattleResponse endBattle(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -163,8 +183,24 @@ public class BattleService {
         Battle battle = findBattle(battleId, campaignId);
         BattleCombatant combatant = loadCombatantInBattle(battleId, combatantId);
         enforceControls(campaignId, user, combatant);
-        return conditionService.apply(campaignId, combatant, request.getConditionId(), request.getSourceText(),
-                request.getRemainingRounds(), user.getId(), battle.getRoundNumber());
+        List<CombatantConditionResponse> result = conditionService.apply(campaignId, combatant,
+                request.getConditionId(), request.getSourceText(), request.getRemainingRounds(),
+                user.getId(), battle.getRoundNumber());
+        Map<String, Object> condLog = new HashMap<>();
+        condLog.put("combatantName", combatant.getDisplayName());
+        condLog.put("action", "ADDED");
+        condLog.put("conditionId", request.getConditionId());
+        result.stream().filter(c -> request.getConditionId().equals(c.getConditionId())).findFirst()
+                .ifPresent(c -> condLog.put("code", c.getCode()));
+        if (request.getSourceText() != null) {
+            condLog.put("source", request.getSourceText());
+        }
+        if (request.getRemainingRounds() != null) {
+            condLog.put("rounds", request.getRemainingRounds());
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.CONDITION, null, combatant.getId(),
+                condLog, BattleLogVisibility.PUBLIC, user.getId());
+        return result;
     }
 
     /** Remove a condition from a combatant (same permission rules as applying one). */
@@ -177,13 +213,172 @@ public class BattleService {
         findBattle(battleId, campaignId);
         BattleCombatant combatant = loadCombatantInBattle(battleId, combatantId);
         enforceControls(campaignId, user, combatant);
-        return conditionService.remove(campaignId, combatantId, conditionId, user.getId());
+        List<CombatantConditionResponse> result = conditionService.remove(campaignId, combatantId, conditionId, user.getId());
+        Map<String, Object> condLog = new HashMap<>();
+        condLog.put("combatantName", combatant.getDisplayName());
+        condLog.put("action", "REMOVED");
+        condLog.put("conditionId", conditionId);
+        battleLogService.append(battleId, campaignId, BattleLogType.CONDITION, null, combatantId,
+                condLog, BattleLogVisibility.PUBLIC, user.getId());
+        return result;
     }
 
     private BattleCombatant loadCombatantInBattle(UUID battleId, UUID combatantId) {
         return combatantRepository.findById(combatantId)
                 .filter(c -> c.getBattle() != null && c.getBattle().getId().equals(battleId))
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+    }
+
+    // ============================== Death saves ==============================
+
+    /**
+     * Roll a death saving throw for a dying (0 HP) character (server d20 or a manual result). nat20 →
+     * back up at 1 HP; nat1 → two failures; 10+ → a success (three ⇒ stable); below 10 → a failure
+     * (three ⇒ dead). Permission as for HP: the GM or the character's owner (1.3).
+     */
+    @Transactional
+    public BattleResponse rollDeathSave(UUID campaignId, UUID battleId, UUID combatantId, Integer manualRoll, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .filter(c -> c.getBattle().getId().equals(battleId))
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+        enforceControls(campaignId, user, combatant);
+        PlayerCharacter character = requireDyingCharacter(combatant);
+
+        int d20 = manualRoll != null ? manualRoll : diceRoller.rollD20();
+        if (d20 < 1 || d20 > 20) {
+            throw new BadRequestException("d20 must be between 1 and 20");
+        }
+
+        if (d20 == 20) {
+            // Regain consciousness at 1 HP; the heal path clears counters + the unconscious condition.
+            applyDamageOrHeal(combatant, 1, user, campaignId);
+        } else if (d20 == 1) {
+            addDeathSaveFailures(character, 2);
+            characterRepository.save(character);
+        } else if (d20 >= 10) {
+            int successes = Math.min(3, nz(character.getDeathSaveSuccesses()) + 1);
+            character.setDeathSaveSuccesses(successes);
+            if (successes >= 3) {
+                // Stable: stop rolling, clear the counters, but stay unconscious at 0 HP.
+                character.setDeathSaveSuccesses(0);
+                character.setDeathSaveFailures(0);
+            }
+            characterRepository.save(character);
+        } else {
+            addDeathSaveFailures(character, 1);
+            characterRepository.save(character);
+        }
+        // Private pip detail (owner/GM only); a resulting death is public.
+        Map<String, Object> rollLog = new HashMap<>();
+        rollLog.put("targetName", combatant.getDisplayName());
+        rollLog.put("event", "ROLL");
+        rollLog.put("d20", d20);
+        rollLog.put("successes", nz(character.getDeathSaveSuccesses()));
+        rollLog.put("failures", nz(character.getDeathSaveFailures()));
+        battleLogService.append(battleId, campaignId, BattleLogType.DEATH_SAVE, null, combatantId,
+                rollLog, BattleLogVisibility.GM_ONLY, user.getId());
+        if (character.getStatus() == CharacterStatus.DEAD) {
+            logDeathSaveEvent(combatant, campaignId, user.getId(), "DEAD", BattleLogVisibility.PUBLIC, null);
+        }
+
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.HP_CHANGED, campaignId,
+                java.util.Map.of("battleId", battleId, "combatantId", combatantId), user.getId());
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /** Stabilize a dying character (GM/healer, Medicine done by hand): clear the death-save counters; stays unconscious. */
+    @Transactional
+    public BattleResponse stabilize(UUID campaignId, UUID battleId, UUID combatantId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .filter(c -> c.getBattle().getId().equals(battleId))
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+        enforceControls(campaignId, user, combatant);
+        PlayerCharacter character = requireDyingCharacter(combatant);
+        character.setDeathSaveSuccesses(0);
+        character.setDeathSaveFailures(0);
+        characterRepository.save(character);
+        logDeathSaveEvent(combatant, campaignId, user.getId(), "STABILIZED", BattleLogVisibility.PUBLIC, null);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Reroll one combatant's initiative (GM quick tool, Phase 1.7): the server rolls a d20, recomputes
+     * initiative (d20 + Dexterity/statblock bonus), re-sorts the whole tracker and keeps the turn
+     * anchored on whoever is currently acting. Logs it and broadcasts a turn change. GM/admin only.
+     */
+    @Transactional
+    public BattleResponse rerollInitiative(UUID campaignId, UUID battleId, UUID combatantId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Initiative can only be rerolled in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        UUID activeId = activeCombatantId(battle, combatants);
+        BattleCombatant target = combatants.stream()
+                .filter(c -> c.getId().equals(combatantId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+
+        int d20 = diceRoller.rollD20();
+        int initiative;
+        if (target.getType() == CombatantType.MONSTER && target.getMonster() != null) {
+            int dex = target.getMonster().getDexScore() != null ? target.getMonster().getDexScore().intValue() : 10;
+            Integer bonus = target.getMonster().getInitiativeBonus() != null
+                    ? target.getMonster().getInitiativeBonus().intValue() : null;
+            initiative = CombatCalculator.monsterInitiative(d20, bonus, dex);
+        } else if (target.getCharacter() != null) {
+            PlayerCharacter character = target.getCharacter();
+            initiative = CombatCalculator.characterInitiative(d20, dexValue(character), dexBuffBonus(character));
+        } else {
+            initiative = d20;
+        }
+        target.setInitiativeRoll(d20);
+        target.setInitiative(initiative);
+
+        // Re-sort the tracker and keep the turn on the same combatant (mirrors join).
+        CombatCalculator.orderTracker(combatants);
+        combatantRepository.saveAll(combatants);
+        battle.setCurrentTurnIndex(
+                CombatCalculator.resolveCurrentIndex(combatants, activeId, battle.getCurrentTurnIndex()));
+        battleRepository.save(battle);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.TURN, target.getId(), null,
+                Map.of("event", "INITIATIVE_REROLL", "combatantName", target.getDisplayName(),
+                        "d20", d20, "initiative", initiative), BattleLogVisibility.PUBLIC, user.getId());
+        log.info("Initiative rerolled: battleId={}, combatant={}, d20={}, initiative={}, by={}",
+                battleId, target.getDisplayName(), d20, initiative, username);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
+                java.util.Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, combatants);
+    }
+
+    private PlayerCharacter requireDyingCharacter(BattleCombatant combatant) {
+        if (combatant.getType() != CombatantType.CHARACTER || combatant.getCharacter() == null) {
+            throw new BadRequestException("Only characters make death saving throws");
+        }
+        PlayerCharacter character = combatant.getCharacter();
+        if (nz(combatant.getCurrentHp()) > 0 || character.getStatus() == CharacterStatus.DEAD) {
+            throw new BadRequestException("Death saves apply only to a dying character (0 HP, not dead)");
+        }
+        return character;
+    }
+
+    private void addDeathSaveFailures(PlayerCharacter character, int amount) {
+        int failures = Math.min(3, nz(character.getDeathSaveFailures()) + amount);
+        character.setDeathSaveFailures(failures);
+        if (failures >= 3) {
+            character.setStatus(CharacterStatus.DEAD);
+        }
     }
 
     // ============================== Group assembly ==============================
@@ -436,6 +631,8 @@ public class BattleService {
             }
             // Conditions with a finite duration tick down on the round boundary too (Phase 1.1).
             conditionService.tick(battleId);
+            battleLogService.append(battleId, campaignId, BattleLogType.ROUND, null, null,
+                    Map.of("round", battle.getRoundNumber()), BattleLogVisibility.PUBLIC, user.getId());
         }
         battle.setCurrentTurnIndex(nextIndex);
         battleRepository.save(battle);
@@ -443,6 +640,10 @@ public class BattleService {
         // The combatant now on turn starts with a fresh action economy.
         BattleCombatant nowOnTurn = combatants.get(nextIndex);
         resetActionEconomy(nowOnTurn);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.TURN, nowOnTurn.getId(), null,
+                Map.of("combatantName", nowOnTurn.getDisplayName(), "turnIndex", nextIndex,
+                        "round", battle.getRoundNumber()), BattleLogVisibility.PUBLIC, user.getId());
 
         log.info("Turn passed: battleId={}, newIndex={}, round={}, by={}",
                 battleId, nextIndex, battle.getRoundNumber(), username);
@@ -747,9 +948,6 @@ public class BattleService {
             DamageMitigationService.Mitigation saveMit = damageMitigationService.mitigate(target, damage, attack.damageTypeId());
             damage = saveMit.finalDamage();
             damageModifierOut = saveMit.modifier().name();
-            if (damage > 0) {
-                applyDamageOrHeal(target, -damage, user, campaignId);
-            }
             outcomeName = save.name();
             total = effectiveD20 + saveBonus;
             saveAbilityOut = saveAbilityDisplayName(attack.saveAbilityCode());
@@ -769,11 +967,56 @@ public class BattleService {
                 DamageMitigationService.Mitigation mit = damageMitigationService.mitigate(target, damage, attack.damageTypeId());
                 damage = mit.finalDamage();
                 damageModifierOut = mit.modifier().name();
-                applyDamageOrHeal(target, -damage, user, campaignId);
             }
             outcomeName = outcome.name();
             attackBonusOut = effectiveAttackBonus;
             total = effectiveD20 + effectiveAttackBonus;
+        }
+
+        // Combat log: record the ATTACK (roll formula + dice + modifier) BEFORE applying damage, so the
+        // log reads ATTACK → DAMAGE (→ DEATH_SAVE). The DAMAGE row is written by the HP primitive.
+        Map<String, Object> attackLog = new HashMap<>();
+        attackLog.put("attackerName", attacker.getDisplayName());
+        attackLog.put("targetName", target.getDisplayName());
+        attackLog.put("attackName", attack.name());
+        attackLog.put("outcome", outcomeName);
+        attackLog.put("rollMode", rollMode.name());
+        if (roll.d20A() != null) {
+            attackLog.put("d20A", roll.d20A());
+        }
+        if (roll.d20B() != null) {
+            attackLog.put("d20B", roll.d20B());
+        }
+        attackLog.put("d20", effectiveD20);
+        if (total != null) {
+            attackLog.put("total", total);
+        }
+        if (targetAc != null) {
+            attackLog.put("targetAc", targetAc);
+        }
+        if (attackBonusOut != null) {
+            attackLog.put("attackBonus", attackBonusOut);
+        }
+        if (attack.saveDc() != null) {
+            attackLog.put("saveDc", attack.saveDc());
+            attackLog.put("saveAbility", saveAbilityOut);
+            attackLog.put("saveBonus", saveBonusOut);
+            attackLog.put("saveTotal", saveTotalOut);
+        }
+        if (damage != null) {
+            attackLog.put("damage", damage);
+        }
+        if (damageModifierOut != null && !"NONE".equals(damageModifierOut)) {
+            attackLog.put("damageModifier", damageModifierOut);
+        }
+        if (attack.damageType() != null) {
+            attackLog.put("damageType", attack.damageType());
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.ATTACK, attacker.getId(), target.getId(),
+                attackLog, BattleLogVisibility.PUBLIC, user.getId());
+
+        if (damage != null && damage > 0) {
+            applyDamageOrHeal(target, -damage, user, campaignId);
         }
 
         attacker.setActionSpent(attacker.getActionSpent() + 1);
@@ -1359,6 +1602,7 @@ public class BattleService {
             // Character HP goes through the single shared primitive (pessimistic lock, temp-HP
             // absorption, tracker mirroring and HP_CHANGED all live there). Mirror the authoritative
             // result back onto this combatant row so the action response reflects the change.
+            int before = nz(combatant.getCurrentHp());
             HpChangeResult result = characterHpService.applyDelta(
                     combatant.getCharacter().getId(), delta, campaignId, actor.getId());
             combatant.setCurrentHp(result.currentHp());
@@ -1366,6 +1610,8 @@ public class BattleService {
                 combatant.setMaxHp(result.maxHp());
             }
             combatantRepository.save(combatant);
+            logHpChange(combatant, delta, campaignId, actor.getId());
+            handleDeathSaveTransitions(combatant, before, result.currentHp(), delta, actor, campaignId);
         } else {
             int maxHp = combatant.getMaxHp() != null ? combatant.getMaxHp() : 0;
             int currentHp = combatant.getCurrentHp() != null ? combatant.getCurrentHp() : 0;
@@ -1376,7 +1622,82 @@ public class BattleService {
             }
             combatant.setCurrentHp(currentHp);
             combatantRepository.save(combatant);
+            logHpChange(combatant, delta, campaignId, actor.getId());
         }
+    }
+
+    /** Combat-log a HP delta as DAMAGE (delta&lt;0) or HEAL (delta&gt;0); no-op for a 0 delta. */
+    private void logHpChange(BattleCombatant combatant, int delta, UUID campaignId, UUID actorUserId) {
+        if (delta == 0 || combatant.getBattle() == null) {
+            return;
+        }
+        Map<String, Object> hpLog = new HashMap<>();
+        hpLog.put("targetName", combatant.getDisplayName());
+        hpLog.put("amount", Math.abs(delta));
+        hpLog.put("newHp", combatant.getCurrentHp());
+        if (combatant.getMaxHp() != null) {
+            hpLog.put("maxHp", combatant.getMaxHp());
+        }
+        battleLogService.append(combatant.getBattle().getId(), campaignId,
+                delta < 0 ? BattleLogType.DAMAGE : BattleLogType.HEAL,
+                null, combatant.getId(), hpLog, BattleLogVisibility.PUBLIC, actorUserId);
+    }
+
+    /**
+     * Death-save side effects of an HP change on a character combatant (1.3): dropping to 0 makes it
+     * unconscious and resets the death-save counters; damage taken while already down is an automatic
+     * failure (three ⇒ dead); healing above 0 clears the counters and the unconscious condition.
+     */
+    private void handleDeathSaveTransitions(BattleCombatant combatant, int before, int after, int delta,
+                                            User actor, UUID campaignId) {
+        PlayerCharacter character = combatant.getCharacter();
+        int round = nz(combatant.getBattle() != null ? combatant.getBattle().getRoundNumber() : null);
+        if (after <= 0) {
+            if (before > 0) {
+                character.setDeathSaveSuccesses(0);
+                character.setDeathSaveFailures(0);
+                characterRepository.save(character);
+                conditionService.applyByCode(campaignId, combatant, "unconscious", actor.getId(), round);
+                logDeathSaveEvent(combatant, campaignId, actor.getId(), "DOWNED", BattleLogVisibility.PUBLIC, null);
+            } else if (delta < 0) {
+                // Damage while already at 0 HP: automatic death-save failure (crit ⇒ 2 is a later refinement).
+                int failures = Math.min(3, nz(character.getDeathSaveFailures()) + 1);
+                character.setDeathSaveFailures(failures);
+                if (failures >= 3) {
+                    character.setStatus(CharacterStatus.DEAD);
+                    characterRepository.save(character);
+                    logDeathSaveEvent(combatant, campaignId, actor.getId(), "DEAD", BattleLogVisibility.PUBLIC, null);
+                } else {
+                    characterRepository.save(character);
+                    // Pip counts are private (owner/GM only); the public "unconscious" state stays visible.
+                    logDeathSaveEvent(combatant, campaignId, actor.getId(), "AUTO_FAIL",
+                            BattleLogVisibility.GM_ONLY, Map.of("failures", failures));
+                }
+            }
+        } else if (before <= 0) {
+            character.setDeathSaveSuccesses(0);
+            character.setDeathSaveFailures(0);
+            character.setStatus(CharacterStatus.ACTIVE);
+            characterRepository.save(character);
+            conditionService.removeByCode(campaignId, combatant.getId(), "unconscious", actor.getId());
+            logDeathSaveEvent(combatant, campaignId, actor.getId(), "REVIVED", BattleLogVisibility.PUBLIC, null);
+        }
+    }
+
+    /** Combat-log a death-save transition; {@code extra} carries private detail (e.g. pip counts). */
+    private void logDeathSaveEvent(BattleCombatant combatant, UUID campaignId, UUID actorUserId,
+                                   String event, BattleLogVisibility visibility, Map<String, Object> extra) {
+        if (combatant.getBattle() == null) {
+            return;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("targetName", combatant.getDisplayName());
+        payload.put("event", event);
+        if (extra != null) {
+            payload.putAll(extra);
+        }
+        battleLogService.append(combatant.getBattle().getId(), campaignId, BattleLogType.DEATH_SAVE,
+                null, combatant.getId(), payload, visibility, actorUserId);
     }
 
     // ================================ Helpers ================================
@@ -1634,6 +1955,9 @@ public class BattleService {
                 .legendaryActionSpent(nz(c.getLegendaryActionSpent()))
                 .reactionUsed(Boolean.TRUE.equals(c.getReactionUsed()))
                 .conditions(conditionService.conditionsForCombatant(c.getId()))
+                .deathSaveSuccesses(c.getCharacter() != null ? nz(c.getCharacter().getDeathSaveSuccesses()) : 0)
+                .deathSaveFailures(c.getCharacter() != null ? nz(c.getCharacter().getDeathSaveFailures()) : 0)
+                .dead(c.getCharacter() != null && c.getCharacter().getStatus() == CharacterStatus.DEAD)
                 .build();
     }
 

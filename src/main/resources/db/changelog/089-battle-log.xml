@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Persistent per-battle combat log (Phase 1.2). One append-only row per meaningful event
+      (attack, damage/heal, turn/round, condition, death save, GM override, item, spell). `seq` is
+      monotonic within a battle and drives ordering + afterSeq pagination. `payload` is JSON text
+      (the core maps JSON as text — see 055-bug-reports) with the roll formula / dice / modifier so
+      the UI can expand a result. `visibility` gates GM_ONLY entries from players in the API. This is
+      the combat domain (core) and is deliberately NOT merged with the map's spatial map_event log.
+    -->
+    <changeSet id="089-battle-log" author="claude">
+        <createTable tableName="battle_log">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="battle_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seq" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actor_combatant_id" type="uuid"/>
+            <column name="target_combatant_id" type="uuid"/>
+            <column name="payload" type="text"/>
+            <column name="visibility" type="varchar(16)" defaultValue="PUBLIC">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="battle_log" columnNames="battle_id, seq"
+                             constraintName="uq_battle_log_battle_seq"/>
+
+        <addForeignKeyConstraint baseTableName="battle_log" baseColumnNames="battle_id"
+                                 referencedTableName="battles" referencedColumnNames="id"
+                                 constraintName="fk_battle_log_battle" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="battle_log" baseColumnNames="actor_combatant_id"
+                                 referencedTableName="battle_combatants" referencedColumnNames="id"
+                                 constraintName="fk_battle_log_actor" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="battle_log" baseColumnNames="target_combatant_id"
+                                 referencedTableName="battle_combatants" referencedColumnNames="id"
+                                 constraintName="fk_battle_log_target" onDelete="SET NULL"/>
+
+        <createIndex tableName="battle_log" indexName="idx_battle_log_battle_seq">
+            <column name="battle_id"/>
+            <column name="seq"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

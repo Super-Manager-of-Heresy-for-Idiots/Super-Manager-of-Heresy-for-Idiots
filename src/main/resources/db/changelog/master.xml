@@ -136,4 +136,7 @@
     <!-- Live condition instances on battle combatants (Blinded/Prone/…), linked to bestiary_conditions. -->
     <include file="db/changelog/088-battle-combatant-conditions.xml"/>
 
+    <!-- Persistent per-battle combat log (append-only, seq-ordered, GM_ONLY-gated) — Phase 1.2. -->
+    <include file="db/changelog/089-battle-log.xml"/>
+
 </databaseChangeLog>

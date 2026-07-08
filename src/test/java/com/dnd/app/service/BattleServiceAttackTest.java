@@ -1,6 +1,8 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.enums.BattleLogType;
+import com.dnd.app.domain.enums.BattleLogVisibility;
 import com.dnd.app.domain.enums.BattleStatus;
 import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
@@ -51,6 +53,7 @@ class BattleServiceAttackTest {
     @Mock private GameplayEventService gameplayEventService;
     @Mock private ModifierAggregator modifierAggregator;
     @Mock private EffectExpirationService effectExpirationService;
+    @Mock private BattleLogService battleLogService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BattleService battleService;
@@ -67,7 +70,8 @@ class BattleServiceAttackTest {
                         webSocketEventService, gameplayEventService),
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
-                org.mockito.Mockito.mock(ConditionService.class));
+                org.mockito.Mockito.mock(ConditionService.class),
+                battleLogService);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -127,6 +131,11 @@ class BattleServiceAttackTest {
         assertEquals(13, character.getCurrentHp(), "урон должен записаться в лист персонажа");
         assertEquals(13, characterC.getCurrentHp(), "и в строку трекера");
         verify(characterRepository).save(character);
+        // Combat log (1.2): the attack records an ATTACK entry and the HP primitive a DAMAGE entry.
+        verify(battleLogService).append(eq(battleId), eq(campaignId), eq(BattleLogType.ATTACK),
+                eq(monsterC.getId()), eq(characterC.getId()), anyMap(), eq(BattleLogVisibility.PUBLIC), any());
+        verify(battleLogService).append(eq(battleId), eq(campaignId), eq(BattleLogType.DAMAGE),
+                isNull(), eq(characterC.getId()), anyMap(), eq(BattleLogVisibility.PUBLIC), any());
     }
 
     @Test
@@ -141,7 +150,8 @@ class BattleServiceAttackTest {
                         webSocketEventService, gameplayEventService),
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
-                org.mockito.Mockito.mock(ConditionService.class));
+                org.mockito.Mockito.mock(ConditionService.class),
+                battleLogService);
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
