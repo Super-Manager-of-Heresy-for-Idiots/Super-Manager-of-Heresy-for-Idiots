@@ -18,6 +18,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
+import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
@@ -359,6 +360,53 @@ public class BattleService {
                 battleId, target.getDisplayName(), d20, initiative, username);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
                 java.util.Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, combatants);
+    }
+
+    /**
+     * Replace the whole tracker's initiative values in one shot (GM quick tool, Phase 1.7): the
+     * request must list every combatant of the battle exactly once. Each initiative is set as a
+     * manual GM value (roll cleared), the tracker is re-sorted and the turn stays anchored on
+     * whoever is currently acting. GM/admin only. Broadcasts a turn change and logs it.
+     */
+    @Transactional
+    public BattleResponse setInitiativeOrder(UUID campaignId, UUID battleId,
+            List<InitiativeOrderRequest.Entry> entries, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Initiative can only be reordered in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        UUID activeId = activeCombatantId(battle, combatants);
+
+        // The request must cover exactly the battle's combatants — no missing, extra or duplicate ids.
+        Map<UUID, Integer> byId = new HashMap<>();
+        for (InitiativeOrderRequest.Entry e : entries) {
+            if (byId.put(e.getCombatantId(), e.getInitiative()) != null) {
+                throw new BadRequestException("Duplicate combatant in initiative order: " + e.getCombatantId());
+            }
+        }
+        if (byId.size() != combatants.size() || !combatants.stream().allMatch(c -> byId.containsKey(c.getId()))) {
+            throw new BadRequestException("Initiative order must list every combatant of the battle exactly once");
+        }
+
+        for (BattleCombatant c : combatants) {
+            c.setInitiative(byId.get(c.getId()));
+            c.setInitiativeRoll(null); // GM-set value, not a rolled d20
+        }
+        CombatCalculator.orderTracker(combatants);
+        combatantRepository.saveAll(combatants);
+        battle.setCurrentTurnIndex(
+                CombatCalculator.resolveCurrentIndex(combatants, activeId, battle.getCurrentTurnIndex()));
+        battleRepository.save(battle);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.TURN, null, null,
+                Map.of("event", "INITIATIVE_ORDER_SET"), BattleLogVisibility.PUBLIC, user.getId());
+        log.info("Initiative order set: battleId={}, by={}", battleId, username);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
+                Map.of("battleId", battleId), user.getId());
         return toResponse(battle, combatants);
     }
 

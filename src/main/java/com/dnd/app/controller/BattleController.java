@@ -8,6 +8,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
+import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
@@ -316,6 +317,19 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.stabilize(campaignId, battleId, combatantId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Stabilized"));
+        }, controllerTaskExecutor);
+    }
+
+    @PatchMapping("/{battleId}/initiative-order")
+    @Operation(summary = "Replace the whole tracker's initiative values (GM drag-reorder quick tool)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setInitiativeOrder(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody InitiativeOrderRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.setInitiativeOrder(
+                    campaignId, battleId, request.getEntries(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Initiative order updated"));
         }, controllerTaskExecutor);
     }
 
