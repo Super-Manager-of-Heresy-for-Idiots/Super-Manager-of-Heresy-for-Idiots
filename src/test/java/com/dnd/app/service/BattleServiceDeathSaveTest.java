@@ -75,7 +75,8 @@ class BattleServiceDeathSaveTest {
                 new DamageMitigationService(modifierAggregator),
                 mock(ConditionService.class),
                 mock(BattleLogService.class),
-                mock(SpellCastService.class));
+                mock(SpellCastService.class),
+                mock(StatTypeRepository.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User owner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

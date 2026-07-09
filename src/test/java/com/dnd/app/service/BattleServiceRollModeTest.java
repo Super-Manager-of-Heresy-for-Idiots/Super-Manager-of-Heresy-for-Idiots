@@ -75,7 +75,8 @@ class BattleServiceRollModeTest {
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
                 org.mockito.Mockito.mock(BattleLogService.class),
-                org.mockito.Mockito.mock(SpellCastService.class));
+                org.mockito.Mockito.mock(SpellCastService.class),
+                org.mockito.Mockito.mock(StatTypeRepository.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

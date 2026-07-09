@@ -72,7 +72,8 @@ class BattleServiceMapSyncTest {
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
                 org.mockito.Mockito.mock(BattleLogService.class),
-                org.mockito.Mockito.mock(SpellCastService.class));
+                org.mockito.Mockito.mock(SpellCastService.class),
+                org.mockito.Mockito.mock(StatTypeRepository.class));
         campaign = Campaign.builder().id(campaignId).build();
         battle = Battle.builder()
                 .id(battleId).campaign(campaign).status(BattleStatus.ACTIVE)

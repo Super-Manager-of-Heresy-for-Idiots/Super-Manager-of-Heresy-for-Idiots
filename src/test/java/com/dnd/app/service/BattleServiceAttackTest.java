@@ -72,7 +72,8 @@ class BattleServiceAttackTest {
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
                 battleLogService,
-                org.mockito.Mockito.mock(SpellCastService.class));
+                org.mockito.Mockito.mock(SpellCastService.class),
+                org.mockito.Mockito.mock(StatTypeRepository.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -153,7 +154,8 @@ class BattleServiceAttackTest {
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
                 battleLogService,
-                org.mockito.Mockito.mock(SpellCastService.class));
+                org.mockito.Mockito.mock(SpellCastService.class),
+                org.mockito.Mockito.mock(StatTypeRepository.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

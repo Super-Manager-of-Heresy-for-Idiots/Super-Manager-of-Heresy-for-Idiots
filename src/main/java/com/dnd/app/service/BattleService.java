@@ -24,8 +24,11 @@ import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
+import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.SpellCastRequest;
 import com.dnd.app.dto.featurerule.SpellCastResult;
+import com.dnd.app.domain.StatType;
+import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
@@ -98,6 +101,7 @@ public class BattleService {
     private final ConditionService conditionService;
     private final BattleLogService battleLogService;
     private final SpellCastService spellCastService;
+    private final StatTypeRepository statTypeRepository;
 
     // ================================ Lifecycle ================================
 
@@ -440,8 +444,9 @@ public class BattleService {
         }
         PlayerCharacter casterChar = caster.getCharacter();
 
-        // A character target maps to its sheet; a monster target has no sheet here, so effects fall
-        // back to the caster (damage-to-monster is 2.1b). Validate the target is in this battle.
+        // A character target maps to its sheet for feature EFFECTS; a monster target has no sheet, so
+        // effects fall back to the caster (its damage/healing lands on the combatant below — 2.1b).
+        // Validate the target is in this battle.
         PlayerCharacter effectTarget = casterChar;
         UUID targetCombatantId = request.getTargetCombatantId();
         if (targetCombatantId != null) {
@@ -476,9 +481,108 @@ public class BattleService {
         battleLogService.append(battleId, campaignId, BattleLogType.SPELL, caster.getId(), targetCombatantId,
                 payload, BattleLogVisibility.PUBLIC, user.getId());
 
+        // 2.1b: resolve the plan's damage/healing onto combatants (incl. monsters) through the shared
+        // save/mitigation/HP pipeline. Reads SPELL → SAVE → DAMAGE in the log.
+        applySpellPlanOutcome(result.getPlan(), targetCombatantId, caster, user, campaignId, battleId);
+
         log.info("Spell cast in battle: battleId={}, caster={}, spell={}, by={}",
                 battleId, caster.getDisplayName(), result.getSpellName(), username);
         return result;
+    }
+
+    /**
+     * Apply a spell's execution plan to combatants (Phase 2.1b). Damage lands only on an explicit
+     * target (incl. monsters); healing lands on the target if given, else the caster (self-heal). The
+     * spell's active effects were already applied by {@link SpellCastService#cast}; here we resolve
+     * the numeric damage/healing the plan left for the caller, reusing the attack save/mitigation/HP
+     * pipeline. Scope: single target. Attack-roll spells (no spell-attack bonus in the plan) and AoE
+     * (multiple targets) are deferred and logged for GM adjudication rather than mis-applied.
+     */
+    private void applySpellPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
+            BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId) {
+        if (plan == null) {
+            return;
+        }
+        BattleCombatant target = targetCombatantId == null ? null
+                : combatantRepository.findByIdForUpdate(targetCombatantId).orElse(null);
+
+        // Save ability for save-for-half comes from a saving_throw resolution: abilityId → StatType slug.
+        String saveAbilityCode = plan.getResolutions() == null ? null : plan.getResolutions().stream()
+                .filter(r -> "saving_throw".equalsIgnoreCase(r.getResolutionType()) && r.getAbilityId() != null)
+                .findFirst()
+                .flatMap(r -> statTypeRepository.findById(r.getAbilityId()))
+                .map(StatType::getSlug)
+                .orElse(null);
+
+        if (plan.getDamages() != null && target != null) {
+            for (FeatureExecutionPlan.Damage dmg : plan.getDamages()) {
+                applySpellDamage(dmg, target, saveAbilityCode, user, campaignId, battleId);
+            }
+        }
+
+        if (plan.getHealings() != null) {
+            BattleCombatant healTarget = target != null ? target
+                    : combatantRepository.findByIdForUpdate(casterCombatant.getId()).orElse(casterCombatant);
+            for (FeatureExecutionPlan.Healing heal : plan.getHealings()) {
+                // Temp-HP healing needs its own accounting (not modelled here) → skip for now.
+                if (heal.getAmount() != null && heal.getAmount() > 0 && !heal.isTempHp()) {
+                    applyDamageOrHeal(healTarget, heal.getAmount(), user, campaignId);
+                }
+            }
+        }
+    }
+
+    /** Roll + resolve one plan damage against a target, honouring save-for-half and resistances. */
+    private void applySpellDamage(FeatureExecutionPlan.Damage dmg, BattleCombatant target,
+            String saveAbilityCode, User user, UUID campaignId, UUID battleId) {
+        // Attack-roll spells need a spell-attack bonus the plan does not carry → GM adjudicates.
+        if (dmg.isRequiresAttackHit()) {
+            logSpellManual(battleId, campaignId, target, "attack_roll", user);
+            return;
+        }
+        int rolled = 0;
+        if (dmg.getDiceExpression() != null && !dmg.getDiceExpression().isBlank()) {
+            rolled += diceRoller.rollDamage(dmg.getDiceExpression(), false);
+        }
+        if (dmg.getFlatAmount() != null) {
+            rolled += dmg.getFlatAmount();
+        }
+        rolled = Math.max(0, rolled);
+
+        if (dmg.isRequiresSave() && dmg.getSaveDc() != null) {
+            if (saveAbilityCode == null) {
+                logSpellManual(battleId, campaignId, target, "unresolved_save", user);
+                return;
+            }
+            int d20 = diceRoller.rollD20();
+            int saveBonus = resolveTargetSaveBonus(target, saveAbilityCode);
+            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(d20, saveBonus, dmg.getSaveDc());
+            if (save == AttackResolver.SaveOutcome.SUCCESS) {
+                rolled = dmg.isHalfOnSave() ? rolled / 2 : 0;
+            }
+            Map<String, Object> saveLog = new HashMap<>();
+            saveLog.put("targetName", target.getDisplayName());
+            saveLog.put("outcome", save.name());
+            saveLog.put("saveDc", dmg.getSaveDc());
+            saveLog.put("saveBonus", saveBonus);
+            saveLog.put("saveTotal", d20 + saveBonus);
+            battleLogService.append(battleId, campaignId, BattleLogType.SAVE, null, target.getId(),
+                    saveLog, BattleLogVisibility.PUBLIC, user.getId());
+        }
+
+        if (rolled <= 0) {
+            return;
+        }
+        DamageMitigationService.Mitigation mit = damageMitigationService.mitigate(target, rolled, dmg.getDamageTypeId());
+        int finalDamage = mit.finalDamage();
+        if (finalDamage > 0) {
+            applyDamageOrHeal(target, -finalDamage, user, campaignId);
+        }
+    }
+
+    private void logSpellManual(UUID battleId, UUID campaignId, BattleCombatant target, String reason, User user) {
+        battleLogService.append(battleId, campaignId, BattleLogType.SPELL, null, target.getId(),
+                Map.of("event", "SPELL_DAMAGE_MANUAL", "reason", reason), BattleLogVisibility.GM_ONLY, user.getId());
     }
 
     private PlayerCharacter requireDyingCharacter(BattleCombatant combatant) {
