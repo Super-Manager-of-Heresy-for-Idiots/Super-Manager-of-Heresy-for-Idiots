@@ -52,4 +52,6 @@ public class BattleCombatantResponse {
     private int deathSaveFailures = 0;
     /** True when the character is dead (three death-save failures). */
     private boolean dead;
+    /** True when the character is currently concentrating on a spell (Phase 2.2). */
+    private boolean concentrating;
 }

@@ -11,6 +11,9 @@ public interface FeatureActiveEffectRepository extends JpaRepository<FeatureActi
 
     List<FeatureActiveEffect> findByCharacterIdAndStatus(UUID characterId, String status);
 
+    /** Effects created BY this caster (concentration is keyed by the caster, not the effect's holder). */
+    List<FeatureActiveEffect> findBySourceCharacterIdAndStatus(UUID sourceCharacterId, String status);
+
     List<FeatureActiveEffect> findByCharacterId(UUID characterId);
 
     List<FeatureActiveEffect> findByCharacterIdAndEffectDefinitionIdAndStatus(

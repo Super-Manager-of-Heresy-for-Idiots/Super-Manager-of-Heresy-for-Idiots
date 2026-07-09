@@ -102,6 +102,7 @@ public class BattleService {
     private final BattleLogService battleLogService;
     private final SpellCastService spellCastService;
     private final StatTypeRepository statTypeRepository;
+    private final FeatureEffectService featureEffectService;
 
     // ================================ Lifecycle ================================
 
@@ -1875,6 +1876,7 @@ public class BattleService {
             combatantRepository.save(combatant);
             logHpChange(combatant, delta, campaignId, actor.getId());
             handleDeathSaveTransitions(combatant, before, result.currentHp(), delta, actor, campaignId);
+            checkConcentrationOnDamage(combatant, delta, result.currentHp(), actor, campaignId);
         } else {
             int maxHp = combatant.getMaxHp() != null ? combatant.getMaxHp() : 0;
             int currentHp = combatant.getCurrentHp() != null ? combatant.getCurrentHp() : 0;
@@ -1904,6 +1906,64 @@ public class BattleService {
         battleLogService.append(combatant.getBattle().getId(), campaignId,
                 delta < 0 ? BattleLogType.DAMAGE : BattleLogType.HEAL,
                 null, combatant.getId(), hpLog, BattleLogVisibility.PUBLIC, actorUserId);
+    }
+
+    /**
+     * Concentration check after a character combatant takes damage (Phase 2.2). Dropping to 0 HP ends
+     * concentration outright; otherwise a Constitution save (DC = max(10, floor(damage/2))) — a failure
+     * ends every spell the character is concentrating on, through the shared effect-termination path
+     * ({@link FeatureEffectService#endConcentration}). No-op unless the effects runtime is on and the
+     * character is actually concentrating.
+     */
+    private void checkConcentrationOnDamage(BattleCombatant combatant, int delta, int currentHp,
+                                            User actor, UUID campaignId) {
+        if (delta >= 0 || combatant.getCharacter() == null) {
+            return;
+        }
+        UUID characterId = combatant.getCharacter().getId();
+        if (!featureEffectService.isConcentrating(characterId)) {
+            return;
+        }
+        int damage = -delta;
+        if (currentHp <= 0) {
+            featureEffectService.endConcentration(characterId);
+            logConcentration(combatant, campaignId, actor, "BROKEN", damage, null, null, null);
+            return;
+        }
+        int dc = Math.max(10, damage / 2);
+        int d20 = diceRoller.rollD20();
+        int saveBonus = resolveTargetSaveBonus(combatant, "con");
+        AttackResolver.SaveOutcome save = AttackResolver.resolveSave(d20, saveBonus, dc);
+        boolean broken = save == AttackResolver.SaveOutcome.FAIL;
+        if (broken) {
+            featureEffectService.endConcentration(characterId);
+        }
+        logConcentration(combatant, campaignId, actor, broken ? "BROKEN" : "HELD",
+                damage, dc, d20 + saveBonus, save.name());
+    }
+
+    private void logConcentration(BattleCombatant combatant, UUID campaignId, User actor, String outcome,
+                                  Integer damage, Integer dc, Integer saveTotal, String saveOutcome) {
+        if (combatant.getBattle() == null) {
+            return;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("targetName", combatant.getDisplayName());
+        payload.put("outcome", outcome);
+        if (damage != null) {
+            payload.put("damage", damage);
+        }
+        if (dc != null) {
+            payload.put("dc", dc);
+        }
+        if (saveTotal != null) {
+            payload.put("saveTotal", saveTotal);
+        }
+        if (saveOutcome != null) {
+            payload.put("save", saveOutcome);
+        }
+        battleLogService.append(combatant.getBattle().getId(), campaignId, BattleLogType.CONCENTRATION,
+                null, combatant.getId(), payload, BattleLogVisibility.PUBLIC, actor.getId());
     }
 
     /**
@@ -2221,6 +2281,8 @@ public class BattleService {
                 .deathSaveSuccesses(c.getCharacter() != null ? nz(c.getCharacter().getDeathSaveSuccesses()) : 0)
                 .deathSaveFailures(c.getCharacter() != null ? nz(c.getCharacter().getDeathSaveFailures()) : 0)
                 .dead(c.getCharacter() != null && c.getCharacter().getStatus() == CharacterStatus.DEAD)
+                .concentrating(c.getCharacter() != null
+                        && featureEffectService.isConcentrating(c.getCharacter().getId()))
                 .build();
     }
 

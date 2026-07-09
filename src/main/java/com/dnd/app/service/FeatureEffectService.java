@@ -74,7 +74,56 @@ public class FeatureEffectService {
         }
         List<FeatureRule> rules =
                 resolver.approvedEnabledRules(FeatureRuleOwnerType.SPELL, List.of(spellId));
+        // Concentration (2.2): starting a new concentration spell ends the caster's previous one
+        // (a creature concentrates on only one spell at a time). Done BEFORE applying the new effects
+        // so the fresh ones survive.
+        if (requiresConcentration(rules)) {
+            endConcentration(caster.getId());
+        }
         return applyRules(target, caster, null, rules);
+    }
+
+    /** Whether any of the rules' effect definitions require concentration. */
+    private boolean requiresConcentration(List<FeatureRule> rules) {
+        if (rules.isEmpty()) {
+            return false;
+        }
+        List<UUID> ruleIds = rules.stream().map(FeatureRule::getId).toList();
+        return definitionRepository.findByFeatureRuleIdIn(ruleIds).stream()
+                .anyMatch(FeatureEffectDefinition::isConcentrationRequired);
+    }
+
+    /** True if the caster has any ACTIVE concentration-required effect (a spell they're concentrating on). */
+    @Transactional(readOnly = true)
+    public boolean isConcentrating(UUID casterId) {
+        return !concentrationEffects(casterId).isEmpty();
+    }
+
+    /**
+     * End all of the caster's ACTIVE concentration-required effects — concentration broken (damage/save
+     * fail, 0 HP, or a new concentration spell) or dropped. Returns how many effects ended. Uses the same
+     * {@code status = ENDED} termination as every other effect end; no parallel mechanism.
+     */
+    @Transactional
+    public int endConcentration(UUID casterId) {
+        List<FeatureActiveEffect> concentration = concentrationEffects(casterId);
+        for (FeatureActiveEffect effect : concentration) {
+            effect.setStatus(ENDED);
+            activeRepository.save(effect);
+        }
+        return concentration.size();
+    }
+
+    /** The caster's ACTIVE effects whose definition requires concentration (keyed by {@code sourceCharacterId}). */
+    private List<FeatureActiveEffect> concentrationEffects(UUID casterId) {
+        List<FeatureActiveEffect> active = activeRepository.findBySourceCharacterIdAndStatus(casterId, ACTIVE);
+        if (active.isEmpty()) {
+            return List.of();
+        }
+        return active.stream()
+                .filter(e -> definitionRepository.findById(e.getEffectDefinitionId())
+                        .map(FeatureEffectDefinition::isConcentrationRequired).orElse(false))
+                .toList();
     }
 
     private int applyRules(PlayerCharacter target, PlayerCharacter source, UUID sourceFeatureId,

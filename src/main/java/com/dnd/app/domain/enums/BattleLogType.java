@@ -17,5 +17,6 @@ public enum BattleLogType {
     DEATH_SAVE,
     GM_OVERRIDE,
     ITEM,
-    SPELL
+    SPELL,
+    CONCENTRATION
 }

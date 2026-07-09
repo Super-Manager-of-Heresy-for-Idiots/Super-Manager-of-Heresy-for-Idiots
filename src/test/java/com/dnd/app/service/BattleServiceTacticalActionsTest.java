@@ -80,7 +80,8 @@ class BattleServiceTacticalActionsTest {
                 org.mockito.Mockito.mock(ConditionService.class),
                 org.mockito.Mockito.mock(BattleLogService.class),
                 org.mockito.Mockito.mock(SpellCastService.class),
-                org.mockito.Mockito.mock(StatTypeRepository.class));
+                org.mockito.Mockito.mock(StatTypeRepository.class),
+                org.mockito.Mockito.mock(FeatureEffectService.class));
 
         gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         campaign = Campaign.builder().id(campaignId).build();

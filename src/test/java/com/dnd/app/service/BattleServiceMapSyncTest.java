@@ -73,7 +73,8 @@ class BattleServiceMapSyncTest {
                 org.mockito.Mockito.mock(ConditionService.class),
                 org.mockito.Mockito.mock(BattleLogService.class),
                 org.mockito.Mockito.mock(SpellCastService.class),
-                org.mockito.Mockito.mock(StatTypeRepository.class));
+                org.mockito.Mockito.mock(StatTypeRepository.class),
+                org.mockito.Mockito.mock(FeatureEffectService.class));
         campaign = Campaign.builder().id(campaignId).build();
         battle = Battle.builder()
                 .id(battleId).campaign(campaign).status(BattleStatus.ACTIVE)

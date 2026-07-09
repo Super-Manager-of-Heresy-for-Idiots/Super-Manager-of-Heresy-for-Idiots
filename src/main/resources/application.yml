@@ -113,7 +113,9 @@ app:
     runtime-enabled: ${APP_FEATURE_RULES_RUNTIME_ENABLED:true}
     resources-enabled: ${APP_FEATURE_RULES_RESOURCES_ENABLED:false}
     actions-enabled: ${APP_FEATURE_RULES_ACTIONS_ENABLED:false}
-    effects-enabled: ${APP_FEATURE_RULES_EFFECTS_ENABLED:false}
+    # 2.2: effects on so buff spells (Bless etc.) actually apply active effects, which concentration
+    # then manages. Turn OFF via APP_FEATURE_RULES_EFFECTS_ENABLED=false.
+    effects-enabled: ${APP_FEATURE_RULES_EFFECTS_ENABLED:true}
     triggers-enabled: ${APP_FEATURE_RULES_TRIGGERS_ENABLED:false}
     forms-enabled: ${APP_FEATURE_RULES_FORMS_ENABLED:false}
     spells-enabled: ${APP_FEATURE_RULES_SPELLS_ENABLED:true}
