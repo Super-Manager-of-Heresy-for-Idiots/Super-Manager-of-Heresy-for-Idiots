@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Pending concentration save (Phase 2.2). When a concentrating character takes damage the server
+      does NOT roll the save for them — it records the required DC here, and the player (or GM) rolls
+      the Constitution save themselves (manual d20 or an explicit AUTO) via the concentration-check
+      endpoint, which then keeps or breaks concentration and clears this. Null = no pending check.
+    -->
+    <changeSet id="090-battle-concentration-check" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="pending_concentration_dc" type="int"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

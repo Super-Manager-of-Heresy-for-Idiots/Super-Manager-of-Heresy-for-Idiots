@@ -8,6 +8,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
+import com.dnd.app.dto.request.ConcentrationCheckRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
@@ -307,6 +308,20 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.rollDeathSave(campaignId, battleId, combatantId, roll, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Death save rolled"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/concentration-check")
+    @Operation(summary = "Roll a pending concentration saving throw (player d20 or server AUTO)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> concentrationCheck(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody(required = false) ConcentrationCheckRequest request, Authentication auth) {
+        Integer d20 = request != null ? request.getD20() : null;
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.resolveConcentration(campaignId, battleId, combatantId, d20, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Concentration check resolved"));
         }, controllerTaskExecutor);
     }
 

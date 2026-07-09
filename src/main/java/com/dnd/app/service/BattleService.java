@@ -1909,10 +1909,11 @@ public class BattleService {
     }
 
     /**
-     * Concentration check after a character combatant takes damage (Phase 2.2). Dropping to 0 HP ends
-     * concentration outright; otherwise a Constitution save (DC = max(10, floor(damage/2))) — a failure
-     * ends every spell the character is concentrating on, through the shared effect-termination path
-     * ({@link FeatureEffectService#endConcentration}). No-op unless the effects runtime is on and the
+     * Concentration side-effect of damage to a character combatant (Phase 2.2). Dropping to 0 HP ends
+     * concentration outright; otherwise the server does NOT roll the save for the player — it records
+     * the required Constitution save DC (= max(10, floor(damage/2))) as a PENDING check, and the player
+     * (or GM) rolls it themselves via the concentration-check endpoint. If several damage instances
+     * arrive before the player rolls, the highest DC is kept. No-op unless effects are on and the
      * character is actually concentrating.
      */
     private void checkConcentrationOnDamage(BattleCombatant combatant, int delta, int currentHp,
@@ -1926,20 +1927,63 @@ public class BattleService {
         }
         int damage = -delta;
         if (currentHp <= 0) {
+            // Dropping to 0 HP ends concentration with no save.
             featureEffectService.endConcentration(characterId);
+            combatant.setPendingConcentrationDc(null);
+            combatantRepository.save(combatant);
             logConcentration(combatant, campaignId, actor, "BROKEN", damage, null, null, null);
             return;
         }
         int dc = Math.max(10, damage / 2);
-        int d20 = diceRoller.rollD20();
+        int pending = combatant.getPendingConcentrationDc() == null
+                ? dc : Math.max(combatant.getPendingConcentrationDc(), dc);
+        combatant.setPendingConcentrationDc(pending);
+        combatantRepository.save(combatant);
+        logConcentration(combatant, campaignId, actor, "CHECK_REQUIRED", damage, pending, null, null);
+    }
+
+    /**
+     * Resolve a pending concentration save the PLAYER (or GM) rolls (Phase 2.2): a manual d20 or, when
+     * {@code d20} is null, a server AUTO roll. A failure ends the character's concentration; either way
+     * the pending check is cleared. Authorization: the character's owner or the GM.
+     */
+    @Transactional
+    public BattleResponse resolveConcentration(UUID campaignId, UUID battleId, UUID combatantId,
+                                               Integer d20, String username) {
+        User user = getUser(username);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Concentration checks only happen in an active battle");
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+        if (combatant.getBattle() == null || !combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+        if (combatant.getCharacter() == null) {
+            throw new BadRequestException("Only characters make concentration checks");
+        }
+        Integer dc = combatant.getPendingConcentrationDc();
+        if (dc == null) {
+            throw new BadRequestException("No pending concentration check for this combatant");
+        }
+        if (d20 != null && (d20 < 1 || d20 > 20)) {
+            throw new BadRequestException("d20 must be between 1 and 20");
+        }
+        UUID characterId = combatant.getCharacter().getId();
+        int roll = d20 != null ? d20 : diceRoller.rollD20();
         int saveBonus = resolveTargetSaveBonus(combatant, "con");
-        AttackResolver.SaveOutcome save = AttackResolver.resolveSave(d20, saveBonus, dc);
+        AttackResolver.SaveOutcome save = AttackResolver.resolveSave(roll, saveBonus, dc);
         boolean broken = save == AttackResolver.SaveOutcome.FAIL;
-        if (broken) {
+        if (broken && featureEffectService.isConcentrating(characterId)) {
             featureEffectService.endConcentration(characterId);
         }
-        logConcentration(combatant, campaignId, actor, broken ? "BROKEN" : "HELD",
-                damage, dc, d20 + saveBonus, save.name());
+        combatant.setPendingConcentrationDc(null);
+        combatantRepository.save(combatant);
+        logConcentration(combatant, campaignId, user, broken ? "BROKEN" : "HELD",
+                null, dc, roll + saveBonus, save.name());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, orderedCombatants(battleId));
     }
 
     private void logConcentration(BattleCombatant combatant, UUID campaignId, User actor, String outcome,
@@ -2283,6 +2327,7 @@ public class BattleService {
                 .dead(c.getCharacter() != null && c.getCharacter().getStatus() == CharacterStatus.DEAD)
                 .concentrating(c.getCharacter() != null
                         && featureEffectService.isConcentrating(c.getCharacter().getId()))
+                .pendingConcentrationDc(c.getPendingConcentrationDc())
                 .build();
     }
 

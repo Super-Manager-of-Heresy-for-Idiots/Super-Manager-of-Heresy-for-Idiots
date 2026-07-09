@@ -54,4 +54,6 @@ public class BattleCombatantResponse {
     private boolean dead;
     /** True when the character is currently concentrating on a spell (Phase 2.2). */
     private boolean concentrating;
+    /** DC of a pending concentration save the player must roll (Phase 2.2); null when none pending. */
+    private Integer pendingConcentrationDc;
 }

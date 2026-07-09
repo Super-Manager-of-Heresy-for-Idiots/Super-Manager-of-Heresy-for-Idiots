@@ -116,6 +116,13 @@ public class BattleCombatant {
     @Builder.Default
     private Integer movementUsedFt = 0;
 
+    // ---- Pending concentration save (Phase 2.2) ------------------------------------------
+    // Set when a concentrating character takes damage: the DC of the Con save they must make to keep
+    // concentration. The player/GM rolls it themselves (manual or AUTO) via the concentration-check
+    // endpoint, which resolves and clears this. Null = no pending check.
+    @Column(name = "pending_concentration_dc")
+    private Integer pendingConcentrationDc;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;
