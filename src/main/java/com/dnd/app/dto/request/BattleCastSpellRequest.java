@@ -28,5 +28,16 @@ public class BattleCastSpellRequest {
     @Min(value = 0, message = "slotLevel must be 0-9")
     private Integer slotLevel;
 
+    /**
+     * How the spell's damage dice are resolved: {@code AUTO} (default) — the server rolls the plan's
+     * dice; {@code MANUAL} — the player rolled physically and supplies the total in {@code manualDamage}.
+     * Either way the server still applies the save-for-half and the target's resistance/immunity.
+     */
+    private String damageRollMode;
+
+    /** The player-rolled dice total, when {@code damageRollMode = MANUAL} (pre-save, pre-resistance). */
+    @Min(value = 0, message = "manualDamage must be >= 0")
+    private Integer manualDamage;
+
     private UUID clientCommandId;
 }

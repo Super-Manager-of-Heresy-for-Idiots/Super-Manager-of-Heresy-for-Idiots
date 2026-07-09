@@ -33,5 +33,14 @@ public class SpellCastResult {
     /** Slot state after the cast (null for cantrips — nothing changed). */
     private SpellSlotsResponse slots;
 
+    /**
+     * Final damage actually dealt to the battle target after save-for-half and resistance/immunity
+     * (Phase 2.1b/2.1c). Null when the cast was not in a battle or dealt no damage to a target.
+     */
+    private Integer appliedDamage;
+
+    /** Damage modifier applied to the target: NONE / RESISTED / IMMUNE / VULNERABLE. Null when no damage. */
+    private String appliedDamageModifier;
+
     private String message;
 }

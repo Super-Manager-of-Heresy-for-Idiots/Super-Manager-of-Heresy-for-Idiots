@@ -481,28 +481,47 @@ public class BattleService {
         battleLogService.append(battleId, campaignId, BattleLogType.SPELL, caster.getId(), targetCombatantId,
                 payload, BattleLogVisibility.PUBLIC, user.getId());
 
-        // 2.1b: resolve the plan's damage/healing onto combatants (incl. monsters) through the shared
-        // save/mitigation/HP pipeline. Reads SPELL → SAVE → DAMAGE in the log.
-        applySpellPlanOutcome(result.getPlan(), targetCombatantId, caster, user, campaignId, battleId);
+        // 2.1b/2.1c: resolve the plan's damage/healing onto combatants (incl. monsters) through the
+        // shared save/mitigation/HP pipeline. AUTO rolls the dice; MANUAL uses the player's total.
+        // Reads SPELL → SAVE → DAMAGE in the log; the dealt damage is echoed back to the caster.
+        SpellDamageSummary dmg = applySpellPlanOutcome(result.getPlan(), targetCombatantId, caster, user,
+                campaignId, battleId, request.getDamageRollMode(), request.getManualDamage());
+        if (dmg.applied()) {
+            result.setAppliedDamage(dmg.total());
+            result.setAppliedDamageModifier(dmg.modifier());
+        }
 
         log.info("Spell cast in battle: battleId={}, caster={}, spell={}, by={}",
                 battleId, caster.getDisplayName(), result.getSpellName(), username);
         return result;
     }
 
+    /** Total damage dealt to the spell target + the resistance modifier applied (for the cast result). */
+    private record SpellDamageSummary(int total, String modifier) {
+        boolean applied() {
+            return total > 0;
+        }
+        static SpellDamageSummary none() {
+            return new SpellDamageSummary(0, null);
+        }
+    }
+
     /**
-     * Apply a spell's execution plan to combatants (Phase 2.1b). Damage lands only on an explicit
+     * Apply a spell's execution plan to combatants (Phase 2.1b/2.1c). Damage lands only on an explicit
      * target (incl. monsters); healing lands on the target if given, else the caster (self-heal). The
      * spell's active effects were already applied by {@link SpellCastService#cast}; here we resolve
      * the numeric damage/healing the plan left for the caller, reusing the attack save/mitigation/HP
-     * pipeline. Scope: single target. Attack-roll spells (no spell-attack bonus in the plan) and AoE
-     * (multiple targets) are deferred and logged for GM adjudication rather than mis-applied.
+     * pipeline. {@code AUTO} rolls the dice; {@code MANUAL} uses {@code manualDamage} (the player's
+     * physical roll) for the first damage line. Scope: single target; attack-roll spells (no attack
+     * bonus in the plan) and AoE (multiple targets) are logged for GM adjudication, not mis-applied.
      */
-    private void applySpellPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
-            BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId) {
+    private SpellDamageSummary applySpellPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
+            BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId,
+            String damageRollMode, Integer manualDamage) {
         if (plan == null) {
-            return;
+            return SpellDamageSummary.none();
         }
+        boolean manual = "MANUAL".equalsIgnoreCase(damageRollMode);
         BattleCombatant target = targetCombatantId == null ? null
                 : combatantRepository.findByIdForUpdate(targetCombatantId).orElse(null);
 
@@ -514,9 +533,19 @@ public class BattleService {
                 .map(StatType::getSlug)
                 .orElse(null);
 
+        int totalDamage = 0;
+        String modifier = null;
         if (plan.getDamages() != null && target != null) {
-            for (FeatureExecutionPlan.Damage dmg : plan.getDamages()) {
-                applySpellDamage(dmg, target, saveAbilityCode, user, campaignId, battleId);
+            List<FeatureExecutionPlan.Damage> damages = plan.getDamages();
+            for (int i = 0; i < damages.size(); i++) {
+                // MANUAL applies the player's rolled total to the FIRST damage line; extra lines auto-roll.
+                Integer manualForLine = manual && i == 0 ? manualDamage : null;
+                SpellDamageSummary line = applySpellDamage(
+                        damages.get(i), target, saveAbilityCode, manualForLine, user, campaignId, battleId);
+                totalDamage += line.total();
+                if (line.modifier() != null && !"NONE".equals(line.modifier())) {
+                    modifier = line.modifier();
+                }
             }
         }
 
@@ -530,29 +559,39 @@ public class BattleService {
                 }
             }
         }
+        return new SpellDamageSummary(totalDamage, modifier);
     }
 
-    /** Roll + resolve one plan damage against a target, honouring save-for-half and resistances. */
-    private void applySpellDamage(FeatureExecutionPlan.Damage dmg, BattleCombatant target,
-            String saveAbilityCode, User user, UUID campaignId, UUID battleId) {
+    /**
+     * Roll (AUTO) or take the player's total (MANUAL) for one plan damage line, apply save-for-half and
+     * the target's resistance/immunity/vulnerability, then deal it. Returns the final damage + modifier.
+     */
+    private SpellDamageSummary applySpellDamage(FeatureExecutionPlan.Damage dmg, BattleCombatant target,
+            String saveAbilityCode, Integer manualDamage, User user, UUID campaignId, UUID battleId) {
         // Attack-roll spells need a spell-attack bonus the plan does not carry → GM adjudicates.
         if (dmg.isRequiresAttackHit()) {
             logSpellManual(battleId, campaignId, target, "attack_roll", user);
-            return;
+            return SpellDamageSummary.none();
         }
-        int rolled = 0;
-        if (dmg.getDiceExpression() != null && !dmg.getDiceExpression().isBlank()) {
-            rolled += diceRoller.rollDamage(dmg.getDiceExpression(), false);
+        int rolled;
+        if (manualDamage != null) {
+            // The player rolled the dice physically and entered the total (pre-save, pre-resistance).
+            rolled = Math.max(0, manualDamage);
+        } else {
+            rolled = 0;
+            if (dmg.getDiceExpression() != null && !dmg.getDiceExpression().isBlank()) {
+                rolled += diceRoller.rollDamage(dmg.getDiceExpression(), false);
+            }
+            if (dmg.getFlatAmount() != null) {
+                rolled += dmg.getFlatAmount();
+            }
+            rolled = Math.max(0, rolled);
         }
-        if (dmg.getFlatAmount() != null) {
-            rolled += dmg.getFlatAmount();
-        }
-        rolled = Math.max(0, rolled);
 
         if (dmg.isRequiresSave() && dmg.getSaveDc() != null) {
             if (saveAbilityCode == null) {
                 logSpellManual(battleId, campaignId, target, "unresolved_save", user);
-                return;
+                return SpellDamageSummary.none();
             }
             int d20 = diceRoller.rollD20();
             int saveBonus = resolveTargetSaveBonus(target, saveAbilityCode);
@@ -571,13 +610,14 @@ public class BattleService {
         }
 
         if (rolled <= 0) {
-            return;
+            return SpellDamageSummary.none();
         }
         DamageMitigationService.Mitigation mit = damageMitigationService.mitigate(target, rolled, dmg.getDamageTypeId());
         int finalDamage = mit.finalDamage();
         if (finalDamage > 0) {
             applyDamageOrHeal(target, -finalDamage, user, campaignId);
         }
+        return new SpellDamageSummary(finalDamage, mit.modifier().name());
     }
 
     private void logSpellManual(UUID battleId, UUID campaignId, BattleCombatant target, String reason, User user) {
