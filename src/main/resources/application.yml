@@ -103,16 +103,20 @@ app:
       virtual-host: ${APP_WEBSOCKET_RELAY_VIRTUAL_HOST:/}
   feature-rules:
     # Class-feature rules runtime (see docs/FEATURE_RULES_RUNTIME_ROADMAP.md).
-    # runtime-enabled is the master switch: when false (default) the app behaves exactly as before —
+    # runtime-enabled is the master switch: when false the app behaves exactly as before —
     # class feature descriptions are shown as text and no structured rule is executed. The per-subsystem
     # flags below only take effect when runtime-enabled is also true.
-    runtime-enabled: ${APP_FEATURE_RULES_RUNTIME_ENABLED:false}
+    # 2026-07-09: runtime + spells enabled by default so in-battle spell casting (Phase 2.1) works.
+    # ONLY spells are on — the other subsystems stay false, so nothing else changes behaviour.
+    # To turn spell casting OFF (e.g. in prod) set APP_FEATURE_RULES_SPELLS_ENABLED=false (or the
+    # master APP_FEATURE_RULES_RUNTIME_ENABLED=false).
+    runtime-enabled: ${APP_FEATURE_RULES_RUNTIME_ENABLED:true}
     resources-enabled: ${APP_FEATURE_RULES_RESOURCES_ENABLED:false}
     actions-enabled: ${APP_FEATURE_RULES_ACTIONS_ENABLED:false}
     effects-enabled: ${APP_FEATURE_RULES_EFFECTS_ENABLED:false}
     triggers-enabled: ${APP_FEATURE_RULES_TRIGGERS_ENABLED:false}
     forms-enabled: ${APP_FEATURE_RULES_FORMS_ENABLED:false}
-    spells-enabled: ${APP_FEATURE_RULES_SPELLS_ENABLED:false}
+    spells-enabled: ${APP_FEATURE_RULES_SPELLS_ENABLED:true}
 
 management:
   endpoints:

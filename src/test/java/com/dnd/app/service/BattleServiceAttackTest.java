@@ -71,7 +71,8 @@ class BattleServiceAttackTest {
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
-                battleLogService);
+                battleLogService,
+                org.mockito.Mockito.mock(SpellCastService.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -151,7 +152,8 @@ class BattleServiceAttackTest {
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
-                battleLogService);
+                battleLogService,
+                org.mockito.Mockito.mock(SpellCastService.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

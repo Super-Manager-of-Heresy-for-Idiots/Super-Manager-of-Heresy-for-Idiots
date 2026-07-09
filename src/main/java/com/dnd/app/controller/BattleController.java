@@ -7,9 +7,11 @@ import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
+import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
+import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
@@ -317,6 +319,18 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.stabilize(campaignId, battleId, combatantId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Stabilized"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/cast-spell")
+    @Operation(summary = "Cast a spell on the caster's turn via the feature-rules runtime (Phase 2.1)")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellCastResult>>> castSpell(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody BattleCastSpellRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            SpellCastResult data = battleService.castSpell(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Spell cast"));
         }, controllerTaskExecutor);
     }
 

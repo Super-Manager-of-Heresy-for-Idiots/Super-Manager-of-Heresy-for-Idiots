@@ -16,6 +16,7 @@ import com.dnd.app.dto.request.ApplyConditionRequest;
 import com.dnd.app.dto.request.AdjustActionEconomyRequest;
 import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
+import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
@@ -23,6 +24,8 @@ import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
+import com.dnd.app.dto.featurerule.SpellCastRequest;
+import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
@@ -94,6 +97,7 @@ public class BattleService {
     private final DamageMitigationService damageMitigationService;
     private final ConditionService conditionService;
     private final BattleLogService battleLogService;
+    private final SpellCastService spellCastService;
 
     // ================================ Lifecycle ================================
 
@@ -408,6 +412,73 @@ public class BattleService {
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
                 Map.of("battleId", battleId), user.getId());
         return toResponse(battle, combatants);
+    }
+
+    /**
+     * Cast a spell inside the battle flow (Phase 2.1). Validates it is the caster's turn and that the
+     * caller controls them, then delegates to the SINGLE cast path — {@link SpellCastService#cast}
+     * (which spends the action via the unified economy with {@code combatId=battleId}, spends the
+     * slot, runs the shared feature-rules engine and publishes {@code spell_cast}) — and records a
+     * {@code SPELL} battle-log entry. Returns the cast result (incl. the execution plan: dice / DC /
+     * save ability). Gated by {@code app.feature-rules.*}: throws when the runtime is disabled.
+     *
+     * <p>Effects apply to a character effect-target (self/ally); spell DAMAGE to monster combatants
+     * (the plan → resolve → {@code applyDamageOrHeal} bridge reusing 0.4/0.5) is a follow-up (2.1b).
+     * Monster spellcasters are out of scope here.
+     */
+    @Transactional
+    public SpellCastResult castSpell(UUID campaignId, UUID battleId, BattleCastSpellRequest request, String username) {
+        User user = getUser(username);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Spells can only be cast in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        BattleCombatant caster = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        enforceControls(campaignId, user, caster);
+        if (caster.getType() != CombatantType.CHARACTER || caster.getCharacter() == null) {
+            throw new BadRequestException("Only characters can cast spells in battle");
+        }
+        PlayerCharacter casterChar = caster.getCharacter();
+
+        // A character target maps to its sheet; a monster target has no sheet here, so effects fall
+        // back to the caster (damage-to-monster is 2.1b). Validate the target is in this battle.
+        PlayerCharacter effectTarget = casterChar;
+        UUID targetCombatantId = request.getTargetCombatantId();
+        if (targetCombatantId != null) {
+            BattleCombatant target = combatants.stream()
+                    .filter(c -> c.getId().equals(targetCombatantId))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Target does not belong to this battle"));
+            if (target.getType() == CombatantType.CHARACTER && target.getCharacter() != null) {
+                effectTarget = target.getCharacter();
+            }
+        }
+
+        SpellCastRequest scReq = SpellCastRequest.builder()
+                .combatId(battleId)
+                .slotLevel(request.getSlotLevel())
+                .targetCharacterId(effectTarget != casterChar ? effectTarget.getId() : null)
+                .build();
+        SpellCastResult result = spellCastService.cast(casterChar, request.getSpellId(), scReq, effectTarget);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("spellName", result.getSpellName());
+        if (result.getSlotLevelUsed() != null) {
+            payload.put("slotLevel", result.getSlotLevelUsed());
+        }
+        if (result.getActionType() != null) {
+            payload.put("actionType", result.getActionType());
+        }
+        payload.put("effectsApplied", result.getEffectsApplied());
+        if (targetCombatantId != null) {
+            payload.put("targetCombatantId", targetCombatantId.toString());
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.SPELL, caster.getId(), targetCombatantId,
+                payload, BattleLogVisibility.PUBLIC, user.getId());
+
+        log.info("Spell cast in battle: battleId={}, caster={}, spell={}, by={}",
+                battleId, caster.getDisplayName(), result.getSpellName(), username);
+        return result;
     }
 
     private PlayerCharacter requireDyingCharacter(BattleCombatant combatant) {
