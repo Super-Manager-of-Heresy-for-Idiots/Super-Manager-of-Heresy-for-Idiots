@@ -25,6 +25,17 @@ public class BattleCastSpellRequest {
 
     private UUID targetCombatantId;
 
+    /**
+     * AoE cast (Phase 2.3): every combatant covered by the template (from map's aoe-targets).
+     * When present it wins over {@code targetCombatantId}; each target saves individually.
+     */
+    private java.util.List<UUID> targetCombatantIds;
+
+    /** AoE template placement in grid cells (origin per AoeGeometry conventions) + rotation. */
+    private Integer originX;
+    private Integer originY;
+    private Double rotationDeg;
+
     @Min(value = 0, message = "slotLevel must be 0-9")
     private Integer slotLevel;
 

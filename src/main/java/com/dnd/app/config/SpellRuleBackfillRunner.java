@@ -1,6 +1,7 @@
 package com.dnd.app.config;
 
 import com.dnd.app.dto.featurerule.SpellRuleBackfillResult;
+import com.dnd.app.service.SpellAreaBackfillService;
 import com.dnd.app.service.SpellRuleBackfillService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class SpellRuleBackfillRunner implements ApplicationRunner {
 
     private final FeatureRulesProperties flags;
     private final SpellRuleBackfillService spellRuleBackfillService;
+    private final SpellAreaBackfillService spellAreaBackfillService;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -44,6 +46,13 @@ public class SpellRuleBackfillRunner implements ApplicationRunner {
                     result.getSpellsTotal(), System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.error("Spell rule backfill on startup failed (spell casting may fall back to empty plans): {}",
+                    e.getMessage(), e);
+        }
+        try {
+            int areaUpdated = spellAreaBackfillService.backfill();
+            log.info("Spell area/zone backfill on startup: {} spells updated (idempotent)", areaUpdated);
+        } catch (Exception e) {
+            log.error("Spell area/zone backfill on startup failed (AoE templates unavailable): {}",
                     e.getMessage(), e);
         }
     }

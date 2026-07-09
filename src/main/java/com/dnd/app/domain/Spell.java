@@ -105,6 +105,30 @@ public class Spell {
     @Column(name = "warning_reason", columnDefinition = "text")
     private String warningReason;
 
+    // ---- Structured area-of-effect / lingering zone (Phase 2.3, changeset 091) ------------
+    // Populated by SpellAreaBackfillService parsing the RU description; admin-editable afterwards.
+
+    /** SPHERE / CUBE / CONE / CYLINDER / LINE; null = the spell has no area of effect. */
+    @Column(name = "area_shape", columnDefinition = "text")
+    private String areaShape;
+
+    /** The shape's size in feet: sphere/cylinder radius, cube edge, cone/line length. */
+    @Column(name = "area_size_ft")
+    private Integer areaSizeFt;
+
+    /** DIFFICULT when the lingering zone is difficult terrain (Web); null = none. */
+    @Column(name = "zone_terrain", columnDefinition = "text")
+    private String zoneTerrain;
+
+    /** LIGHT / HEAVY when the zone obscures its area (Web = LIGHT); null = none. */
+    @Column(name = "zone_obscurement", columnDefinition = "text")
+    private String zoneObscurement;
+
+    /** True when the spell leaves a zone for its duration (Web); false = instant burst (Fireball). */
+    @Column(name = "zone_persists", nullable = false)
+    @Builder.Default
+    private Boolean zonePersists = false;
+
     @Column(columnDefinition = "text")
     private String description;
 

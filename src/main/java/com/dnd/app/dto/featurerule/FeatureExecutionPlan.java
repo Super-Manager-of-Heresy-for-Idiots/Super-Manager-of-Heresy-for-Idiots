@@ -26,6 +26,10 @@ public class FeatureExecutionPlan {
     private List<Healing> healings;
     private List<Resolution> resolutions;
     private List<Attack> attacks;
+    /** Area of effect (Phase 2.3); null when the feature/spell has none. Static content data. */
+    private Area area;
+    /** Lingering zone the cast leaves on the map (Web); null when instant (Fireball). */
+    private Zone zone;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class Damage {
@@ -57,5 +61,20 @@ public class FeatureExecutionPlan {
     public static class Attack {
         private String attackKind;
         private Integer extraAttackCount;
+    }
+
+    /** AoE template: SPHERE/CUBE/CONE/CYLINDER/LINE + size in feet (radius / edge / length). */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class Area {
+        private String shape;
+        private Integer sizeFt;
+    }
+
+    /** Lingering zone properties: difficult terrain and/or obscurement for the spell's duration. */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class Zone {
+        private String terrain;
+        private String obscurement;
+        private boolean persists;
     }
 }

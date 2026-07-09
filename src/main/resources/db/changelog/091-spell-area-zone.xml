@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Structured area-of-effect and lingering-zone data for spells (Phase 2.3). Mirrors the 056/057
+      pattern: nullable columns on `spell`, populated idempotently by a RU-description parser backfill
+      (SpellAreaBackfillService), admin-editable afterwards.
+        area_shape:       SPHERE / CUBE / CONE / CYLINDER / LINE; null = the spell has no area.
+        area_size_ft:     the shape's size in feet (sphere/cylinder radius, cube edge, cone/line length).
+        zone_terrain:     DIFFICULT when the lingering zone is difficult terrain (Web); null = none.
+        zone_obscurement: LIGHT / HEAVY when the zone obscures the area (Web = LIGHT, Fog Cloud = HEAVY).
+        zone_persists:    true when the spell leaves a zone for its duration (Web); false = instant (Fireball).
+    -->
+    <changeSet id="091-spell-area-zone" author="claude">
+        <addColumn tableName="spell">
+            <column name="area_shape" type="text"/>
+            <column name="area_size_ft" type="int"/>
+            <column name="zone_terrain" type="text"/>
+            <column name="zone_obscurement" type="text"/>
+            <column name="zone_persists" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

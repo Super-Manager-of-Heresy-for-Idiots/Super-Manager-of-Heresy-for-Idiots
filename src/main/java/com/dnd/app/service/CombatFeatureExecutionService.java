@@ -82,7 +82,23 @@ public class CombatFeatureExecutionService {
     public FeatureExecutionPlan planForSpell(PlayerCharacter actor, Spell spell, Integer slotLevel) {
         List<FeatureRule> rules =
                 resolver.approvedEnabledRules(FeatureRuleOwnerType.SPELL, List.of(spell.getId()));
-        return planForRules(actor, spell.getId(), spell.getNameRu(), rules, slotLevel);
+        FeatureExecutionPlan plan = planForRules(actor, spell.getId(), spell.getNameRu(), rules, slotLevel);
+        // AoE template + lingering zone (Phase 2.3): static content data from the spell's structured
+        // columns (091) — per-actor numbers stay rule-driven above; this is not a second damage path.
+        if (spell.getAreaShape() != null) {
+            plan.setArea(FeatureExecutionPlan.Area.builder()
+                    .shape(spell.getAreaShape())
+                    .sizeFt(spell.getAreaSizeFt())
+                    .build());
+        }
+        if (Boolean.TRUE.equals(spell.getZonePersists())) {
+            plan.setZone(FeatureExecutionPlan.Zone.builder()
+                    .terrain(spell.getZoneTerrain())
+                    .obscurement(spell.getZoneObscurement())
+                    .persists(true)
+                    .build());
+        }
+        return plan;
     }
 
     private FeatureExecutionPlan planForRules(PlayerCharacter actor, UUID ownerId, String displayName,

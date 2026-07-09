@@ -103,6 +103,7 @@ public class BattleService {
     private final SpellCastService spellCastService;
     private final StatTypeRepository statTypeRepository;
     private final FeatureEffectService featureEffectService;
+    private final com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
 
     // ================================ Lifecycle ================================
 
@@ -484,12 +485,52 @@ public class BattleService {
 
         // 2.1b/2.1c: resolve the plan's damage/healing onto combatants (incl. monsters) through the
         // shared save/mitigation/HP pipeline. AUTO rolls the dice; MANUAL uses the player's total.
-        // Reads SPELL → SAVE → DAMAGE in the log; the dealt damage is echoed back to the caster.
-        SpellDamageSummary dmg = applySpellPlanOutcome(result.getPlan(), targetCombatantId, caster, user,
-                campaignId, battleId, request.getDamageRollMode(), request.getManualDamage());
-        if (dmg.applied()) {
-            result.setAppliedDamage(dmg.total());
-            result.setAppliedDamageModifier(dmg.modifier());
+        // AoE (2.3): with targetCombatantIds each covered combatant resolves individually (own save,
+        // own resistance) against the same rolled/entered total. Reads SPELL → SAVE → DAMAGE in the log.
+        List<UUID> aoeTargets = request.getTargetCombatantIds();
+        if (aoeTargets != null && !aoeTargets.isEmpty()) {
+            int total = 0;
+            String modifier = null;
+            for (UUID aoeTarget : aoeTargets) {
+                boolean inBattle = combatants.stream().anyMatch(c -> c.getId().equals(aoeTarget));
+                if (!inBattle) {
+                    throw new BadRequestException("AoE target does not belong to this battle: " + aoeTarget);
+                }
+                SpellDamageSummary one = applySpellPlanOutcome(result.getPlan(), aoeTarget, caster, user,
+                        campaignId, battleId, request.getDamageRollMode(), request.getManualDamage());
+                total += one.total();
+                if (one.modifier() != null) {
+                    modifier = one.modifier();
+                }
+            }
+            if (total > 0) {
+                result.setAppliedDamage(total);
+                result.setAppliedDamageModifier(modifier);
+            }
+        } else {
+            SpellDamageSummary dmg = applySpellPlanOutcome(result.getPlan(), targetCombatantId, caster, user,
+                    campaignId, battleId, request.getDamageRollMode(), request.getManualDamage());
+            if (dmg.applied()) {
+                result.setAppliedDamage(dmg.total());
+                result.setAppliedDamageModifier(dmg.modifier());
+            }
+        }
+
+        // 2.3: a lingering zone (Web) materializes on the battle's live map sessions — best-effort,
+        // after commit semantics are relaxed (the cast never depends on map-service being up).
+        FeatureExecutionPlan plan = result.getPlan();
+        if (plan != null && plan.getZone() != null && plan.getZone().isPersists()
+                && plan.getArea() != null && request.getOriginX() != null && request.getOriginY() != null) {
+            mapZoneCreator.createZoneForBattle(battleId, new com.dnd.app.integration.map.MapZoneCreator.ZoneSpec(
+                    plan.getArea().getShape(),
+                    request.getOriginX(),
+                    request.getOriginY(),
+                    plan.getArea().getSizeFt() != null ? plan.getArea().getSizeFt() : 0,
+                    request.getRotationDeg() != null ? request.getRotationDeg() : 0,
+                    result.getSpellName(),
+                    plan.getZone().getTerrain(),
+                    plan.getZone().getObscurement(),
+                    caster.getId()));
         }
 
         log.info("Spell cast in battle: battleId={}, caster={}, spell={}, by={}",
