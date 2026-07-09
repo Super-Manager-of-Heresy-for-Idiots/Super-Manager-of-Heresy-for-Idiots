@@ -54,6 +54,19 @@ public class SpellSlotController {
                 controllerTaskExecutor);
     }
 
+    @PostMapping("/api/characters/{characterId}/spell-slots/{spellLevel}/restore")
+    @Operation(summary = "Restore one expended spell slot of the given level (GM granular adjust)")
+    public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> restoreOne(
+            @PathVariable UUID characterId,
+            @PathVariable int spellLevel,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                spellSlotService.restoreOne(characterId, auth.getName(), spellLevel),
+                                "Ячейка заклинания восстановлена")),
+                controllerTaskExecutor);
+    }
+
     @PostMapping("/api/characters/{characterId}/spell-slots/restore-all")
     @Operation(summary = "Restore all expended spell slots (long rest)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> restoreAll(

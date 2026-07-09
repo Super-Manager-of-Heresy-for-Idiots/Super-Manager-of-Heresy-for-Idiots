@@ -121,6 +121,25 @@ public class SpellSlotService {
         return buildResponse(characterId);
     }
 
+    /**
+     * Restore one expended slot of the given level (GM granular adjust / partial recovery). No-op
+     * when nothing of that level is spent. Owner/GM/ADMIN, same authorization as spending.
+     */
+    @Transactional
+    public SpellSlotsResponse restoreOne(UUID characterId, String username, int spellLevel) {
+        loadAndAuthorize(characterId, username, true);
+        if (spellLevel < 1 || spellLevel > MAX_SPELL_LEVEL) {
+            throw new BadRequestException("Уровень ячейки должен быть от 1 до 9");
+        }
+        usageRepository.findByCharacterIdAndSpellLevel(characterId, spellLevel).ifPresent(usage -> {
+            if (usage.getExpendedCount() > 0) {
+                usage.setExpendedCount(usage.getExpendedCount() - 1);
+                usageRepository.save(usage);
+            }
+        });
+        return buildResponse(characterId);
+    }
+
     @Transactional
     public SpellSlotsResponse restoreHalf(UUID characterId, String username) {
         loadAndAuthorize(characterId, username, true);
