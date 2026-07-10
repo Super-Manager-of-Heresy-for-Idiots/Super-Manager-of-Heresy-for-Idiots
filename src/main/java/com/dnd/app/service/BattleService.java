@@ -2,6 +2,7 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.AttackRollMode;
+import com.dnd.app.domain.enums.CoverType;
 import com.dnd.app.domain.enums.BattleLogType;
 import com.dnd.app.domain.enums.BattleLogVisibility;
 import com.dnd.app.domain.enums.BattleStatus;
@@ -1372,6 +1373,17 @@ public class BattleService {
                     + range.distanceFt() + " ft; " + rangeLabel(attack) + ")");
         }
 
+        // Cover (Phase 2.6): manual selection. TOTAL cover cannot be targeted; HALF/THREE_QUARTERS
+        // raise the target's AC (attack roll) and its Dexterity saving throw (save-based attacks).
+        CoverType cover = request.getCover() != null ? request.getCover() : CoverType.NONE;
+        if (cover == CoverType.TOTAL) {
+            throw new BadRequestException("Target has total cover and cannot be targeted directly");
+        }
+        int coverBonus = cover.bonus();
+        boolean coverAppliesToSave = coverBonus > 0
+                && attack.saveAbilityCode() != null
+                && "DEXTERITY".equalsIgnoreCase(attack.saveAbilityCode());
+
         // Feature-effect bonuses for a character attacker (to-hit and damage); 0 for monsters and when
         // no active effect contributes — additive, so existing behaviour is unchanged without them.
         int attackRollBonus = 0;
@@ -1405,7 +1417,8 @@ public class BattleService {
             rollMode = request.getSaveRollMode() != null ? request.getSaveRollMode() : AttackRollMode.NORMAL;
             roll = resolveRoll("save", rollMode, request.getSaveD20(), request.getSaveD20A(), request.getSaveD20B());
             effectiveD20 = roll.effectiveD20();
-            int saveBonus = resolveTargetSaveBonus(target, attack.saveAbilityCode());
+            int saveBonus = resolveTargetSaveBonus(target, attack.saveAbilityCode())
+                    + (coverAppliesToSave ? coverBonus : 0);
             AttackResolver.SaveOutcome save = AttackResolver.resolveSave(effectiveD20, saveBonus, attack.saveDc());
             int rolled = Math.max(0, diceRoller.rollDamage(attack.damage(), false) + damageBonus);
             damage = save == AttackResolver.SaveOutcome.SUCCESS ? rolled / 2 : rolled;
@@ -1436,7 +1449,7 @@ public class BattleService {
                 roll = resolveAttackRoll(request);
             }
             effectiveD20 = roll.effectiveD20();
-            targetAc = resolveTargetAc(target);
+            targetAc = resolveTargetAc(target) + coverBonus;
             int effectiveAttackBonus = attack.attackBonus() + attackRollBonus;
             AttackResolver.Outcome outcome = AttackResolver.resolve(effectiveD20, effectiveAttackBonus, targetAc);
             if (outcome.dealsDamage()) {
@@ -1489,6 +1502,9 @@ public class BattleService {
         }
         if (attack.damageType() != null) {
             attackLog.put("damageType", attack.damageType());
+        }
+        if (cover != CoverType.NONE) {
+            attackLog.put("cover", cover.name());
         }
         if (range.checked()) {
             attackLog.put("distanceFt", range.distanceFt());
@@ -1560,6 +1576,7 @@ public class BattleService {
                 .damage(damage)
                 .damageType(attack.damageType())
                 .damageModifier(damageModifierOut)
+                .cover(cover != CoverType.NONE ? cover.name() : null)
                 .distanceFt(range.distanceFt())
                 .rangeNote(range.checked() ? range.note() : null)
                 .targetCurrentHp(target.getCurrentHp())

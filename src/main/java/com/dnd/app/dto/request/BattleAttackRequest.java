@@ -1,6 +1,7 @@
 package com.dnd.app.dto.request;
 
 import com.dnd.app.domain.enums.AttackRollMode;
+import com.dnd.app.domain.enums.CoverType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -97,4 +98,11 @@ public class BattleAttackRequest {
 
     /** GM bypass of the range gate and any range-derived disadvantage (recorded in the log). */
     private Boolean gmOverrideRange;
+
+    // ---- Cover (Phase 2.6) ----------------------------------------------------------------------
+    /**
+     * The target's cover, chosen manually by the attacker. HALF/THREE_QUARTERS raise the target's AC
+     * (and Dexterity saving throws) by +2/+5; TOTAL rejects the attack (cannot be targeted). Null → NONE.
+     */
+    private CoverType cover;
 }

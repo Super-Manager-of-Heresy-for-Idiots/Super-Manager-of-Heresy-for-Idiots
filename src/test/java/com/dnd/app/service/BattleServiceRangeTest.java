@@ -221,4 +221,42 @@ class BattleServiceRangeTest {
         assertNull(r.getRangeNote());
         assertNull(r.getDistanceFt());
     }
+
+    // ---- Cover (Phase 2.6) — target character AC 12, bite bonus +5 --------------------------------
+
+    @Test
+    @DisplayName("Без укрытия: 8+5=13 против AC 12 — попадание")
+    void noCover_hitsAt12() {
+        BattleActionResultResponse r = attack(melee().d20(8).build());
+        assertEquals("HIT", r.getOutcome());
+        assertEquals(12, r.getTargetAc());
+        assertNull(r.getCover());
+    }
+
+    @Test
+    @DisplayName("Половинное укрытие (+2): AC 14, тот же бросок 13 — промах")
+    void halfCover_raisesAcToMiss() {
+        BattleActionResultResponse r = attack(melee().d20(8)
+                .cover(com.dnd.app.domain.enums.CoverType.HALF).build());
+        assertEquals("MISS", r.getOutcome());
+        assertEquals(14, r.getTargetAc());
+        assertEquals("HALF", r.getCover());
+    }
+
+    @Test
+    @DisplayName("Укрытие на ¾ (+5): AC 17")
+    void threeQuartersCover_raisesAcBy5() {
+        BattleActionResultResponse r = attack(melee().d20(8)
+                .cover(com.dnd.app.domain.enums.CoverType.THREE_QUARTERS).build());
+        assertEquals(17, r.getTargetAc());
+        assertEquals("THREE_QUARTERS", r.getCover());
+    }
+
+    @Test
+    @DisplayName("Полное укрытие: атака отклоняется")
+    void totalCover_rejected() {
+        BattleAttackRequest req = melee().d20(8)
+                .cover(com.dnd.app.domain.enums.CoverType.TOTAL).build();
+        assertThrows(BadRequestException.class, () -> attack(req));
+    }
 }
