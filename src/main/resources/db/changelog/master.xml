@@ -140,5 +140,6 @@
     <include file="db/changelog/089-battle-log.xml"/>
     <include file="db/changelog/090-battle-concentration-check.xml"/>
     <include file="db/changelog/091-spell-area-zone.xml"/>
+    <include file="db/changelog/092-battle-standard-actions.xml"/>
 
 </databaseChangeLog>

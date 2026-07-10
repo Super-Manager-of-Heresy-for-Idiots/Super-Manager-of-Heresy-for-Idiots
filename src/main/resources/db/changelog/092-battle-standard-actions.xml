@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Standard-action turn state (Phase 2.7): Dash / Dodge / Disengage / Help / Hide. Each is a
+      normal action spent through the action economy; its effect is a turn-scoped flag on the
+      combatant. All but `hidden` are cleared at the start of the combatant's next turn (they last
+      "until the start of your next turn"). `help_advantage` is set on the ALLY that was Helped and
+      is consumed by that ally's next attack.
+    -->
+    <changeSet id="092-battle-standard-actions" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="dashing" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dodging" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="disengaged" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hidden" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="help_advantage" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

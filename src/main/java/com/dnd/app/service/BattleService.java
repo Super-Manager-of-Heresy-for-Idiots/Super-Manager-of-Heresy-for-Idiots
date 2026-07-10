@@ -2,6 +2,7 @@ package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
 import com.dnd.app.domain.enums.AttackRollMode;
+import com.dnd.app.domain.enums.ContestType;
 import com.dnd.app.domain.enums.CoverType;
 import com.dnd.app.domain.enums.BattleLogType;
 import com.dnd.app.domain.enums.BattleLogVisibility;
@@ -24,7 +25,9 @@ import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
+import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
+import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.SpellCastRequest;
@@ -1340,15 +1343,34 @@ public class BattleService {
         if (combatants.isEmpty()) {
             throw new BadRequestException("Battle has no combatants");
         }
-        BattleCombatant attacker = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
-        enforceControls(campaignId, user, attacker);
-
-        // Lock the attacker row and reject a second action this turn: one action per turn is modelled,
-        // multi-attack is not, so a duplicate/racing attack must not spend the action again.
-        attacker = combatantRepository.findByIdForUpdate(attacker.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
-        if (attacker.getActionSpent() >= attacker.getActionMax()) {
-            throw new BadRequestException("The action has already been used this turn");
+        // An opportunity attack (or any reaction strike, Phase 2.8) is made out of turn by a named
+        // combatant and spends its reaction; a normal attack is made by the active combatant and
+        // spends its action. Both go through this one server-authoritative path (A3 — no side door).
+        boolean reaction = Boolean.TRUE.equals(request.getReaction());
+        BattleCombatant attacker;
+        if (reaction) {
+            if (request.getAttackerCombatantId() == null) {
+                throw new BadRequestException("A reaction attack requires the attacker combatant id");
+            }
+            attacker = combatantRepository.findByIdForUpdate(request.getAttackerCombatantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
+            if (!attacker.getBattle().getId().equals(battleId)) {
+                throw new BadRequestException("Attacker does not belong to this battle");
+            }
+            enforceControls(campaignId, user, attacker);
+            if (Boolean.TRUE.equals(attacker.getReactionUsed())) {
+                throw new BadRequestException("The reaction has already been used this turn");
+            }
+        } else {
+            attacker = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+            enforceControls(campaignId, user, attacker);
+            // Lock the attacker row and reject a second action this turn: one action per turn is modelled,
+            // multi-attack is not, so a duplicate/racing attack must not spend the action again.
+            attacker = combatantRepository.findByIdForUpdate(attacker.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
+            if (attacker.getActionSpent() >= attacker.getActionMax()) {
+                throw new BadRequestException("The action has already been used this turn");
+            }
         }
 
         // Lock the target row before its HP changes (matters for monster targets, whose HP lives
@@ -1410,12 +1432,29 @@ public class BattleService {
         AttackRollMode rollMode;
         int effectiveD20;
 
+        // Standard-action modifiers (Phase 2.7). Attacking from hiding or with an ally's Help grants
+        // advantage; a dodging target imposes disadvantage and gets advantage on its own Dex saves.
+        // These combine with the range penalty and cancel per 5e (any advantage + any disadvantage = normal).
+        boolean attackerAdvantage = Boolean.TRUE.equals(attacker.getHidden())
+                || Boolean.TRUE.equals(attacker.getHelpAdvantage());
+        boolean targetDodging = Boolean.TRUE.equals(target.getDodging());
+
         if (attack.saveDc() != null) {
             // Save-based attack (e.g. a monster's breath weapon): the TARGET rolls a saving throw with
             // its own bonus (ability modifier + proficiency/statblock save + active effects) against the
             // DC — the attacker makes no attack roll. Success halves the damage, failure takes it full.
-            rollMode = request.getSaveRollMode() != null ? request.getSaveRollMode() : AttackRollMode.NORMAL;
-            roll = resolveRoll("save", rollMode, request.getSaveD20(), request.getSaveD20A(), request.getSaveD20B());
+            AttackRollMode requestedSaveMode = request.getSaveRollMode() != null
+                    ? request.getSaveRollMode() : AttackRollMode.NORMAL;
+            boolean saveAdvFromDodge = targetDodging
+                    && "DEXTERITY".equalsIgnoreCase(attack.saveAbilityCode());
+            if (saveAdvFromDodge && requestedSaveMode != AttackRollMode.ADVANTAGE) {
+                // Dodging grants advantage on Dexterity saves — the server rolls it (Phase 2.7).
+                rollMode = AttackRollMode.ADVANTAGE;
+                roll = resolveRoll("save", AttackRollMode.ADVANTAGE, null, null, null);
+            } else {
+                rollMode = requestedSaveMode;
+                roll = resolveRoll("save", rollMode, request.getSaveD20(), request.getSaveD20A(), request.getSaveD20B());
+            }
             effectiveD20 = roll.effectiveD20();
             int saveBonus = resolveTargetSaveBonus(target, attack.saveAbilityCode())
                     + (coverAppliesToSave ? coverBonus : 0);
@@ -1433,17 +1472,21 @@ public class BattleService {
             saveRollModeOut = rollMode.name();
         } else {
             AttackRollMode requestedMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
-            if (range.forcedDisadvantage() && !gmOverrideRange) {
-                // Long range or shooting into a melee threat: the server enforces disadvantage. If the
-                // client already sent a DISADVANTAGE pair (its FE knew the range), keep their dice;
-                // otherwise the server rolls the disadvantage virtually (any lone/advantage die is not
-                // trusted to reflect the range-derived penalty).
-                rollMode = AttackRollMode.DISADVANTAGE;
-                boolean clientDisadvPair = requestedMode == AttackRollMode.DISADVANTAGE
+            // Combine every automatic source: advantage (hidden/help) vs disadvantage (range/dodge).
+            // Per 5e any advantage and any disadvantage cancel to normal, regardless of count.
+            boolean autoDisadvantage = (range.forcedDisadvantage() && !gmOverrideRange) || targetDodging;
+            AttackRollMode autoMode = attackerAdvantage == autoDisadvantage ? null
+                    : (attackerAdvantage ? AttackRollMode.ADVANTAGE : AttackRollMode.DISADVANTAGE);
+            if (autoMode != null) {
+                // The server enforces the automatic mode. It keeps the client's dice only if they
+                // already match the enforced mode (its FE knew the state); otherwise it rolls virtually,
+                // since a lone/opposite die is not trusted to reflect the enforced advantage/disadvantage.
+                rollMode = autoMode;
+                boolean clientPair = requestedMode == autoMode
                         && request.getD20A() != null && request.getD20B() != null;
-                roll = clientDisadvPair
-                        ? resolveRoll("attack", AttackRollMode.DISADVANTAGE, null, request.getD20A(), request.getD20B())
-                        : resolveRoll("attack", AttackRollMode.DISADVANTAGE, null, null, null);
+                roll = clientPair
+                        ? resolveRoll("attack", autoMode, null, request.getD20A(), request.getD20B())
+                        : resolveRoll("attack", autoMode, null, null, null);
             } else {
                 rollMode = requestedMode;
                 roll = resolveAttackRoll(request);
@@ -1472,6 +1515,19 @@ public class BattleService {
         attackLog.put("attackName", attack.name());
         attackLog.put("outcome", outcomeName);
         attackLog.put("rollMode", rollMode.name());
+        if (reaction) {
+            attackLog.put("reaction", true);
+        }
+        // Standard-action modifiers that shaped this roll (Phase 2.7), for the log narrative.
+        if (Boolean.TRUE.equals(attacker.getHidden())) {
+            attackLog.put("fromHiding", true);
+        }
+        if (Boolean.TRUE.equals(attacker.getHelpAdvantage())) {
+            attackLog.put("helped", true);
+        }
+        if (targetDodging) {
+            attackLog.put("targetDodging", true);
+        }
         if (roll.d20A() != null) {
             attackLog.put("d20A", roll.d20A());
         }
@@ -1523,7 +1579,16 @@ public class BattleService {
             applyDamageOrHeal(target, -damage, user, campaignId);
         }
 
-        attacker.setActionSpent(attacker.getActionSpent() + 1);
+        // Consume the attacker's one-shot advantage sources (Phase 2.7): attacking reveals a hidden
+        // combatant, and an ally's Help is spent on this attack. Persisted by the save below.
+        attacker.setHidden(false);
+        attacker.setHelpAdvantage(false);
+        // Spend the reaction for an opportunity/reaction attack, otherwise the action (Phase 2.8).
+        if (reaction) {
+            attacker.setReactionUsed(true);
+        } else {
+            attacker.setActionSpent(attacker.getActionSpent() + 1);
+        }
         combatantRepository.save(attacker);
 
         boolean down = target.getCurrentHp() != null && target.getCurrentHp() <= 0;
@@ -1770,6 +1835,234 @@ public class BattleService {
         log.info("Action economy spent: battleId={}, combatant={}, slot={}, by={}",
                 battleId, combatant.getDisplayName(), slot, username);
         return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
+    private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
+        switch (slot) {
+            case ACTION -> {
+                if (combatant.getActionSpent() >= combatant.getActionMax()) {
+                    throw new BadRequestException("The action has already been used this turn");
+                }
+                combatant.setActionSpent(combatant.getActionSpent() + 1);
+            }
+            case BONUS_ACTION -> {
+                if (combatant.getBonusActionSpent() >= combatant.getBonusActionMax()) {
+                    throw new BadRequestException("The bonus action has already been used this turn");
+                }
+                combatant.setBonusActionSpent(combatant.getBonusActionSpent() + 1);
+            }
+            case LEGENDARY_ACTION -> {
+                if (combatant.getLegendaryActionSpent() >= combatant.getLegendaryActionMax()) {
+                    throw new BadRequestException("No legendary actions remain this turn");
+                }
+                combatant.setLegendaryActionSpent(combatant.getLegendaryActionSpent() + 1);
+            }
+            case REACTION -> {
+                if (Boolean.TRUE.equals(combatant.getReactionUsed())) {
+                    throw new BadRequestException("The reaction has already been used this turn");
+                }
+                combatant.setReactionUsed(true);
+            }
+        }
+    }
+
+    /**
+     * A combatant takes a standard action (Dash / Dodge / Disengage / Help / Hide) on its own turn.
+     * The action economy is spent through the chosen slot; the effect is a turn-scoped state that the
+     * attack resolver and movement budget read (Phase 2.7). HELP flags an ally's next attack with
+     * advantage; HIDE resolves a Stealth check (manual or server-rolled) against an optional DC.
+     */
+    @Transactional
+    public BattleResponse standardAction(UUID campaignId, UUID battleId, UUID combatantId,
+                                         StandardActionRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Standard actions can only be taken in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+
+        BattleCombatant active = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        if (!active.getId().equals(combatant.getId())) {
+            throw new BadRequestException("A standard action can only be taken on the combatant's own turn");
+        }
+
+        SpendActionRequest.Slot slot = request.getSlot() != null ? request.getSlot() : SpendActionRequest.Slot.ACTION;
+        if (slot != SpendActionRequest.Slot.ACTION && slot != SpendActionRequest.Slot.BONUS_ACTION) {
+            throw new BadRequestException("A standard action uses an action or a bonus action");
+        }
+        spendSlot(combatant, slot);
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("action", request.getType().name());
+        logData.put("actor", combatant.getDisplayName());
+        logData.put("slot", slot.name());
+        UUID logTargetId = null;
+
+        switch (request.getType()) {
+            case DASH -> {
+                combatant.setDashing(true);
+                logData.put("movementBudgetFt", baseSpeedFt(combatant) * 2);
+            }
+            case DODGE -> combatant.setDodging(true);
+            case DISENGAGE -> combatant.setDisengaged(true);
+            case HELP -> {
+                if (request.getTargetCombatantId() == null) {
+                    throw new BadRequestException("Help requires a target ally");
+                }
+                if (request.getTargetCombatantId().equals(combatant.getId())) {
+                    throw new BadRequestException("A combatant cannot Help itself");
+                }
+                BattleCombatant ally = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Help target not found"));
+                if (!ally.getBattle().getId().equals(battleId)) {
+                    throw new BadRequestException("Help target does not belong to this battle");
+                }
+                ally.setHelpAdvantage(true);
+                combatantRepository.save(ally);
+                logTargetId = ally.getId();
+                logData.put("target", ally.getDisplayName());
+            }
+            case HIDE -> {
+                int bonus = nz(request.getStealthBonus());
+                int d20 = request.getStealthD20() != null ? request.getStealthD20() : diceRoller.rollD20();
+                int total = d20 + bonus;
+                boolean success = request.getHideDc() == null || total >= request.getHideDc();
+                combatant.setHidden(success);
+                logData.put("stealthRoll", d20);
+                logData.put("stealthTotal", total);
+                if (request.getHideDc() != null) {
+                    logData.put("hideDc", request.getHideDc());
+                }
+                logData.put("success", success);
+            }
+        }
+        combatantRepository.save(combatant);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.STANDARD_ACTION, combatant.getId(), logTargetId,
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("battleId", battleId);
+        payload.put("action", request.getType().name());
+        payload.put("actorName", combatant.getDisplayName());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId, payload, user.getId());
+
+        log.info("Standard action: battleId={}, combatant={}, type={}, slot={}, by={}",
+                battleId, combatant.getDisplayName(), request.getType(), slot, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * An opposed melee contest — Grapple or Shove — on the actor's turn (Phase 2.7). Both sides make
+     * a check (d20 + supplied bonus; manual or server-rolled); the defender wins ties. On the actor's
+     * win the target is grappled (Grapple) or knocked prone (Shove PRONE); a PUSH shove is forced
+     * movement executed via map (Phase 2.12). The action is spent regardless of the outcome.
+     */
+    @Transactional
+    public ContestResultResponse contest(UUID campaignId, UUID battleId, UUID combatantId,
+                                         ContestRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Contests can only happen in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant actor = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!actor.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, actor);
+
+        BattleCombatant active = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        if (!active.getId().equals(actor.getId())) {
+            throw new BadRequestException("A contest can only be initiated on the actor's own turn");
+        }
+        if (request.getTargetCombatantId().equals(actor.getId())) {
+            throw new BadRequestException("A combatant cannot contest itself");
+        }
+        BattleCombatant target = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
+        if (!target.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Target does not belong to this battle");
+        }
+
+        spendSlot(actor, SpendActionRequest.Slot.ACTION);
+
+        int atkD20 = request.getAttackerD20() != null ? request.getAttackerD20() : diceRoller.rollD20();
+        int tgtD20 = request.getTargetD20() != null ? request.getTargetD20() : diceRoller.rollD20();
+        int atkTotal = atkD20 + nz(request.getAttackerBonus());
+        int tgtTotal = tgtD20 + nz(request.getTargetBonus());
+        boolean attackerWins = atkTotal > tgtTotal; // the defender wins ties (5e)
+
+        String appliedCondition = null;
+        if (attackerWins) {
+            if (request.getType() == ContestType.GRAPPLE) {
+                appliedCondition = "grappled";
+            } else if (!"PUSH".equalsIgnoreCase(request.getShoveMode())) {
+                appliedCondition = "prone"; // PUSH is forced movement handled by map (2.12)
+            }
+            if (appliedCondition != null) {
+                conditionService.applyByCode(campaignId, target, appliedCondition, user.getId(), battle.getRoundNumber());
+            }
+        }
+        combatantRepository.save(actor);
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("contest", request.getType().name());
+        logData.put("attacker", actor.getDisplayName());
+        logData.put("target", target.getDisplayName());
+        logData.put("attackerRoll", atkD20);
+        logData.put("attackerTotal", atkTotal);
+        logData.put("targetRoll", tgtD20);
+        logData.put("targetTotal", tgtTotal);
+        logData.put("attackerWins", attackerWins);
+        if (appliedCondition != null) {
+            logData.put("condition", appliedCondition);
+        }
+        if (request.getType() == ContestType.SHOVE && "PUSH".equalsIgnoreCase(request.getShoveMode())) {
+            logData.put("shoveMode", "PUSH");
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.CONTEST, actor.getId(), target.getId(),
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("battleId", battleId);
+        payload.put("contest", request.getType().name());
+        payload.put("attackerWins", attackerWins);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId, payload, user.getId());
+
+        log.info("Contest: battleId={}, {} by {} vs {} → attackerWins={}, by={}",
+                battleId, request.getType(), actor.getDisplayName(), target.getDisplayName(), attackerWins, username);
+
+        return ContestResultResponse.builder()
+                .type(request.getType().name())
+                .attackerName(actor.getDisplayName())
+                .targetName(target.getDisplayName())
+                .attackerRoll(atkD20)
+                .attackerTotal(atkTotal)
+                .targetRoll(tgtD20)
+                .targetTotal(tgtTotal)
+                .attackerWins(attackerWins)
+                .condition(appliedCondition)
+                .battle(toResponse(battle, orderedCombatants(battleId)))
+                .build();
     }
 
     /**
@@ -2654,6 +2947,11 @@ public class BattleService {
                 .concentrating(c.getCharacter() != null
                         && featureEffectService.isConcentrating(c.getCharacter().getId()))
                 .pendingConcentrationDc(c.getPendingConcentrationDc())
+                .dashing(Boolean.TRUE.equals(c.getDashing()))
+                .dodging(Boolean.TRUE.equals(c.getDodging()))
+                .disengaged(Boolean.TRUE.equals(c.getDisengaged()))
+                .hidden(Boolean.TRUE.equals(c.getHidden()))
+                .helpAdvantage(Boolean.TRUE.equals(c.getHelpAdvantage()))
                 .build();
     }
 
@@ -2668,6 +2966,13 @@ public class BattleService {
         combatant.setLegendaryActionSpent(0);
         combatant.setReactionUsed(false);
         combatant.setMovementUsedFt(0);
+        // Standard-action states that last "until the start of your next turn" clear now (Phase 2.7).
+        // `hidden` is deliberately NOT reset here — it persists across turns until the combatant
+        // attacks or is discovered.
+        combatant.setDashing(false);
+        combatant.setDodging(false);
+        combatant.setDisengaged(false);
+        combatant.setHelpAdvantage(false);
         combatantRepository.save(combatant);
     }
 
@@ -2767,8 +3072,17 @@ public class BattleService {
                 .build();
     }
 
-    /** A combatant's walking speed this turn, in feet: the character sheet speed, or the monster's walk speed. */
+    /**
+     * A combatant's movement budget this turn, in feet: its base walking speed (character sheet or
+     * monster walk speed), doubled when it has Dashed (Phase 2.7).
+     */
     private int resolveSpeedFt(BattleCombatant combatant) {
+        int base = baseSpeedFt(combatant);
+        return Boolean.TRUE.equals(combatant.getDashing()) ? base * 2 : base;
+    }
+
+    /** The combatant's base walking speed in feet, ignoring Dash. */
+    private int baseSpeedFt(BattleCombatant combatant) {
         if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
             Integer speed = combatant.getCharacter().getSpeed();
             return speed != null && speed > 0 ? speed : DEFAULT_SPEED_FT;

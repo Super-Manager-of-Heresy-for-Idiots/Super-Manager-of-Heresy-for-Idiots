@@ -16,11 +16,14 @@ import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.dto.request.SpendActionRequest;
+import com.dnd.app.dto.request.StandardActionRequest;
+import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
 import com.dnd.app.dto.response.BattleLogEntryResponse;
 import com.dnd.app.dto.response.BattleResponse;
+import com.dnd.app.dto.response.ContestResultResponse;
 import com.dnd.app.dto.response.CombatantConditionResponse;
 import com.dnd.app.dto.response.CombatantTurnResponse;
 import com.dnd.app.integration.map.MapSessionCloser;
@@ -229,6 +232,32 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.spendAction(campaignId, battleId, combatantId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Action spent"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/standard-action")
+    @Operation(summary = "Take a standard action: Dash / Dodge / Disengage / Help / Hide (own turn)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> standardAction(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody StandardActionRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.standardAction(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Standard action taken"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/combatants/{combatantId}/contest")
+    @Operation(summary = "Opposed melee contest — Grapple or Shove — against a target (own turn)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ContestResultResponse>>> contest(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody ContestRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            ContestResultResponse data = battleService.contest(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Contest resolved"));
         }, controllerTaskExecutor);
     }
 

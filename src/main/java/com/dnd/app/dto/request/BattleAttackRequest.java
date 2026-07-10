@@ -99,6 +99,17 @@ public class BattleAttackRequest {
     /** GM bypass of the range gate and any range-derived disadvantage (recorded in the log). */
     private Boolean gmOverrideRange;
 
+    // ---- Opportunity / reaction attack (Phase 2.8) ----------------------------------------------
+    /**
+     * When true this is a reaction strike (e.g. an opportunity attack) made out of turn: it is
+     * resolved for {@code attackerCombatantId} and spends that combatant's reaction instead of the
+     * active combatant's action. Null/false → a normal attack by the active combatant.
+     */
+    private Boolean reaction;
+
+    /** The reacting attacker for a reaction strike; required when {@code reaction} is true. */
+    private UUID attackerCombatantId;
+
     // ---- Cover (Phase 2.6) ----------------------------------------------------------------------
     /**
      * The target's cover, chosen manually by the attacker. HALF/THREE_QUARTERS raise the target's AC

@@ -56,4 +56,16 @@ public class BattleCombatantResponse {
     private boolean concentrating;
     /** DC of a pending concentration save the player must roll (Phase 2.2); null when none pending. */
     private Integer pendingConcentrationDc;
+
+    // ---- Standard-action turn state (Phase 2.7) ------------------------------------------------
+    /** Dash taken: movement budget doubled this turn. */
+    private boolean dashing;
+    /** Dodging: attackers have disadvantage, this combatant has advantage on Dex saves. */
+    private boolean dodging;
+    /** Disengaged: movement provokes no opportunity attacks this turn. */
+    private boolean disengaged;
+    /** Hidden from enemies; its next attack has advantage, then it is revealed. */
+    private boolean hidden;
+    /** An ally Helped this combatant: its next attack has advantage (consumed on use). */
+    private boolean helpAdvantage;
 }

@@ -123,6 +123,35 @@ public class BattleCombatant {
     @Column(name = "pending_concentration_dc")
     private Integer pendingConcentrationDc;
 
+    // ---- Standard-action turn state (Phase 2.7) ------------------------------------------
+    // Set by the standard-action endpoint and (except `hidden`) cleared at the start of this
+    // combatant's next turn — i.e. they last "until the start of your next turn" (D&D 5e).
+    //   dashing       — movement budget is doubled this turn (Dash).
+    //   dodging        — attacks against this combatant have disadvantage; advantage on Dex saves.
+    //   disengaged     — this combatant's movement provokes no opportunity attacks this turn.
+    //   hidden         — hidden from enemies; grants advantage on its next attack, then revealed.
+    //   helpAdvantage  — an ally Helped this combatant: its next attack has advantage (consumed on use).
+
+    @Column(name = "dashing", nullable = false)
+    @Builder.Default
+    private Boolean dashing = false;
+
+    @Column(name = "dodging", nullable = false)
+    @Builder.Default
+    private Boolean dodging = false;
+
+    @Column(name = "disengaged", nullable = false)
+    @Builder.Default
+    private Boolean disengaged = false;
+
+    @Column(name = "hidden", nullable = false)
+    @Builder.Default
+    private Boolean hidden = false;
+
+    @Column(name = "help_advantage", nullable = false)
+    @Builder.Default
+    private Boolean helpAdvantage = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

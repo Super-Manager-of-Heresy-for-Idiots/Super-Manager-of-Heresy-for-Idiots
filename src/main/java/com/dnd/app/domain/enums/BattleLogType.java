@@ -18,5 +18,7 @@ public enum BattleLogType {
     GM_OVERRIDE,
     ITEM,
     SPELL,
-    CONCENTRATION
+    CONCENTRATION,
+    STANDARD_ACTION,
+    CONTEST
 }
