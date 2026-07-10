@@ -10,6 +10,7 @@ import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.ConcentrationCheckRequest;
+import com.dnd.app.dto.request.GroupInitiativeRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
@@ -372,6 +373,19 @@ public class BattleController {
             BattleResponse data = battleService.setInitiativeOrder(
                     campaignId, battleId, request.getEntries(), auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Initiative order updated"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/group-initiative")
+    @Operation(summary = "Roll one shared initiative die for a group of combatants (GM)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> groupInitiative(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody GroupInitiativeRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.groupInitiative(
+                    campaignId, battleId, request.getCombatantIds(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Group initiative rolled"));
         }, controllerTaskExecutor);
     }
 

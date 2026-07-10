@@ -761,6 +761,62 @@ public class BattleService {
                 Map.of("event", "SPELL_DAMAGE_MANUAL", "reason", reason), BattleLogVisibility.GM_ONLY, user.getId());
     }
 
+    /**
+     * Roll ONE shared initiative die for a group of combatants (Phase 2.4): every listed combatant
+     * takes the same d20 (keeping its own Dexterity/statblock bonus), the tracker re-sorts and the turn
+     * stays anchored. GM/admin only. Reuses the same {@link CombatCalculator} math as a single reroll.
+     */
+    @Transactional
+    public BattleResponse groupInitiative(UUID campaignId, UUID battleId, List<UUID> combatantIds, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Initiative can only be rolled in an active battle");
+        if (combatantIds == null || combatantIds.isEmpty()) {
+            throw new BadRequestException("No combatants selected");
+        }
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        UUID activeId = activeCombatantId(battle, combatants);
+        java.util.Set<UUID> ids = new java.util.HashSet<>(combatantIds);
+        int d20 = diceRoller.rollD20();
+        int applied = 0;
+        for (BattleCombatant c : combatants) {
+            if (!ids.contains(c.getId())) {
+                continue;
+            }
+            int initiative;
+            if (c.getType() == CombatantType.MONSTER && c.getMonster() != null) {
+                int dex = c.getMonster().getDexScore() != null ? c.getMonster().getDexScore().intValue() : 10;
+                Integer bonus = c.getMonster().getInitiativeBonus() != null
+                        ? c.getMonster().getInitiativeBonus().intValue() : null;
+                initiative = CombatCalculator.monsterInitiative(d20, bonus, dex);
+            } else if (c.getCharacter() != null) {
+                PlayerCharacter character = c.getCharacter();
+                initiative = CombatCalculator.characterInitiative(d20, dexValue(character), dexBuffBonus(character));
+            } else {
+                initiative = d20;
+            }
+            c.setInitiativeRoll(d20);
+            c.setInitiative(initiative);
+            applied++;
+        }
+        CombatCalculator.orderTracker(combatants);
+        combatantRepository.saveAll(combatants);
+        battle.setCurrentTurnIndex(
+                CombatCalculator.resolveCurrentIndex(combatants, activeId, battle.getCurrentTurnIndex()));
+        battleRepository.save(battle);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.TURN, null, null,
+                Map.of("event", "GROUP_INITIATIVE", "d20", d20, "count", applied),
+                BattleLogVisibility.PUBLIC, user.getId());
+        log.info("Group initiative rolled: battleId={}, d20={}, count={}, by={}", battleId, d20, applied, username);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_TURN_CHANGED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, combatants);
+    }
+
     private PlayerCharacter requireDyingCharacter(BattleCombatant combatant) {
         if (combatant.getType() != CombatantType.CHARACTER || combatant.getCharacter() == null) {
             throw new BadRequestException("Only characters make death saving throws");
