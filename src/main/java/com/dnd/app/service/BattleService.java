@@ -1363,6 +1363,15 @@ public class BattleService {
 
         AttackOption attack = resolveAttack(attacker, request.getAttackName());
 
+        // Range/reach gate (Phase 2.5): reject a strike out of reach or a shot beyond long range;
+        // long range / ranged-in-melee force disadvantage below. GM may override the whole gate.
+        RangeEvaluation range = evaluateRange(request, attack);
+        boolean gmOverrideRange = Boolean.TRUE.equals(request.getGmOverrideRange());
+        if (range.outOfRange() && !gmOverrideRange) {
+            throw new BadRequestException("Target is out of range for '" + attack.name() + "' ("
+                    + range.distanceFt() + " ft; " + rangeLabel(attack) + ")");
+        }
+
         // Feature-effect bonuses for a character attacker (to-hit and damage); 0 for monsters and when
         // no active effect contributes — additive, so existing behaviour is unchanged without them.
         int attackRollBonus = 0;
@@ -1410,8 +1419,22 @@ public class BattleService {
             saveTotalOut = total;
             saveRollModeOut = rollMode.name();
         } else {
-            rollMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
-            roll = resolveAttackRoll(request);
+            AttackRollMode requestedMode = request.getRollMode() != null ? request.getRollMode() : AttackRollMode.NORMAL;
+            if (range.forcedDisadvantage() && !gmOverrideRange) {
+                // Long range or shooting into a melee threat: the server enforces disadvantage. If the
+                // client already sent a DISADVANTAGE pair (its FE knew the range), keep their dice;
+                // otherwise the server rolls the disadvantage virtually (any lone/advantage die is not
+                // trusted to reflect the range-derived penalty).
+                rollMode = AttackRollMode.DISADVANTAGE;
+                boolean clientDisadvPair = requestedMode == AttackRollMode.DISADVANTAGE
+                        && request.getD20A() != null && request.getD20B() != null;
+                roll = clientDisadvPair
+                        ? resolveRoll("attack", AttackRollMode.DISADVANTAGE, null, request.getD20A(), request.getD20B())
+                        : resolveRoll("attack", AttackRollMode.DISADVANTAGE, null, null, null);
+            } else {
+                rollMode = requestedMode;
+                roll = resolveAttackRoll(request);
+            }
             effectiveD20 = roll.effectiveD20();
             targetAc = resolveTargetAc(target);
             int effectiveAttackBonus = attack.attackBonus() + attackRollBonus;
@@ -1466,6 +1489,16 @@ public class BattleService {
         }
         if (attack.damageType() != null) {
             attackLog.put("damageType", attack.damageType());
+        }
+        if (range.checked()) {
+            attackLog.put("distanceFt", range.distanceFt());
+            attackLog.put("rangeNote", range.note());
+            if (range.forcedDisadvantage() && !gmOverrideRange) {
+                attackLog.put("forcedDisadvantage", true);
+            }
+            if (gmOverrideRange && (range.outOfRange() || range.forcedDisadvantage())) {
+                attackLog.put("gmOverrideRange", true);
+            }
         }
         battleLogService.append(battleId, campaignId, BattleLogType.ATTACK, attacker.getId(), target.getId(),
                 attackLog, BattleLogVisibility.PUBLIC, user.getId());
@@ -1527,6 +1560,8 @@ public class BattleService {
                 .damage(damage)
                 .damageType(attack.damageType())
                 .damageModifier(damageModifierOut)
+                .distanceFt(range.distanceFt())
+                .rangeNote(range.checked() ? range.note() : null)
                 .targetCurrentHp(target.getCurrentHp())
                 .targetMaxHp(target.getMaxHp())
                 .targetDown(down)
@@ -1803,7 +1838,70 @@ public class BattleService {
      * to hit); it stays null for ordinary attack-roll strikes.
      */
     private record AttackOption(String name, int attackBonus, String damage, String damageType,
-                                UUID damageTypeId, Integer saveDc, String saveAbilityCode) {
+                                UUID damageTypeId, Integer saveDc, String saveAbilityCode,
+                                boolean ranged, Integer reachFt, Integer rangeNormalFt, Integer rangeLongFt) {
+    }
+
+    /** Distance/reach gate for an attack (Phase 2.5): whether it was checked, the distance, and its consequences. */
+    private record RangeEvaluation(boolean checked, Integer distanceFt, boolean outOfRange,
+                                   boolean forcedDisadvantage, String note) {
+    }
+
+    private static final java.util.regex.Pattern FEET_NUMBER = java.util.regex.Pattern.compile("\\d+");
+
+    /** Extracts the numbers from a reach/range hint like "5 фт." or "20/60 фт." (feet). */
+    private static int[] parseFeet(String text) {
+        if (text == null || text.isBlank()) {
+            return new int[0];
+        }
+        java.util.regex.Matcher m = FEET_NUMBER.matcher(text);
+        List<Integer> nums = new ArrayList<>();
+        while (m.find()) {
+            nums.add(Integer.parseInt(m.group()));
+        }
+        return nums.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /**
+     * Range/reach gate (Phase 2.5). Positions come from the request (map-authoritative, relayed by FE);
+     * distance is Chebyshev grid squares × 5 ft. Melee beyond reach or a shot beyond long range is
+     * out of range; long range and shooting while threatened in melee force disadvantage. All-null
+     * coords → unchecked (backward compatible).
+     */
+    private RangeEvaluation evaluateRange(BattleAttackRequest req, AttackOption attack) {
+        Integer ac = req.getAttackerCol();
+        Integer ar = req.getAttackerRow();
+        Integer tc = req.getTargetCol();
+        Integer tr = req.getTargetRow();
+        if (ac == null || ar == null || tc == null || tr == null) {
+            return new RangeEvaluation(false, null, false, false, null);
+        }
+        int distFt = Math.max(Math.abs(ac - tc), Math.abs(ar - tr)) * 5;
+        if (!attack.ranged()) {
+            int reach = attack.reachFt() != null ? attack.reachFt() : 5;
+            boolean out = distFt > reach;
+            return new RangeEvaluation(true, distFt, out, false, out ? "OUT_OF_REACH" : "IN_REACH");
+        }
+        int normal = attack.rangeNormalFt() != null ? attack.rangeNormalFt() : 0;
+        int longRange = attack.rangeLongFt() != null ? attack.rangeLongFt() : normal;
+        if (normal > 0 && distFt > longRange) {
+            return new RangeEvaluation(true, distFt, true, false, "BEYOND_LONG_RANGE");
+        }
+        boolean beyondNormal = normal > 0 && distFt > normal;
+        boolean inMelee = Boolean.TRUE.equals(req.getAttackerInMeleeThreat());
+        boolean disadvantage = beyondNormal || inMelee;
+        String note = inMelee ? "RANGED_IN_MELEE" : beyondNormal ? "LONG_RANGE" : "IN_RANGE";
+        return new RangeEvaluation(true, distFt, false, disadvantage, note);
+    }
+
+    /** Short reach/range label for out-of-range error messages. */
+    private static String rangeLabel(AttackOption attack) {
+        if (!attack.ranged()) {
+            return "reach " + (attack.reachFt() != null ? attack.reachFt() : 5) + " ft";
+        }
+        Integer n = attack.rangeNormalFt();
+        Integer l = attack.rangeLongFt();
+        return "range " + (n != null ? n : "?") + "/" + (l != null ? l : (n != null ? n : "?")) + " ft";
     }
 
     /** The two dice considered and the single die selected for the attack per its roll mode. */
@@ -1991,9 +2089,24 @@ public class BattleService {
             return attacks.stream()
                     .filter(a -> a.getName() != null && a.getName().equalsIgnoreCase(attackName))
                     .findFirst()
-                    .map(a -> new AttackOption(a.getName(),
-                            AttackResolver.parseAttackBonus(a.getAttackBonus()),
-                            a.getDamage(), a.getDamageType(), null, null, null))
+                    .map(a -> {
+                        boolean ranged = "RANGED".equalsIgnoreCase(a.getCategory())
+                                || "THROWN".equalsIgnoreCase(a.getCategory());
+                        int[] feet = parseFeet(a.getRange());
+                        Integer reachFt = null;
+                        Integer rangeNormalFt = null;
+                        Integer rangeLongFt = null;
+                        if (ranged) {
+                            rangeNormalFt = feet.length > 0 ? Integer.valueOf(feet[0]) : null;
+                            rangeLongFt = feet.length > 1 ? Integer.valueOf(feet[1]) : rangeNormalFt;
+                        } else {
+                            reachFt = feet.length > 0 ? Integer.valueOf(feet[0]) : Integer.valueOf(5);
+                        }
+                        return new AttackOption(a.getName(),
+                                AttackResolver.parseAttackBonus(a.getAttackBonus()),
+                                a.getDamage(), a.getDamageType(), null, null, null,
+                                ranged, reachFt, rangeNormalFt, rangeLongFt);
+                    })
                     .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
 
@@ -2023,7 +2136,12 @@ public class BattleService {
             }
             Integer saveDc = feature.getSaveDc() != null ? feature.getSaveDc().intValue() : null;
             String saveAbilityCode = feature.getSaveAbility() != null ? feature.getSaveAbility().getCode() : null;
-            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc, saveAbilityCode);
+            boolean ranged = feature.getRangeFt() != null;
+            Integer reachFt = feature.getReachFt() != null ? Integer.valueOf(feature.getReachFt()) : null;
+            Integer rangeNormalFt = feature.getRangeFt() != null ? Integer.valueOf(feature.getRangeFt()) : null;
+            Integer rangeLongFt = feature.getRangeLongFt() != null ? Integer.valueOf(feature.getRangeLongFt()) : rangeNormalFt;
+            return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc, saveAbilityCode,
+                    ranged, reachFt, rangeNormalFt, rangeLongFt);
         }
 
         throw new BadRequestException("This combatant cannot attack");

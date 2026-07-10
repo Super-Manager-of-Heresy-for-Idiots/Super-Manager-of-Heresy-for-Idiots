@@ -61,6 +61,11 @@ public class BattleActionResultResponse {
     /** How the target's defences changed the damage: NONE | RESISTED | IMMUNE | VULNERABLE; null when not applicable. */
     private String damageModifier;
 
+    /** Chebyshev distance attacker→target in feet, when grid positions were supplied; null otherwise (Phase 2.5). */
+    private Integer distanceFt;
+    /** Range outcome: IN_REACH | OUT_OF_REACH | IN_RANGE | LONG_RANGE | RANGED_IN_MELEE | BEYOND_LONG_RANGE; null when unchecked (Phase 2.5). */
+    private String rangeNote;
+
     private Integer targetCurrentHp;
     private Integer targetMaxHp;
     private boolean targetDown;

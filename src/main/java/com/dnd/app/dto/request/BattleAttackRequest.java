@@ -74,4 +74,27 @@ public class BattleAttackRequest {
     @Min(value = 1, message = "saveD20B must be between 1 and 20")
     @Max(value = 20, message = "saveD20B must be between 1 and 20")
     private Integer saveD20B;
+
+    // ---- Range / reach validation (Phase 2.5) ---------------------------------------------------
+    // Grid squares of both tokens, supplied by the FE (positions are map-authoritative and relayed
+    // here on demand — core stores none, per A1). When all four are present the server gates the
+    // attack by distance (Chebyshev × 5 ft): a melee strike beyond reach or a shot beyond long range
+    // is rejected; long range and shooting while an enemy threatens melee force DISADVANTAGE. Omit
+    // them to skip the range gate (backward compatible). {@code gmOverrideRange} bypasses the gate
+    // AND any forced disadvantage, with a note in the log.
+
+    /** Attacker token column (grid square). Range gate is applied only when all four coords are present. */
+    private Integer attackerCol;
+    /** Attacker token row (grid square). */
+    private Integer attackerRow;
+    /** Target token column (grid square). */
+    private Integer targetCol;
+    /** Target token row (grid square). */
+    private Integer targetRow;
+
+    /** FE hint: an enemy is within melee reach of this (ranged) attacker → ranged-in-melee disadvantage. */
+    private Boolean attackerInMeleeThreat;
+
+    /** GM bypass of the range gate and any range-derived disadvantage (recorded in the log). */
+    private Boolean gmOverrideRange;
 }
