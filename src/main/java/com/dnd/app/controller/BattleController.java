@@ -8,6 +8,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
+import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.ConcentrationCheckRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
@@ -346,6 +347,18 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             SpellCastResult data = battleService.castSpell(campaignId, battleId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Spell cast"));
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/{battleId}/bulk-action")
+    @Operation(summary = "Mass GM operation (damage/heal/condition) over several combatants at once")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> bulkAction(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody BulkActionRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.bulkAction(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Bulk action applied"));
         }, controllerTaskExecutor);
     }
 

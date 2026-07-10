@@ -18,6 +18,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
+import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
@@ -238,6 +239,99 @@ public class BattleService {
         return combatantRepository.findById(combatantId)
                 .filter(c -> c.getBattle() != null && c.getBattle().getId().equals(battleId))
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+    }
+
+    /**
+     * Mass GM operation over several combatants at once (Phase 2.4): damage/heal a flat amount, or
+     * add/remove a condition. Reuses the SAME per-target primitives as the single-target flows
+     * ({@code applyDamageOrHeal} + save/mitigation, {@link ConditionService}) — no copied logic — in a
+     * single transaction, with one summary GM log entry and one battle-updated broadcast. GM/admin only.
+     */
+    @Transactional
+    public BattleResponse bulkAction(UUID campaignId, UUID battleId, BulkActionRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Bulk actions only happen in an active battle");
+        if (request.getCombatantIds() == null || request.getCombatantIds().isEmpty()) {
+            throw new BadRequestException("No targets selected");
+        }
+
+        List<BattleCombatant> targets = new java.util.ArrayList<>();
+        for (UUID id : request.getCombatantIds()) {
+            targets.add(combatantRepository.findByIdForUpdate(id)
+                    .filter(c -> c.getBattle() != null && c.getBattle().getId().equals(battleId))
+                    .orElseThrow(() -> new BadRequestException("Combatant not in battle: " + id)));
+        }
+        int round = nz(battle.getRoundNumber());
+        int affected = 0;
+
+        switch (request.getType()) {
+            case DAMAGE -> {
+                int base = nz(request.getAmount());
+                for (BattleCombatant target : targets) {
+                    int dmg = base;
+                    if (dmg > 0 && request.getSaveDc() != null && request.getSaveAbility() != null) {
+                        int d20 = diceRoller.rollD20();
+                        int bonus = resolveTargetSaveBonus(target, request.getSaveAbility());
+                        AttackResolver.SaveOutcome save = AttackResolver.resolveSave(d20, bonus, request.getSaveDc());
+                        if (save == AttackResolver.SaveOutcome.SUCCESS) {
+                            dmg = Boolean.TRUE.equals(request.getHalfOnSave()) ? dmg / 2 : 0;
+                        }
+                    }
+                    if (dmg > 0) {
+                        int fin = damageMitigationService.mitigate(target, dmg, request.getDamageTypeId()).finalDamage();
+                        if (fin > 0) {
+                            applyDamageOrHeal(target, -fin, user, campaignId);
+                        }
+                    }
+                    affected++;
+                }
+            }
+            case HEAL -> {
+                int heal = nz(request.getAmount());
+                for (BattleCombatant target : targets) {
+                    if (heal > 0) {
+                        applyDamageOrHeal(target, heal, user, campaignId);
+                    }
+                    affected++;
+                }
+            }
+            case CONDITION_ADD -> {
+                if (request.getConditionId() == null) {
+                    throw new BadRequestException("conditionId is required for CONDITION_ADD");
+                }
+                for (BattleCombatant target : targets) {
+                    conditionService.apply(campaignId, target, request.getConditionId(),
+                            request.getSourceText(), request.getRemainingRounds(), user.getId(), round);
+                    affected++;
+                }
+            }
+            case CONDITION_REMOVE -> {
+                if (request.getConditionId() == null) {
+                    throw new BadRequestException("conditionId is required for CONDITION_REMOVE");
+                }
+                for (BattleCombatant target : targets) {
+                    conditionService.remove(campaignId, target.getId(), request.getConditionId(), user.getId());
+                    affected++;
+                }
+            }
+        }
+
+        Map<String, Object> logPayload = new HashMap<>();
+        logPayload.put("action", request.getType().name());
+        logPayload.put("count", affected);
+        if (request.getAmount() != null) {
+            logPayload.put("amount", request.getAmount());
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.GM_OVERRIDE, null, null,
+                logPayload, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Bulk action {} on {} combatants: battleId={}, by={}",
+                request.getType(), affected, battleId, username);
+        return toResponse(battle, orderedCombatants(battleId));
     }
 
     // ============================== Death saves ==============================
