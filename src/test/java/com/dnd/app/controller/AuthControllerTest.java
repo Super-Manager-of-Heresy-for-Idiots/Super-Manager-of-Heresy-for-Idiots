@@ -3,6 +3,7 @@ package com.dnd.app.controller;
 import com.dnd.app.config.SecurityConfig;
 import com.dnd.app.dto.request.LoginRequest;
 import com.dnd.app.dto.request.RegisterRequest;
+import com.dnd.app.dto.request.SwitchAccountRequest;
 import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.security.AuthCookieService;
 import com.dnd.app.security.JwtTokenProvider;
@@ -18,9 +19,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +32,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -83,9 +88,10 @@ class AuthControllerTest {
     @DisplayName("Вход возвращает 200, токен в теле и две HttpOnly-cookie")
     void login_validRequest_returns200() throws Exception {
         LoginRequest req = LoginRequest.builder().username("user1").password("pass1234").build();
-        UserResponse userResp = UserResponse.builder().username("user1").role("PLAYER").build();
+        UserResponse userResp = UserResponse.builder().id(UUID.randomUUID()).username("user1").role("PLAYER").build();
         IssuedTokens tokens = new IssuedTokens("access-token", "refresh-token", 3600000L, 604800000L, userResp);
-        when(authService.login(any(), any(), any())).thenReturn(tokens);
+        when(authService.generateTrustedDeviceToken()).thenReturn("trusted-device-token");
+        when(authService.login(any(), any(), any(), eq("trusted-device-token"))).thenReturn(tokens);
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,9 +107,39 @@ class AuthControllerTest {
                 .andExpect(cookie().httpOnly("access_token", true))
                 .andExpect(cookie().value("refresh_token", "refresh-token"))
                 .andExpect(cookie().httpOnly("refresh_token", true))
+                .andExpect(cookie().value("trusted_device", "trusted-device-token"))
+                .andExpect(cookie().httpOnly("trusted_device", true))
                 // refresh cookie is path-scoped to the auth endpoints
                 .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
                         org.hamcrest.Matchers.hasItem(containsString("refresh_token=refresh-token"))));
+    }
+
+    @Test
+    @DisplayName("РџРµСЂРµРєР»СЋС‡РµРЅРёРµ trusted-device РІРѕР·РІСЂР°С‰Р°РµС‚ РЅРѕРІС‹Рµ session-cookie")
+    @WithMockUser
+    void switch_withTrustedDevice_returnsNewSession() throws Exception {
+        UUID userId = UUID.randomUUID();
+        SwitchAccountRequest req = SwitchAccountRequest.builder().userId(userId).build();
+        UserResponse userResp = UserResponse.builder().id(userId).username("gm").role("GAME_MASTER").build();
+        IssuedTokens tokens = new IssuedTokens("switch-access", "switch-refresh", 3600000L, 604800000L, userResp);
+        when(authService.switchTrustedDevice(eq(userId), eq("trusted-device-token"), any(), any())).thenReturn(tokens);
+
+        MvcResult result = mockMvc.perform(post("/api/auth/switch")
+                        .with(csrf())
+                        .cookie(new Cookie("trusted_device", "trusted-device-token"))
+                        .cookie(new Cookie("refresh_token", "old-refresh"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").value("switch-access"))
+                .andExpect(jsonPath("$.data.user.username").value("gm"))
+                .andExpect(cookie().value("access_token", "switch-access"))
+                .andExpect(cookie().value("refresh_token", "switch-refresh"))
+                .andExpect(cookie().value("trusted_device", "trusted-device-token"));
     }
 
     @Test

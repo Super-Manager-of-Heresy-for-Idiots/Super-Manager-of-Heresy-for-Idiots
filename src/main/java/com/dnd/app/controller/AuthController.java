@@ -2,6 +2,7 @@ package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.LoginRequest;
 import com.dnd.app.dto.request.RegisterRequest;
+import com.dnd.app.dto.request.SwitchAccountRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.AuthResponse;
 import com.dnd.app.dto.response.UserResponse;
@@ -17,7 +18,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.UUID;
 
 /**
  * Класс AuthController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
@@ -84,15 +88,18 @@ public class AuthController {
      */
     @PostMapping("/login")
     public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> login(
-            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+            @Valid @RequestBody LoginRequest request,
+            @CookieValue(name = "${app.auth.trusted-device.cookie-name:trusted_device}", required = false) String trustedDeviceToken,
+            HttpServletRequest httpRequest) {
         // Read request metadata on the servlet thread, before handing off to the async executor.
         String userAgent = httpRequest.getHeader(HttpHeaders.USER_AGENT);
         String ip = clientIp(httpRequest);
+        String deviceToken = trustedDeviceToken != null ? trustedDeviceToken : authService.generateTrustedDeviceToken();
         return CompletableFuture.supplyAsync(() -> {
             log.info("Login attempt: username={}", request.getUsername());
             long startTime = System.currentTimeMillis();
 
-            IssuedTokens tokens = authService.login(request, userAgent, ip);
+            IssuedTokens tokens = authService.login(request, userAgent, ip, deviceToken);
 
             log.info("Login successful: username={}, userId={}, role={}, tokenIssued=true, durationMs={}",
                     tokens.user().getUsername(),
@@ -100,7 +107,22 @@ public class AuthController {
                     tokens.user().getRole(),
                     System.currentTimeMillis() - startTime);
 
-            return sessionResponse(tokens, "Вход выполнен");
+            return sessionResponse(tokens, "Вход выполнен", deviceToken);
+        }, controllerTaskExecutor);
+    }
+
+    @PostMapping("/switch")
+    public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> switchAccount(
+            @Valid @RequestBody SwitchAccountRequest request,
+            @CookieValue(name = "${app.auth.trusted-device.cookie-name:trusted_device}", required = false) String trustedDeviceToken,
+            @CookieValue(name = "${app.jwt.refresh-cookie-name:refresh_token}", required = false) String currentRefreshToken,
+            HttpServletRequest httpRequest) {
+        String userAgent = httpRequest.getHeader(HttpHeaders.USER_AGENT);
+        String ip = clientIp(httpRequest);
+        return CompletableFuture.supplyAsync(() -> {
+            IssuedTokens tokens = authService.switchTrustedDevice(request.getUserId(), trustedDeviceToken, userAgent, ip);
+            authService.logout(currentRefreshToken);
+            return sessionResponse(tokens, "Аккаунт переключен", trustedDeviceToken);
         }, controllerTaskExecutor);
     }
 
@@ -140,6 +162,14 @@ public class AuthController {
                 .body(ApiResponse.ok(null, "Выход выполнен"));
     }
 
+    @DeleteMapping("/trusted-accounts/{userId}")
+    public ResponseEntity<ApiResponse<Void>> forgetTrustedAccount(
+            @PathVariable UUID userId,
+            @CookieValue(name = "${app.auth.trusted-device.cookie-name:trusted_device}", required = false) String trustedDeviceToken) {
+        authService.forgetTrustedDevice(userId, trustedDeviceToken);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Аккаунт убран из доверенных на этом устройстве"));
+    }
+
     /**
      * Best-effort client IP for session forensics only (stored, never used for a trust decision).
      * Prefers the X-Forwarded-For chain when present so it is meaningful behind a proxy.
@@ -153,6 +183,10 @@ public class AuthController {
     }
 
     private ResponseEntity<ApiResponse<AuthResponse>> sessionResponse(IssuedTokens tokens, String message) {
+        return sessionResponse(tokens, message, null);
+    }
+
+    private ResponseEntity<ApiResponse<AuthResponse>> sessionResponse(IssuedTokens tokens, String message, String trustedDeviceToken) {
         ResponseCookie accessCookie = cookieService.accessCookie(tokens.accessToken(), tokens.accessExpiresInMs());
         ResponseCookie refreshCookie = cookieService.refreshCookie(tokens.refreshToken(), tokens.refreshExpiresInMs());
         AuthResponse body = AuthResponse.builder()
@@ -160,9 +194,12 @@ public class AuthController {
                 .expiresIn(tokens.accessExpiresInMs())
                 .user(tokens.user())
                 .build();
-        return ResponseEntity.ok()
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-                .body(ApiResponse.ok(body, message));
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        if (trustedDeviceToken != null && !trustedDeviceToken.isBlank()) {
+            response.header(HttpHeaders.SET_COOKIE, cookieService.trustedDeviceCookie(trustedDeviceToken).toString());
+        }
+        return response.body(ApiResponse.ok(body, message));
     }
 }

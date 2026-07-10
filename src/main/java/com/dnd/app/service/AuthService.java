@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.RefreshToken;
+import com.dnd.app.domain.TrustedDeviceAccount;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LoginRequest;
@@ -10,18 +11,26 @@ import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.RefreshTokenRepository;
+import com.dnd.app.repository.TrustedDeviceAccountRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -35,13 +44,19 @@ public class AuthService {
 
     private static final int MAX_USER_AGENT_LEN = 512;
     private static final int MAX_IP_LEN = 128;
+    private static final long DEFAULT_TRUSTED_DEVICE_TTL_MS = 7_776_000_000L;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TrustedDeviceAccountRepository trustedDeviceAccountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
+
+    @Value("${app.auth.trusted-device.ttl-ms:7776000000}")
+    private long trustedDeviceTtlMs;
 
     /**
      * Выполняет операции "register" в рамках бизнес-логики домена.
@@ -92,11 +107,17 @@ public class AuthService {
      */
     @Transactional
     public IssuedTokens login(LoginRequest request, String userAgent, String ip) {
+        return login(request, userAgent, ip, null);
+    }
+
+    @Transactional
+    public IssuedTokens login(LoginRequest request, String userAgent, String ip, String trustedDeviceToken) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         log.info("User logged in: username={}, role={}", user.getUsername(), user.getRole());
+        rememberTrustedDevice(trustedDeviceToken, user, userAgent, ip);
         // A login opens a fresh rotation family.
         return rotate(user, UUID.randomUUID(), null, userAgent, ip);
     }
@@ -159,6 +180,89 @@ public class AuthService {
                     .ifPresent(row -> refreshTokenRepository.revokeFamily(row.getFamilyId()));
         } catch (RuntimeException e) {
             log.warn("AuthService#logout refresh-token revocation skipped: operation=logout-revoke-refresh-token", e);
+        }
+    }
+
+    @Transactional
+    public IssuedTokens switchTrustedDevice(UUID userId, String trustedDeviceToken, String userAgent, String ip) {
+        TrustedDeviceAccount trustedAccount = requireTrustedAccount(userId, trustedDeviceToken);
+        User user = userRepository.findById(trustedAccount.getUserId())
+                .orElseThrow(() -> new BadCredentialsException("Trusted account not found"));
+
+        Instant now = Instant.now();
+        trustedAccount.setLastUsedAt(now);
+        trustedAccount.setExpiresAt(now.plusMillis(trustedDeviceTtl()));
+        trustedAccount.setUserAgent(truncate(userAgent, MAX_USER_AGENT_LEN));
+        trustedAccount.setIp(truncate(ip, MAX_IP_LEN));
+        trustedDeviceAccountRepository.save(trustedAccount);
+
+        log.info("Trusted-device account switch: username={}, userId={}", user.getUsername(), user.getId());
+        return rotate(user, UUID.randomUUID(), null, userAgent, ip);
+    }
+
+    @Transactional
+    public void forgetTrustedDevice(UUID userId, String trustedDeviceToken) {
+        if (userId == null || !StringUtils.hasText(trustedDeviceToken)) {
+            return;
+        }
+        trustedDeviceAccountRepository.findByDeviceTokenHashAndUserId(hashDeviceToken(trustedDeviceToken), userId)
+                .ifPresent(account -> {
+                    account.setRevoked(true);
+                    trustedDeviceAccountRepository.save(account);
+                });
+    }
+
+    public String generateTrustedDeviceToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private void rememberTrustedDevice(String trustedDeviceToken, User user, String userAgent, String ip) {
+        if (!StringUtils.hasText(trustedDeviceToken) || user == null || user.getId() == null) {
+            return;
+        }
+        Instant now = Instant.now();
+        String hash = hashDeviceToken(trustedDeviceToken);
+        TrustedDeviceAccount account = trustedDeviceAccountRepository
+                .findByDeviceTokenHashAndUserId(hash, user.getId())
+                .orElseGet(() -> TrustedDeviceAccount.builder()
+                        .deviceTokenHash(hash)
+                        .userId(user.getId())
+                        .createdAt(now)
+                        .build());
+        account.setLastUsedAt(now);
+        account.setExpiresAt(now.plusMillis(trustedDeviceTtl()));
+        account.setRevoked(false);
+        account.setUserAgent(truncate(userAgent, MAX_USER_AGENT_LEN));
+        account.setIp(truncate(ip, MAX_IP_LEN));
+        trustedDeviceAccountRepository.save(account);
+    }
+
+    private TrustedDeviceAccount requireTrustedAccount(UUID userId, String trustedDeviceToken) {
+        if (userId == null || !StringUtils.hasText(trustedDeviceToken)) {
+            throw new BadCredentialsException("Trusted device required");
+        }
+        TrustedDeviceAccount account = trustedDeviceAccountRepository
+                .findByDeviceTokenHashAndUserId(hashDeviceToken(trustedDeviceToken), userId)
+                .orElseThrow(() -> new BadCredentialsException("Trusted account not found"));
+        if (account.isRevoked() || account.getExpiresAt().isBefore(Instant.now())) {
+            throw new BadCredentialsException("Trusted account expired");
+        }
+        return account;
+    }
+
+    private long trustedDeviceTtl() {
+        return trustedDeviceTtlMs > 0 ? trustedDeviceTtlMs : DEFAULT_TRUSTED_DEVICE_TTL_MS;
+    }
+
+    private static String hashDeviceToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.RefreshToken;
+import com.dnd.app.domain.TrustedDeviceAccount;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.LoginRequest;
@@ -9,6 +10,7 @@ import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.mapper.UserMapper;
 import com.dnd.app.repository.RefreshTokenRepository;
+import com.dnd.app.repository.TrustedDeviceAccountRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +39,7 @@ class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private TrustedDeviceAccountRepository trustedDeviceAccountRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtTokenProvider tokenProvider;
     @Mock private AuthenticationManager authenticationManager;
@@ -119,6 +122,29 @@ class AuthServiceTest {
         assertEquals("user1", result.user().getUsername());
         // First token of a login: persisted, no predecessor to consume.
         verify(refreshTokenRepository, times(1)).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("Р’С…РѕРґ СЃ trusted-device token Р·Р°РїРѕРјРёРЅР°РµС‚ Р°РєРєР°СѓРЅС‚ РґР»СЏ Р±С‹СЃС‚СЂРѕРіРѕ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ")
+    void login_withTrustedDevice_remembersAccount() {
+        LoginRequest request = LoginRequest.builder().username("user1").password("pass123").build();
+        User user = User.builder().id(UUID.randomUUID()).username("user1").role(Role.PLAYER).build();
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(trustedDeviceAccountRepository.findByDeviceTokenHashAndUserId(anyString(), eq(user.getId())))
+                .thenReturn(Optional.empty());
+        stubSaveAssignsId();
+        when(tokenProvider.generateToken("user1", "PLAYER", user.getId())).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken(eq("user1"), eq("PLAYER"), eq(user.getId()), anyString())).thenReturn("refresh-token");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
+        when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().id(user.getId()).username("user1").build());
+
+        authService.login(request, "agent", "1.2.3.4", "device-token");
+
+        verify(trustedDeviceAccountRepository).save(argThat(account ->
+                account.getUserId().equals(user.getId())
+                        && account.getDeviceTokenHash() != null
+                        && !account.isRevoked()));
     }
 
     @Test
@@ -255,5 +281,56 @@ class AuthServiceTest {
     void logout_nullToken_noop() {
         authService.logout(null);
         verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    @DisplayName("Trusted-device switch РІС‹РґР°РµС‚ РЅРѕРІСѓСЋ СЃРµСЃСЃРёСЋ РґР»СЏ РґРѕРІРµСЂРµРЅРЅРѕРіРѕ Р°РєРєР°СѓРЅС‚Р°")
+    void switchTrustedDevice_success() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).username("user2").role(Role.GAME_MASTER).build();
+        TrustedDeviceAccount trusted = TrustedDeviceAccount.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .deviceTokenHash("hash")
+                .createdAt(Instant.now().minusSeconds(60))
+                .lastUsedAt(Instant.now().minusSeconds(60))
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .revoked(false)
+                .build();
+        when(trustedDeviceAccountRepository.findByDeviceTokenHashAndUserId(anyString(), eq(userId)))
+                .thenReturn(Optional.of(trusted));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        stubSaveAssignsId();
+        when(tokenProvider.generateToken("user2", "GAME_MASTER", userId)).thenReturn("switch-access");
+        when(tokenProvider.generateRefreshToken(eq("user2"), eq("GAME_MASTER"), eq(userId), anyString()))
+                .thenReturn("switch-refresh");
+        when(tokenProvider.getExpirationMs()).thenReturn(3600000L);
+        when(tokenProvider.getRefreshExpirationMs()).thenReturn(604800000L);
+        when(userMapper.toResponse(user)).thenReturn(UserResponse.builder().id(userId).username("user2").role("GAME_MASTER").build());
+
+        IssuedTokens result = authService.switchTrustedDevice(userId, "device-token", "agent", "1.2.3.4");
+
+        assertEquals("switch-access", result.accessToken());
+        assertEquals("switch-refresh", result.refreshToken());
+        assertEquals("user2", result.user().getUsername());
+        verify(trustedDeviceAccountRepository).save(trusted);
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("Trusted-device switch РѕС‚РєР»РѕРЅСЏРµС‚ РѕС‚РѕР·РІР°РЅРЅС‹Р№ Р°РєРєР°СѓРЅС‚")
+    void switchTrustedDevice_revoked_throws() {
+        UUID userId = UUID.randomUUID();
+        TrustedDeviceAccount trusted = TrustedDeviceAccount.builder()
+                .userId(userId)
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .revoked(true)
+                .build();
+        when(trustedDeviceAccountRepository.findByDeviceTokenHashAndUserId(anyString(), eq(userId)))
+                .thenReturn(Optional.of(trusted));
+
+        assertThrows(BadCredentialsException.class,
+                () -> authService.switchTrustedDevice(userId, "device-token", "agent", "1.2.3.4"));
+        verify(refreshTokenRepository, never()).save(any());
     }
 }

@@ -16,10 +16,13 @@ public class AuthCookieService {
 
     private final String accessCookieName;
     private final String refreshCookieName;
+    private final String trustedDeviceCookieName;
     private final boolean secure;
     private final String sameSite;
     private final String accessPath;
     private final String refreshPath;
+    private final String trustedDevicePath;
+    private final long trustedDeviceMaxAgeMs;
     private final String domain;
 
     /**
@@ -39,17 +42,23 @@ public class AuthCookieService {
      */
             @Value("${app.jwt.access-cookie-name:access_token}") String accessCookieName,
             @Value("${app.jwt.refresh-cookie-name:refresh_token}") String refreshCookieName,
+            @Value("${app.auth.trusted-device.cookie-name:trusted_device}") String trustedDeviceCookieName,
             @Value("${app.jwt.cookie.secure:false}") boolean secure,
             @Value("${app.jwt.cookie.same-site:Lax}") String sameSite,
             @Value("${app.jwt.cookie.access-path:/}") String accessPath,
             @Value("${app.jwt.cookie.refresh-path:/api/auth}") String refreshPath,
+            @Value("${app.auth.trusted-device.cookie-path:/api/auth}") String trustedDevicePath,
+            @Value("${app.auth.trusted-device.ttl-ms:7776000000}") long trustedDeviceMaxAgeMs,
             @Value("${app.jwt.cookie.domain:}") String domain) {
         this.accessCookieName = accessCookieName;
         this.refreshCookieName = refreshCookieName;
+        this.trustedDeviceCookieName = trustedDeviceCookieName;
         this.secure = secure;
         this.sameSite = sameSite;
         this.accessPath = accessPath;
         this.refreshPath = refreshPath;
+        this.trustedDevicePath = trustedDevicePath;
+        this.trustedDeviceMaxAgeMs = trustedDeviceMaxAgeMs;
         this.domain = domain;
     }
 
@@ -67,6 +76,10 @@ public class AuthCookieService {
      */
     public String getRefreshCookieName() {
         return refreshCookieName;
+    }
+
+    public String getTrustedDeviceCookieName() {
+        return trustedDeviceCookieName;
     }
 
     /**
@@ -89,6 +102,10 @@ public class AuthCookieService {
         return build(refreshCookieName, token, refreshPath, Duration.ofMillis(ttlMs));
     }
 
+    public ResponseCookie trustedDeviceCookie(String token) {
+        return build(trustedDeviceCookieName, token, trustedDevicePath, Duration.ofMillis(trustedDeviceMaxAgeMs));
+    }
+
     /**
      * Выполняет операции "clear access cookie" в рамках бизнес-логики безопасности.
      * @return результат выполнения бизнес-операции
@@ -103,6 +120,10 @@ public class AuthCookieService {
      */
     public ResponseCookie clearRefreshCookie() {
         return build(refreshCookieName, "", refreshPath, Duration.ZERO);
+    }
+
+    public ResponseCookie clearTrustedDeviceCookie() {
+        return build(trustedDeviceCookieName, "", trustedDevicePath, Duration.ZERO);
     }
 
     private ResponseCookie build(String name, String value, String path, Duration maxAge) {

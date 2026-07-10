@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="093-trusted-device-accounts" author="codex">
+        <createTable tableName="trusted_device_account">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_token_hash" type="varchar(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_used_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revoked" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_agent" type="text"/>
+            <column name="ip" type="text"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="trusted_device_account"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_trusted_device_account_user"
+                onDelete="CASCADE"/>
+
+        <addUniqueConstraint
+                tableName="trusted_device_account"
+                columnNames="device_token_hash,user_id"
+                constraintName="uq_trusted_device_account_device_user"/>
+
+        <createIndex tableName="trusted_device_account" indexName="idx_trusted_device_account_device">
+            <column name="device_token_hash"/>
+        </createIndex>
+
+        <createIndex tableName="trusted_device_account" indexName="idx_trusted_device_account_user">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
