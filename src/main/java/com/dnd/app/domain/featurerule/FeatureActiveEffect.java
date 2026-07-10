@@ -8,8 +8,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A live feature effect on a character (table {@code character_active_effect}, singular). Distinct from the
- * existing item/spell buff entity {@code CharacterActiveEffect} (table {@code character_active_effects}).
+ * Класс FeatureActiveEffect описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "character_active_effect")

@@ -19,9 +19,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 /**
- * HTTP implementation of {@link MapSessionCloser}: POSTs to map-service's internal endpoint with the
- * shared {@code X-Internal-Api-Key}. Best-effort — any failure is logged and swallowed so ending a
- * battle never depends on map-service being up. Enabled by {@code map-service.http-client-enabled=true}.
+ * Класс HttpMapSessionCloser описывает интеграционный компонент, который связывает backend с внешним сервисом.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Component
@@ -35,6 +34,11 @@ public class HttpMapSessionCloser implements MapSessionCloser, EnvironmentAware 
     private final String apiKey;
     private final HttpClient httpClient;
 
+    /**
+     * Создает экземпляр компонента приложения и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param baseUrl входящее значение base url, используемое бизнес-сценарием
+     * @param apiKey входящее значение api key, используемое бизнес-сценарием
+     */
     public HttpMapSessionCloser(
             @Value("${map-service.base-url:}") String baseUrl,
             @Value("${app.internal.api-key:}") String apiKey
@@ -45,9 +49,8 @@ public class HttpMapSessionCloser implements MapSessionCloser, EnvironmentAware 
     }
 
     /**
-     * Fail fast at startup: when the map client is enabled, both the base URL and the shared internal
-     * API key must be configured outside local/test (BTL-06). A misconfigured integration should stop
-     * the app, not silently no-op or send unauthenticated requests.
+     * Устанавливает результат операции "set environment" в рамках бизнес-логики приложения.
+     * @param environment входящее значение environment, используемое бизнес-сценарием
      */
     @Override
     public void setEnvironment(Environment environment) {
@@ -66,6 +69,10 @@ public class HttpMapSessionCloser implements MapSessionCloser, EnvironmentAware 
         }
     }
 
+    /**
+     * Выполняет операции "close sessions for battle" в рамках бизнес-логики приложения.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     */
     @Override
     public void closeSessionsForBattle(UUID battleId) {
         if (!StringUtils.hasText(baseUrl)) {

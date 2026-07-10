@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A feature choice a character must make (Fighting Style, Expertise skills, Metamagic, …) with its options
- * and the character's current selections. Drives the level-up / folio pending-choices UI.
+ * Класс FeatureChoiceGroupResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

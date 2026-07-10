@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A filter selecting a set of spells (class list, school, max level, tag, source) for a spell grant. */
+/**
+ * Класс FeatureSpellFilter описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_spell_filter")
 @Getter

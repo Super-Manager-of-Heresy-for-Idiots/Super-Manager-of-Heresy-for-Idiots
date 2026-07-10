@@ -6,14 +6,8 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * Full admin edit of a spell's combat resolution, submitted from the spell editor
- * console. Covers the structured fields the auto-parser fills heuristically: the
- * saving-throw ability, attack-roll flag, ability-check ability + skill, the base
- * damage and healing entries, and whether the record stays flagged for review.
- *
- * The {@code damages} / {@code healings} lists REPLACE the spell's current entries
- * wholesale (send the full desired set). A null list leaves that collection
- * untouched; an empty list clears it.
+ * Класс SpellEditRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Schema(name = "SpellEditRequest")

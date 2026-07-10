@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** A feature DAMAGE rule for the admin editor, with the formulas' validation status. */
+/**
+ * Класс DamageRuleAdminResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

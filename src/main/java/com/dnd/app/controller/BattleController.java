@@ -43,10 +43,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Campaign-scoped battles. The GM assembles a monster group (with a danger / xp preview),
- * starts the fight, players join their characters with a d20 roll, and the shared initiative
- * tracker drives turn passing. Every state change is broadcast to the campaign topic so all
- * participants re-fetch the authoritative state. Authorization lives in the service.
+ * Класс BattleController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/battles")
@@ -58,6 +56,13 @@ public class BattleController {
     private final Executor controllerTaskExecutor;
     private final MapSessionCloser mapSessionCloser;
 
+    /**
+     * Создает результат операции "create battle" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create a battle in the assembling state (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> createBattle(
@@ -69,6 +74,12 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list battles" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List battles in the campaign (members)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BattleResponse>>>> listBattles(
@@ -79,6 +90,13 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get battle" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{battleId}")
     @Operation(summary = "Get full battle state with the initiative tracker (members)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> getBattle(
@@ -92,6 +110,15 @@ public class BattleController {
 
     @GetMapping("/{battleId}/log")
     @Operation(summary = "Combat log for the battle, seq-ordered after afterSeq (members; GM_ONLY hidden from players)")
+    /**
+     * Возвращает результат операции "get battle log" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param afterSeq граница выборки, используемая для продолжения бизнес-потока
+     * @param limit ограничение размера результата бизнес-операции
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<List<BattleLogEntryResponse>>>> getBattleLog(
             @PathVariable UUID campaignId,
             @PathVariable UUID battleId,
@@ -105,6 +132,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add monsters" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/monsters")
     @Operation(summary = "Add monsters to the group while assembling (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> addMonsters(
@@ -117,6 +152,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove combatant" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{battleId}/combatants/{combatantId}")
     @Operation(summary = "Remove a combatant while assembling (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> removeCombatant(
@@ -129,6 +172,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set override xp" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{battleId}/xp")
     @Operation(summary = "Override the group's total combat XP (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setOverrideXp(
@@ -141,6 +192,13 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "start battle" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/start")
     @Operation(summary = "Roll monster initiative, activate the battle and notify players (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> startBattle(
@@ -152,6 +210,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "join characters" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/join")
     @Operation(summary = "Join one or more of your characters with a d20 (manual or server-rolled)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> joinCharacters(
@@ -164,6 +230,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get initiative bonus" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{battleId}/characters/{characterId}/initiative-bonus")
     @Operation(summary = "Preview a character's initiative bonus (DEX mod + buffs) so the UI can show d20 + bonus live")
     public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> getInitiativeBonus(
@@ -176,6 +250,13 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "end turn" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/end-turn")
     @Operation(summary = "Pass the turn to the next combatant (GM or the active character's owner)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> endTurn(
@@ -187,6 +268,13 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get current turn" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{battleId}/current-turn")
     @Operation(summary = "Get the active combatant's detail (character sheet + resources, or monster for the GM)")
     public CompletableFuture<ResponseEntity<ApiResponse<CombatantTurnResponse>>> getCurrentTurn(
@@ -198,6 +286,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "attack" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/attack")
     @Operation(summary = "The active combatant attacks a target: manual d20, server resolves hit/crit vs AC and rolls damage")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleActionResultResponse>>> attack(
@@ -210,6 +306,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "use item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/use-item")
     @Operation(summary = "The active character uses a carried consumable (e.g. drinks a healing potion)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleActionResultResponse>>> useItem(
@@ -222,6 +326,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "spend action" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/spend")
     @Operation(summary = "Mark a combatant's action / bonus action / reaction as spent this turn")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> spendAction(
@@ -235,6 +348,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "standard action" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/standard-action")
     @Operation(summary = "Take a standard action: Dash / Dodge / Disengage / Help / Hide (own turn)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> standardAction(
@@ -248,6 +370,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "contest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/contest")
     @Operation(summary = "Opposed melee contest — Grapple or Shove — against a target (own turn)")
     public CompletableFuture<ResponseEntity<ApiResponse<ContestResultResponse>>> contest(
@@ -261,6 +392,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "adjust action economy" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/action-economy")
     @Operation(summary = "Adjust a combatant's action / bonus / legendary action maxima — GM only")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> adjustActionEconomy(
@@ -274,6 +414,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "apply combatant hp" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/hp")
     @Operation(summary = "Adjust a combatant's HP (negative damages, positive heals) — GM only")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> applyCombatantHp(
@@ -287,6 +436,13 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "end battle" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/end")
     @Operation(summary = "End the battle (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> endBattle(
@@ -300,6 +456,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add condition" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/conditions")
     @Operation(summary = "Apply a condition to a combatant (GM, or the character's owner)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CombatantConditionResponse>>>> addCondition(
@@ -314,6 +479,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove condition" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param conditionId идентификатор condition, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{battleId}/combatants/{combatantId}/conditions/{conditionId}")
     @Operation(summary = "Remove a condition from a combatant (GM, or the character's owner)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CombatantConditionResponse>>>> removeCondition(
@@ -328,6 +502,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "death save" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/death-save")
     @Operation(summary = "Roll a death saving throw for a dying character (server d20 or manual)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> deathSave(
@@ -342,6 +525,15 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "concentration check" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/concentration-check")
     @Operation(summary = "Roll a pending concentration saving throw (player d20 or server AUTO)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> concentrationCheck(
@@ -356,6 +548,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "stabilize" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/stabilize")
     @Operation(summary = "Stabilize a dying character (GM/healer)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> stabilize(
@@ -368,6 +568,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Применяет заклинание операции "cast spell" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/cast-spell")
     @Operation(summary = "Cast a spell on the caster's turn via the feature-rules runtime (Phase 2.1)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellCastResult>>> castSpell(
@@ -380,6 +588,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "bulk action" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/bulk-action")
     @Operation(summary = "Mass GM operation (damage/heal/condition) over several combatants at once")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> bulkAction(
@@ -392,6 +608,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set initiative order" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PatchMapping("/{battleId}/initiative-order")
     @Operation(summary = "Replace the whole tracker's initiative values (GM drag-reorder quick tool)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setInitiativeOrder(
@@ -405,6 +629,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "group initiative" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/group-initiative")
     @Operation(summary = "Roll one shared initiative die for a group of combatants (GM)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> groupInitiative(
@@ -418,6 +650,14 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "reroll initiative" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{battleId}/combatants/{combatantId}/reroll-initiative")
     @Operation(summary = "Reroll a combatant's initiative and re-sort the tracker (GM quick tool)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> rerollInitiative(

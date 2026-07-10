@@ -10,6 +10,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт CampaignBlueprintRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CampaignBlueprintRepository extends JpaRepository<CampaignBlueprint, UUID> {
 
     Optional<CampaignBlueprint> findByIdAndAuthorId(UUID id, UUID authorId);

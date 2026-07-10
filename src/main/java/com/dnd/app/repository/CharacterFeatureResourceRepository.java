@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт CharacterFeatureResourceRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CharacterFeatureResourceRepository extends JpaRepository<CharacterFeatureResource, UUID> {
     List<CharacterFeatureResource> findByCharacterId(UUID characterId);
     Optional<CharacterFeatureResource> findByCharacterIdAndResourceDefinitionId(UUID characterId, UUID resourceDefinitionId);

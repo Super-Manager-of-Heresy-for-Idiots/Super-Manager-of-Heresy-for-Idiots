@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A single {@code feature_rule_issue} row. Feature context fields are populated for the global list. */
+/**
+ * Класс FeatureRuleIssueResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

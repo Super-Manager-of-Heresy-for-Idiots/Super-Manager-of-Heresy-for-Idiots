@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin review row for a class feature whose parsed mechanics need checking. */
+/**
+ * Класс ClassFeatureWarningResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

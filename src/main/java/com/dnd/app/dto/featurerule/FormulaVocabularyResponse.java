@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/** The complete formula DSL vocabulary (functions + scalars) served to the admin autocomplete. */
+/**
+ * Класс FormulaVocabularyResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

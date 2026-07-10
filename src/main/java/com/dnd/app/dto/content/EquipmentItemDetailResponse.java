@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single equipment item in the new content model (D&D 2024):
- * category, cost, weight, and—when applicable—weapon stats, armor stats and weapon properties.
+ * Класс EquipmentItemDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

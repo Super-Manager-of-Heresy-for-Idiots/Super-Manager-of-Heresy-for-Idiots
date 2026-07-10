@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** A feature-granted spell (or filtered set) with its exceptions, for the spellbook overlay. */
+/**
+ * Класс FeatureSpellGrantResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

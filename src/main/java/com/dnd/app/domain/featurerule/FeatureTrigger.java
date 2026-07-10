@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Binds a feature rule to a gameplay event, with a predicate and reaction/resource cost. */
+/**
+ * Класс FeatureTrigger описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_trigger")
 @Getter

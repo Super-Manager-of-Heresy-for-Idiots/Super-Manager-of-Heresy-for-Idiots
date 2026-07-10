@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт CampaignMemberRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CampaignMemberRepository extends JpaRepository<CampaignMember, UUID> {
 
     Optional<CampaignMember> findByCampaignIdAndUserId(UUID campaignId, UUID userId);

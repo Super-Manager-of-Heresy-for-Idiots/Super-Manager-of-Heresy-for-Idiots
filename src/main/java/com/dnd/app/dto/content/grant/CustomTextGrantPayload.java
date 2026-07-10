@@ -7,9 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * CUSTOM_TEXT grant — manual/free-text grant. This is also the fallback for any
- * unknown {@code grantType}: structural fields of unknown types are NOT
- * interpreted; the grant is stored as custom/manual.
+ * Класс CustomTextGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

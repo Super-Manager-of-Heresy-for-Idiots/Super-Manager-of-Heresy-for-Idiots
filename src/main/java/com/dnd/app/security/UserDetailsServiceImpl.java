@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Класс UserDetailsServiceImpl описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -19,6 +23,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+    /**
+     * Выполняет операции "load user by username" в рамках бизнес-логики безопасности.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)

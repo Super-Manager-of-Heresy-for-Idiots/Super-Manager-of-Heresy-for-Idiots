@@ -18,6 +18,10 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+/**
+ * Класс AuthRateLimitFilter описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 public class AuthRateLimitFilter extends OncePerRequestFilter {
@@ -35,6 +39,13 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     private final ConcurrentHashMap<String, Deque<Instant>> registerHits = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deque<Instant>> refreshHits = new ConcurrentHashMap<>();
 
+    /**
+     * Создает экземпляр компонента безопасности и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param loginPerMinute входящее значение login per minute, используемое бизнес-сценарием
+     * @param registerPerHour входящее значение register per hour, используемое бизнес-сценарием
+     * @param refreshPerMinute входящее значение refresh per minute, используемое бизнес-сценарием
+     * @param trustedProxyCount входящее значение trusted proxy count, используемое бизнес-сценарием
+     */
     public AuthRateLimitFilter(
             @Value("${app.ratelimit.login-per-minute:5}") int loginPerMinute,
             @Value("${app.ratelimit.register-per-hour:3}") int registerPerHour,

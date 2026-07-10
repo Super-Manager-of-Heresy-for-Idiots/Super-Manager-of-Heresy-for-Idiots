@@ -6,9 +6,8 @@ import lombok.*;
 import java.util.UUID;
 
 /**
- * A pool of hit dice of one size (d{@code die}) a character has. {@code total} = sum of class levels of
- * classes using that die; {@code remaining} = unspent (spent on short rests, half regained on a long rest).
- * One row per (character, die).
+ * Класс CharacterHitDie описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "character_hit_dice")

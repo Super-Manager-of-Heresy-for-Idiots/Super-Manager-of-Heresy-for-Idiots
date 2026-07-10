@@ -9,16 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Universal attach point for a single piece of class-feature mechanics plus its review lifecycle.
- *
- * <p>One class feature can own several {@code FeatureRule} rows (e.g. an action cost, a resource and a
- * trigger). The specialized payload tables (action cost, resource, effect, …) are added in later
- * stages and reference this row. Only rows with {@code review_status = approved} and {@code enabled}
- * are ever executed by the runtime.</p>
- *
- * <p>String columns (owner type, rule type, review status, source) store stable snake_case
- * {@code code}s; the matching enums under this package are authoritative for validation. This mirrors
- * the existing {@code class_feature} convention of storing parsed mechanics as plain strings.</p>
+ * Класс FeatureRule описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "feature_rule")

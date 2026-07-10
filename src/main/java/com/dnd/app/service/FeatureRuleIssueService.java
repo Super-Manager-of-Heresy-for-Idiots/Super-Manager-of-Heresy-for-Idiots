@@ -25,7 +25,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Admin operations for {@code feature_rule_issue}: per-feature and global listing, create, resolve. */
+/**
+ * Класс FeatureRuleIssueService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureRuleIssueService {
@@ -37,6 +40,12 @@ public class FeatureRuleIssueService {
     private final ClassFeatureRepository classFeatureRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Возвращает список для операции "list for feature" в рамках бизнес-логики домена.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRuleIssueResponse> listForFeature(UUID featureId, String lang) {
         ClassFeature feature = classFeatureRepository.findById(featureId)
@@ -46,6 +55,14 @@ public class FeatureRuleIssueService {
                 .toList();
     }
 
+    /**
+     * Возвращает список для операции "list global" в рамках бизнес-логики домена.
+     * @param severity входящее значение severity, используемое бизнес-сценарием
+     * @param resolved входящее значение resolved, используемое бизнес-сценарием
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRuleIssueResponse> listGlobal(String severity, Boolean resolved, UUID classId, String lang) {
         List<FeatureRuleIssue> issues = issueRepository.findByOwnerType(OWNER).stream()
@@ -69,6 +86,13 @@ public class FeatureRuleIssueService {
                 .toList();
     }
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики домена.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleIssueResponse create(UUID featureId, CreateFeatureRuleIssueRequest request, String lang) {
         ClassFeature feature = classFeatureRepository.findById(featureId)
@@ -101,6 +125,13 @@ public class FeatureRuleIssueService {
         return toResponse(issue, feature, lang);
     }
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param issueId идентификатор issue, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleIssueResponse resolve(UUID issueId, String username, String lang) {
         FeatureRuleIssue issue = issueRepository.findById(issueId)

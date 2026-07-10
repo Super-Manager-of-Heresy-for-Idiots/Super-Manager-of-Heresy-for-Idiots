@@ -25,8 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Social graph endpoints: user search, friend requests, friendships and blocks. All require an
- * authenticated user (any role); the caller is taken from the JWT via {@link Authentication}.
+ * Класс FriendController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -34,6 +34,13 @@ public class FriendController {
 
     private final com.dnd.app.service.FriendService friendService;
 
+    /**
+     * Выполняет операции "search users" в рамках бизнес-логики API.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param limit ограничение размера результата бизнес-операции
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/users/search")
     public ResponseEntity<ApiResponse<List<UserSearchResultResponse>>> searchUsers(
             @RequestParam("username") String username,
@@ -43,6 +50,12 @@ public class FriendController {
                 friendService.searchUsers(authentication.getName(), username, limit)));
     }
 
+    /**
+     * Публикует событие операции "send request" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/friends/requests")
     public ResponseEntity<ApiResponse<FriendRequestResponse>> sendRequest(
             @Valid @RequestBody SendFriendRequestRequest request,
@@ -52,6 +65,12 @@ public class FriendController {
                 .body(ApiResponse.ok(response, "Friend request sent"));
     }
 
+    /**
+     * Возвращает список для операции "list requests" в рамках бизнес-логики API.
+     * @param direction входящее значение direction, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/friends/requests")
     public ResponseEntity<ApiResponse<List<FriendRequestResponse>>> listRequests(
             @RequestParam(value = "direction", defaultValue = "incoming") String direction,
@@ -60,6 +79,12 @@ public class FriendController {
                 friendService.listRequests(authentication.getName(), parseDirection(direction))));
     }
 
+    /**
+     * Выполняет операции "accept request" в рамках бизнес-логики API.
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/friends/requests/{relationshipId}/accept")
     public ResponseEntity<ApiResponse<FriendResponse>> acceptRequest(
             @PathVariable UUID relationshipId,
@@ -68,6 +93,12 @@ public class FriendController {
                 friendService.acceptFriendRequest(authentication.getName(), relationshipId), "Friend request accepted"));
     }
 
+    /**
+     * Выполняет операции "decline request" в рамках бизнес-логики API.
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/friends/requests/{relationshipId}/decline")
     public ResponseEntity<ApiResponse<Void>> declineRequest(
             @PathVariable UUID relationshipId,
@@ -76,6 +107,12 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Friend request declined"));
     }
 
+    /**
+     * Проверяет условие операции "cancel request" в рамках бизнес-логики API.
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/api/friends/requests/{relationshipId}")
     public ResponseEntity<ApiResponse<Void>> cancelRequest(
             @PathVariable UUID relationshipId,
@@ -84,11 +121,22 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Friend request cancelled"));
     }
 
+    /**
+     * Возвращает список для операции "list friends" в рамках бизнес-логики API.
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/friends")
     public ResponseEntity<ApiResponse<List<FriendResponse>>> listFriends(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.ok(friendService.listFriends(authentication.getName())));
     }
 
+    /**
+     * Удаляет результат операции "remove friend" в рамках бизнес-логики API.
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/api/friends/{userId}")
     public ResponseEntity<ApiResponse<Void>> removeFriend(
             @PathVariable UUID userId,
@@ -97,6 +145,12 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Friend removed"));
     }
 
+    /**
+     * Выполняет операции "block" в рамках бизнес-логики API.
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/friends/{userId}/block")
     public ResponseEntity<ApiResponse<Void>> block(
             @PathVariable UUID userId,
@@ -105,6 +159,12 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.ok(null, "User blocked"));
     }
 
+    /**
+     * Выполняет операции "unblock" в рамках бизнес-логики API.
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/api/friends/{userId}/block")
     public ResponseEntity<ApiResponse<Void>> unblock(
             @PathVariable UUID userId,
@@ -113,6 +173,11 @@ public class FriendController {
         return ResponseEntity.ok(ApiResponse.ok(null, "User unblocked"));
     }
 
+    /**
+     * Возвращает список для операции "list blocked" в рамках бизнес-логики API.
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/friends/blocked")
     public ResponseEntity<ApiResponse<List<BlockedUserResponse>>> listBlocked(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.ok(friendService.listBlocked(authentication.getName())));

@@ -28,8 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Aggregate class authoring (Phase 8). Same request body for admin/core and homebrew;
- * only scope/ownership differ. Replaces the legacy rich class-authoring path.
+ * Класс ClassAuthoringController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -41,6 +41,13 @@ public class ClassAuthoringController {
 
     // --- admin / core ---
 
+    /**
+     * Возвращает результат операции "get core" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/admin/character-classes/{classId}")
     @Operation(summary = "Get a core class detail (admin) with concurrency ETag")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getCore(
@@ -53,6 +60,14 @@ public class ClassAuthoringController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create core" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param idempotencyKey входящее значение idempotency key, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/admin/character-classes")
     @Operation(summary = "Create a core class (admin)")
     public CompletableFuture<ResponseEntity<ApiResponse<ClassSaveResult>>> createCore(
@@ -69,6 +84,15 @@ public class ClassAuthoringController {
 
     @PutMapping("/api/admin/character-classes/{classId}")
     @Operation(summary = "Update a core class (admin); honours If-Match for optimistic concurrency")
+    /**
+     * Обновляет результат операции "update core" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<ClassSaveResult>>> updateCore(
             @PathVariable UUID classId,
             @RequestParam(defaultValue = "en") String lang,
@@ -81,6 +105,12 @@ public class ClassAuthoringController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete core" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/api/admin/character-classes/{classId}")
     @Operation(summary = "Delete a core class (admin)")
     public CompletableFuture<ResponseEntity<Void>> deleteCore(
@@ -93,6 +123,14 @@ public class ClassAuthoringController {
 
     // --- homebrew package ---
 
+    /**
+     * Возвращает результат операции "get package class" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/homebrew/packages/{packageId}/classes/{classId}")
     @Operation(summary = "Get a homebrew package class detail with concurrency ETag")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getPackageClass(
@@ -107,6 +145,15 @@ public class ClassAuthoringController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create package class" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param idempotencyKey входящее значение idempotency key, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/homebrew/packages/{packageId}/classes")
     @Operation(summary = "Create a class in a homebrew package")
     public CompletableFuture<ResponseEntity<ApiResponse<ClassSaveResult>>> createPackageClass(
@@ -125,6 +172,16 @@ public class ClassAuthoringController {
 
     @PutMapping("/api/homebrew/packages/{packageId}/classes/{classId}")
     @Operation(summary = "Update a class in a homebrew package; honours If-Match for optimistic concurrency")
+    /**
+     * Обновляет результат операции "update package class" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<ClassSaveResult>>> updatePackageClass(
             @PathVariable UUID packageId,
             @PathVariable UUID classId,
@@ -139,6 +196,13 @@ public class ClassAuthoringController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete package class" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/api/homebrew/packages/{packageId}/classes/{classId}")
     @Operation(summary = "Delete a class from a homebrew package")
     public CompletableFuture<ResponseEntity<Void>> deletePackageClass(

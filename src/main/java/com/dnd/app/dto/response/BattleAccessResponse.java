@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Service-to-service answer to "what may this user do in this battle?". Consumed by map-service
- * so it can authorize token control without reaching into the core database or duplicating the
- * combat permission rules. Combat authority stays in core BE; this is a read-only projection.
+ * Класс BattleAccessResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

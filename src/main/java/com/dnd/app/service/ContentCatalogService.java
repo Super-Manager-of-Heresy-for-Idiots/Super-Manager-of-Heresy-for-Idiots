@@ -37,10 +37,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Read-only catalog access for the normalized content model (feats, and—added in later
- * phases—spells, backgrounds, equipment, magic items). Campaign-aware visibility mirrors
- * {@link ContentReferenceService}: core content ({@code homebrew_id IS NULL}) plus the
- * homebrew packages activated for the campaign; vanilla variants expose core content only.
+ * Класс ContentCatalogService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -63,6 +61,11 @@ public class ContentCatalogService {
 
     // --- feats: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla feats" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatDetailResponse> getVanillaFeats(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -71,6 +74,12 @@ public class ContentCatalogService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla feat" в рамках бизнес-логики домена.
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatDetailResponse getVanillaFeat(UUID featId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -84,6 +93,13 @@ public class ContentCatalogService {
 
     // --- feats: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign feats" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatDetailResponse> getCampaignFeats(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -97,6 +113,14 @@ public class ContentCatalogService {
         return feats.stream().map(f -> featMapper.toDetail(f, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign feat" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatDetailResponse getCampaignFeat(UUID campaignId, UUID featId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -110,6 +134,11 @@ public class ContentCatalogService {
 
     // --- spells: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla spells" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpellDetailResponse> getVanillaSpells(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -118,6 +147,12 @@ public class ContentCatalogService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla spell" в рамках бизнес-логики домена.
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpellDetailResponse getVanillaSpell(UUID spellId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -131,6 +166,13 @@ public class ContentCatalogService {
 
     // --- spells: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign spells" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpellDetailResponse> getCampaignSpells(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -144,6 +186,14 @@ public class ContentCatalogService {
         return spells.stream().map(s -> spellMapper.toDetail(s, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign spell" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpellDetailResponse getCampaignSpell(UUID campaignId, UUID spellId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -157,6 +207,11 @@ public class ContentCatalogService {
 
     // --- backgrounds: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla backgrounds" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BackgroundDetailResponse> getVanillaBackgrounds(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -165,6 +220,12 @@ public class ContentCatalogService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla background" в рамках бизнес-логики домена.
+     * @param backgroundId идентификатор background, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public BackgroundDetailResponse getVanillaBackground(UUID backgroundId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -178,6 +239,13 @@ public class ContentCatalogService {
 
     // --- backgrounds: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign backgrounds" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BackgroundDetailResponse> getCampaignBackgrounds(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -191,6 +259,14 @@ public class ContentCatalogService {
         return backgrounds.stream().map(b -> backgroundMapper.toDetail(b, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign background" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param backgroundId идентификатор background, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public BackgroundDetailResponse getCampaignBackground(UUID campaignId, UUID backgroundId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -204,6 +280,11 @@ public class ContentCatalogService {
 
     // --- equipment items: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla equipment items" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<EquipmentItemDetailResponse> getVanillaEquipmentItems(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -212,6 +293,12 @@ public class ContentCatalogService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla equipment item" в рамках бизнес-логики домена.
+     * @param equipmentItemId идентификатор equipment item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public EquipmentItemDetailResponse getVanillaEquipmentItem(UUID equipmentItemId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -225,6 +312,13 @@ public class ContentCatalogService {
 
     // --- equipment items: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign equipment items" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<EquipmentItemDetailResponse> getCampaignEquipmentItems(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -238,6 +332,14 @@ public class ContentCatalogService {
         return items.stream().map(e -> equipmentItemMapper.toDetail(e, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign equipment item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param equipmentItemId идентификатор equipment item, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public EquipmentItemDetailResponse getCampaignEquipmentItem(UUID campaignId, UUID equipmentItemId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -251,6 +353,11 @@ public class ContentCatalogService {
 
     // --- magic items: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla magic items" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MagicItemDetailResponse> getVanillaMagicItems(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -259,6 +366,12 @@ public class ContentCatalogService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla magic item" в рамках бизнес-логики домена.
+     * @param magicItemId идентификатор magic item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MagicItemDetailResponse getVanillaMagicItem(UUID magicItemId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -272,6 +385,13 @@ public class ContentCatalogService {
 
     // --- magic items: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign magic items" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MagicItemDetailResponse> getCampaignMagicItems(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -285,6 +405,14 @@ public class ContentCatalogService {
         return items.stream().map(m -> magicItemMapper.toDetail(m, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign magic item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param magicItemId идентификатор magic item, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MagicItemDetailResponse getCampaignMagicItem(UUID campaignId, UUID magicItemId, String username, String lang) {
         enforceAccess(campaignId, username);

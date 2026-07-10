@@ -18,10 +18,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Single entry point for condition instances on battle combatants (apply / remove / round tick).
- * The catalogue lives in {@code bestiary_conditions}; instances live on {@code battle_combatant_condition}.
- * Kept as one service so later feature-rules effects can hang conditions off the same path (A8). Phase
- * 1.1 tracks the marker + duration only — advantage/disadvantage automation from conditions is Phase 2.
+ * Класс ConditionService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -33,8 +31,15 @@ public class ConditionService {
     private final WebSocketEventService webSocketEventService;
 
     /**
-     * Apply a condition to a combatant. Duplicate policy: a re-apply of the same condition refreshes
-     * its source note and duration (upsert), rather than erroring — the GM re-marking is common.
+     * Выполняет операции "apply" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param combatant входящее значение combatant, используемое бизнес-сценарием
+     * @param conditionId идентификатор condition, используемый для выбора нужного бизнес-объекта
+     * @param sourceText входящее значение source text, используемое бизнес-сценарием
+     * @param remainingRounds входящее значение remaining rounds, используемое бизнес-сценарием
+     * @param actorId идентификатор actor, используемый для выбора нужного бизнес-объекта
+     * @param currentRound входящее значение current round, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public List<CombatantConditionResponse> apply(UUID campaignId, BattleCombatant combatant, UUID conditionId,
@@ -53,21 +58,41 @@ public class ConditionService {
         return publish(campaignId, combatant.getId(), actorId);
     }
 
-    /** Apply a catalogue condition by its code (e.g. "unconscious") — used by death saves and, later, feature effects. */
+    /**
+     * Выполняет операции "apply by code" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param combatant входящее значение combatant, используемое бизнес-сценарием
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param actorId идентификатор actor, используемый для выбора нужного бизнес-объекта
+     * @param currentRound входящее значение current round, используемое бизнес-сценарием
+     */
     @Transactional
     public void applyByCode(UUID campaignId, BattleCombatant combatant, String code, UUID actorId, int currentRound) {
         bestiaryConditionRepository.findByCodeAndHomebrewIsNull(code)
                 .ifPresent(cond -> apply(campaignId, combatant, cond.getId(), null, null, actorId, currentRound));
     }
 
-    /** Remove a catalogue condition by its code (no-op if the code is unknown or not present). */
+    /**
+     * Удаляет результат операции "remove by code" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param actorId идентификатор actor, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void removeByCode(UUID campaignId, UUID combatantId, String code, UUID actorId) {
         bestiaryConditionRepository.findByCodeAndHomebrewIsNull(code)
                 .ifPresent(cond -> remove(campaignId, combatantId, cond.getId(), actorId));
     }
 
-    /** Remove a condition from a combatant (no-op if it isn't present). */
+    /**
+     * Удаляет результат операции "remove" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param conditionId идентификатор condition, используемый для выбора нужного бизнес-объекта
+     * @param actorId идентификатор actor, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<CombatantConditionResponse> remove(UUID campaignId, UUID combatantId, UUID conditionId, UUID actorId) {
         conditionRepository.findByCombatantIdAndConditionId(combatantId, conditionId)
@@ -76,8 +101,8 @@ public class ConditionService {
     }
 
     /**
-     * Round-boundary tick: decrement finite durations and delete any that reach 0. Conditions with a
-     * null duration (until removed) are untouched. Call from the one place a new round begins.
+     * Выполняет операции "tick" в рамках бизнес-логики домена.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
      */
     @Transactional
     public void tick(UUID battleId) {
@@ -95,6 +120,11 @@ public class ConditionService {
         }
     }
 
+    /**
+     * Выполняет операции "conditions for combatant" в рамках бизнес-логики домена.
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CombatantConditionResponse> conditionsForCombatant(UUID combatantId) {
         return conditionRepository.findByCombatantId(combatantId).stream().map(this::toDto).toList();

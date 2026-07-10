@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Reference row for a duration unit (round, minute, hour, day, until_rest, …). Seeded in migration 066. */
+/**
+ * Класс DurationUnit описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "duration_unit")
 @Getter

@@ -6,12 +6,20 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/** Fallback when the map-service HTTP client is disabled — no live map, so zones are a no-op. */
+/**
+ * Класс NoOpMapZoneCreator описывает интеграционный компонент, который связывает backend с внешним сервисом.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "map-service.http-client-enabled", havingValue = "false", matchIfMissing = true)
 public class NoOpMapZoneCreator implements MapZoneCreator {
     @Override
+    /**
+     * Создает результат операции "create zone for battle" в рамках бизнес-логики приложения.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param spec входящее значение spec, используемое бизнес-сценарием
+     */
     public void createZoneForBattle(UUID battleId, ZoneSpec spec) {
         log.debug("map-service integration disabled; not creating a zone for battle {}", battleId);
     }

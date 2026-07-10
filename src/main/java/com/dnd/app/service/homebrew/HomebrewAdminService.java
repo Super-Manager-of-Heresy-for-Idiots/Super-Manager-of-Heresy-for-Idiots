@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+/**
+ * Класс HomebrewAdminService описывает сервис homebrew-логики, который проверяет и обслуживает пользовательский контент.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,6 +33,13 @@ public class HomebrewAdminService {
     private final HomebrewTagRepository tagRepository;
     private final HomebrewAuthoringService authoringService;
 
+    /**
+     * Возвращает список для операции "list all packages" в рамках бизнес-логики homebrew-контента.
+     * @param status входящее значение status, используемое бизнес-сценарием
+     * @param authorId идентификатор author, используемый для выбора нужного бизнес-объекта
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<HomebrewPackageResponse> listAllPackages(String status, UUID authorId, Pageable pageable) {
         Page<HomebrewPackage> packages;
@@ -46,6 +57,11 @@ public class HomebrewAdminService {
         return packages.map(authoringService::toPackageResponse);
     }
 
+    /**
+     * Выполняет операции "hard delete" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public Map<String, Object> hardDelete(UUID id) {
         HomebrewPackage pkg = packageRepository.findById(id)
@@ -64,6 +80,10 @@ public class HomebrewAdminService {
         return result;
     }
 
+    /**
+     * Возвращает список для операции "list tags with usage count" в рамках бизнес-логики homebrew-контента.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<HomebrewTagResponse> listTagsWithUsageCount() {
         List<Object[]> rows = tagRepository.findAllWithUsageCount();
@@ -76,6 +96,10 @@ public class HomebrewAdminService {
                 .toList();
     }
 
+    /**
+     * Удаляет результат операции "delete tag" в рамках бизнес-логики homebrew-контента.
+     * @param tagId идентификатор tag, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteTag(UUID tagId) {
         HomebrewTag tag = tagRepository.findById(tagId)

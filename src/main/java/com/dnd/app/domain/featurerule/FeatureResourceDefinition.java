@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Definition of a feature resource: how its max is computed, how it resets, and its spend cost. */
+/**
+ * Класс FeatureResourceDefinition описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_resource_definition")
 @Getter

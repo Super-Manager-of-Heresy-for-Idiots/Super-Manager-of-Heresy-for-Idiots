@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт SpeciesRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface SpeciesRepository extends JpaRepository<Species, UUID> {
 
     Optional<Species> findBySlugAndHomebrewIsNull(String slug);

@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** One resource's before/after value for a rest preview or completion. */
+/**
+ * Класс RestResourcePreview описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

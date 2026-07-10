@@ -8,8 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Create a new manually-authored rule for a class feature. New rules always start in {@code draft};
- * status changes go through the dedicated approve/disable endpoints.
+ * Класс CreateFeatureRuleRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

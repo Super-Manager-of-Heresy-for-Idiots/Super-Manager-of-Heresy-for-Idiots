@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * FEATURE grant — automatically grants a class feature.
- * Exactly one of {@code featureId} / {@code featureKey} / {@code inline} is set.
+ * Класс FeatureGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

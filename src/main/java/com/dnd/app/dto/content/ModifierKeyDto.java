@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Known numeric-modifier key suggestion for NUMERIC_MODIFIER grants. Free text
- * is still allowed by the authoring UI; these are only suggestions.
+ * Класс ModifierKeyDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс ClassLevelRewardOption описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "class_level_reward_option")
 @Getter

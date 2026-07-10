@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin edit of a feature HEALING rule (amount formula + target + temp-HP / revive flags). */
+/**
+ * Класс HealingRuleEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

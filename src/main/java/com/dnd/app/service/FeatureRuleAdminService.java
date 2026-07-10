@@ -51,11 +51,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Admin operations for class-feature rules: authoring, review lifecycle (approve/disable), lightweight
- * validation, the "problem features" triage list, and controlled vocabularies for the UI.
- *
- * <p>Stage 1 scope: this manages rule rows and their lifecycle only. No runtime executes the rules —
- * that arrives in later stages, gated by {@code app.feature-rules.*} flags.</p>
+ * Класс FeatureRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -85,6 +82,10 @@ public class FeatureRuleAdminService {
 
     // ── Metadata ───────────────────────────────────────────────────────────
 
+    /**
+     * Возвращает результат операции "get metadata" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureRuleMetadataResponse getMetadata() {
         List<CodeLabel> ruleTypes = new ArrayList<>();
@@ -116,6 +117,10 @@ public class FeatureRuleAdminService {
                 .build();
     }
 
+    /**
+     * Возвращает список для операции "list rulesets" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<RulesetResponse> listRulesets() {
         return rulesetRepository.findAllByOrderByEditionAsc().stream()
@@ -129,6 +134,10 @@ public class FeatureRuleAdminService {
                 .toList();
     }
 
+    /**
+     * Возвращает список для операции "list rule sources" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<RuleSourceResponse> listRuleSources() {
         return ruleSourceRepository.findAllByOrderByDisplayNameAsc().stream()
@@ -144,6 +153,11 @@ public class FeatureRuleAdminService {
 
     // ── Rules for a feature ─────────────────────────────────────────────────
 
+    /**
+     * Возвращает результат операции "get rules for feature" в рамках бизнес-логики домена.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRuleResponse> getRulesForFeature(UUID featureId) {
         requireFeature(featureId);
@@ -153,6 +167,12 @@ public class FeatureRuleAdminService {
         return rules.stream().map(rule -> toResponse(rule, issues)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get feature detail" в рамках бизнес-логики домена.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureRuleDetailResponse getFeatureDetail(UUID featureId, String lang) {
         ClassFeature feature = requireFeature(featureId);
@@ -241,6 +261,13 @@ public class FeatureRuleAdminService {
                 .toList();
     }
 
+    /**
+     * Создает результат операции "create rule" в рамках бизнес-логики домена.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse createRule(UUID featureId, CreateFeatureRuleRequest request, String actingUsername) {
         requireFeature(featureId);
@@ -261,6 +288,13 @@ public class FeatureRuleAdminService {
         return toResponse(rule, List.of());
     }
 
+    /**
+     * Обновляет результат операции "update rule" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse updateRule(UUID ruleId, UpdateFeatureRuleRequest request, String actingUsername) {
         FeatureRule rule = requireRule(ruleId);
@@ -295,36 +329,74 @@ public class FeatureRuleAdminService {
 
     // ── Review lifecycle (delegates snapshot/revision handling to the revision service) ──
 
+    /**
+     * Проверяет корректность операции "validate" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureRuleValidationResponse validate(UUID ruleId) {
         return validator.validate(requireRule(ruleId));
     }
 
+    /**
+     * Выполняет операции "approve" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse approve(UUID ruleId, String changeReason, String actingUsername) {
         FeatureRule rule = revisionService.approveCurrent(ruleId, changeReason, actingUsername);
         return toResponse(rule, issuesForRuleOwner(rule));
     }
 
+    /**
+     * Выполняет операции "disable" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse disable(UUID ruleId, String actingUsername) {
         FeatureRule rule = revisionService.disable(ruleId, actingUsername);
         return toResponse(rule, issuesForRuleOwner(rule));
     }
 
+    /**
+     * Выполняет операции "new draft from approved" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse newDraftFromApproved(UUID ruleId, String changeReason, String actingUsername) {
         FeatureRule rule = revisionService.newDraftFromApproved(ruleId, changeReason, actingUsername);
         return toResponse(rule, issuesForRuleOwner(rule));
     }
 
+    /**
+     * Выполняет бросок операции "rollback" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param targetRevisionId идентификатор target revision, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleResponse rollback(UUID ruleId, UUID targetRevisionId, String changeReason, String actingUsername) {
         FeatureRule rule = revisionService.rollback(ruleId, targetRevisionId, changeReason, actingUsername);
         return toResponse(rule, issuesForRuleOwner(rule));
     }
 
-    /** Batch-approve all valid, needs_review rules of a low-risk type (Stage 12 policy). Returns count. */
+    /**
+     * Выполняет операции "batch approve low risk" в рамках бизнес-логики домена.
+     * @param ruleType входящее значение rule type, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int batchApproveLowRisk(String ruleType, String actingUsername) {
         java.util.Set<String> lowRisk = java.util.Set.of(
@@ -348,6 +420,16 @@ public class FeatureRuleAdminService {
 
     // ── Problem features list ───────────────────────────────────────────────
 
+    /**
+     * Возвращает список для операции "list problem features" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param ruleType входящее значение rule type, используемое бизнес-сценарием
+     * @param reviewStatus входящее значение review status, используемое бизнес-сценарием
+     * @param severity входящее значение severity, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ProblemFeatureSummaryResponse> listProblemFeatures(
             UUID classId, Integer level, String ruleType, String reviewStatus, String severity, String lang) {

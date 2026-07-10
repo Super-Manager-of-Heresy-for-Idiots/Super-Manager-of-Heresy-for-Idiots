@@ -33,10 +33,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Publishes typed gameplay events and dispatches them to a character's feature triggers: automatic triggers
- * apply immediately (resource spend), optional ones create a durable {@code pending_gameplay_prompt}. Gated by
- * {@code app.feature-rules.triggers}. Wiring publish() into every gameplay action (combat/rest/…) is deferred;
- * for now it is called on feature use.
+ * Класс GameplayEventService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -56,7 +54,14 @@ public class GameplayEventService {
     private final FeatureResourceDefinitionRepository resourceDefinitionRepository;
     private final FeatureResourceService featureResourceService;
 
-    /** Publish an event for {@code actor}; returns the number of pending prompts created. */
+    /**
+     * Публикует событие операции "publish" в рамках бизнес-логики домена.
+     * @param actor входящее значение actor, используемое бизнес-сценарием
+     * @param eventType входящее значение event type, используемое бизнес-сценарием
+     * @param combatId идентификатор combat, используемый для выбора нужного бизнес-объекта
+     * @param payloadJson входящее значение payload json, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int publish(PlayerCharacter actor, String eventType, UUID combatId, String payloadJson) {
         if (!flags.triggersActive()) {

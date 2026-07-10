@@ -20,6 +20,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс CampaignController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns")
 @RequiredArgsConstructor
@@ -30,6 +34,12 @@ public class CampaignController {
     private final CampaignContentService campaignContentService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create campaign" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create a new campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignResponse>>> createCampaign(
@@ -41,6 +51,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list campaigns" в рамках бизнес-логики API.
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List my campaigns (paginated)")
     public CompletableFuture<ResponseEntity<ApiResponse<Page<CampaignResponse>>>> listCampaigns(
@@ -51,6 +67,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get campaign details")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignDetailResponse>>> getCampaign(
@@ -61,6 +83,13 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update campaign" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignResponse>>> updateCampaign(
@@ -72,6 +101,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete campaign" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete campaign (creator only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteCampaign(
@@ -82,6 +117,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "join campaign" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/join")
     @Operation(summary = "Join a campaign by invite code")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignResponse>>> joinCampaign(
@@ -92,6 +133,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "leave campaign" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/leave")
     @Operation(summary = "Leave a campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> leaveCampaign(
@@ -102,6 +149,13 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "kick member" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/kick")
     @Operation(summary = "Kick a member (creator only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> kickMember(
@@ -113,6 +167,13 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "change status" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}/status")
     @Operation(summary = "Change campaign status (creator only)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignResponse>>> changeStatus(
@@ -124,6 +185,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get invite code" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}/invite-code")
     @Operation(summary = "Get invite code")
     public CompletableFuture<ResponseEntity<ApiResponse<InviteCodeResponse>>> getInviteCode(
@@ -134,6 +201,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "regenerate invite code" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/invite-code/regenerate")
     @Operation(summary = "Regenerate invite code (creator only)")
     public CompletableFuture<ResponseEntity<ApiResponse<InviteCodeResponse>>> regenerateInviteCode(
@@ -146,6 +219,14 @@ public class CampaignController {
 
     // --- Character reassignment ---
 
+    /**
+     * Выполняет операции "reassign character" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/characters/{characterId}/reassign")
     @Operation(summary = "Reassign RESERVE character to new owner with deep copy (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> reassignCharacter(
@@ -161,6 +242,13 @@ public class CampaignController {
 
     // --- Homebrew ---
 
+    /**
+     * Выполняет операции "activate homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/homebrew")
     @Operation(summary = "Attach homebrew package to campaign (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignHomebrewResponse>>> activateHomebrew(
@@ -173,6 +261,13 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "deactivate homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}/homebrew/{packageId}")
     @Operation(summary = "Detach homebrew package from campaign (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deactivateHomebrew(
@@ -183,6 +278,14 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update pinned version" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}/homebrew/{packageId}/version")
     @Operation(summary = "Update pinned homebrew version for campaign (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignHomebrewResponse>>> updatePinnedVersion(
@@ -194,6 +297,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list active homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}/homebrew")
     @Operation(summary = "List active homebrew packages in campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CampaignHomebrewResponse>>>> listActiveHomebrew(
@@ -204,6 +313,12 @@ public class CampaignController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get available content" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}/available-content")
     @Operation(summary = "Get available content for campaign (global + homebrew)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignAvailableContentResponse>>> getAvailableContent(

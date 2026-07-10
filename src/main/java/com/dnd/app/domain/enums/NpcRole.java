@@ -1,9 +1,8 @@
 package com.dnd.app.domain.enums;
 
 /**
- * The role an NPC plays in the world, independent of how it was statted up
- * ({@link NpcSourceType}). Drives the interactions players can have out of combat —
- * notably {@link #MERCHANT}s, who expose a shop the party can buy from and sell to.
+ * Перечисление NpcRole описывает перечисление домена, которое фиксирует допустимые значения игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum NpcRole {
     /** Buys and sells goods: exposes a shop inventory with prices. */

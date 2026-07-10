@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Feat reference option for authoring dropdowns (class builder FEAT grants).
+ * Класс FeatOptionDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

@@ -12,29 +12,8 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 /**
- * STOMP / WebSocket configuration with a switchable message broker:
- *
- * <ul>
- *   <li><b>Single pod / dev</b> ({@code app.websocket.relay.enabled=false}, default):
- *       the in-memory {@code SimpleBroker}. Subscriptions live inside the pod, which is fine
- *       when there is exactly one instance.</li>
- *   <li><b>Multi-pod</b> ({@code app.websocket.relay.enabled=true}): an external
- *       {@code StompBrokerRelay} (RabbitMQ with the STOMP plugin). All pods connect to the
- *       shared broker, so a message published on any pod reaches subscribers connected to
- *       any other pod. This is what makes horizontal scaling of WebSocket correct.</li>
- * </ul>
- *
- * <p>For user-targeted destinations ({@code convertAndSendToUser} → {@code /user/queue/...})
- * the relay mode also enables user-destination and user-registry broadcasting, so a message
- * addressed to a user whose session lives on a different pod is routed correctly.
- *
- * <p><b>Role split (running WS as a separate container):</b> every node registers the {@code /ws}
- * endpoint — Spring requires at least one, otherwise {@code subProtocolWebSocketHandler} fails to
- * start with "No handlers". The separation is enforced by <em>routing</em>: nginx sends {@code /ws}
- * only to the WS tier, while the REST tier merely <em>publishes</em> events to the broker relay via
- * {@code SimpMessagingTemplate}. The broker (RabbitMQ) fans them out to whichever WS node holds the
- * subscriber, so the REST tier scales on CPU/DB and the WS tier on connection count, independently.
- * The broker is configured on both roles so server-side publishing works everywhere.
+ * Класс WebSocketConfig описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Configuration
@@ -44,6 +23,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
+    /**
+     * Выполняет операции "configure message broker" в рамках бизнес-логики инфраструктуры.
+     * @param config входящее значение config, используемое бизнес-сценарием
+     */
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
@@ -60,6 +43,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${app.websocket.relay.virtual-host:/}")
     private String relayVirtualHost;
 
+    /**
+     * Выполняет операции "configure message broker" в рамках бизнес-логики инфраструктуры.
+     * @param config входящее значение config, используемое бизнес-сценарием
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         if (relayEnabled) {
@@ -83,6 +70,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * Выполняет операции "register stomp endpoints" в рамках бизнес-логики инфраструктуры.
+     * @param registry входящее значение registry, используемое бизнес-сценарием
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // The /ws endpoint is registered on EVERY node: @EnableWebSocketMessageBroker requires at
@@ -95,6 +86,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS();
     }
 
+    /**
+     * Выполняет операции "configure client inbound channel" в рамках бизнес-логики инфраструктуры.
+     * @param registration входящее значение registration, используемое бизнес-сценарием
+     */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(webSocketAuthInterceptor);

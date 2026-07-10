@@ -12,15 +12,19 @@ import com.dnd.app.dto.response.ItemInstanceResponse;
 import java.math.BigDecimal;
 
 /**
- * Maps an {@link ItemInstance} to its API response, resolving display fields from whichever
- * item source backs the instance: the new content model ({@link EquipmentItem} /
- * {@link MagicItem}) or the legacy {@link ItemTemplate}.
+ * Класс ItemInstanceMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class ItemInstanceMapper {
 
     private ItemInstanceMapper() {
     }
 
+    /**
+     * Преобразует данные операции "to response" в рамках бизнес-логики преобразования данных.
+     * @param instance входящее значение instance, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static ItemInstanceResponse toResponse(ItemInstance instance) {
         String rarity = null;
         String itemTypeName = null;
@@ -90,7 +94,11 @@ public final class ItemInstanceMapper {
         return cost.getCopperValue().movePointLeft(2);
     }
 
-    /** Renders a {@link DiceFormula} as e.g. "1d8", "2d6+1"; prefers its raw text when present. */
+    /**
+     * Выполняет операции "format dice" в рамках бизнес-логики преобразования данных.
+     * @param dice входящее значение dice, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static String formatDice(DiceFormula dice) {
         if (dice == null) {
             return null;

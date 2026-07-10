@@ -24,10 +24,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Records the feats a character has (structured {@code character_feats} table, S1) and auto-provisions any
- * feat-bound resources ({@code custom_resource_types.feat_bound_id} from 080) when a feat is added —
- * previously that binding had to be attached by hand because there was no character↔feat table. Access
- * mirrors character resources: owner / campaign GM / ADMIN modify, campaign members view.
+ * Класс CharacterFeatService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -41,6 +39,12 @@ public class CharacterFeatService {
     private final CampaignService campaignService;
     private final CharacterResourceService characterResourceService;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterFeatResponse> list(UUID characterId, String username) {
         PlayerCharacter character = findCharacter(characterId);
@@ -48,6 +52,13 @@ public class CharacterFeatService {
         return toResponses(characterFeatRepository.findByCharacterId(characterId));
     }
 
+    /**
+     * Добавляет результат операции "add" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterFeatResponse add(UUID characterId, UUID featId, String username) {
         PlayerCharacter character = findCharacter(characterId);
@@ -66,6 +77,12 @@ public class CharacterFeatService {
         return toResponse(saved, feat);
     }
 
+    /**
+     * Удаляет результат операции "remove" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void remove(UUID characterId, UUID featId, String username) {
         PlayerCharacter character = findCharacter(characterId);
@@ -76,9 +93,10 @@ public class CharacterFeatService {
     }
 
     /**
-     * Grant a feat from a deterministic system source (e.g. a background's granted feat) with no auth check,
-     * for the character-creation path. Idempotent; provisions feat-bound resources; never throws so the
-     * critical creation flow is unaffected on failure.
+     * Выполняет операции "grant from source" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param source входящее значение source, используемое бизнес-сценарием
      */
     @Transactional
     public void grantFromSource(PlayerCharacter character, UUID featId, String source) {

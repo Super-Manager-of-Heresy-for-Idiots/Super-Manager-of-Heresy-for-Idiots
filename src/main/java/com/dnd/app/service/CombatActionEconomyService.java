@@ -14,33 +14,28 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The action economy for callers OUTSIDE the core attack flow — chiefly the feature-rules runtime, so
- * that using a feature in combat actually costs its declared slot instead of being free. Keyed by
- * {@code (combatId, characterId)} because a feature is always used by a character; {@code combatId}
- * is the battle id. Feature action codes that carry no economy cost ({@code free_action},
- * {@code no_action}, {@code special}) consume nothing.
- *
- * <p>Not flag-gated itself — gating lives at the callers ({@code FeatureUseService} is gated by
- * {@code app.feature-rules.actions}; reaction prompts by triggers). {@code BattleService} keeps its
- * own inline economy for the hot attack/item/spend paths; folding those onto this service is a
- * deliberate follow-up so this change does not disturb that well-tested flow.</p>
+ * Класс CombatActionEconomyService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CombatActionEconomyService {
 
-    /** A per-turn economy slot a feature cost can consume. */
+    /**
+     * Перечисление Slot описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     */
     public enum Slot { ACTION, BONUS_ACTION, REACTION }
 
     private final BattleCombatantRepository combatantRepository;
     private final WebSocketEventService webSocketEventService;
 
     /**
-     * Spends the slot mapped from {@code actionTypeCode} for the character's combatant in the given
-     * combat. Cost-free codes are a no-op. Throws {@link BadRequestException} when the character is not
-     * a combatant in that battle or the slot is already used this turn — invoke this BEFORE any
-     * irreversible spend so the surrounding transaction rolls back cleanly on failure.
+     * Выполняет операции "spend" в рамках бизнес-логики домена.
+     * @param combatId идентификатор combat, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param actionTypeCode входящее значение action type code, используемое бизнес-сценарием
      */
     @Transactional
     public void spend(UUID combatId, UUID characterId, String actionTypeCode) {
@@ -58,8 +53,11 @@ public class CombatActionEconomyService {
     }
 
     /**
-     * Whether the mapped slot is still free this turn. Cost-free codes are always spendable; a
-     * character not present in the combat is not.
+     * Проверяет условие операции "can spend" в рамках бизнес-логики домена.
+     * @param combatId идентификатор combat, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param actionTypeCode входящее значение action type code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public boolean canSpend(UUID combatId, UUID characterId, String actionTypeCode) {
@@ -72,7 +70,11 @@ public class CombatActionEconomyService {
                 .orElse(false);
     }
 
-    /** Maps a feature {@code action_type} code to an economy slot, or {@code null} when it costs none. */
+    /**
+     * Выполняет операции "slot for code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Slot slotForCode(String code) {
         if (code == null) {
             return null;

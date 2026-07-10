@@ -18,13 +18,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Manages a character's recorded spells (the "spellbook"): list / learn / forget. This is the
- * player-facing spell management the folio was missing (a Wizard could not record newly learned spells;
- * spells were only ever set at level-up). It mutates {@code character_known_spells} directly and is
- * independent of the feature-rules runtime flags. Access is enforced by the caller (owner/GM/ADMIN).
- *
- * <p>The backend stays permissive (any existing spell not already known can be recorded); the frontend
- * picker is responsible for offering only class/level-appropriate spells.</p>
+ * Класс CharacterSpellbookService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +29,11 @@ public class CharacterSpellbookService {
     private final SpellRepository spellRepository;
     private final CharacterKnownSpellRepository knownSpellRepository;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterKnownSpellResponse> list(UUID characterId) {
         return knownSpellRepository.findByCharacterId(characterId).stream()
@@ -45,6 +45,12 @@ public class CharacterSpellbookService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "learn" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterKnownSpellResponse learn(UUID characterId, UUID spellId) {
         if (knownSpellRepository.existsByCharacterIdAndSpellId(characterId, spellId)) {
@@ -61,6 +67,11 @@ public class CharacterSpellbookService {
         return toResponse(spell);
     }
 
+    /**
+     * Выполняет операции "forget" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void forget(UUID characterId, UUID spellId) {
         knownSpellRepository.findByCharacterIdAndSpellId(characterId, spellId)

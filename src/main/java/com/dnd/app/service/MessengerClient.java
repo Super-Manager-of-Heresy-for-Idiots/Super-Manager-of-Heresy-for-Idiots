@@ -17,10 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * Fire-and-forget notifier that asks the messenger service to close any live chat session for a pair
- * on block/unfriend (TZ 4.4). Intentionally best-effort: the messenger's relationship cache is the
- * safety net, so messenger downtime must never break block/unfriend in core. Runs off the request
- * thread and swallows/retries transport errors.
+ * Класс MessengerClient описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -39,6 +37,13 @@ public class MessengerClient {
         return thread;
     });
 
+    /**
+     * Создает экземпляр компонента домена и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param enabled входящее значение enabled, используемое бизнес-сценарием
+     * @param a входящее значение a, используемое бизнес-сценарием
+     * @param b входящее значение b, используемое бизнес-сценарием
+     * @param reason входящее значение reason, используемое бизнес-сценарием
+     */
     public MessengerClient(
             @Value("${app.messenger.http-client-enabled:false}") boolean enabled,
             @Value("${app.messenger.base-url:http://localhost:8082}") String baseUrl,
@@ -51,7 +56,12 @@ public class MessengerClient {
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
     }
 
-    /** Asks the messenger to close the pair's active session. Non-blocking; never throws to the caller. */
+    /**
+     * Выполняет операции "close session for pair" в рамках бизнес-логики домена.
+     * @param userAId идентификатор user a, используемый для выбора нужного бизнес-объекта
+     * @param userBId идентификатор user b, используемый для выбора нужного бизнес-объекта
+     * @param reason входящее значение reason, используемое бизнес-сценарием
+     */
     public void closeSessionForPair(UUID userAId, UUID userBId, String reason) {
         if (!enabled) {
             return;

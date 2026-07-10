@@ -28,9 +28,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Reads a character's acquired rewards from the new content reward-selection model
- * ({@code character_reward_selection}). Only CHOICE selections are recorded; AUTO grants
- * are applied deterministically at level-up and are not part of this view.
+ * Класс CharacterRewardQueryService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,6 +42,12 @@ public class CharacterRewardQueryService {
     private final ContentCharacterClassRepository contentClassRepository;
     private final ClassLevelRewardGroupRepository rewardGroupRepository;
 
+    /**
+     * Возвращает результат операции "get character rewards" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CharacterRewardsResponse getCharacterRewards(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)

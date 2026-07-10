@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** A game ruleset / edition option. */
+/**
+ * Класс RulesetResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

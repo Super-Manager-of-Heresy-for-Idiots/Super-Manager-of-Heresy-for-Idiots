@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/** Result of validating a DSL expression. */
+/**
+ * Класс FeatureFormulaValidationResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Adds monsters to an assembling battle. Each entry references a monster the GM can use
- * (a campaign monster or a bestiary/system monster) and how many instances to add.
+ * Класс AddBattleMonstersRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

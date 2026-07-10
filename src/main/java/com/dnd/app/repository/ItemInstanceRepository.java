@@ -13,6 +13,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт ItemInstanceRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface ItemInstanceRepository extends JpaRepository<ItemInstance, UUID> {
 
     List<ItemInstance> findByOwnerCharacterId(UUID characterId);

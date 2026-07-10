@@ -16,7 +16,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Ends feature effects by time, rest, combat rounds, or manual GM action. */
+/**
+ * Класс EffectExpirationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class EffectExpirationService {
@@ -29,7 +32,10 @@ public class EffectExpirationService {
     private final FeatureEffectEndConditionRepository endConditionRepository;
     private final RestTypeRepository restTypeRepository;
 
-    /** Wall-clock sweep: mark active effects whose expiry has passed as expired. Returns the count. */
+    /**
+     * Выполняет операции "expire due" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int expireDue() {
         List<FeatureActiveEffect> due =
@@ -41,7 +47,12 @@ public class EffectExpirationService {
         return due.size();
     }
 
-    /** End effects that expire on the given rest type (e.g. Rage/effects ending on a long rest). */
+    /**
+     * Выполняет операции "end on rest" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param restTypeCode входящее значение rest type code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int endOnRest(PlayerCharacter character, String restTypeCode) {
         RestType restType = restTypeRepository.findByCode(restTypeCode).orElse(null);
@@ -62,7 +73,10 @@ public class EffectExpirationService {
         return ended;
     }
 
-    /** Combat helper: decrement remaining rounds for a character's active effects; expire at zero. */
+    /**
+     * Выполняет операции "tick rounds" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void tickRounds(UUID characterId) {
         for (FeatureActiveEffect effect : activeRepository.findByCharacterIdAndStatus(characterId, ACTIVE)) {
@@ -80,6 +94,10 @@ public class EffectExpirationService {
         }
     }
 
+    /**
+     * Выполняет операции "gm end" в рамках бизнес-логики домена.
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void gmEnd(UUID effectId) {
         activeRepository.findById(effectId).ifPresent(e -> {
@@ -88,6 +106,11 @@ public class EffectExpirationService {
         });
     }
 
+    /**
+     * Выполняет операции "gm set rounds" в рамках бизнес-логики домена.
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     * @param rounds входящее значение rounds, используемое бизнес-сценарием
+     */
     @Transactional
     public void gmSetRounds(UUID effectId, int rounds) {
         activeRepository.findById(effectId).ifPresent(e -> {

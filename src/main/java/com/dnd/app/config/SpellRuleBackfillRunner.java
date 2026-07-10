@@ -11,18 +11,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Integrates the existing structured spell mechanics (migrations 056–062: spell damage / healing /
- * save / action cost / buffs) into SPELL-owned feature rules on startup, so the feature-rules engine
- * can actually plan and resolve a spell (e.g. Fireball → 8d6 fire + Dex save). Without this the
- * spell-stack data exists but no {@code owner_type=SPELL} rules are created, so {@code planForSpell}
- * returns an empty plan (no preview, no damage).
- *
- * <p>Runs only when the spell subsystem is active ({@code app.feature-rules.runtime-enabled} +
- * {@code spells-enabled}). The backfill is idempotent per (spell, rule type) — already-created rules
- * are skipped — so re-running on every boot is safe and a no-op after the first pass. It is the same
- * operation the admin endpoint {@code POST /api/admin/feature-rules/backfill-spells?apply=true}
- * performs; doing it automatically means the target functionality is populated without a manual step.
- * Failures are logged and swallowed so a backfill problem never blocks application startup.</p>
+ * Класс SpellRuleBackfillRunner описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Component
@@ -34,6 +24,10 @@ public class SpellRuleBackfillRunner implements ApplicationRunner {
     private final SpellRuleBackfillService spellRuleBackfillService;
     private final SpellAreaBackfillService spellAreaBackfillService;
 
+    /**
+     * Выполняет операции "run" в рамках бизнес-логики инфраструктуры.
+     * @param args входящее значение args, используемое бизнес-сценарием
+     */
     @Override
     public void run(ApplicationArguments args) {
         if (!flags.spellsActive()) {

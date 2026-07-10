@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * GM override of the battle's total XP. A null value clears the override and reverts to the
- * computed sum of monster base XP.
+ * Класс UpdateBattleXpRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

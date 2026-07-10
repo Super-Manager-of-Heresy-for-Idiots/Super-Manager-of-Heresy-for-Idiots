@@ -12,10 +12,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Final level-up command (new content model). The player commits a set of
- * reward-group selections; each selection picks option(s) within a group and may
- * carry child selections (ability scores, skills, spells) that satisfy the
- * group/option grant filters.
+ * Класс LevelUpRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

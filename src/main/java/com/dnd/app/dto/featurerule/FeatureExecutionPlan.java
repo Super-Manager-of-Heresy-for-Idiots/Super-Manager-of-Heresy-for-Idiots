@@ -9,10 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * The structured combat resolution a feature would produce for its actor: what to roll (dice, DC),
- * what damage/healing to apply, and any attack-economy effect. Computed from the feature's rules +
- * the actor's formula context. The actual dice rolls happen at the client/GM; the runtime supplies
- * the structure and numbers.
+ * Класс FeatureExecutionPlan описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

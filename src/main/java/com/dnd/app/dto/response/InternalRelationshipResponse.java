@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Service-to-service relationship projection consumed by the messenger service
- * ({@code GET /api/internal/users/{userId}/relationships/{otherUserId}}).
+ * Класс InternalRelationshipResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

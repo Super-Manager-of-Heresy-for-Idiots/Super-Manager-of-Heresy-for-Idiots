@@ -22,16 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * The single entry point for a character's rest. A short/long rest touches four independent
- * subsystems (legacy resources, feature-rules resources + effects, spell slots, HP) that each have
- * their own endpoint today; the frontend firing them one by one means an interrupted rest leaves a
- * half-rested character. This runs them all in one transaction so a rest either fully applies or not
- * at all, and returns a single combined {@link RestResult}. The individual endpoints stay for
- * targeted/GM use.
- *
- * <p>Long rest: legacy resources + feature resources + endOnRest effects + all spell slots + HP to
- * full (temp HP cleared). Short rest: legacy + feature resources only (spell slots and HP wait on
- * class short-rest rules and hit dice respectively).</p>
+ * Класс RestOrchestrationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -50,6 +42,14 @@ public class RestOrchestrationService {
     private final CharacterHpService characterHpService;
     private final CharacterHitDiceService characterHitDiceService;
 
+    /**
+     * Выполняет операции "rest" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param restTypeInput входящее значение rest type input, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public RestResult rest(UUID campaignId, UUID characterId, String restTypeInput, String username) {
         String restCode = normalize(restTypeInput);

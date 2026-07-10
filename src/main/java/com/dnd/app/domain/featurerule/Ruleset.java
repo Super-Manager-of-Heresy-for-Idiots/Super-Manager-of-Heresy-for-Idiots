@@ -6,8 +6,8 @@ import lombok.*;
 import java.util.UUID;
 
 /**
- * A game ruleset / edition (e.g. D&D 2024, D&D 2014). This is the top of the game-facing source
- * scope and is unrelated to {@code feature_rule.source} (technical provenance).
+ * Класс Ruleset описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "ruleset")

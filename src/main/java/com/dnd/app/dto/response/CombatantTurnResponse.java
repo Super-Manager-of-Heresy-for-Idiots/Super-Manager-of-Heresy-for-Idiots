@@ -8,10 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Everything the battle UI needs for whoever's turn it is. For a character it bundles the
- * full sheet (stats, known spells, attacks, features), the character's resources (rage,
- * spell slots, …) and active effects. For a monster the {@code monster} block is populated
- * instead (visible to the GM).
+ * Класс CombatantTurnResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

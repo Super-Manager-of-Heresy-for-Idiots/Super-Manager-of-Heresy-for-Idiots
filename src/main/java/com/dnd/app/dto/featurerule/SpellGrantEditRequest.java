@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin edit of a SPELL_GRANT (specific spell + prepared/known/free-cast + ability override). */
+/**
+ * Класс SpellGrantEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

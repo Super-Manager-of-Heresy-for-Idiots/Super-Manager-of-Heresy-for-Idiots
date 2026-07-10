@@ -9,7 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
-/** Periodically prunes expired refresh-token rows so the session table does not grow unbounded. */
+/**
+ * Класс RefreshTokenCleanupTask описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,6 +20,9 @@ public class RefreshTokenCleanupTask {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
+    /**
+     * Выполняет операции "purge expired" в рамках бизнес-логики безопасности.
+     */
     @Scheduled(cron = "${app.security.refresh-cleanup-cron:0 30 3 * * *}")
     @Transactional
     public void purgeExpired() {

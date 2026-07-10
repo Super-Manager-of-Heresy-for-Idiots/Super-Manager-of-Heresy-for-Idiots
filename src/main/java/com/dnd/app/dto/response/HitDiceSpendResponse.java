@@ -5,7 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Result of spending hit dice on a short rest: how much was healed and the character's HP after. */
+/**
+ * Класс HitDiceSpendResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

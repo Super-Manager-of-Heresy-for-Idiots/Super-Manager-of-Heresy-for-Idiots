@@ -14,21 +14,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Server-to-client notification facade for GAME_MASTER ↔ PLAYER interactions.
- *
- * <p>Callers (GM-triggered service methods) invoke {@link #sendCampaignEvent} /
- * {@link #sendUserEvent} from inside their {@code @Transactional} method. Instead of
- * pushing to the broker immediately, this publishes a Spring application event that is
- * delivered to the STOMP broker only AFTER the transaction commits
- * ({@code WebSocketBroadcastListener}). This avoids notifying clients about state that
- * is later rolled back, while keeping call sites trivial.
- *
- * <p>Payloads are pure notifications — the client re-fetches authoritative state over REST.
- *
- * <ul>
- *   <li>{@code /topic/campaign.{campaignId}} — fan-out to everyone in the campaign (GM + players).</li>
- *   <li>{@code /user/queue/notifications} — a single targeted user (e.g. the kicked player).</li>
- * </ul>
+ * Класс WebSocketEventService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -38,6 +25,14 @@ public class WebSocketEventService {
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
 
+    /**
+     * Публикует событие операции "send campaign event" в рамках бизнес-логики домена.
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param data входящее значение data, используемое бизнес-сценарием
+     * @param triggeredBy входящее значение triggered by, используемое бизнес-сценарием
+     */
     public void sendCampaignEvent(WebSocketEventType type, UUID campaignId, UUID characterId,
                                    Object data, UUID triggeredBy) {
         if (campaignId == null) {
@@ -58,10 +53,25 @@ public class WebSocketEventService {
         log.debug("WebSocket event queued: type={}, campaignId={}, characterId={}", type, campaignId, characterId);
     }
 
+    /**
+     * Публикует событие операции "send campaign event" в рамках бизнес-логики домена.
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param data входящее значение data, используемое бизнес-сценарием
+     * @param triggeredBy входящее значение triggered by, используемое бизнес-сценарием
+     */
     public void sendCampaignEvent(WebSocketEventType type, UUID campaignId, Object data, UUID triggeredBy) {
         sendCampaignEvent(type, campaignId, null, data, triggeredBy);
     }
 
+    /**
+     * Публикует событие операции "send user event" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param data входящее значение data, используемое бизнес-сценарием
+     * @param triggeredBy входящее значение triggered by, используемое бизнес-сценарием
+     */
     public void sendUserEvent(String username, WebSocketEventType type, UUID campaignId, Object data, UUID triggeredBy) {
         if (username == null) {
             return;

@@ -8,6 +8,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Класс Source описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "sources")
 @Getter

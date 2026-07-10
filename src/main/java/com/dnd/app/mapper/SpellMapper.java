@@ -15,14 +15,24 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param s входящее значение s, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content spell graph ({@link Spell} + school + components + class/subclass
- * availability) to {@link SpellDetailResponse}. Must run inside a read-only transaction:
- * lazy collections are resolved on demand.
+ * Класс SpellMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class SpellMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param s входящее значение s, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public SpellDetailResponse toDetail(Spell s, String lang) {
         return SpellDetailResponse.builder()
                 .id(s.getId())

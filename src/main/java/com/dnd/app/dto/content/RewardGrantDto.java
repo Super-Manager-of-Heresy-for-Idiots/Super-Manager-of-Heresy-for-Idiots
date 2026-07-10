@@ -20,9 +20,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * A single grant attached to a reward group (group-level) or option (option-level).
- * The {@code payload} is a typed discriminated union keyed by {@code grantType}
- * (external property). Unknown grant types deserialize as {@link CustomTextGrantPayload}.
+ * Класс RewardGrantDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

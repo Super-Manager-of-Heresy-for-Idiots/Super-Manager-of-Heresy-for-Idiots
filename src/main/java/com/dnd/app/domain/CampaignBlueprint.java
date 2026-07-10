@@ -9,6 +9,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Класс CampaignBlueprint описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "campaign_blueprints")
 @Getter
@@ -81,6 +85,10 @@ public class CampaignBlueprint {
     @JoinColumn(name = "deleted_by")
     private User deletedBy;
 
+    /**
+     * Проверяет условие операции "is deleted" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isDeleted() {
         return deletedAt != null;
     }

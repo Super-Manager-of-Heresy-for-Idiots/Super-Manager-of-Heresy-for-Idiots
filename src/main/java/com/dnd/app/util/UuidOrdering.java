@@ -3,15 +3,20 @@ package com.dnd.app.util;
 import java.util.UUID;
 
 /**
- * Orders UUIDs the way PostgreSQL's {@code uuid} type does — an unsigned, byte-wise comparison — so
- * pair normalization agrees with the {@code user_a_id < user_b_id} CHECK constraint. Java's
- * {@link UUID#compareTo} is a SIGNED comparison of the two longs and disagrees for high-bit UUIDs.
+ * Класс UuidOrdering описывает утилиту, которая поддерживает повторяемые операции бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class UuidOrdering {
 
     private UuidOrdering() {
     }
 
+    /**
+     * Выполняет операции "compare unsigned" в рамках бизнес-логики приложения.
+     * @param first входящее значение first, используемое бизнес-сценарием
+     * @param second входящее значение second, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static int compareUnsigned(UUID first, UUID second) {
         int high = Long.compareUnsigned(first.getMostSignificantBits(), second.getMostSignificantBits());
         if (high != 0) {
@@ -20,7 +25,12 @@ public final class UuidOrdering {
         return Long.compareUnsigned(first.getLeastSignificantBits(), second.getLeastSignificantBits());
     }
 
-    /** @return the two ids ordered so that result[0] < result[1] in PostgreSQL uuid ordering. */
+    /**
+     * Выполняет операции "normalized pair" в рамках бизнес-логики приложения.
+     * @param first входящее значение first, используемое бизнес-сценарием
+     * @param second входящее значение second, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static UUID[] normalizedPair(UUID first, UUID second) {
         return compareUnsigned(first, second) < 0
                 ? new UUID[]{first, second}

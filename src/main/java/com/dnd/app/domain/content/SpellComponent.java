@@ -5,9 +5,8 @@ import jakarta.persistence.Embeddable;
 import lombok.*;
 
 /**
- * Embeddable row of the {@code spell_component} table, owned by a {@code Spell} via
- * {@code @ElementCollection}. The {@code cost_money_value_id} column is intentionally
- * left unmapped here (read model does not surface component cost).
+ * Класс SpellComponent описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Embeddable
 @Getter

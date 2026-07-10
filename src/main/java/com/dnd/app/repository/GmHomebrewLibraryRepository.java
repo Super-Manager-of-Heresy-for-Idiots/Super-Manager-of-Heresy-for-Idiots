@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт GmHomebrewLibraryRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface GmHomebrewLibraryRepository extends JpaRepository<GmHomebrewLibrary, GmHomebrewLibraryId> {
 
     List<GmHomebrewLibrary> findByGmUserId(UUID gmUserId);

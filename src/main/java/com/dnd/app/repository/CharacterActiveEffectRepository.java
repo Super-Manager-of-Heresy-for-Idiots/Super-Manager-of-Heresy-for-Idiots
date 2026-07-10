@@ -6,6 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт CharacterActiveEffectRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CharacterActiveEffectRepository extends JpaRepository<CharacterActiveEffect, UUID> {
 
     List<CharacterActiveEffect> findByCharacterId(UUID characterId);

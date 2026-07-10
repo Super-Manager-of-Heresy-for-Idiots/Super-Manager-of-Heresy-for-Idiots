@@ -12,11 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shared lightweight rule validation used by both the admin service and the revision service (kept as
- * a separate component to avoid a service dependency cycle).
- *
- * <p>Stage 1/2 scope: known rule type and no unresolved error issue. Later stages extend this with
- * formula/reference/profile-specific checks.</p>
+ * Класс FeatureRuleValidator описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 @RequiredArgsConstructor
@@ -26,6 +23,11 @@ public class FeatureRuleValidator {
 
     private final FeatureRuleIssueRepository issueRepository;
 
+    /**
+     * Проверяет корректность операции "validate" в рамках бизнес-логики домена.
+     * @param rule входящее значение rule, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureRuleValidationResponse validate(FeatureRule rule) {
         List<String> problems = new ArrayList<>();
         if (FeatureRuleProfile.fromCode(rule.getRuleType()).isEmpty()) {

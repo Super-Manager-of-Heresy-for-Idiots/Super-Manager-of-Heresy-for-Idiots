@@ -4,11 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Lifecycle of a feature rule (see {@code anal-integration/00_STAGE_SCOPE_AND_EXECUTION_CONTRACT.md}).
- *
- * <p>Flow: {@code draft -> needs_review -> approved | disabled}. Only {@link #APPROVED} rules are
- * eligible to be executed by the runtime; everything else is authoring/back-office state and never
- * affects gameplay.</p>
+ * Перечисление FeatureReviewStatus описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum FeatureReviewStatus {
 
@@ -27,17 +24,27 @@ public enum FeatureReviewStatus {
         this.code = code;
     }
 
-    /** Stable snake_case identifier used in persistence and API payloads. */
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** True only for {@link #APPROVED}: the single status the runtime is allowed to execute. */
+    /**
+     * Проверяет условие операции "is runtime eligible" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isRuntimeEligible() {
         return this == APPROVED;
     }
 
-    /** Resolve a status from its persisted {@link #getCode() code}. */
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FeatureReviewStatus> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

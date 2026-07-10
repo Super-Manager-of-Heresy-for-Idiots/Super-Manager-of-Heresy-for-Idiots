@@ -23,10 +23,20 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Класс GlobalExceptionHandler описывает исключение бизнес-логики, которое сообщает о нарушении ожидаемого сценария.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Обрабатывает событие операции "handle not found" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.NOT_FOUND, "NOT_FOUND", ex, request, null);
@@ -34,6 +44,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("NOT_FOUND", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle no resource found" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(
             NoResourceFoundException ex, HttpServletRequest request) {
@@ -42,6 +58,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("NOT_FOUND", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle access denied" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.FORBIDDEN, "ACCESS_DENIED", ex, request, null);
@@ -49,6 +71,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("ACCESS_DENIED", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle spring access denied" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleSpringAccessDenied(
             org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
@@ -57,6 +85,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("ACCESS_DENIED", "Access denied"));
     }
 
+    /**
+     * Обрабатывает событие операции "handle duplicate" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.CONFLICT, "DUPLICATE", ex, request, null);
@@ -64,6 +98,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("DUPLICATE", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle bad request" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex, request, null);
@@ -71,6 +111,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("BAD_REQUEST", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle unprocessable" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(UnprocessableEntityException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnprocessable(UnprocessableEntityException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.UNPROCESSABLE_ENTITY, "UNPROCESSABLE_ENTITY", ex, request, null);
@@ -78,6 +124,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("UNPROCESSABLE_ENTITY", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle class validation" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(ClassValidationException.class)
     public ResponseEntity<ApiResponse<java.util.List<com.dnd.app.dto.content.ValidationIssue>>> handleClassValidation(
             ClassValidationException ex, HttpServletRequest request) {
@@ -92,6 +144,12 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    /**
+     * Обрабатывает событие операции "handle precondition failed" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(PreconditionFailedException.class)
     public ResponseEntity<ApiResponse<Void>> handlePreconditionFailed(
             PreconditionFailedException ex, HttpServletRequest request) {
@@ -100,6 +158,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("PRECONDITION_FAILED", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle too many requests" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ApiResponse<Void>> handleTooManyRequests(
             TooManyRequestsException ex, HttpServletRequest request) {
@@ -108,6 +172,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("RATE_LIMITED", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle bad credentials" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         logControllerException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", ex, request, "bad credentials");
@@ -115,6 +185,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("BAD_CREDENTIALS", "Неверное имя пользователя или пароль"));
     }
 
+    /**
+     * Обрабатывает событие операции "handle method not supported" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
@@ -124,6 +200,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("METHOD_NOT_ALLOWED", ex.getMessage()));
     }
 
+    /**
+     * Обрабатывает событие операции "handle type mismatch" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
@@ -138,6 +220,12 @@ public class GlobalExceptionHandler {
                                 value, paramName, requiredType)));
     }
 
+    /**
+     * Обрабатывает событие операции "handle validation" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -150,6 +238,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.validationError("Validation failed", fields));
     }
 
+    /**
+     * Обрабатывает событие операции "handle general" в рамках бизнес-логики приложения.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex, HttpServletRequest request) {
         logControllerException(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", ex, request, null);

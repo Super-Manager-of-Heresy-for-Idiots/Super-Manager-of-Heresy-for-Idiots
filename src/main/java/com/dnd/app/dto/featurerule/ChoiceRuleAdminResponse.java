@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
-/** Choice groups and options attached to a CHOICE feature rule. */
+/**
+ * Класс ChoiceRuleAdminResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

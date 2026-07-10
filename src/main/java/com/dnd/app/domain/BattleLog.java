@@ -10,11 +10,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * One append-only combat-log entry for a battle (Phase 1.2). Ordering + afterSeq pagination ride
- * {@code seq} (monotonic within a battle). References are raw UUIDs, not {@code @ManyToOne} — the log
- * never navigates them and must survive combatant deletion (the DB FKs are {@code ON DELETE SET NULL}
- * for actor/target). {@code payload} is JSON text (the core maps JSON as text) carrying the roll
- * formula / dice / modifier so the UI can expand a result.
+ * Класс BattleLog описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "battle_log")

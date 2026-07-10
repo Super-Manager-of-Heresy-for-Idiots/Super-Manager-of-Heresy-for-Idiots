@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Service-to-service relationship projection consumed by the messenger service to authorize opening a
- * chat session. Secured by {@code X-Internal-Api-Key} (ROLE_INTERNAL_SERVICE), not a user JWT.
+ * Класс InternalRelationshipController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/internal/users/{userId}/relationships")
@@ -24,6 +24,12 @@ public class InternalRelationshipController {
 
     private final FriendService friendService;
 
+    /**
+     * Возвращает результат операции "get relationship" в рамках бизнес-логики API.
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param otherUserId идентификатор other user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{otherUserId}")
     @Operation(summary = "Whether two users are friends/blocked, with username snapshots")
     public ResponseEntity<InternalRelationshipResponse> getRelationship(

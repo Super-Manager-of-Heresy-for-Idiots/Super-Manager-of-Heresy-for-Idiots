@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * One selectable option within a CHOICE reward group. Carries the grants applied
- * when the player picks it.
+ * Класс RewardOptionDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

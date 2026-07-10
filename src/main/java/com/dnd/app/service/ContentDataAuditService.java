@@ -34,9 +34,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Produces a data-completeness report for the new content model so migration gaps
- * (missing mechanics, unseeded features, classes without reward groups, empty CHOICE
- * groups) are visible without DB access. Read-only.
+ * Класс ContentDataAuditService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -58,6 +57,11 @@ public class ContentDataAuditService {
     private final ClassLevelRewardGrantCustomTextRepository grantCustomRepo;
     private final ImportWarningRepository importWarningRepo;
 
+    /**
+     * Формирует результат операции "build report" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentDataAuditReport buildReport(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -141,6 +145,10 @@ public class ContentDataAuditService {
 
     // --- Phase 9: deeper data-quality findings ---
 
+    /**
+     * Формирует результат операции "build data quality report" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentDataQualityReport buildDataQualityReport() {
         List<ContentDataQualityReport.FeatureGap> featuresWithoutRewards = new ArrayList<>();
@@ -196,6 +204,10 @@ public class ContentDataAuditService {
         };
     }
 
+    /**
+     * Возвращает список для операции "list import warnings" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ImportWarningResponse> listImportWarnings() {
         return importWarningRepo.findAllByOrderByCreatedAtDesc().stream()

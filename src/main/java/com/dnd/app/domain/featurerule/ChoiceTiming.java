@@ -3,7 +3,10 @@ package com.dnd.app.domain.featurerule;
 import java.util.Arrays;
 import java.util.Optional;
 
-/** When a choice group becomes available to resolve (plan §4.12). */
+/**
+ * Перечисление ChoiceTiming описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public enum ChoiceTiming {
 
     LEVEL_UP("level_up"),
@@ -18,10 +21,19 @@ public enum ChoiceTiming {
         this.code = code;
     }
 
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<ChoiceTiming> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

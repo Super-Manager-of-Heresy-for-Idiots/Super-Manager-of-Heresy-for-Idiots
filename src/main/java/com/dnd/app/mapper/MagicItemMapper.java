@@ -12,14 +12,24 @@ import com.dnd.app.dto.content.MagicItemDetailResponse;
 import com.dnd.app.util.Localization;
 import org.springframework.stereotype.Component;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param m входящее значение m, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content magic-item graph ({@link MagicItem} + type + rarity + cost +
- * allowed equipment) to {@link MagicItemDetailResponse}. Must run inside a read-only
- * transaction: lazy collections are resolved on demand.
+ * Класс MagicItemMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class MagicItemMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param m входящее значение m, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public MagicItemDetailResponse toDetail(MagicItem m, String lang) {
         return MagicItemDetailResponse.builder()
                 .id(m.getId())

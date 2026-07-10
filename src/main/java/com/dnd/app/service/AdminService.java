@@ -21,6 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс AdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -43,11 +47,20 @@ public class AdminService {
 
     // --- Stat Types ---
 
+    /**
+     * Возвращает список для операции "list stat types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<StatTypeResponse> listStatTypes() {
         return statTypeRepository.findAll().stream().map(refMapper::toStatTypeResponse).toList();
     }
 
+    /**
+     * Возвращает результат операции "get stat type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public StatTypeResponse getStatType(UUID id) {
         return refMapper.toStatTypeResponse(statTypeRepository.findById(id)
@@ -56,11 +69,20 @@ public class AdminService {
 
     // --- Item Types ---
 
+    /**
+     * Возвращает список для операции "list item types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemTypeResponse> listItemTypes() {
         return itemTypeRepository.findAll().stream().map(this::toItemTypeResponse).toList();
     }
 
+    /**
+     * Создает результат операции "create item type" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemTypeResponse createItemType(CreateItemTypeRequest request) {
         if (itemTypeRepository.existsByName(request.getName())) {
@@ -89,12 +111,23 @@ public class AdminService {
         return toItemTypeResponse(saved);
     }
 
+    /**
+     * Возвращает результат операции "get item type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ItemTypeResponse getItemType(UUID id) {
         return toItemTypeResponse(itemTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден")));
     }
 
+    /**
+     * Обновляет результат операции "update item type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemTypeResponse updateItemType(UUID id, CreateItemTypeRequest request) {
         ItemType it = itemTypeRepository.findById(id)
@@ -123,6 +156,10 @@ public class AdminService {
         return toItemTypeResponse(itemTypeRepository.save(it));
     }
 
+    /**
+     * Удаляет результат операции "delete item type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteItemType(UUID id) {
         if (!itemTypeRepository.existsById(id)) {
@@ -136,11 +173,20 @@ public class AdminService {
 
     // --- Skills ---
 
+    /**
+     * Возвращает список для операции "list skills" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SkillResponse> listSkills() {
         return skillRepository.findAll().stream().map(this::toSkillResponse).toList();
     }
 
+    /**
+     * Создает результат операции "create skill" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SkillResponse createSkill(CreateSkillRequest request) {
         if (skillRepository.existsByName(request.getName())) {
@@ -160,12 +206,23 @@ public class AdminService {
         return toSkillResponse(saved);
     }
 
+    /**
+     * Возвращает результат операции "get skill" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SkillResponse getSkill(UUID id) {
         return toSkillResponse(skillRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено")));
     }
 
+    /**
+     * Обновляет результат операции "update skill" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SkillResponse updateSkill(UUID id, CreateSkillRequest request) {
         Skill skill = skillRepository.findById(id)
@@ -183,6 +240,10 @@ public class AdminService {
         return toSkillResponse(skillRepository.save(skill));
     }
 
+    /**
+     * Удаляет результат операции "delete skill" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteSkill(UUID id) {
         if (!skillRepository.existsById(id)) {
@@ -194,11 +255,20 @@ public class AdminService {
 
     // --- Feats ---
 
+    /**
+     * Возвращает список для операции "list feats" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatResponse> listFeats() {
         return featRepository.findAll().stream().map(this::toFeatResponse).toList();
     }
 
+    /**
+     * Создает результат операции "create feat" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatResponse createFeat(CreateFeatRequest request) {
         if (featRepository.existsByNameRu(request.getName())) {
@@ -214,12 +284,23 @@ public class AdminService {
         return toFeatResponse(saved);
     }
 
+    /**
+     * Возвращает результат операции "get feat" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatResponse getFeat(UUID id) {
         return toFeatResponse(featRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена")));
     }
 
+    /**
+     * Обновляет результат операции "update feat" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatResponse updateFeat(UUID id, CreateFeatRequest request) {
         Feat feat = featRepository.findById(id)
@@ -232,6 +313,10 @@ public class AdminService {
         return toFeatResponse(featRepository.save(feat));
     }
 
+    /**
+     * Удаляет результат операции "delete feat" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteFeat(UUID id) {
         if (!featRepository.existsById(id)) {
@@ -246,11 +331,20 @@ public class AdminService {
 
     // --- Users & Teams (read-only) ---
 
+    /**
+     * Возвращает список для операции "list all users" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<UserResponse> listAllUsers() {
         return userRepository.findAll().stream().map(userMapper::toResponse).toList();
     }
 
+    /**
+     * Возвращает список для операции "list all users" в рамках бизнес-логики домена.
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<UserResponse> listAllUsers(org.springframework.data.domain.Pageable pageable) {
         return userRepository.findAll(pageable).map(userMapper::toResponse);
@@ -307,6 +401,11 @@ public class AdminService {
 
     // --- Skill Effects ---
 
+    /**
+     * Возвращает результат операции "get skill effects" в рамках бизнес-логики домена.
+     * @param skillId идентификатор skill, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SkillEffectResponse> getSkillEffects(UUID skillId) {
         if (!skillRepository.existsById(skillId)) {
@@ -316,6 +415,12 @@ public class AdminService {
                 .map(this::toSkillEffectResponse).toList();
     }
 
+    /**
+     * Устанавливает результат операции "set skill effects" в рамках бизнес-логики домена.
+     * @param skillId идентификатор skill, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<SkillEffectResponse> setSkillEffects(UUID skillId, SetSkillEffectsRequest request) {
         Skill skill = skillRepository.findById(skillId)
@@ -407,11 +512,20 @@ public class AdminService {
 
     // --- Backgrounds ---
 
+    /**
+     * Возвращает список для операции "list backgrounds" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BackgroundResponse> listBackgrounds() {
         return backgroundRepository.findAll().stream().map(this::toBackgroundResponse).toList();
     }
 
+    /**
+     * Создает результат операции "create background" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BackgroundResponse createBackground(CreateBackgroundRequest request) {
         if (backgroundRepository.existsByNameRu(request.getName())) {
@@ -427,6 +541,11 @@ public class AdminService {
         return toBackgroundResponse(bg);
     }
 
+    /**
+     * Возвращает результат операции "get background" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public BackgroundResponse getBackground(UUID id) {
         Background bg = backgroundRepository.findById(id)
@@ -434,6 +553,12 @@ public class AdminService {
         return toBackgroundResponse(bg);
     }
 
+    /**
+     * Обновляет результат операции "update background" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BackgroundResponse updateBackground(UUID id, CreateBackgroundRequest request) {
         Background bg = backgroundRepository.findById(id)
@@ -444,6 +569,10 @@ public class AdminService {
         return toBackgroundResponse(bg);
     }
 
+    /**
+     * Удаляет результат операции "delete background" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteBackground(UUID id) {
         if (!backgroundRepository.existsById(id)) {
@@ -455,11 +584,20 @@ public class AdminService {
 
     // --- Spells ---
 
+    /**
+     * Возвращает список для операции "list spells" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpellResponse> listSpells() {
         return spellRepository.findAll().stream().map(this::toSpellResponse).toList();
     }
 
+    /**
+     * Создает результат операции "create spell" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellResponse createSpell(CreateSpellRequest request) {
         Spell spell = Spell.builder()
@@ -473,6 +611,11 @@ public class AdminService {
         return toSpellResponse(spell);
     }
 
+    /**
+     * Возвращает результат операции "get spell" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpellResponse getSpell(UUID id) {
         Spell spell = spellRepository.findById(id)
@@ -480,6 +623,12 @@ public class AdminService {
         return toSpellResponse(spell);
     }
 
+    /**
+     * Обновляет результат операции "update spell" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellResponse updateSpell(UUID id, CreateSpellRequest request) {
         Spell spell = spellRepository.findById(id)
@@ -491,6 +640,10 @@ public class AdminService {
         return toSpellResponse(spell);
     }
 
+    /**
+     * Удаляет результат операции "delete spell" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteSpell(UUID id) {
         if (!spellRepository.existsById(id)) {
@@ -502,6 +655,10 @@ public class AdminService {
 
     // --- Proficiency Skills ---
 
+    /**
+     * Возвращает список для операции "list proficiency skills" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> listProficiencySkills() {
         return proficiencySkillRepository.findAll().stream()
@@ -514,6 +671,11 @@ public class AdminService {
                 .toList();
     }
 
+    /**
+     * Создает результат операции "create proficiency skill" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ProficiencySkillResponse createProficiencySkill(CreateProficiencySkillRequest request) {
         StatType stat = statTypeRepository.findById(request.getGoverningStatId())
@@ -532,6 +694,10 @@ public class AdminService {
                 .build();
     }
 
+    /**
+     * Удаляет результат операции "delete proficiency skill" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteProficiencySkill(UUID id) {
         if (!proficiencySkillRepository.existsById(id)) {

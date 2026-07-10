@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * One row in the "problem features" list: a class feature that has at least one rule or issue, with
- * aggregate counts so the admin can triage without expanding every row.
+ * Класс ProblemFeatureSummaryResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

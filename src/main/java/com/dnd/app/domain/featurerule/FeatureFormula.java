@@ -9,8 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A stored, bounded DSL formula (resource max, duration, DC, dice scaling, eligibility predicate, …).
- * Evaluated by {@code FeatureFormulaEvaluator} against a typed context; no Java/reflection access.
+ * Класс FeatureFormula описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "feature_formula")

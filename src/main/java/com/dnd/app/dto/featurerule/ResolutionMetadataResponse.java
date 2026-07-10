@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/** Reference vocabularies for the SAVE_CHECK_ATTACK editor (resolution types, abilities, skills). */
+/**
+ * Класс ResolutionMetadataResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

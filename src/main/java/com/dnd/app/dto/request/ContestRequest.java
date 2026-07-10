@@ -12,11 +12,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * An opposed melee contest on the actor's turn: GRAPPLE or SHOVE against a target. Both sides make
- * a check (d20 + bonus); supply a manual {@code attackerD20}/{@code targetD20} or omit either for
- * the server to roll it. Bonuses are the Athletics/Acrobatics modifiers the FE reads off the sheets.
- * SHOVE resolves to {@code shoveMode} PRONE (default) — pushing 5 ft is forced movement (Phase 2.12).
- * The defender wins ties (5e).
+ * Класс ContestRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

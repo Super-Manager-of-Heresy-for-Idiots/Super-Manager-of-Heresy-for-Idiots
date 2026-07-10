@@ -16,14 +16,24 @@ import com.dnd.app.dto.content.EquipmentItemDetailResponse;
 import com.dnd.app.util.Localization;
 import org.springframework.stereotype.Component;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param e входящее значение e, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content equipment graph ({@link EquipmentItem} + category + cost +
- * weapon/armor stats + weapon properties) to {@link EquipmentItemDetailResponse}.
- * Must run inside a read-only transaction: lazy collections are resolved on demand.
+ * Класс EquipmentItemMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class EquipmentItemMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param e входящее значение e, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public EquipmentItemDetailResponse toDetail(EquipmentItem e, String lang) {
         return EquipmentItemDetailResponse.builder()
                 .id(e.getId())

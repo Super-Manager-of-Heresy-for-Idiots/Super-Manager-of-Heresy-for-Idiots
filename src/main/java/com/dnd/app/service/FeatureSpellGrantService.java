@@ -33,10 +33,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Feature spell integration (Stage 9): an additive overlay on the existing spell model. Exposes the spells a
- * character's features grant (with always-prepared / counts-against-known / free-cast / ability-override
- * flags) and handles a resource-backed free cast. It never duplicates the spellcasting model — the spellbook
- * merges this overlay on top. Gated by {@code app.feature-rules.spells}.
+ * Класс FeatureSpellGrantService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -54,6 +52,11 @@ public class FeatureSpellGrantService {
     private final FeatureResourceDefinitionRepository resourceDefinitionRepository;
     private final FeatureResourceService featureResourceService;
 
+    /**
+     * Возвращает список для операции "list granted spells" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureSpellGrantResponse> listGrantedSpells(PlayerCharacter character) {
         if (!flags.spellsActive()) {
@@ -101,6 +104,12 @@ public class FeatureSpellGrantService {
         }).filter(r -> r != null).toList();
     }
 
+    /**
+     * Применяет заклинание операции "cast via feature" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param grantId идентификатор grant, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureSpellCastResult castViaFeature(PlayerCharacter character, UUID grantId) {
         if (!flags.spellsActive()) {

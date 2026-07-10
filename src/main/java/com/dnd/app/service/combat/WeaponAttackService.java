@@ -20,12 +20,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Derives a character's available weapon attacks from the items they have equipped, honouring the
- * weapon's properties and the character's class weapon proficiency. Each equipped weapon yields a
- * "strike" and, when the weapon supports it, extra actions (throw for {@code thrown}, a two-handed
- * variant for {@code versatile}). The attack/damage bonus combines the governing ability modifier
- * (Strength, or Dexterity for ranged / finesse) with the proficiency bonus when the character is
- * proficient with the weapon. Results feed the existing battle resolver as {@link CharacterAttackResponse}.
+ * Класс WeaponAttackService описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,7 +35,11 @@ public class WeaponAttackService {
 
     private final ItemInstanceRepository itemInstanceRepository;
 
-    /** Weapon-driven attacks for every equipped weapon of the character (may be empty). */
+    /**
+     * Выполняет операции "compute attacks" в рамках бизнес-логики боя.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public List<CharacterAttackResponse> computeAttacks(PlayerCharacter character) {
         List<CharacterAttackResponse> attacks = new ArrayList<>();
         List<ItemInstance> equipped = itemInstanceRepository.findByOwnerCharacterIdAndSlotIsNotNull(character.getId());

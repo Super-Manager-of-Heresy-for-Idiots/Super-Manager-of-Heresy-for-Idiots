@@ -23,9 +23,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Read-only catalog endpoints for the normalized content model (feats, spells,
- * backgrounds, equipment, magic items). Mirrors {@link ContentReferenceController}
- * for classes and species.
+ * Класс ContentCatalogController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -37,6 +36,11 @@ public class ContentCatalogController {
 
     // --- feats ---
 
+    /**
+     * Возвращает результат операции "get vanilla feats" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/feats", "/api/reference/content/feats"})
     @Operation(summary = "Get core (vanilla) feats from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatDetailResponse>>>> getVanillaFeats(
@@ -46,6 +50,12 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla feat" в рамках бизнес-логики API.
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/feats/{featId}", "/api/reference/content/feats/{featId}"})
     @Operation(summary = "Get a single core (vanilla) feat from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatDetailResponse>>> getVanillaFeat(
@@ -56,6 +66,13 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign feats" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/feats",
             "/api/campaigns/{campaignId}/reference/content/feats"
@@ -71,6 +88,14 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign feat" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/feats/{featId}",
             "/api/campaigns/{campaignId}/reference/content/feats/{featId}"
@@ -89,6 +114,11 @@ public class ContentCatalogController {
 
     // --- spells ---
 
+    /**
+     * Возвращает результат операции "get vanilla spells" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/spells", "/api/reference/content/spells"})
     @Operation(summary = "Get core (vanilla) spells from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpellDetailResponse>>>> getVanillaSpells(
@@ -98,6 +128,12 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla spell" в рамках бизнес-логики API.
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/spells/{spellId}", "/api/reference/content/spells/{spellId}"})
     @Operation(summary = "Get a single core (vanilla) spell from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellDetailResponse>>> getVanillaSpell(
@@ -108,6 +144,13 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign spells" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/spells",
             "/api/campaigns/{campaignId}/reference/content/spells"
@@ -123,6 +166,14 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign spell" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/spells/{spellId}",
             "/api/campaigns/{campaignId}/reference/content/spells/{spellId}"
@@ -141,6 +192,11 @@ public class ContentCatalogController {
 
     // --- backgrounds ---
 
+    /**
+     * Возвращает результат операции "get vanilla backgrounds" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/backgrounds", "/api/reference/content/backgrounds"})
     @Operation(summary = "Get core (vanilla) backgrounds from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundDetailResponse>>>> getVanillaBackgrounds(
@@ -150,6 +206,12 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla background" в рамках бизнес-логики API.
+     * @param backgroundId идентификатор background, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/backgrounds/{backgroundId}", "/api/reference/content/backgrounds/{backgroundId}"})
     @Operation(summary = "Get a single core (vanilla) background from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<BackgroundDetailResponse>>> getVanillaBackground(
@@ -160,6 +222,13 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign backgrounds" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/backgrounds",
             "/api/campaigns/{campaignId}/reference/content/backgrounds"
@@ -175,6 +244,14 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign background" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param backgroundId идентификатор background, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/backgrounds/{backgroundId}",
             "/api/campaigns/{campaignId}/reference/content/backgrounds/{backgroundId}"
@@ -193,6 +270,11 @@ public class ContentCatalogController {
 
     // --- equipment items ---
 
+    /**
+     * Возвращает результат операции "get vanilla equipment items" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/equipment", "/api/reference/content/equipment"})
     @Operation(summary = "Get core (vanilla) equipment items from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<EquipmentItemDetailResponse>>>> getVanillaEquipmentItems(
@@ -202,6 +284,12 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla equipment item" в рамках бизнес-логики API.
+     * @param equipmentItemId идентификатор equipment item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/equipment/{equipmentItemId}", "/api/reference/content/equipment/{equipmentItemId}"})
     @Operation(summary = "Get a single core (vanilla) equipment item from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<EquipmentItemDetailResponse>>> getVanillaEquipmentItem(
@@ -212,6 +300,13 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign equipment items" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/equipment",
             "/api/campaigns/{campaignId}/reference/content/equipment"
@@ -227,6 +322,14 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign equipment item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param equipmentItemId идентификатор equipment item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/equipment/{equipmentItemId}",
             "/api/campaigns/{campaignId}/reference/content/equipment/{equipmentItemId}"
@@ -245,6 +348,11 @@ public class ContentCatalogController {
 
     // --- magic items ---
 
+    /**
+     * Возвращает результат операции "get vanilla magic items" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/magic-items", "/api/reference/content/magic-items"})
     @Operation(summary = "Get core (vanilla) magic items from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MagicItemDetailResponse>>>> getVanillaMagicItems(
@@ -254,6 +362,12 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla magic item" в рамках бизнес-логики API.
+     * @param magicItemId идентификатор magic item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/magic-items/{magicItemId}", "/api/reference/content/magic-items/{magicItemId}"})
     @Operation(summary = "Get a single core (vanilla) magic item from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<MagicItemDetailResponse>>> getVanillaMagicItem(
@@ -264,6 +378,13 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign magic items" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/magic-items",
             "/api/campaigns/{campaignId}/reference/content/magic-items"
@@ -279,6 +400,14 @@ public class ContentCatalogController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign magic item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param magicItemId идентификатор magic item, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/magic-items/{magicItemId}",
             "/api/campaigns/{campaignId}/reference/content/magic-items/{magicItemId}"

@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * The full "feature card" for the Rule Workbench: the source description plus all rules and issues of
- * a single class feature. Loaded lazily when a feature row is expanded.
+ * Класс FeatureRuleDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

@@ -24,9 +24,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Domain versioning for feature rules. Each edit is captured as an immutable {@link FeatureRuleRevision}
- * snapshot; {@code approve} promotes exactly one revision to be the rule's active approved revision, and
- * the runtime only ever executes that one. Draft/needs_review revisions never affect gameplay.
+ * Класс FeatureRuleRevisionService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,7 +42,11 @@ public class FeatureRuleRevisionService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    /** Create revision #1 for a freshly created rule and point the rule at it. */
+    /**
+     * Создает результат операции "create initial draft" в рамках бизнес-логики домена.
+     * @param rule входящее значение rule, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void createInitialDraft(FeatureRule rule, String actingUsername) {
         FeatureRuleRevision rev = createDraft(rule, snapshot(rule), "initial", resolveUserId(actingUsername));
@@ -52,8 +55,9 @@ public class FeatureRuleRevisionService {
     }
 
     /**
-     * Record an edit: update the current draft snapshot in place, or (if the current revision is already
-     * approved) start a new draft revision so the approved one stays the runtime truth.
+     * Выполняет операции "record edit" в рамках бизнес-логики домена.
+     * @param rule входящее значение rule, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
      */
     @Transactional
     public void recordEdit(FeatureRule rule, String actingUsername) {
@@ -69,7 +73,13 @@ public class FeatureRuleRevisionService {
         ruleRepository.save(rule);
     }
 
-    /** Approve the current revision and make it the rule's active approved revision. */
+    /**
+     * Выполняет операции "approve current" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRule approveCurrent(UUID ruleId, String changeReason, String actingUsername) {
         FeatureRule rule = requireRule(ruleId);
@@ -96,7 +106,12 @@ public class FeatureRuleRevisionService {
         return ruleRepository.save(rule);
     }
 
-    /** Disable the rule so the runtime never executes it; records who/when on the current revision. */
+    /**
+     * Выполняет операции "disable" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRule disable(UUID ruleId, String actingUsername) {
         FeatureRule rule = requireRule(ruleId);
@@ -111,7 +126,13 @@ public class FeatureRuleRevisionService {
         return ruleRepository.save(rule);
     }
 
-    /** Clone the approved revision into a fresh draft so it can be edited without touching runtime. */
+    /**
+     * Выполняет операции "new draft from approved" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRule newDraftFromApproved(UUID ruleId, String changeReason, String actingUsername) {
         FeatureRule rule = requireRule(ruleId);
@@ -127,7 +148,14 @@ public class FeatureRuleRevisionService {
         return ruleRepository.save(rule);
     }
 
-    /** Roll back: make a prior revision the active approved one again. */
+    /**
+     * Выполняет бросок операции "rollback" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param targetRevisionId идентификатор target revision, используемый для выбора нужного бизнес-объекта
+     * @param changeReason входящее значение change reason, используемое бизнес-сценарием
+     * @param actingUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRule rollback(UUID ruleId, UUID targetRevisionId, String changeReason, String actingUsername) {
         FeatureRule rule = requireRule(ruleId);
@@ -153,6 +181,11 @@ public class FeatureRuleRevisionService {
         return ruleRepository.save(rule);
     }
 
+    /**
+     * Возвращает список для операции "list history" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRuleRevisionResponse> listHistory(UUID ruleId) {
         FeatureRule rule = requireRule(ruleId);
@@ -163,6 +196,12 @@ public class FeatureRuleRevisionService {
 
     // ── helpers ─────────────────────────────────────────────────────────────
 
+    /**
+     * Преобразует данные операции "to response" в рамках бизнес-логики домена.
+     * @param rev входящее значение rev, используемое бизнес-сценарием
+     * @param rule входящее значение rule, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureRuleRevisionResponse toResponse(FeatureRuleRevision rev, FeatureRule rule) {
         return FeatureRuleRevisionResponse.builder()
                 .id(rev.getId())

@@ -28,17 +28,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Applies approved feature-rule static grants to a character when it gains class features (parallel,
- * flag-gated layer next to the existing ClassLevelReward system — see
- * docs/FEATURE_RULES_RUNTIME_ROADMAP.md §Stage 4 coexistence decision).
- *
- * <p>When {@code app.feature-rules.runtime-enabled} is off (default) this is a hard no-op, so the
- * existing level-up/creation flow is completely unaffected. Failures in this experimental layer are
- * logged and swallowed so they can never break the critical character path.</p>
- *
- * <p>Today only SKILL proficiencies/expertise are materializable (that is the only character-side
- * proficiency store that exists). Weapon/armor/tool/language grants are authored but not yet applied —
- * they need new character-side storage (tracked as a Stage 4 follow-up).</p>
+ * Класс CharacterFeatureGrantService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -56,7 +47,12 @@ public class CharacterFeatureGrantService {
     private final ContentSkillRepository contentSkillRepository;
     private final FeatureResourceService featureResourceService;
 
-    /** Apply feature-rule static grants for the base-class features gained at {@code classLevel}. */
+    /**
+     * Выполняет операции "apply for class level" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param classLevel входящее значение class level, используемое бизнес-сценарием
+     */
     @Transactional
     public void applyForClassLevel(PlayerCharacter character, UUID classId, int classLevel) {
         if (!flags.isRuntimeEnabled()) {
@@ -108,10 +104,9 @@ public class CharacterFeatureGrantService {
     }
 
     /**
-     * Apply a background's approved static skill grants to a character (S1 polymorphic owner). Mirrors
-     * {@link #applyForClassLevel}: same hard flag-gate and swallow-on-failure, but resolves rules owned by
-     * {@code owner_type = BACKGROUND} and tags the resulting proficiencies as {@link SkillProficiencySource#BACKGROUND}.
-     * Call at character creation once the background is known.
+     * Выполняет операции "apply for background" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param backgroundId идентификатор background, используемый для выбора нужного бизнес-объекта
      */
     @Transactional
     public void applyForBackground(PlayerCharacter character, UUID backgroundId) {

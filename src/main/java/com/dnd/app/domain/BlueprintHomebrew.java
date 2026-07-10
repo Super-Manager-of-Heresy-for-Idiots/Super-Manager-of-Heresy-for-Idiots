@@ -5,6 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс BlueprintHomebrew описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "blueprint_homebrew")
 @IdClass(BlueprintHomebrewId.class)

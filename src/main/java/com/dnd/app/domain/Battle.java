@@ -12,9 +12,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A battle/encounter scoped to a single campaign. The GM owns its lifecycle
- * (assemble → start → complete); the state is shared by every campaign member and
- * synchronised over WebSocket.
+ * Класс Battle описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "battles")

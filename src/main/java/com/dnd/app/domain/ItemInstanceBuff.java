@@ -7,6 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Класс ItemInstanceBuff описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "item_instance_buffs",
         uniqueConstraints = @UniqueConstraint(columnNames = {"item_instance_id", "buff_debuff_id"}))

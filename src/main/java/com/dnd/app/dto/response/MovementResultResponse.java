@@ -6,12 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Result of validating/committing a combatant's movement spend against their per-turn budget.
- *
- * <p>This is an explicit allowed-flag envelope (always HTTP 200) rather than a 4xx on refusal, so
- * the caller (map-service) receives the {@code reason} and remaining budget even when the move is
- * rejected — it needs both to snap the token back and show a precise message. When {@code allowed}
- * is false the spend was NOT committed; when true the budget was incremented by the requested feet.
+ * Класс MovementResultResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

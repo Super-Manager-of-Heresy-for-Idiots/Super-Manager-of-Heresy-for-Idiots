@@ -15,7 +15,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Lists and resolves durable gameplay prompts (reactions/optional triggers). */
+/**
+ * Класс PendingGameplayPromptService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class PendingGameplayPromptService {
@@ -25,12 +28,23 @@ public class PendingGameplayPromptService {
     private final GameplayEventService gameplayEventService;
     private final CombatActionEconomyService economyService;
 
+    /**
+     * Возвращает список для операции "list pending" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<PendingPromptResponse> listPending(UUID characterId) {
         return promptRepository.findByCharacterIdAndStatus(characterId, "pending").stream()
                 .map(this::toResponse).toList();
     }
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param promptId идентификатор prompt, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public PendingPromptResponse resolve(UUID characterId, UUID promptId) {
         PendingGameplayPrompt prompt = require(characterId, promptId);
@@ -55,6 +69,12 @@ public class PendingGameplayPromptService {
         return toResponse(promptRepository.save(prompt));
     }
 
+    /**
+     * Выполняет операции "decline" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param promptId идентификатор prompt, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public PendingPromptResponse decline(UUID characterId, UUID promptId) {
         PendingGameplayPrompt prompt = require(characterId, promptId);
@@ -63,7 +83,10 @@ public class PendingGameplayPromptService {
         return toResponse(promptRepository.save(prompt));
     }
 
-    /** Expire pending prompts past their window. Returns the count expired. */
+    /**
+     * Выполняет операции "expire due" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int expireDue() {
         List<PendingGameplayPrompt> due =

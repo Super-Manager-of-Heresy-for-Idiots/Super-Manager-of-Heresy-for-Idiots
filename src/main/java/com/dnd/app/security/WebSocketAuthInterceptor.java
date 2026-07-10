@@ -19,6 +19,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс WebSocketAuthInterceptor описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -28,6 +32,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private final UserRepository userRepository;
     private final CampaignMemberRepository campaignMemberRepository;
 
+    /**
+     * Выполняет операции "pre send" в рамках бизнес-логики безопасности.
+     * @param message входящее значение message, используемое бизнес-сценарием
+     * @param channel входящее значение channel, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);

@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
-/** Replace-style edit payload for companion/summon definitions. */
+/**
+ * Класс CompanionDefinitionEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

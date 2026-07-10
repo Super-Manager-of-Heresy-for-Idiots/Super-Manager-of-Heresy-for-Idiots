@@ -21,9 +21,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Admin CRUD for class resource templates ({@code custom_resource_types}) — the single, player-facing resource
- * system (see [[existing-resource-system]]). Lets a GM/admin set a resource's max (fixed or a per-character DSL
- * formula such as {@code class_level("monk")}) and bind it to a class so members auto-provision it.
+ * Класс CustomResourceTypeAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,6 +34,10 @@ public class CustomResourceTypeAdminService {
     private final FeatRepository featRepository;
     private final FeatureFormulaService formulaService;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CustomResourceTypeAdminResponse> list() {
         return repository.findByHomebrewIsNull().stream()
@@ -44,6 +47,11 @@ public class CustomResourceTypeAdminService {
                 .toList();
     }
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики домена.
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CustomResourceTypeAdminResponse create(CustomResourceTypeRequest req) {
         CustomResourceType type = new CustomResourceType();
@@ -51,6 +59,12 @@ public class CustomResourceTypeAdminService {
         return toResponse(repository.save(type));
     }
 
+    /**
+     * Обновляет результат операции "update" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CustomResourceTypeAdminResponse update(UUID id, CustomResourceTypeRequest req) {
         CustomResourceType type = repository.findById(id)
@@ -59,6 +73,10 @@ public class CustomResourceTypeAdminService {
         return toResponse(repository.save(type));
     }
 
+    /**
+     * Удаляет результат операции "delete" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void delete(UUID id) {
         CustomResourceType type = repository.findById(id)

@@ -25,13 +25,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Read-only reference access for the new normalized content model. Replaces the
- * class-reading behaviour of {@link ReferenceDataService} for the final
- * {@link ContentClassDetailResponse} shape.
- *
- * <p>Campaign-aware visibility = core content ({@code homebrew_id IS NULL}) plus the
- * homebrew packages activated for the campaign. Vanilla variants expose core content
- * only (used by character templates without a campaign).</p>
+ * Класс ContentReferenceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -48,6 +43,13 @@ public class ContentReferenceService {
 
     // --- campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign classes" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentClassDetailResponse> getCampaignClasses(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -61,6 +63,14 @@ public class ContentReferenceService {
         return classes.stream().map(c -> classMapper.toDetail(c, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign class" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentClassDetailResponse getCampaignClass(UUID campaignId, UUID classId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -74,6 +84,11 @@ public class ContentReferenceService {
 
     // --- vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla classes" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @org.springframework.cache.annotation.Cacheable(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, key = "#lang")
     @Transactional(readOnly = true)
@@ -84,6 +99,12 @@ public class ContentReferenceService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla class" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentClassDetailResponse getVanillaClass(UUID classId, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -97,6 +118,13 @@ public class ContentReferenceService {
 
     // --- species: campaign-aware ---
 
+    /**
+     * Возвращает результат операции "get campaign species" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpeciesDetailResponse> getCampaignSpecies(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -110,6 +138,14 @@ public class ContentReferenceService {
         return species.stream().map(s -> speciesMapper.toDetail(s, resolvedLang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get campaign species by id" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpeciesDetailResponse getCampaignSpeciesById(UUID campaignId, UUID speciesId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -123,6 +159,11 @@ public class ContentReferenceService {
 
     // --- species: vanilla / core only ---
 
+    /**
+     * Возвращает результат операции "get vanilla species" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpeciesDetailResponse> getVanillaSpecies(String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -131,6 +172,12 @@ public class ContentReferenceService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla species by id" в рамках бизнес-логики домена.
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpeciesDetailResponse getVanillaSpeciesById(UUID speciesId, String lang) {
         String resolvedLang = Localization.normalize(lang);

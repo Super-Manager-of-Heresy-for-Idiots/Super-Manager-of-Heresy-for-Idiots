@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A spell (or filtered set) a feature grants, with prepared/known/free-cast/ability-override flags. */
+/**
+ * Класс FeatureSpellGrant описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_spell_grant")
 @Getter

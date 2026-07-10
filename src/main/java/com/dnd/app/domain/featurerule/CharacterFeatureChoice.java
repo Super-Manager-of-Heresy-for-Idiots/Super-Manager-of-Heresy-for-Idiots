@@ -7,7 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A choice a character has made for a feature's {@link FeatureChoiceGroup}. */
+/**
+ * Класс CharacterFeatureChoice описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "character_feature_choice")
 @Getter

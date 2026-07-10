@@ -11,31 +11,40 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Pure combat math: ability modifiers, initiative, encounter danger/XP preview and the
- * deterministic ordering of the initiative tracker. Kept side-effect free and Spring-free
- * so the rules can be unit-tested in isolation.
+ * Класс CombatCalculator описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class CombatCalculator {
 
     private CombatCalculator() {
     }
 
-    /** D&D ability modifier: floor((score - 10) / 2). */
+    /**
+     * Выполняет операции "ability modifier" в рамках бизнес-логики боя.
+     * @param score входящее значение score, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static int abilityModifier(int score) {
         return AbilityScores.modifier(score);
     }
 
     /**
-     * A character's initiative: the d20 plus its Dexterity modifier and the net of any active
-     * Dexterity STAT_MODIFIER buffs/debuffs (buffs add, debuffs subtract).
+     * Выполняет операции "character initiative" в рамках бизнес-логики боя.
+     * @param d20 входящее значение d20, используемое бизнес-сценарием
+     * @param dexScore входящее значение dex score, используемое бизнес-сценарием
+     * @param dexBuffBonus входящее значение dex buff bonus, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static int characterInitiative(int d20, int dexScore, int dexBuffBonus) {
         return d20 + abilityModifier(dexScore) + dexBuffBonus;
     }
 
     /**
-     * A monster's initiative: the d20 plus the authored initiative bonus when present,
-     * otherwise the Dexterity modifier derived from its DEX score.
+     * Выполняет операции "monster initiative" в рамках бизнес-логики боя.
+     * @param d20 входящее значение d20, используемое бизнес-сценарием
+     * @param initiativeBonus входящее значение initiative bonus, используемое бизнес-сценарием
+     * @param dexScore входящее значение dex score, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static int monsterInitiative(int d20, Integer initiativeBonus, int dexScore) {
         int modifier = (initiativeBonus != null) ? initiativeBonus : abilityModifier(dexScore);
@@ -43,8 +52,9 @@ public final class CombatCalculator {
     }
 
     /**
-     * Average danger of the monster group = mean of the monsters' challenge ratings,
-     * rounded to two decimals. Empty group → 0.
+     * Выполняет операции "average danger" в рамках бизнес-логики боя.
+     * @param crValues входящее значение cr values, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static BigDecimal averageDanger(List<BigDecimal> crValues) {
         if (crValues == null || crValues.isEmpty()) {
@@ -57,8 +67,10 @@ public final class CombatCalculator {
     }
 
     /**
-     * Total combat XP. When the GM has overridden it, that value wins; otherwise it is the
-     * sum of each monster's base XP (null base XP counts as 0).
+     * Преобразует данные операции "total xp" в рамках бизнес-логики боя.
+     * @param xpBases входящее значение xp bases, используемое бизнес-сценарием
+     * @param override входящее значение override, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static int totalXp(List<Integer> xpBases, Integer override) {
         if (override != null) {
@@ -71,9 +83,9 @@ public final class CombatCalculator {
     }
 
     /**
-     * Sorts combatants by initiative (desc), breaking ties by Dexterity (desc) and finally by a
-     * stable key (creation time then id) so the order is deterministic across recomputations.
-     * Mutates each combatant's {@code turnOrder} to its 0-based position and returns the list.
+     * Выполняет операции "order tracker" в рамках бизнес-логики боя.
+     * @param combatants входящее значение combatants, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static List<BattleCombatant> orderTracker(List<BattleCombatant> combatants) {
         combatants.sort(Comparator
@@ -88,10 +100,11 @@ public final class CombatCalculator {
     }
 
     /**
-     * After re-ordering the tracker, returns the index of the combatant that should keep the
-     * turn. If the previously-active combatant is still present, the turn stays on it (its index
-     * may have shifted because a faster combatant joined); otherwise the index is clamped into
-     * range.
+     * Выполняет операции "resolve current index" в рамках бизнес-логики боя.
+     * @param ordered входящее значение ordered, используемое бизнес-сценарием
+     * @param activeCombatantId идентификатор active combatant, используемый для выбора нужного бизнес-объекта
+     * @param previousIndex входящее значение previous index, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static int resolveCurrentIndex(List<BattleCombatant> ordered, UUID activeCombatantId, int previousIndex) {
         if (activeCombatantId != null) {

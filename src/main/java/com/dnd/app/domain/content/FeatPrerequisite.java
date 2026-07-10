@@ -7,6 +7,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс FeatPrerequisite описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feat_prerequisite")
 @Getter

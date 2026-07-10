@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Final level-up options model (new content model). Surfaces the reward groups,
- * options and grants available for the next level of each eligible class, plus
- * already-selected state and derived data.
+ * Класс LevelUpOptionsResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

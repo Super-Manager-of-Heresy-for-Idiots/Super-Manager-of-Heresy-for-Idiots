@@ -31,13 +31,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Builds a character's {@link CapabilityProfileResponse} — the single source of truth the frontend uses to
- * render class-aware panels/tabs (see {@code docs/FEATURE_RULES_FRONTEND_REWORK_PLAN.md} §0).
- *
- * <p>Spellcasting is derived from class content ({@code character_class}) and is always populated, so the
- * frontend can gate the spells tab by {@code spellcasting.caster} regardless of the runtime flags. All
- * feature-rules presence flags are only computed when the matching {@code app.feature-rules.*} subsystem is
- * active, so the profile never advertises something the backend will not actually serve.</p>
+ * Класс CharacterCapabilityProfileService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -60,6 +55,11 @@ public class CharacterCapabilityProfileService {
     private final FeatureChoiceGroupRepository choiceGroupRepository;
     private final CharacterFeatureChoiceRepository choiceRepository;
 
+    /**
+     * Формирует результат операции "build" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CapabilityProfileResponse build(UUID characterId) {
         PlayerCharacter character = characterRepository.findById(characterId)
@@ -148,9 +148,9 @@ public class CharacterCapabilityProfileService {
     }
 
     /**
-     * The character's structured class features (base-class, feature level ≤ its class level) for the folio
-     * "Features" tab — the real class abilities (Reckless Attack, Wild Shape, …), not a prose blob. Available
-     * for every class independent of the runtime flags. (Subclass features are a follow-up.)
+     * Возвращает список для операции "list class features" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public List<CharacterClassFeatureResponse> listClassFeatures(UUID characterId) {

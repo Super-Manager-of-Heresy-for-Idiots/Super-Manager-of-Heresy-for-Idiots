@@ -10,9 +10,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A line in a merchant NPC's shop: an item template offered for sale at a price (gold pieces)
- * with an available quantity. Buying decrements the quantity and grants the item to the buyer;
- * selling can restock it. Only NPCs with the MERCHANT role carry these.
+ * Класс NpcShopItem описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "npc_shop_items")

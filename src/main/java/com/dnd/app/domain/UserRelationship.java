@@ -13,9 +13,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * A single social-graph edge between two users. The pair is normalized so {@code userAId < userBId}
- * (PostgreSQL uuid ordering — see {@link com.dnd.app.util.UuidOrdering}); {@code requesterId} and
- * {@code blockedById} preserve direction for PENDING and BLOCKED rows respectively.
+ * Класс UserRelationship описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "user_relationships")

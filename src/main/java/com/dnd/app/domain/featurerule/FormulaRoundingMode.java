@@ -3,7 +3,10 @@ package com.dnd.app.domain.featurerule;
 import java.util.Arrays;
 import java.util.Optional;
 
-/** How a numeric formula result is rounded before {@code min}/{@code max} clamping. */
+/**
+ * Перечисление FormulaRoundingMode описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public enum FormulaRoundingMode {
 
     FLOOR("floor"),
@@ -17,10 +20,19 @@ public enum FormulaRoundingMode {
         this.code = code;
     }
 
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
+    /**
+     * Выполняет операции "apply" в рамках бизнес-логики домена.
+     * @param value входящее значение value, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public double apply(double value) {
         return switch (this) {
             case FLOOR -> Math.floor(value);
@@ -30,6 +42,11 @@ public enum FormulaRoundingMode {
         };
     }
 
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FormulaRoundingMode> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

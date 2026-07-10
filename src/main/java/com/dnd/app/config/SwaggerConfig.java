@@ -9,9 +9,17 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Класс SwaggerConfig описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Configuration
 public class SwaggerConfig {
 
+    /**
+     * Выполняет операции "open api" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()

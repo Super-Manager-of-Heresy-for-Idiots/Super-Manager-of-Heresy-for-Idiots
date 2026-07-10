@@ -36,10 +36,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Trading with merchant NPCs. The GM stocks a merchant's shop with item templates priced in gold;
- * players then buy from it (gold leaves the wallet, the item is granted) or sell carried items
- * back at a reduced rate. Currency moves through {@link WalletService} (which enforces ownership
- * and non-negative balances), so a purchase fails cleanly when the buyer cannot afford it.
+ * Класс TradeService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -60,6 +58,13 @@ public class TradeService {
     private final WalletService walletService;
     private final UserRepository userRepository;
 
+    /**
+     * Возвращает список для операции "list shop" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ShopItemResponse> listShop(UUID campaignId, UUID npcId, String username) {
         User user = getUser(username);
@@ -68,6 +73,14 @@ public class TradeService {
         return shopItemRepository.findByNpcId(npc.getId()).stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Выполняет операции "stock shop" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ShopItemResponse stockShop(UUID campaignId, UUID npcId, AddShopItemRequest request, String username) {
         User user = getUser(username);
@@ -98,6 +111,14 @@ public class TradeService {
         return toResponse(line);
     }
 
+    /**
+     * Выполняет операции "buy" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public TradeResultResponse buy(UUID campaignId, UUID npcId, BuyItemRequest request, String username) {
         User user = getUser(username);
@@ -146,6 +167,14 @@ public class TradeService {
                 .build();
     }
 
+    /**
+     * Выполняет операции "sell" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public TradeResultResponse sell(UUID campaignId, UUID npcId, SellItemRequest request, String username) {
         User user = getUser(username);

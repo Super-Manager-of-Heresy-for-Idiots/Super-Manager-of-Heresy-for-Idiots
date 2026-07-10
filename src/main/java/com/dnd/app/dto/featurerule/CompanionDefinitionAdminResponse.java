@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
-/** Rule-authored companion/summon definitions attached to a COMPANION rule. */
+/**
+ * Класс CompanionDefinitionAdminResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

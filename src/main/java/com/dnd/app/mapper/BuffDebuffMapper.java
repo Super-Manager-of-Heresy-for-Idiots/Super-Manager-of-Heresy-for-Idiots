@@ -3,11 +3,20 @@ package com.dnd.app.mapper;
 import com.dnd.app.domain.BuffDebuff;
 import com.dnd.app.dto.response.BuffDebuffResponse;
 
+/**
+ * Класс BuffDebuffMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public final class BuffDebuffMapper {
 
     private BuffDebuffMapper() {
     }
 
+    /**
+     * Преобразует данные операции "to response" в рамках бизнес-логики преобразования данных.
+     * @param bd входящее значение bd, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static BuffDebuffResponse toResponse(BuffDebuff bd) {
         if (bd == null) {
             return null;

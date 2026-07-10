@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Read-only movement snapshot for a battle, so map-service / the tactical UI can preview how far the
- * active combatant may still move (and show every combatant's speed) without recomputing speed from
- * the character sheet. The authoritative source of speed and spent budget is core BE.
+ * Класс MovementContextResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

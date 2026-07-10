@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Full authoritative state of a battle: lifecycle, the group preview (average danger /
- * total xp) and the initiative-ordered tracker. Clients re-fetch this after WebSocket pings.
+ * Класс BattleResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

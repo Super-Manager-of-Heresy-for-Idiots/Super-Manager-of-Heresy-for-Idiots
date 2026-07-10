@@ -13,6 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс ItemInstance описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "item_instances")
 @Getter
@@ -27,9 +31,8 @@ public class ItemInstance {
     private UUID id;
 
     /**
-     * An instance references exactly one item source (enforced by chk_iteminst_one_ref):
-     * a new-content {@link #equipmentItem} or {@link #magicItem}, or the legacy
-     * {@link #template} (kept for backward-compatibility with pre-migration rows).
+     * Возвращает результат операции "get display name" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id")
@@ -81,11 +84,18 @@ public class ItemInstance {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Возвращает результат операции "get display name" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getDisplayName() {
         return customName != null ? customName : getBaseName();
     }
 
-    /** Name from whichever item source is set (Russian-preferred for content items). */
+    /**
+     * Возвращает результат операции "get base name" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getBaseName() {
         if (template != null) {
             return template.getName();
@@ -99,7 +109,10 @@ public class ItemInstance {
         return null;
     }
 
-    /** The id of the active item source (template / equipment / magic). */
+    /**
+     * Возвращает результат операции "get reference id" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public UUID getReferenceId() {
         if (template != null) {
             return template.getId();
@@ -113,7 +126,10 @@ public class ItemInstance {
         return null;
     }
 
-    /** WeaponStat of the equipped item, when it is an equipment-model weapon. */
+    /**
+     * Возвращает результат операции "get weapon stat" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public WeaponStat getWeaponStat() {
         return equipmentItem != null ? equipmentItem.getWeaponStat() : null;
     }

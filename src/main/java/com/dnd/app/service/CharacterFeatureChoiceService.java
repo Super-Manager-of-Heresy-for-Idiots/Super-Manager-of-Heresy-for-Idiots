@@ -32,13 +32,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Lists and records a character's feature choices (Fighting Style, Expertise skills, Metamagic, …) — the
- * choice half of Stage 4 that was deferred (only concrete {@code targetId} skill grants auto-applied before).
- *
- * <p>Safe-by-default application: a {@code skill} option is materialised as a skill proficiency (the only
- * character-side proficiency store that exists today); every other option type is recorded and surfaced so
- * the UI can show it and later stages can apply its mechanical effect. All flag-gated: a hard no-op / empty
- * list unless {@code app.feature-rules.runtime-enabled}. Access is enforced by the caller (owner/GM/ADMIN).</p>
+ * Класс CharacterFeatureChoiceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,6 +48,11 @@ public class CharacterFeatureChoiceService {
     private final CharacterSkillProficiencyRepository skillProficiencyRepository;
     private final ContentSkillRepository contentSkillRepository;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureChoiceGroupResponse> list(UUID characterId) {
         List<FeatureRule> rules = approvedRules(characterId);
@@ -80,6 +80,14 @@ public class CharacterFeatureChoiceService {
         return out;
     }
 
+    /**
+     * Выполняет операции "choose" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param groupId идентификатор group, используемый для выбора нужного бизнес-объекта
+     * @param optionType входящее значение option type, используемое бизнес-сценарием
+     * @param targetEntityId идентификатор target entity, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureChoiceGroupResponse choose(UUID characterId, UUID groupId, String optionType, UUID targetEntityId) {
         if (!flags.isRuntimeEnabled()) {
@@ -130,6 +138,11 @@ public class CharacterFeatureChoiceService {
                 choiceRepository.findByCharacterIdAndChoiceGroupId(characterId, groupId));
     }
 
+    /**
+     * Выполняет операции "unchoose" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param choiceId идентификатор choice, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void unchoose(UUID characterId, UUID choiceId) {
         choiceRepository.findById(choiceId)

@@ -9,6 +9,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт DictionaryRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @NoRepositoryBean
 public interface DictionaryRepository<T extends DictionaryEntry> extends JpaRepository<T, UUID> {
 

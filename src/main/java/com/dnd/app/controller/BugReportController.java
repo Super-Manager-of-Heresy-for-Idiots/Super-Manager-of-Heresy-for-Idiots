@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Класс BugReportController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/bug-reports")
 @RequiredArgsConstructor
@@ -23,6 +27,13 @@ public class BugReportController {
 
     private final BugReportService bugReportService;
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @param httpRequest входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<BugReportResponse>> create(
             @Valid @RequestBody CreateBugReportRequest request,

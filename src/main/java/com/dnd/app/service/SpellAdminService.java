@@ -31,9 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Admin-side operations for the spell data-quality review console: listing spells
- * flagged for manual resolution and applying an admin's correction (saving-throw
- * ability / attack-roll flag) while clearing the warning.
+ * Класс SpellAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -47,6 +46,17 @@ public class SpellAdminService {
     private final BuffDebuffRepository buffDebuffRepository;
     private final SpellMapper spellMapper;
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list warnings" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpellWarningResponse> listWarnings(String lang) {
         return spellRepository.findWarnings().stream()
@@ -54,6 +64,13 @@ public class SpellAdminService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellWarningResponse resolve(UUID id, SpellResolutionRequest request, String lang) {
         Spell spell = spellRepository.findById(id)
@@ -85,10 +102,11 @@ public class SpellAdminService {
     }
 
     /**
-     * Full admin edit of a spell's combat resolution: save ability, attack-roll flag,
-     * ability-check ability + skill, warning flag, and the base damage / healing entries.
-     * The damage and healing lists, when present, replace the spell's current entries
-     * wholesale; a null list leaves that collection untouched.
+     * Обновляет результат операции "update" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public SpellDetailResponse update(UUID id, SpellEditRequest request, String lang) {
@@ -142,7 +160,11 @@ public class SpellAdminService {
         return spellMapper.toDetail(spell, lang);
     }
 
-    /** The buffs/debuffs currently linked to a spell, sorted by name for stable display. */
+    /**
+     * Возвращает результат операции "get linked buffs" в рамках бизнес-логики домена.
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BuffDebuffResponse> getLinkedBuffs(UUID spellId) {
         Spell spell = spellRepository.findById(spellId)
@@ -154,8 +176,10 @@ public class SpellAdminService {
     }
 
     /**
-     * Replaces the full set of buffs/debuffs linked to a spell. A null/empty list clears the links;
-     * every supplied id must resolve to an existing buff/debuff.
+     * Устанавливает результат операции "set linked buffs" в рамках бизнес-логики домена.
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param buffIds входящее значение buff ids, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public List<BuffDebuffResponse> setLinkedBuffs(UUID spellId, List<UUID> buffIds) {

@@ -57,13 +57,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Maps the new-content class graph ({@link ContentCharacterClass} + features +
- * reward groups/options/grants + typed grant tables) to the canonical
- * {@link ContentClassDetailResponse} read model.
- *
- * <p>Must be invoked inside a read-only transaction: lazy associations (typed grant
- * detail rows and their option collections) are resolved on demand. N+1 access here
- * is acceptable for Phase 3 and addressed in Phase 11.</p>
+ * Класс ContentClassMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 @RequiredArgsConstructor
@@ -80,6 +75,12 @@ public class ContentClassMapper {
     private final ClassLevelRewardGrantNumericModifierRepository grantNumericRepo;
     private final ClassLevelRewardGrantCustomTextRepository grantCustomRepo;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param c входящее значение c, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public ContentClassDetailResponse toDetail(ContentCharacterClass c, String lang) {
         return ContentClassDetailResponse.builder()
                 .id(c.getId())
@@ -174,7 +175,12 @@ public class ContentClassMapper {
         return groups.stream().map(g -> mapGroup(g, lang, cache)).toList();
     }
 
-    /** Maps a single reward group (with options/grants) to the read DTO. */
+    /**
+     * Преобразует данные операции "to reward group dto" в рамках бизнес-логики преобразования данных.
+     * @param group входящее значение group, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public RewardGroupDto toRewardGroupDto(ClassLevelRewardGroup group, String lang) {
         return mapGroup(group, lang, buildCache(collectGrants(List.of(group))));
     }

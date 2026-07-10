@@ -9,10 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A single participant on a battle's initiative tracker. Each row is one instance:
- * three goblins are three rows (each with its own roll, HP and label), and every joined
- * character is its own row. {@code monster} XOR {@code character} is populated depending
- * on {@link #type}.
+ * Класс BattleCombatant описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "battle_combatants")

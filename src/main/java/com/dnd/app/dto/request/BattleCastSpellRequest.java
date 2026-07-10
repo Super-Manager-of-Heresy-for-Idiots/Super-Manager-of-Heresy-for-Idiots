@@ -9,10 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Cast a spell inside the battle flow (Phase 2.1). The caster is always the combatant whose turn it
- * is (the server does not take a casterId from the client). {@code targetCombatantId} is optional
- * (self/no-target spells); {@code slotLevel} upcasts (>= spell level). {@code clientCommandId} is the
- * idempotency key (A6; dedup infrastructure lands in 2.14, the field is accepted now).
+ * Класс BattleCastSpellRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

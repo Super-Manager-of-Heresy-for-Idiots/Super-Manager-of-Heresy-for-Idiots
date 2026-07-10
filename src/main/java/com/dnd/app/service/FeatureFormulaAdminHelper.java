@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Shared helper for the admin rule-mechanics editors: create/update the DSL {@link FeatureFormula} behind an
- * editor field (damage dice, resource max, DC, duration, …) and read it back. Keeps every editor from
- * duplicating the create-validate-stamp-save dance.
+ * Класс FeatureFormulaAdminHelper описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 @RequiredArgsConstructor
@@ -20,7 +19,13 @@ public class FeatureFormulaAdminHelper {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
 
-    /** Create/update the formula for a field; returns its id, or null when the expression is blank (field cleared). */
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param existingId идентификатор existing, используемый для выбора нужного бизнес-объекта
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @param resultType входящее значение result type, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public UUID upsert(UUID existingId, String expression, String resultType) {
         if (expression == null || expression.isBlank()) {
             return null;
@@ -37,7 +42,11 @@ public class FeatureFormulaAdminHelper {
         return formulaRepository.save(formula).getId();
     }
 
-    /** The stored formula (for reading expression / validation status), or null. */
+    /**
+     * Находит результат операции "find" в рамках бизнес-логики домена.
+     * @param formulaId идентификатор formula, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureFormula find(UUID formulaId) {
         return formulaId == null ? null : formulaRepository.findById(formulaId).orElse(null);
     }

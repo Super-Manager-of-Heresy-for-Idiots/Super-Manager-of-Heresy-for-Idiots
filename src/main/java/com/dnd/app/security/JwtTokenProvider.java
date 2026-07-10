@@ -12,6 +12,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 
+/**
+ * Класс JwtTokenProvider описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 public class JwtTokenProvider {
@@ -28,6 +32,12 @@ public class JwtTokenProvider {
     private final long expirationMs;
     private final long refreshExpirationMs;
 
+    /**
+     * Создает экземпляр компонента безопасности и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param secret входящее значение secret, используемое бизнес-сценарием
+     * @param expirationMs входящее значение expiration ms, используемое бизнес-сценарием
+     * @param refreshExpirationMs входящее значение refresh expiration ms, используемое бизнес-сценарием
+     */
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-ms}") long expirationMs,
@@ -38,24 +48,46 @@ public class JwtTokenProvider {
         log.info("JwtTokenProvider initialized, accessTTL={}ms refreshTTL={}ms", expirationMs, refreshExpirationMs);
     }
 
-    /** Access token: presented on every API/WS call, short TTL. */
+    /**
+     * Выполняет операции "generate token" в рамках бизнес-логики безопасности.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param role входящее значение role, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String generateToken(String username, String role) {
         return generateToken(username, role, null);
     }
 
+    /**
+     * Выполняет операции "generate token" в рамках бизнес-логики безопасности.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param role входящее значение role, используемое бизнес-сценарием
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public String generateToken(String username, String role, UUID userId) {
         return build(username, role, TYPE_ACCESS, expirationMs, userId, null);
     }
 
     /**
-     * Refresh token: only accepted by /api/auth/refresh, long TTL, never used to authorize requests.
-     * The {@code jti} ties the token to its server-side {@code refresh_token} row so it can be
-     * rotated and revoked; reuse of a rotated jti is the theft signal.
+     * Выполняет операции "generate refresh token" в рамках бизнес-логики безопасности.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param role входящее значение role, используемое бизнес-сценарием
+     * @param jti входящее значение jti, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public String generateRefreshToken(String username, String role, String jti) {
         return generateRefreshToken(username, role, null, jti);
     }
 
+    /**
+     * Выполняет операции "generate refresh token" в рамках бизнес-логики безопасности.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param role входящее значение role, используемое бизнес-сценарием
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param jti входящее значение jti, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String generateRefreshToken(String username, String role, UUID userId, String jti) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + refreshExpirationMs);
@@ -90,24 +122,47 @@ public class JwtTokenProvider {
         return builder.signWith(key, Jwts.SIG.HS256).compact();
     }
 
+    /**
+     * Возвращает результат операции "get username from token" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String getUsernameFromToken(String token) {
         return parseClaims(token).getSubject();
     }
 
+    /**
+     * Возвращает результат операции "get role from token" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String getRoleFromToken(String token) {
         return parseClaims(token).get(CLAIM_ROLE, String.class);
     }
 
+    /**
+     * Возвращает результат операции "get token type" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String getTokenType(String token) {
         return parseClaims(token).get(CLAIM_TYPE, String.class);
     }
 
-    /** Refresh-token rotation id. Null for legacy refresh tokens minted before server-side sessions. */
+    /**
+     * Возвращает результат операции "get jti" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String getJti(String token) {
         return parseClaims(token).get(CLAIM_JTI, String.class);
     }
 
-    /** Generic validity (signature + expiry). Does not check token type. */
+    /**
+     * Проверяет корректность операции "validate token" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public boolean validateToken(String token) {
         try {
             parseClaims(token);
@@ -122,12 +177,20 @@ public class JwtTokenProvider {
         }
     }
 
-    /** Valid signature, not expired, AND carries the access type. Used by the request filter. */
+    /**
+     * Проверяет условие операции "is access token" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isAccessToken(String token) {
         return isOfType(token, TYPE_ACCESS);
     }
 
-    /** Valid signature, not expired, AND carries the refresh type. Used by /api/auth/refresh. */
+    /**
+     * Проверяет условие операции "is refresh token" в рамках бизнес-логики безопасности.
+     * @param token входящее значение token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isRefreshToken(String token) {
         return isOfType(token, TYPE_REFRESH);
     }
@@ -152,10 +215,18 @@ public class JwtTokenProvider {
         }
     }
 
+    /**
+     * Возвращает результат операции "get expiration ms" в рамках бизнес-логики безопасности.
+     * @return результат выполнения бизнес-операции
+     */
     public long getExpirationMs() {
         return expirationMs;
     }
 
+    /**
+     * Возвращает результат операции "get refresh expiration ms" в рамках бизнес-логики безопасности.
+     * @return результат выполнения бизнес-операции
+     */
     public long getRefreshExpirationMs() {
         return refreshExpirationMs;
     }

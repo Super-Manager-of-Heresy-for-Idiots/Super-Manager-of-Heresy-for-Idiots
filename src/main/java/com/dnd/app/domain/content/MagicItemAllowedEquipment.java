@@ -3,6 +3,10 @@ package com.dnd.app.domain.content;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Класс MagicItemAllowedEquipment описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "magic_item_allowed_equipment")
 @IdClass(MagicItemAllowedEquipmentId.class)

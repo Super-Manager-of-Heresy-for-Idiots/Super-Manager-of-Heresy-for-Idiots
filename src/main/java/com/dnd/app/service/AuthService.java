@@ -24,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Класс AuthService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,6 +43,11 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
 
+    /**
+     * Выполняет операции "register" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public UserResponse register(RegisterRequest request) {
         Role role;
@@ -74,6 +83,13 @@ public class AuthService {
         return userMapper.toResponse(user);
     }
 
+    /**
+     * Выполняет операции "login" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param userAgent заголовок клиента, используемый для аудита пользовательского обращения
+     * @param ip IP-адрес клиента для аудита пользовательского обращения
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public IssuedTokens login(LoginRequest request, String userAgent, String ip) {
         authenticationManager.authenticate(
@@ -86,14 +102,11 @@ public class AuthService {
     }
 
     /**
-     * Silently renews a session from a valid refresh token. The token is rotated: the presented
-     * row is consumed (revoked + replaced_by) and a fresh token with a new jti is issued, so the
-     * cookie keeps extending while the user stays active. Re-presenting an already-rotated token
-     * means it was captured and replayed — the whole family is revoked. The user's role is re-read
-     * so a role change takes effect on renewal.
-     *
-     * {@code noRollbackFor} keeps the theft-response family revoke committed even though we then
-     * throw to reject the request.
+     * Выполняет операции "refresh" в рамках бизнес-логики домена.
+     * @param refreshToken входящее значение refresh token, используемое бизнес-сценарием
+     * @param userAgent заголовок клиента, используемый для аудита пользовательского обращения
+     * @param ip IP-адрес клиента для аудита пользовательского обращения
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(noRollbackFor = BadCredentialsException.class)
     public IssuedTokens refresh(String refreshToken, String userAgent, String ip) {
@@ -128,7 +141,10 @@ public class AuthService {
         return rotate(user, row.getFamilyId(), row, userAgent, ip);
     }
 
-    /** Revokes the session family behind a refresh token. Best-effort and never throws. */
+    /**
+     * Выполняет операции "logout" в рамках бизнес-логики домена.
+     * @param refreshToken входящее значение refresh token, используемое бизнес-сценарием
+     */
     @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null) {

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Result of saving (create/update) a class via the authoring contract. Returns the full
- * saved graph in read form plus metadata for toast/close/cache-invalidation.
+ * Класс ClassSaveResult описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

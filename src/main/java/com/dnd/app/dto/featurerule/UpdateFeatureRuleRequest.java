@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Partial update of a rule's editable fields. Null fields are left unchanged. */
+/**
+ * Класс UpdateFeatureRuleRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

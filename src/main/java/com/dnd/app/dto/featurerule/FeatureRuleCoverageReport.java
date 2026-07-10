@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-/** Coverage of the runtime features by the feature-rules model (Stage 12). */
+/**
+ * Класс FeatureRuleCoverageReport описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

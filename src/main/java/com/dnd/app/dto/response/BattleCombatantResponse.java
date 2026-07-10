@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * A single entry on the battle tracker. {@code monsterId} or {@code characterId} is populated
- * depending on {@code type}; {@code ownerUserId} is the controlling player for characters.
+ * Класс BattleCombatantResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

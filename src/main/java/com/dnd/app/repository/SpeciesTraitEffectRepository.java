@@ -8,6 +8,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт SpeciesTraitEffectRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface SpeciesTraitEffectRepository extends JpaRepository<SpeciesTraitEffect, UUID> {
 
     /** Trait effects of a given type (e.g. {@code resistance}) for a species, across all its traits. */

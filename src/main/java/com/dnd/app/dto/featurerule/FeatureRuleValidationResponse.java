@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Result of validating a rule. Stage 1 validation is intentionally lightweight (known rule type,
- * no unresolved error issue, owner exists); later stages add formula/reference checks.
+ * Класс FeatureRuleValidationResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

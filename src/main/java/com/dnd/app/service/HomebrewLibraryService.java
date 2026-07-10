@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс HomebrewLibraryService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,11 @@ public class HomebrewLibraryService {
     private final HomebrewPackageRepository packageRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Возвращает список для операции "list library" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<HomebrewPackageResponse> listLibrary(String username) {
         User user = getUser(username);
@@ -38,6 +47,11 @@ public class HomebrewLibraryService {
                 .toList();
     }
 
+    /**
+     * Добавляет результат операции "add to library" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void addToLibrary(UUID packageId, String username) {
         User user = getUser(username);
@@ -63,6 +77,11 @@ public class HomebrewLibraryService {
         log.info("Package added to GM library: packageId={}, gmUser={}", packageId, username);
     }
 
+    /**
+     * Удаляет результат операции "remove from library" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void removeFromLibrary(UUID packageId, String username) {
         User user = getUser(username);

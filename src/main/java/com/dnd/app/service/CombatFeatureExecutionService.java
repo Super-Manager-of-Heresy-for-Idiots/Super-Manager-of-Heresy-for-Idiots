@@ -37,14 +37,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Structured combat resolution for a feature (Stage 8): computes what to roll (damage dice, DC, save/attack
- * requirements) from the feature's rules + the actor's context, and applies an already-rolled outcome to a
- * target character's HP. Actual dice rolls happen at the client/GM. Deep integration into the core
- * BattleService flow is intentionally deferred; this stays additive and flag-gated.
- *
- * <p>S2 (spell-stack absorption): the same engine now also executes rules owned by a SPELL
- * ({@link #planForSpell}, {@link #applySpellToTarget}) — there is deliberately no separate spell runner.
- * Cast-time slot level flows into formulas as the {@code spell_slot_level} scalar.</p>
+ * Класс CombatFeatureExecutionService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -65,6 +59,12 @@ public class CombatFeatureExecutionService {
     private final ModifierAggregator modifierAggregator;
     private final FeatureUseLogRepository useLogRepository;
 
+    /**
+     * Выполняет операции "plan" в рамках бизнес-логики домена.
+     * @param actor входящее значение actor, используемое бизнес-сценарием
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureExecutionPlan plan(PlayerCharacter actor, UUID featureId) {
         ClassFeature feature = classFeatureRepository.findById(featureId)
@@ -74,9 +74,11 @@ public class CombatFeatureExecutionService {
     }
 
     /**
-     * The same structured plan for a spell (rules with {@code owner_type = SPELL}). {@code slotLevel} is
-     * the slot the spell is being cast with (null for cantrips/out-of-slot casts) and is exposed to the
-     * rule formulas as the {@code spell_slot_level} scalar.
+     * Выполняет операции "plan for spell" в рамках бизнес-логики домена.
+     * @param actor входящее значение actor, используемое бизнес-сценарием
+     * @param spell входящее значение spell, используемое бизнес-сценарием
+     * @param slotLevel входящее значение slot level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public FeatureExecutionPlan planForSpell(PlayerCharacter actor, Spell spell, Integer slotLevel) {
@@ -147,12 +149,16 @@ public class CombatFeatureExecutionService {
     }
 
     /**
-     * Apply an already-rolled damage/healing outcome to a target character's HP and log it. Routed
-     * through {@link CharacterHpService} (the same primitive the core combat flow uses) so temp HP,
-     * the write lock, live-tracker mirroring and {@code HP_CHANGED} all apply — a feature that hits a
-     * character mid-battle is now visible on the combat map instead of writing {@code current_hp}
-     * silently. Damage and healing are separate HP events. {@code campaignId}/{@code actorUserId}
-     * come from the caller so the broadcast is attributed and audience-scoped.
+     * Выполняет операции "apply to target" в рамках бизнес-логики домена.
+     * @param actor входящее значение actor, используемое бизнес-сценарием
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @param damage входящее значение damage, используемое бизнес-сценарием
+     * @param healing входящее значение healing, используемое бизнес-сценарием
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public FeatureApplyResult applyToTarget(PlayerCharacter actor, UUID featureId, PlayerCharacter target,
@@ -170,9 +176,16 @@ public class CombatFeatureExecutionService {
     }
 
     /**
-     * Spell counterpart of {@link #applyToTarget}. The use log carries the spell through
-     * {@code feature_rule_id} (owner SPELL) and the detail text — {@code feature_id} must stay null
-     * because its FK points at {@code class_feature}.
+     * Выполняет операции "apply spell to target" в рамках бизнес-логики домена.
+     * @param actor входящее значение actor, используемое бизнес-сценарием
+     * @param spell входящее значение spell, используемое бизнес-сценарием
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @param damage входящее значение damage, используемое бизнес-сценарием
+     * @param healing входящее значение healing, используемое бизнес-сценарием
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public FeatureApplyResult applySpellToTarget(PlayerCharacter actor, Spell spell, PlayerCharacter target,

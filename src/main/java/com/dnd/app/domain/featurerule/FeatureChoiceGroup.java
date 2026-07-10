@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A choice a feature rule requires (e.g. Fighting Style, Expertise skills), with N options. */
+/**
+ * Класс FeatureChoiceGroup описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_choice_group")
 @Getter

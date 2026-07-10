@@ -18,9 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Per-character spell slot tracking. Maxima are derived from class progression; this
- * controller exposes spending a slot and restoring all / half of the expended slots
- * (long rest / partial recovery).
+ * Класс SpellSlotController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -30,6 +29,12 @@ public class SpellSlotController {
     private final SpellSlotService spellSlotService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает результат операции "get slots" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/api/characters/{characterId}/spell-slots")
     @Operation(summary = "Get derived max, expended and available spell slots per spell level")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> getSlots(
@@ -41,6 +46,13 @@ public class SpellSlotController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "expend" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/characters/{characterId}/spell-slots/{spellLevel}/expend")
     @Operation(summary = "Expend one spell slot of the given level")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> expend(
@@ -54,6 +66,13 @@ public class SpellSlotController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "restore one" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/characters/{characterId}/spell-slots/{spellLevel}/restore")
     @Operation(summary = "Restore one expended spell slot of the given level (GM granular adjust)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> restoreOne(
@@ -67,6 +86,12 @@ public class SpellSlotController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "restore all" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/characters/{characterId}/spell-slots/restore-all")
     @Operation(summary = "Restore all expended spell slots (long rest)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> restoreAll(
@@ -79,6 +104,12 @@ public class SpellSlotController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "restore half" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/api/characters/{characterId}/spell-slots/restore-half")
     @Operation(summary = "Restore half of the expended spell slots (partial recovery)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellSlotsResponse>>> restoreHalf(

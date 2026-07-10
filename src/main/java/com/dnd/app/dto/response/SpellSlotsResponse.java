@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Spell slots view for a character: per spell level the derived maximum, how many are
- * expended, and how many remain available.
+ * Класс SpellSlotsResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

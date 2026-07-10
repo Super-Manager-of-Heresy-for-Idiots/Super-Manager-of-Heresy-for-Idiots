@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Structured healing / temp HP output of a feature. */
+/**
+ * Класс FeatureHealingRule описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_healing_rule")
 @Getter

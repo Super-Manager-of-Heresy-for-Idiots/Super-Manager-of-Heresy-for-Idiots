@@ -29,9 +29,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Applies and replaces active feature effects when a feature is used (stacking policy, duration from a
- * formula/unit, same-feature-reuse end). Gated by {@code app.feature-rules.effects}. This is a separate
- * lifecycle layer from the existing item/spell buff system.
+ * Класс FeatureEffectService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -51,7 +50,12 @@ public class FeatureEffectService {
     private final DurationUnitRepository durationUnitRepository;
     private final CharacterFormulaContextFactory contextFactory;
 
-    /** Create active effects for the effect definitions of a used feature. Returns the number created. */
+    /**
+     * Выполняет операции "apply for feature use" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int applyForFeatureUse(PlayerCharacter character, UUID featureId) {
         if (!flags.effectsActive()) {
@@ -62,10 +66,11 @@ public class FeatureEffectService {
     }
 
     /**
-     * Create active effects of a cast spell (rules with {@code owner_type = SPELL}) on {@code target}.
-     * The duration formulas run in the CASTER's context (the caster's power drives the effect), while the
-     * effect itself lands on the target. {@code source_feature_id} stays null — its FK points at
-     * {@code class_feature}; the spell is traceable through the definition's rule (owner SPELL).
+     * Выполняет операции "apply for spell cast" в рамках бизнес-логики домена.
+     * @param caster входящее значение caster, используемое бизнес-сценарием
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public int applyForSpellCast(PlayerCharacter caster, PlayerCharacter target, UUID spellId) {
@@ -93,16 +98,20 @@ public class FeatureEffectService {
                 .anyMatch(FeatureEffectDefinition::isConcentrationRequired);
     }
 
-    /** True if the caster has any ACTIVE concentration-required effect (a spell they're concentrating on). */
+    /**
+     * Проверяет условие операции "is concentrating" в рамках бизнес-логики домена.
+     * @param casterId идентификатор caster, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public boolean isConcentrating(UUID casterId) {
         return !concentrationEffects(casterId).isEmpty();
     }
 
     /**
-     * End all of the caster's ACTIVE concentration-required effects — concentration broken (damage/save
-     * fail, 0 HP, or a new concentration spell) or dropped. Returns how many effects ended. Uses the same
-     * {@code status = ENDED} termination as every other effect end; no parallel mechanism.
+     * Выполняет операции "end concentration" в рамках бизнес-логики домена.
+     * @param casterId идентификатор caster, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public int endConcentration(UUID casterId) {
@@ -174,6 +183,10 @@ public class FeatureEffectService {
         return created;
     }
 
+    /**
+     * Выполняет операции "end effect" в рамках бизнес-логики домена.
+     * @param activeEffectId идентификатор active effect, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void endEffect(UUID activeEffectId) {
         activeRepository.findById(activeEffectId).ifPresent(effect -> {

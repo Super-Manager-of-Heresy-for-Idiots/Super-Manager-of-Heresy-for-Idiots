@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Where a {@code feature_rule} came from (plan §4.1). This is a technical provenance marker and is
- * intentionally separate from the game-facing source/ruleset scope introduced in Stage 2.
+ * Перечисление FeatureRuleSource описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum FeatureRuleSource {
 
@@ -24,12 +24,19 @@ public enum FeatureRuleSource {
         this.code = code;
     }
 
-    /** Stable identifier stored in the {@code source} column. */
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** Resolve a source from its persisted {@link #getCode() code}. */
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FeatureRuleSource> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

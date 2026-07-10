@@ -23,9 +23,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Known forms + Wild Shape-like transformation for a character. Learning a form checks monster eligibility
- * against the source feature's filter; a transformation is a lifecycle row (optionally linked to a Stage 7
- * active effect). Gated by {@code app.feature-rules.forms}.
+ * Класс CharacterFormService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +38,14 @@ public class CharacterFormService {
     private final CharacterTransformationRepository transformationRepository;
     private final CharacterFormulaContextFactory contextFactory;
 
+    /**
+     * Выполняет операции "learn form" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public KnownFormResponse learnForm(PlayerCharacter character, UUID monsterId, UUID sourceFeatureId, Integer level) {
         if (!flags.formsActive()) {
@@ -63,11 +70,21 @@ public class CharacterFormService {
         return toResponse(form);
     }
 
+    /**
+     * Возвращает список для операции "list known forms" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<KnownFormResponse> listKnownForms(UUID characterId) {
         return knownFormRepository.findByCharacterId(characterId).stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Выполняет операции "approve form" в рамках бизнес-логики домена.
+     * @param formId идентификатор form, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public KnownFormResponse approveForm(UUID formId) {
         CharacterKnownForm form = knownFormRepository.findById(formId)
@@ -76,6 +93,13 @@ public class CharacterFormService {
         return toResponse(knownFormRepository.save(form));
     }
 
+    /**
+     * Выполняет операции "start transformation" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public TransformationResponse startTransformation(PlayerCharacter character, UUID monsterId, UUID sourceFeatureId) {
         if (!flags.formsActive()) {
@@ -95,6 +119,10 @@ public class CharacterFormService {
         return toResponse(transformation);
     }
 
+    /**
+     * Выполняет операции "end transformation" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void endTransformation(UUID characterId) {
         transformationRepository.findByCharacterIdAndStatus(characterId, "active").forEach(t -> {
@@ -103,6 +131,11 @@ public class CharacterFormService {
         });
     }
 
+    /**
+     * Выполняет операции "current transformation" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public TransformationResponse currentTransformation(UUID characterId) {
         return transformationRepository.findByCharacterIdAndStatus(characterId, "active").stream()

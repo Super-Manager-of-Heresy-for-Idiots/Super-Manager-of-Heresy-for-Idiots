@@ -7,6 +7,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс BackgroundFeatOption описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "background_feat_option")
 @Getter

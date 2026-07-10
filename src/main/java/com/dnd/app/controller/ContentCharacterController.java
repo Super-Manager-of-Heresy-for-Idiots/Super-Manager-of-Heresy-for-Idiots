@@ -21,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Character creation on the new content model. The stable wizard routes now resolve
- * through this controller; legacy wizard persistence remains under /legacy/full.
+ * Класс ContentCharacterController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -32,6 +32,13 @@ public class ContentCharacterController {
     private final ContentCharacterCreationService creationService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create campaign character" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping({
             "/api/campaigns/{campaignId}/characters/full",
             "/api/campaigns/{campaignId}/characters/content"
@@ -48,6 +55,12 @@ public class ContentCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create vanilla character" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping({
             "/api/characters/full",
             "/api/characters/content"

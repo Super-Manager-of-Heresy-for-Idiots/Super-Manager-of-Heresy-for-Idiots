@@ -9,12 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * The single canonical damage type (fire, cold, poison, …). Merged from three former tables
- * (this {@code damage_type}, the orphan {@code damage_types}, and {@code bestiary_damage_types}) so
- * every subsystem — rules, spells, weapons, items, skills, species traits, monsters — shares one
- * reference. Exposes BOTH the rules-facing {@code slug} (lowercase) and the dictionary-facing
- * {@code code} (uppercase), kept mirrored, and implements {@link DictionaryEntry} so the bestiary
- * dictionary framework uses it directly.
+ * Класс DamageType описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "damage_type")
@@ -72,21 +68,37 @@ public class DamageType implements DictionaryEntry {
     }
 
     // DictionaryEntry — the localized names map onto the existing name_ru / name_en columns.
+    /**
+     * Возвращает результат операции "get name rusloc" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public String getNameRusloc() {
         return nameRu;
     }
 
+    /**
+     * Устанавливает результат операции "set name rusloc" в рамках бизнес-логики домена.
+     * @param nameRusloc входящее значение name rusloc, используемое бизнес-сценарием
+     */
     @Override
     public void setNameRusloc(String nameRusloc) {
         this.nameRu = nameRusloc;
     }
 
+    /**
+     * Возвращает результат операции "get name engloc" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public String getNameEngloc() {
         return nameEn;
     }
 
+    /**
+     * Устанавливает результат операции "set name engloc" в рамках бизнес-логики домена.
+     * @param nameEngloc входящее значение name engloc, используемое бизнес-сценарием
+     */
     @Override
     public void setNameEngloc(String nameEngloc) {
         this.nameEn = nameEngloc;

@@ -10,14 +10,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Internal (service-to-service) request from map-service to spend a combatant's movement budget for
- * the current turn. The spatial cost of the path is computed authoritatively in map-service and sent
- * here as {@code feet}; core validates it against the combatant's per-turn budget and commits it.
- *
- * <p>{@code gmOverride} is passed only for a GM who explicitly moved a token outside the rules; core
- * then skips the turn/budget checks, still commits the spend and flags the result as overridden.
- * {@code clientCommandId} is the idempotency key — the dedup infrastructure lands in Phase 2.14, the
- * field is carried now (A6) so the contract is stable.
+ * Класс MovementRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

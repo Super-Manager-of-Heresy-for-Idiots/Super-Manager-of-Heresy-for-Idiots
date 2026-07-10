@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Reference row for an action-economy type (action, bonus_action, reaction, …). Seeded in migration 066. */
+/**
+ * Класс ActionType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "action_type")
 @Getter

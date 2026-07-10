@@ -17,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс NpcController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/npcs")
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class NpcController {
     private final NpcService npcService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create NPC (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> createNpc(
@@ -37,6 +48,12 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list npcs" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List NPCs")
     public CompletableFuture<ResponseEntity<ApiResponse<List<NpcResponse>>>> listNpcs(
@@ -47,6 +64,13 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{npcId}")
     @Operation(summary = "Get NPC details")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> getNpc(
@@ -58,6 +82,14 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{npcId}")
     @Operation(summary = "Update NPC (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> updateNpc(
@@ -70,6 +102,13 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{npcId}")
     @Operation(summary = "Delete NPC (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNpc(
@@ -81,6 +120,13 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Преобразует данные операции "toggle visibility" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{npcId}/toggle-visibility")
     @Operation(summary = "Toggle NPC visibility (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> toggleVisibility(
@@ -92,6 +138,14 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{npcId}/notes")
     @Operation(summary = "Add note to NPC")
     public CompletableFuture<ResponseEntity<ApiResponse<NoteResponse>>> addNote(
@@ -104,6 +158,15 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{npcId}/notes/{noteId}")
     @Operation(summary = "Update note")
     public CompletableFuture<ResponseEntity<ApiResponse<NoteResponse>>> updateNote(
@@ -117,6 +180,14 @@ public class NpcController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{npcId}/notes/{noteId}")
     @Operation(summary = "Delete note")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNote(

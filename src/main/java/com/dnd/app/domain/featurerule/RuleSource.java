@@ -6,8 +6,8 @@ import lombok.*;
 import java.util.UUID;
 
 /**
- * A game-facing source (sourcebook / supplement / source pack) belonging to a {@link Ruleset}.
- * Distinct from {@code feature_rule.source} (technical provenance: manual/parser/seed/migration).
+ * Класс RuleSource описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "rule_source")

@@ -16,14 +16,24 @@ import com.dnd.app.dto.content.ContentLabelDto;
 import com.dnd.app.util.Localization;
 import org.springframework.stereotype.Component;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param b входящее значение b, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content background graph ({@link Background} + ability/skill options,
- * feat/tool/language choices and equipment choice groups) to {@link BackgroundDetailResponse}.
- * Must run inside a read-only transaction: lazy collections are resolved on demand.
+ * Класс BackgroundMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class BackgroundMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param b входящее значение b, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public BackgroundDetailResponse toDetail(Background b, String lang) {
         return BackgroundDetailResponse.builder()
                 .id(b.getId())

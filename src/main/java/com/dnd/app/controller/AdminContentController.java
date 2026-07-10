@@ -41,9 +41,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Admin tools for the new content model: read views of the same model the runtime
- * uses, data-completeness &amp; data-quality reports, the import-warning viewer, and an
- * idempotent backfill. Secured under {@code /api/admin/**} (ADMIN role).
+ * Класс AdminContentController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/admin/content")
@@ -61,6 +60,11 @@ public class AdminContentController {
 
     // --- read views (same model runtime uses) ---
 
+    /**
+     * Возвращает список для операции "list classes" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/classes")
     @Operation(summary = "List core content classes (admin)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ContentClassDetailResponse>>>> listClasses(
@@ -70,6 +74,12 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get class" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/classes/{classId}")
     @Operation(summary = "Get a core content class with its full graph (admin)")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getClass(
@@ -82,6 +92,11 @@ public class AdminContentController {
 
     // --- data quality / completeness ---
 
+    /**
+     * Выполняет операции "audit" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/audit")
     @Operation(summary = "Data-completeness report for the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentDataAuditReport>>> audit(
@@ -91,6 +106,10 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "data quality" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/data-quality")
     @Operation(summary = "Data-quality findings (features without rewards, grants without payload, orphans)")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentDataQualityReport>>> dataQuality() {
@@ -99,6 +118,10 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "import warnings" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/import-warnings")
     @Operation(summary = "View recorded content import warnings")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ImportWarningResponse>>>> importWarnings() {
@@ -109,6 +132,11 @@ public class AdminContentController {
 
     // --- spell resolution review (data-quality) ---
 
+    /**
+     * Выполняет операции "spell warnings" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spell-warnings")
     @Operation(summary = "List spells flagged for manual resolution review (unparsed save ability, etc.)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpellWarningResponse>>>> spellWarnings(
@@ -118,6 +146,11 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "class feature warnings" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/class-feature-warnings")
     @Operation(summary = "List class features flagged for manual mechanics review")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ClassFeatureWarningResponse>>>> classFeatureWarnings(
@@ -127,6 +160,13 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resolve spell" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PatchMapping("/spells/{id}/resolution")
     @Operation(summary = "Apply an admin correction of a spell's save ability / attack roll and clear its warning")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellWarningResponse>>> resolveSpell(
@@ -138,6 +178,13 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resolve class feature" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PatchMapping("/class-features/{id}/resolution")
     @Operation(summary = "Apply an admin correction of a class feature's parsed mechanics and clear its warning")
     public CompletableFuture<ResponseEntity<ApiResponse<ClassFeatureWarningResponse>>> resolveClassFeature(
@@ -149,6 +196,13 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update spell" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/spells/{id}")
     @Operation(summary = "Full admin edit of a spell's resolution: damage, healing, save/attack, ability check, warning")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellDetailResponse>>> updateSpell(
@@ -160,6 +214,11 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get spell buffs" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spells/{id}/buffs")
     @Operation(summary = "List the buffs/debuffs linked to a spell")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> getSpellBuffs(
@@ -169,6 +228,12 @@ public class AdminContentController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set spell buffs" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/spells/{id}/buffs")
     @Operation(summary = "Replace the set of buffs/debuffs a spell applies")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> setSpellBuffs(
@@ -183,9 +248,21 @@ public class AdminContentController {
 
     // --- runtime data migration (Phase 10) ---
 
+    /**
+     * Выполняет операции "runtime migration" в рамках бизнес-логики API.
+     * @param dryRun входящее значение dry run, используемое бизнес-сценарием
+     * @param confirmBackup входящее значение confirm backup, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/runtime-migration")
     @Operation(summary = "Migrate legacy runtime IDs (class_id/skill_id) to new content IDs; "
             + "dry-run by default, applying requires confirmBackup=true")
+    /**
+     * Выполняет операции "runtime migration" в рамках бизнес-логики API.
+     * @param dryRun входящее значение dry run, используемое бизнес-сценарием
+     * @param confirmBackup входящее значение confirm backup, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<RuntimeMigrationReport>>> runtimeMigration(
             @RequestParam(defaultValue = "true") boolean dryRun,
             @RequestParam(defaultValue = "false") boolean confirmBackup) {
@@ -197,6 +274,10 @@ public class AdminContentController {
 
     // --- backfill ---
 
+    /**
+     * Выполняет обратное заполнение операции "backfill subclass choice groups" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/backfill/subclass-choice-groups")
     @Operation(summary = "Idempotently backfill subclass-choice reward groups for core classes")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentSeedSummary>>> backfillSubclassChoiceGroups() {

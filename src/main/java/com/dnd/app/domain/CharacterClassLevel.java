@@ -7,13 +7,13 @@ import org.springframework.data.domain.Persistable;
 
 import java.util.UUID;
 
+/**
+ * Класс CharacterClassLevel описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "character_class_levels")
 @IdClass(CharacterClassLevelId.class)
-/**
- * Transitional character class level table. It still points at the legacy class catalog
- * until character creation and level-up are migrated to character_class.
- */
 @Deprecated(forRemoval = false)
 @Getter
 @Setter
@@ -47,11 +47,19 @@ public class CharacterClassLevel implements Persistable<CharacterClassLevelId> {
     @Builder.Default
     private boolean newEntity = true;
 
+    /**
+     * Возвращает результат операции "get id" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public CharacterClassLevelId getId() {
         return new CharacterClassLevelId(characterId, classId);
     }
 
+    /**
+     * Проверяет условие операции "is new" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public boolean isNew() {
         return newEntity;

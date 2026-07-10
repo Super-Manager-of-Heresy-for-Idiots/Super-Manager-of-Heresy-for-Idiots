@@ -20,9 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Campaign-scoped monsters. The campaign GM (master) creates monsters or clones existing
- * ones into the campaign, hides them until ready, reveals them to players, and removes
- * them once defeated. Players see only monsters marked visible. Checks live in the service.
+ * Класс CampaignMonsterController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/monsters")
@@ -33,6 +32,13 @@ public class CampaignMonsterController {
     private final MonsterService monsterService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list monsters" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List campaign monsters (GM sees all, players see visible only)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
@@ -44,6 +50,14 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
@@ -56,6 +70,14 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create monster" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create a campaign monster (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
@@ -68,6 +90,14 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "clone monster" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/clone/{sourceId}")
     @Operation(summary = "Clone a system, homebrew, or campaign monster into this campaign (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> cloneMonster(
@@ -80,6 +110,15 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update monster" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update a campaign monster (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
@@ -93,6 +132,14 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Преобразует данные операции "toggle visibility" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/toggle-visibility")
     @Operation(summary = "Reveal or hide a campaign monster from players (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> toggleVisibility(
@@ -105,6 +152,13 @@ public class CampaignMonsterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete monster" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a campaign monster (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteMonster(

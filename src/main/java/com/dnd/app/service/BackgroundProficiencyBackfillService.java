@@ -21,15 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Backfills one {@code static_grant} feature rule (owner_type = BACKGROUND) per background from its
- * structured skill proficiencies, so the polymorphic runtime can materialise a background's skills at
- * character creation the same way it does class-feature grants — closing the seam where a background's
- * {@code background_id} was set but its listed skills were never granted.
- *
- * <p>Idempotent: a background that already has a BACKGROUND rule is skipped. Rules are auto-approved
- * because a background's listed skills are deterministic (a fixed set, no adjudication) — unlike the
- * parser-derived class-feature rules which stay {@code needs_review}. Enabled via migration 082, which
- * dropped the owner→class_feature FK so a non-class owner_id is now valid.</p>
+ * Класс BackgroundProficiencyBackfillService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -43,7 +36,11 @@ public class BackgroundProficiencyBackfillService {
     private final FeatureProficiencyGrantRepository proficiencyGrantRepository;
     private final FeatureRuleRevisionService revisionService;
 
-    /** @return number of background rules created (or that would be created when {@code apply} is false). */
+    /**
+     * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики домена.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int backfill(boolean apply) {
         int rulesCreated = 0;

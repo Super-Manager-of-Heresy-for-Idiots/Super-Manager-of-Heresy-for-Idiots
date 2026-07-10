@@ -34,9 +34,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Spellbook management for a character: record newly learned spells and forget them, outside the
- * level-up flow (the folio was missing this — a Wizard could not record spells), plus casting a known
- * spell through the feature-rules runtime (plan/cast/apply). Access = owner/GM/ADMIN.
+ * Класс CharacterSpellbookController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/characters/{characterId}/spellbook")
@@ -50,6 +49,12 @@ public class CharacterSpellbookController {
     private final CharacterAccessGuard accessGuard;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List a character's recorded spells")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterKnownSpellResponse>>>> list(
@@ -61,6 +66,13 @@ public class CharacterSpellbookController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "learn" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Record (learn) a spell into the character's spellbook")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterKnownSpellResponse>>> learn(
@@ -72,6 +84,13 @@ public class CharacterSpellbookController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "forget" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{spellId}")
     @Operation(summary = "Forget (remove) a spell from the character's spellbook")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> forget(
@@ -86,6 +105,14 @@ public class CharacterSpellbookController {
 
     // ── Cast through the feature-rules runtime (S2 spell-stack absorption) ──
 
+    /**
+     * Выполняет операции "plan" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param slotLevel входящее значение slot level, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{spellId}/plan")
     @Operation(summary = "Roll plan of a spell (damage dice, DC, healing) without spending anything")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureExecutionPlan>>> plan(
@@ -98,6 +125,14 @@ public class CharacterSpellbookController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Применяет заклинание операции "cast" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{spellId}/cast")
     @Operation(summary = "Cast a known spell: spend the combat action + slot, apply effects, return the roll plan")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellCastResult>>> cast(
@@ -114,6 +149,14 @@ public class CharacterSpellbookController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "apply" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{spellId}/apply")
     @Operation(summary = "Apply a rolled spell outcome (damage/healing) to a target character")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureApplyResult>>> apply(

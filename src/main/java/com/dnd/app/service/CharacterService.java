@@ -26,6 +26,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Класс CharacterService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,6 +56,11 @@ public class CharacterService {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final WebSocketEventService webSocketEventService;
 
+    /**
+     * Возвращает список для операции "list templates" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterResponse> listTemplates(String username) {
         User user = userRepository.findByUsername(username)
@@ -60,6 +69,12 @@ public class CharacterService {
         return templates.stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Возвращает результат операции "get template by id" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CharacterResponse getTemplateById(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
@@ -76,16 +91,11 @@ public class CharacterService {
     }
 
     /**
-     * Instantiates a campaign character from a (campaign-less) template using <b>sheet-only</b>
-     * semantics: the durable character definition is copied, while runtime/play state starts fresh.
-     *
-     * <p>Copied: identity and sheet fields, class levels, ability stats, skill proficiencies,
-     * known spells, wallets, and resource pools.</p>
-     *
-     * <p>Intentionally reset to defaults for the new character (never carried over from the
-     * template): inventory and equipment ({@code item_instance}), active effects, reward
-     * selections, and spell-slot usage; HP is set to max, temp HP / death saves / inspiration
-     * are cleared. A full playable clone is deliberately not offered here.</p>
+     * Выполняет операции "clone character to campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param templateId идентификатор template, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public CharacterResponse cloneCharacterToCampaign(UUID campaignId, UUID templateId, String username) {
@@ -203,6 +213,11 @@ public class CharacterService {
         return toResponse(copy);
     }
 
+    /**
+     * Удаляет результат операции "delete template" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteTemplate(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
@@ -219,6 +234,13 @@ public class CharacterService {
         characterRepository.delete(character);
     }
 
+    /**
+     * Создает результат операции "create character" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterResponse createCharacter(UUID campaignId, CreateCharacterRequest request, String username) {
         User owner = userRepository.findByUsername(username)
@@ -277,6 +299,12 @@ public class CharacterService {
         return toResponse(character);
     }
 
+    /**
+     * Добавляет результат операции "add or update class level" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     */
     public void addOrUpdateClassLevel(PlayerCharacter character, UUID classId, int level) {
         CharacterClassLevelId cclId = new CharacterClassLevelId(character.getId(), classId);
         Optional<CharacterClassLevel> existing = classLevelRepository.findById(cclId);
@@ -296,6 +324,12 @@ public class CharacterService {
         }
     }
 
+    /**
+     * Возвращает список для операции "list characters" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterResponse> listCharacters(UUID campaignId, String username) {
         User user = userRepository.findByUsername(username)
@@ -309,6 +343,12 @@ public class CharacterService {
         return characters.stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Возвращает результат операции "get character by id" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CharacterResponse getCharacterById(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
@@ -318,9 +358,9 @@ public class CharacterService {
     }
 
     /**
-     * Verifies that the character with {@code characterId} belongs to the campaign
-     * identified by {@code campaignId}. Used by /api/campaigns/{campaignId}/characters/*
-     * endpoints to prevent IDOR where the campaignId in the URL is ignored.
+     * Проверяет требуемое условие операции "enforce character in campaign" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
      */
     @Transactional(readOnly = true)
     public void enforceCharacterInCampaign(UUID characterId, UUID campaignId) {
@@ -331,6 +371,13 @@ public class CharacterService {
         }
     }
 
+    /**
+     * Обновляет результат операции "update character" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterResponse updateCharacter(UUID id, UpdateCharacterRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(id)
@@ -382,6 +429,11 @@ public class CharacterService {
         return response;
     }
 
+    /**
+     * Удаляет результат операции "delete character" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteCharacter(UUID id, String username) {
         PlayerCharacter character = characterRepository.findById(id)
@@ -393,6 +445,12 @@ public class CharacterService {
         characterRepository.delete(character);
     }
 
+    /**
+     * Возвращает результат операции "get stats" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterStatResponse> getStats(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
@@ -422,6 +480,14 @@ public class CharacterService {
         }).toList();
     }
 
+    /**
+     * Обновляет результат операции "update stat value" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param statId идентификатор stat, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterStatResponse updateStatValue(UUID characterId, UUID statId, UpdateStatRequest request, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)
@@ -440,6 +506,14 @@ public class CharacterService {
         return characterMapper.toStatResponse(stat);
     }
 
+    /**
+     * Выполняет операции "modify hp" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterResponse modifyHp(UUID campaignId, UUID characterId, ModifyHpRequest request, String username) {
         PlayerCharacter character = characterRepository.findByIdForUpdate(characterId)

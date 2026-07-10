@@ -17,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс SharedStorageController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/shared-storage")
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class SharedStorageController {
     private final SharedStorageService sharedStorageService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create storage" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create shared storage container (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<SharedStorageResponse>>> createStorage(
@@ -37,6 +48,12 @@ public class SharedStorageController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list storages" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List shared storage containers")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SharedStorageResponse>>>> listStorages(
@@ -47,6 +64,13 @@ public class SharedStorageController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get storage" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{storageId}")
     @Operation(summary = "Get shared storage with items")
     public CompletableFuture<ResponseEntity<ApiResponse<SharedStorageResponse>>> getStorage(
@@ -58,6 +82,13 @@ public class SharedStorageController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete storage" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{storageId}")
     @Operation(summary = "Delete shared storage (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteStorage(
@@ -69,6 +100,15 @@ public class SharedStorageController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "deposit item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param quantity входящее значение quantity, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{storageId}/items/{instanceId}/deposit")
     @Operation(summary = "Deposit item into shared storage")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> depositItem(
@@ -82,6 +122,16 @@ public class SharedStorageController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "take item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param quantity входящее значение quantity, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{storageId}/items/{instanceId}/take/{characterId}")
     @Operation(summary = "Take item from shared storage")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> takeItem(

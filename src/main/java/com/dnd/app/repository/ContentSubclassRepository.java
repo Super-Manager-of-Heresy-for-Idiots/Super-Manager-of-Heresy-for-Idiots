@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт ContentSubclassRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface ContentSubclassRepository extends JpaRepository<ContentSubclass, UUID> {
 
     Optional<ContentSubclass> findByCharacterClassIdAndSlugAndHomebrewIsNull(UUID classId, String slug);

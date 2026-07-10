@@ -15,9 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Service-to-service campaign authorization projections for map-service.
- *
- * <p>Secured by {@code X-Internal-Api-Key}; callers do not present a user JWT.
+ * Класс InternalCampaignController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/internal/campaigns/{campaignId}")
@@ -27,6 +26,12 @@ public class InternalCampaignController {
 
     private final CampaignService campaignService;
 
+    /**
+     * Возвращает результат операции "get campaign access" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/access")
     @Operation(summary = "What a user may do with campaign maps")
     public ResponseEntity<CampaignAccessResponse> getCampaignAccess(

@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * FEAT grant — grants a fixed feat or lets the player choose any feat.
+ * Класс FeatGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

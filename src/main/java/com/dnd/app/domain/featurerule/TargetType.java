@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Reference row for a rule target (self, ally, enemy, creature, …). Seeded in migration 066. */
+/**
+ * Класс TargetType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "target_type")
 @Getter

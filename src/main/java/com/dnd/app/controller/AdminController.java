@@ -18,6 +18,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс AdminController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -29,6 +33,10 @@ public class AdminController {
 
     // --- Stat Types ---
 
+    /**
+     * Возвращает список для операции "list stat types" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/stat-types")
     public CompletableFuture<ResponseEntity<ApiResponse<List<StatTypeResponse>>>> listStatTypes() {
         return CompletableFuture.supplyAsync(() ->
@@ -36,6 +44,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get stat type" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/stat-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<StatTypeResponse>>> getStatType(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -45,6 +58,10 @@ public class AdminController {
 
     // --- Item Types ---
 
+    /**
+     * Возвращает список для операции "list item types" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/item-types")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemTypeResponse>>>> listItemTypes() {
         return CompletableFuture.supplyAsync(() ->
@@ -52,6 +69,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create item type" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/item-types")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTypeResponse>>> createItemType(
             @Valid @RequestBody CreateItemTypeRequest request) {
@@ -61,6 +83,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get item type" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/item-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTypeResponse>>> getItemType(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -68,6 +95,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update item type" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/item-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTypeResponse>>> updateItemType(
             @PathVariable UUID id, @Valid @RequestBody CreateItemTypeRequest request) {
@@ -76,6 +109,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete item type" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/item-types/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteItemType(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -91,6 +129,10 @@ public class AdminController {
 
     // --- Skills ---
 
+    /**
+     * Возвращает список для операции "list skills" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/skills")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SkillResponse>>>> listSkills() {
         return CompletableFuture.supplyAsync(() ->
@@ -98,6 +140,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create skill" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/skills")
     public CompletableFuture<ResponseEntity<ApiResponse<SkillResponse>>> createSkill(
             @Valid @RequestBody CreateSkillRequest request) {
@@ -107,6 +154,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get skill" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/skills/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<SkillResponse>>> getSkill(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -114,6 +166,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update skill" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/skills/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<SkillResponse>>> updateSkill(
             @PathVariable UUID id, @Valid @RequestBody CreateSkillRequest request) {
@@ -122,6 +180,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete skill" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/skills/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteSkill(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -132,6 +195,11 @@ public class AdminController {
 
     // --- Skill Effects ---
 
+    /**
+     * Возвращает результат операции "get skill effects" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/skills/{id}/effects")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SkillEffectResponse>>>> getSkillEffects(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -139,6 +207,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set skill effects" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/skills/{id}/effects")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SkillEffectResponse>>>> setSkillEffects(
             @PathVariable UUID id, @Valid @RequestBody SetSkillEffectsRequest request) {
@@ -151,6 +225,10 @@ public class AdminController {
 
     // --- Feats ---
 
+    /**
+     * Возвращает список для операции "list feats" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feats")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatResponse>>>> listFeats() {
         return CompletableFuture.supplyAsync(() ->
@@ -158,6 +236,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create feat" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feats")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatResponse>>> createFeat(
             @Valid @RequestBody CreateFeatRequest request) {
@@ -167,6 +250,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get feat" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feats/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatResponse>>> getFeat(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -174,6 +262,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update feat" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feats/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatResponse>>> updateFeat(
             @PathVariable UUID id, @Valid @RequestBody CreateFeatRequest request) {
@@ -182,6 +276,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete feat" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/feats/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteFeat(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -195,6 +294,10 @@ public class AdminController {
 
     // --- Backgrounds ---
 
+    /**
+     * Возвращает список для операции "list backgrounds" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/backgrounds")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> listBackgrounds() {
         return CompletableFuture.supplyAsync(() ->
@@ -202,6 +305,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create background" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/backgrounds")
     public CompletableFuture<ResponseEntity<ApiResponse<BackgroundResponse>>> createBackground(
             @Valid @RequestBody CreateBackgroundRequest request) {
@@ -211,6 +319,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get background" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/backgrounds/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<BackgroundResponse>>> getBackground(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -218,6 +331,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update background" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/backgrounds/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<BackgroundResponse>>> updateBackground(
             @PathVariable UUID id, @Valid @RequestBody CreateBackgroundRequest request) {
@@ -226,6 +345,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete background" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/backgrounds/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteBackground(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -236,6 +360,10 @@ public class AdminController {
 
     // --- Spells ---
 
+    /**
+     * Возвращает список для операции "list spells" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spells")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpellResponse>>>> listSpells() {
         return CompletableFuture.supplyAsync(() ->
@@ -243,6 +371,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create spell" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/spells")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellResponse>>> createSpell(
             @Valid @RequestBody CreateSpellRequest request) {
@@ -252,6 +385,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get spell" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spells/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellResponse>>> getSpell(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -259,6 +397,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update spell" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/spells/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellResponse>>> updateSpell(
             @PathVariable UUID id, @Valid @RequestBody CreateSpellRequest request) {
@@ -267,6 +411,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete spell" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/spells/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteSpell(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -277,6 +426,10 @@ public class AdminController {
 
     // --- Proficiency Skills ---
 
+    /**
+     * Возвращает список для операции "list proficiency skills" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/proficiency-skills")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> listProficiencySkills() {
         return CompletableFuture.supplyAsync(() ->
@@ -284,6 +437,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create proficiency skill" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/proficiency-skills")
     public CompletableFuture<ResponseEntity<ApiResponse<ProficiencySkillResponse>>> createProficiencySkill(
             @Valid @RequestBody CreateProficiencySkillRequest request) {
@@ -293,6 +451,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete proficiency skill" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/proficiency-skills/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteProficiencySkill(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {
@@ -303,6 +466,11 @@ public class AdminController {
 
     // --- Users & Teams (read-only) ---
 
+    /**
+     * Возвращает список для операции "list users" в рамках бизнес-логики API.
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/users")
     public CompletableFuture<ResponseEntity<ApiResponse<Page<UserResponse>>>> listUsers(Pageable pageable) {
         return CompletableFuture.supplyAsync(() ->
@@ -312,6 +480,13 @@ public class AdminController {
 
     // --- Homebrew Admin ---
 
+    /**
+     * Возвращает список для операции "list all homebrew packages" в рамках бизнес-логики API.
+     * @param status входящее значение status, используемое бизнес-сценарием
+     * @param authorId идентификатор author, используемый для выбора нужного бизнес-объекта
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/homebrew")
     public CompletableFuture<ResponseEntity<ApiResponse<Page<HomebrewPackageResponse>>>> listAllHomebrewPackages(
             @RequestParam(required = false) String status,
@@ -322,6 +497,12 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "hard delete homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/homebrew/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Map<String, Object>>>> hardDeleteHomebrew(
             @PathVariable UUID id,
@@ -335,6 +516,10 @@ public class AdminController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list homebrew tags" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/homebrew/tags")
     public CompletableFuture<ResponseEntity<ApiResponse<List<HomebrewTagResponse>>>> listHomebrewTags() {
         return CompletableFuture.supplyAsync(() ->
@@ -342,6 +527,11 @@ public class AdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete homebrew tag" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/homebrew/tags/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteHomebrewTag(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {

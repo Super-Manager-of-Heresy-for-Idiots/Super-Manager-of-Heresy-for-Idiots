@@ -10,10 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Confirmation returned after creating a character on the new content model.
- * Intentionally minimal (it reports the new content IDs that were stored) and does
- * not reuse the legacy character response, whose class/skill mapping still reads the
- * legacy catalog. Full content-aware character detail is delivered in later phases.
+ * Класс ContentCharacterCreationResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

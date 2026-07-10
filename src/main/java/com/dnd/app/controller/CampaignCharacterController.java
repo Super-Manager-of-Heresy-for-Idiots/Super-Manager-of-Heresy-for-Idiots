@@ -18,6 +18,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс CampaignCharacterController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/characters")
 @RequiredArgsConstructor
@@ -36,6 +40,13 @@ public class CampaignCharacterController {
 
     // --- Clone from template ---
 
+    /**
+     * Выполняет операции "clone from template" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param templateId идентификатор template, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/from-template/{templateId}")
     @Operation(summary = "Clone a vanilla template character into this campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> cloneFromTemplate(
@@ -50,6 +61,13 @@ public class CampaignCharacterController {
 
     // --- Character CRUD ---
 
+    /**
+     * Создает результат операции "create character" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create a character in campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> createCharacter(
@@ -62,6 +80,12 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list characters" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List characters in campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterResponse>>>> listCharacters(
@@ -72,6 +96,13 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get character" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}")
     @Operation(summary = "Get character by ID")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> getCharacter(
@@ -84,6 +115,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update character" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{characterId}")
     @Operation(summary = "Update character")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> updateCharacter(
@@ -97,6 +136,13 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete character" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{characterId}")
     @Operation(summary = "Delete character")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteCharacter(
@@ -111,6 +157,13 @@ public class CampaignCharacterController {
 
     // --- Stats ---
 
+    /**
+     * Возвращает результат операции "get stats" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/stats")
     @Operation(summary = "Get character stats")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterStatResponse>>>> getStats(
@@ -123,6 +176,15 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update stat" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param statId идентификатор stat, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{characterId}/stats/{statId}")
     @Operation(summary = "Update character stat")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterStatResponse>>> updateStat(
@@ -139,6 +201,13 @@ public class CampaignCharacterController {
 
     // --- Inventory ---
 
+    /**
+     * Возвращает результат операции "get inventory" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/inventory")
     @Operation(summary = "Get character inventory (all items)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemInstanceResponse>>>> getInventory(
@@ -151,6 +220,13 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get equipped items" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/inventory/equipped")
     @Operation(summary = "Get equipped items")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemInstanceResponse>>>> getEquippedItems(
@@ -163,6 +239,13 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get backpack items" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/inventory/backpack")
     @Operation(summary = "Get backpack items")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemInstanceResponse>>>> getBackpackItems(
@@ -175,6 +258,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "grant item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/inventory")
     @Operation(summary = "Grant item to character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> grantItem(
@@ -188,6 +279,15 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "equip item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/inventory/{instanceId}/equip")
     @Operation(summary = "Equip an item")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> equipItem(
@@ -202,6 +302,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "unequip item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/inventory/{instanceId}/unequip")
     @Operation(summary = "Unequip an item")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> unequipItem(
@@ -215,6 +323,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{characterId}/inventory/{instanceId}")
     @Operation(summary = "Remove item from character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeItem(
@@ -228,6 +344,15 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "transfer item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param fromCharId идентификатор from char, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{fromCharId}/inventory/{instanceId}/transfer")
     @Operation(summary = "Transfer item to another character")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> transferItem(
@@ -241,6 +366,15 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rename item" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{characterId}/inventory/{instanceId}/rename")
     @Operation(summary = "Rename an item")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> renameItem(
@@ -257,6 +391,13 @@ public class CampaignCharacterController {
 
     // --- Effects ---
 
+    /**
+     * Возвращает результат операции "get effects" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/effects")
     @Operation(summary = "Get active effects on character")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterActiveEffectResponse>>>> getEffects(
@@ -269,6 +410,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "apply effect" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/effects")
     @Operation(summary = "Apply buff/debuff to character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterActiveEffectResponse>>> applyEffect(
@@ -281,6 +430,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove effect" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{characterId}/effects/{effectId}")
     @Operation(summary = "Remove effect from character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeEffect(
@@ -293,6 +450,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "ability check" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param statTypeId идентификатор stat type, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/ability-check/{statTypeId}")
     @Operation(summary = "Calculate ability check modifier")
     public CompletableFuture<ResponseEntity<ApiResponse<AbilityCheckResponse>>> abilityCheck(
@@ -308,6 +473,13 @@ public class CampaignCharacterController {
 
     // --- Wallet ---
 
+    /**
+     * Возвращает результат операции "get wallet" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/wallet")
     @Operation(summary = "Get character wallet")
     public CompletableFuture<ResponseEntity<ApiResponse<List<WalletEntryResponse>>>> getWallet(
@@ -320,6 +492,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "modify currency" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/wallet")
     @Operation(summary = "Modify currency amount")
     public CompletableFuture<ResponseEntity<ApiResponse<WalletEntryResponse>>> modifyCurrency(
@@ -333,6 +513,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get wallet history" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/wallet/history")
     @Operation(summary = "Get character wallet transaction history")
     public ResponseEntity<ApiResponse<PageResponse<WalletHistoryEntryResponse>>> getWalletHistory(
@@ -347,6 +535,13 @@ public class CampaignCharacterController {
 
     // --- Resources ---
 
+    /**
+     * Возвращает результат операции "get resources" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/resources")
     @Operation(summary = "Get character resources")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ResourceResponse>>>> getResources(
@@ -359,6 +554,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "modify resource" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/resources")
     @Operation(summary = "Modify resource value")
     public CompletableFuture<ResponseEntity<ApiResponse<ResourceResponse>>> modifyResource(
@@ -372,6 +575,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rest reset resources" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/resources/rest")
     @Operation(summary = "Refill resources that reset on a short/long rest")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ResourceResponse>>>> restResetResources(
@@ -385,6 +596,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/rest")
     @Operation(summary = "Rest (long/short): one transactional call restoring resources, "
             + "feature resources, spell slots and HP")
@@ -401,6 +620,14 @@ public class CampaignCharacterController {
 
     // --- HP ---
 
+    /**
+     * Выполняет операции "modify hp" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/hp")
     @Operation(summary = "Modify character HP")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterResponse>>> modifyHp(
@@ -416,6 +643,13 @@ public class CampaignCharacterController {
 
     // --- Feats (S1) ---
 
+    /**
+     * Возвращает список для операции "list feats" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/feats")
     @Operation(summary = "List a character's feats")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterFeatResponse>>>> listFeats(
@@ -426,6 +660,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add feat" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/feats")
     @Operation(summary = "Add a feat to a character (auto-provisions feat-bound resources)")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterFeatResponse>>> addFeat(
@@ -438,6 +680,14 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove feat" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featId идентификатор feat, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{characterId}/feats/{featId}")
     @Operation(summary = "Remove a feat from a character")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeFeat(
@@ -452,6 +702,13 @@ public class CampaignCharacterController {
 
     // --- Hit dice ---
 
+    /**
+     * Возвращает список для операции "list hit dice" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/hit-dice")
     @Operation(summary = "List a character's hit dice (per die size)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<HitDiceResponse>>>> listHitDice(
@@ -463,6 +720,16 @@ public class CampaignCharacterController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "spend hit dice" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param die входящее значение die, используемое бизнес-сценарием
+     * @param count входящее значение count, используемое бизнес-сценарием
+     * @param rolledTotal входящее значение rolled total, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{characterId}/hit-dice/spend")
     @Operation(summary = "Spend hit dice on a short rest (heal die + CON modifier)")
     public CompletableFuture<ResponseEntity<ApiResponse<HitDiceSpendResponse>>> spendHitDice(

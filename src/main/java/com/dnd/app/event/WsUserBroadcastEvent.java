@@ -3,9 +3,11 @@ package com.dnd.app.event;
 import com.dnd.app.dto.response.WebSocketEventPayload;
 
 /**
- * Internal application event: "deliver this payload to a single user's queue".
- * {@code username} is the STOMP principal name (the account username, set by
- * {@code WebSocketAuthInterceptor}). Delivered after transaction commit.
+ * Запись WsUserBroadcastEvent описывает событие домена, которое передает изменения бизнес-состояния подписчикам.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+ * @param destination входящее значение destination, используемое бизнес-сценарием
+ * @param payload входящее значение payload, используемое бизнес-сценарием
  */
 public record WsUserBroadcastEvent(String username, String destination, WebSocketEventPayload payload) {
 }

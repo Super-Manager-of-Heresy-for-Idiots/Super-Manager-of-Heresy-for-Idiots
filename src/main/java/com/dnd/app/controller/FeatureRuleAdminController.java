@@ -95,8 +95,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Rule Workbench admin API (Stage 1). Authoring, review lifecycle and issue tracking for class-feature
- * rules. Secured under {@code /api/admin/**} (ADMIN role) by SecurityConfig.
+ * Класс FeatureRuleAdminController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -133,6 +133,18 @@ public class FeatureRuleAdminController {
 
     // ── Metadata & triage list ──────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "problem features" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param ruleType входящее значение rule type, используемое бизнес-сценарием
+     * @param reviewStatus входящее значение review status, используемое бизнес-сценарием
+     * @param severity входящее значение severity, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+    /**
+     * Выполняет операции "metadata" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/metadata")
     @Operation(summary = "Controlled vocabularies for the Rule Workbench (rule types, statuses, severities)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleMetadataResponse>>> metadata() {
@@ -141,6 +153,16 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "problem features" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param ruleType входящее значение rule type, используемое бизнес-сценарием
+     * @param reviewStatus входящее значение review status, используемое бизнес-сценарием
+     * @param severity входящее значение severity, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/features")
     @Operation(summary = "List class features that have rules or issues, with aggregate triage counts")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ProblemFeatureSummaryResponse>>>> problemFeatures(
@@ -156,6 +178,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "feature detail" в рамках бизнес-логики API.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/class-features/{featureId}/detail")
     @Operation(summary = "Full feature card: source description plus all rules and issues")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleDetailResponse>>> featureDetail(
@@ -168,6 +196,11 @@ public class FeatureRuleAdminController {
 
     // ── Rules for a feature ─────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "feature rules" в рамках бизнес-логики API.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/class-features/{featureId}/rules")
     @Operation(summary = "List the rules attached to a class feature")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureRuleResponse>>>> featureRules(
@@ -177,6 +210,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create rule" в рамках бизнес-логики API.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/class-features/{featureId}/rules")
     @Operation(summary = "Create a new draft rule for a class feature")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> createRule(
@@ -190,6 +230,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update rule" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{id}")
     @Operation(summary = "Update an existing rule's editable fields (records a revision)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> updateRule(
@@ -203,6 +250,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resource keys" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/resource-keys")
     @Operation(summary = "List distinct resource keys already defined (for workbench autocomplete)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<String>>>> resourceKeys() {
@@ -211,6 +262,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get resource definition" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/resource-definition")
     @Operation(summary = "Get a RESOURCE rule's definition (resource key, max formula, reset) for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<ResourceDefinitionAdminResponse>>> getResourceDefinition(
@@ -220,6 +276,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert resource definition" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/resource-definition")
     @Operation(summary = "Create/update a RESOURCE rule's definition (key, max formula, reset window)")
     public CompletableFuture<ResponseEntity<ApiResponse<ResourceDefinitionAdminResponse>>> upsertResourceDefinition(
@@ -230,6 +292,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get damage rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/damage-rule")
     @Operation(summary = "Get a DAMAGE rule's definition (dice/flat formula, type, gating) for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<DamageRuleAdminResponse>>> getDamageRule(
@@ -239,6 +306,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert damage rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/damage-rule")
     @Operation(summary = "Create/update a DAMAGE rule (dice/flat formula, damage type, attack/save gating)")
     public CompletableFuture<ResponseEntity<ApiResponse<DamageRuleAdminResponse>>> upsertDamageRule(
@@ -249,6 +322,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "action types" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/action-types")
     @Operation(summary = "List action-economy types (for the action-cost editor)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ActionTypeOption>>>> actionTypes() {
@@ -257,6 +334,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get action cost" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/action-cost")
     @Operation(summary = "Get an ACTION_COST rule's definition for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<ActionCostAdminResponse>>> getActionCost(
@@ -266,6 +348,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert action cost" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/action-cost")
     @Operation(summary = "Create/update an ACTION_COST rule (action type, amount, condition)")
     public CompletableFuture<ResponseEntity<ApiResponse<ActionCostAdminResponse>>> upsertActionCost(
@@ -276,6 +364,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "target types" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/target-types")
     @Operation(summary = "List rule-target types (for the healing editor)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<TargetTypeOption>>>> targetTypes() {
@@ -284,6 +376,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get healing rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/healing-rule")
     @Operation(summary = "Get a HEALING rule's definition (amount formula, target, temp-HP/revive) for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<HealingRuleAdminResponse>>> getHealingRule(
@@ -293,6 +390,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert healing rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/healing-rule")
     @Operation(summary = "Create/update a HEALING rule (amount formula, target, temp-HP / revive flags)")
     public CompletableFuture<ResponseEntity<ApiResponse<HealingRuleAdminResponse>>> upsertHealingRule(
@@ -303,6 +406,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "effect metadata" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/effect-metadata")
     @Operation(summary = "Reference vocabularies for the active-effect editor (durations, stacking, targets, triggers)")
     public CompletableFuture<ResponseEntity<ApiResponse<EffectMetadataResponse>>> effectMetadata() {
@@ -311,6 +418,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get active effect" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/active-effect")
     @Operation(summary = "Get an ACTIVE_EFFECT rule's graph (definition + modifiers + end conditions) for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<ActiveEffectAdminResponse>>> getActiveEffect(
@@ -320,6 +432,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert active effect" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/active-effect")
     @Operation(summary = "Create/update an ACTIVE_EFFECT rule (definition, stat modifiers, end conditions)")
     public CompletableFuture<ResponseEntity<ApiResponse<ActiveEffectAdminResponse>>> upsertActiveEffect(
@@ -330,6 +448,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resolution metadata" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/resolution-metadata")
     @Operation(summary = "Reference vocabularies for the save/check/attack editor (types, abilities, skills)")
     public CompletableFuture<ResponseEntity<ApiResponse<ResolutionMetadataResponse>>> resolutionMetadata() {
@@ -338,6 +460,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get resolution rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/resolution-rule")
     @Operation(summary = "Get a SAVE_CHECK_ATTACK rule's definition (type, ability/skill, DC) for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<ResolutionRuleAdminResponse>>> getResolutionRule(
@@ -347,6 +474,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert resolution rule" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/resolution-rule")
     @Operation(summary = "Create/update a SAVE_CHECK_ATTACK rule (resolution type, ability/skill, DC formula)")
     public CompletableFuture<ResponseEntity<ApiResponse<ResolutionRuleAdminResponse>>> upsertResolutionRule(
@@ -357,6 +490,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get monster form" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/monster-form")
     @Operation(summary = "Get a MONSTER_FORM (Wild Shape) filter for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterFormAdminResponse>>> getMonsterForm(
@@ -366,6 +504,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert monster form" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/monster-form")
     @Operation(summary = "Create/update a MONSTER_FORM filter (creature type, max CR, movement/size/source)")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterFormAdminResponse>>> upsertMonsterForm(
@@ -376,6 +520,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get trigger" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/trigger")
     @Operation(summary = "Get a TRIGGER_REACTION binding for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<TriggerAdminResponse>>> getTrigger(
@@ -385,6 +534,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert trigger" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/trigger")
     @Operation(summary = "Create/update a TRIGGER_REACTION rule (event, timing, predicate, reaction flags)")
     public CompletableFuture<ResponseEntity<ApiResponse<TriggerAdminResponse>>> upsertTrigger(
@@ -395,6 +550,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get spell grant" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/spell-grant")
     @Operation(summary = "Get a SPELL_GRANT for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellGrantAdminResponse>>> getSpellGrant(
@@ -404,6 +564,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "upsert spell grant" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/spell-grant")
     @Operation(summary = "Create/update a SPELL_GRANT (spell + prepared/known/free-cast + ability override)")
     public CompletableFuture<ResponseEntity<ApiResponse<SpellGrantAdminResponse>>> upsertSpellGrant(
@@ -414,6 +580,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get static grants" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/static-grants")
     @Operation(summary = "Get STATIC_GRANT rule details for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<StaticGrantAdminResponse>>> getStaticGrants(
@@ -423,6 +594,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "replace static grants" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/static-grants")
     @Operation(summary = "Replace STATIC_GRANT proficiency/language grants")
     public CompletableFuture<ResponseEntity<ApiResponse<StaticGrantAdminResponse>>> replaceStaticGrants(
@@ -433,6 +610,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get choice groups" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/choice-groups")
     @Operation(summary = "Get CHOICE rule groups/options for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<ChoiceRuleAdminResponse>>> getChoiceGroups(
@@ -442,6 +624,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "replace choice groups" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/choice-groups")
     @Operation(summary = "Replace CHOICE rule groups/options")
     public CompletableFuture<ResponseEntity<ApiResponse<ChoiceRuleAdminResponse>>> replaceChoiceGroups(
@@ -452,6 +640,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get generic formulas" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/generic-formulas")
     @Operation(summary = "Get FORMULA/manual helper formulas for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<GenericFormulaRuleAdminResponse>>> getGenericFormulas(
@@ -461,6 +654,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "replace generic formulas" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/generic-formulas")
     @Operation(summary = "Replace FORMULA/manual helper formula rows")
     public CompletableFuture<ResponseEntity<ApiResponse<GenericFormulaRuleAdminResponse>>> replaceGenericFormulas(
@@ -471,6 +670,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get companion definitions" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{ruleId}/companion-definitions")
     @Operation(summary = "Get COMPANION rule definitions for editing")
     public CompletableFuture<ResponseEntity<ApiResponse<CompanionDefinitionAdminResponse>>> getCompanionDefinitions(
@@ -480,6 +684,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "replace companion definitions" в рамках бизнес-логики API.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/feature-rules/{ruleId}/companion-definitions")
     @Operation(summary = "Replace COMPANION rule definitions")
     public CompletableFuture<ResponseEntity<ApiResponse<CompanionDefinitionAdminResponse>>> replaceCompanionDefinitions(
@@ -490,6 +700,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "approve rule" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/{id}/approve")
     @Operation(summary = "Approve the current revision (fails on unresolved error issue or invalid type)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> approveRule(
@@ -504,6 +721,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "disable rule" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/{id}/disable")
     @Operation(summary = "Disable a rule so the runtime never executes it")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> disableRule(
@@ -516,6 +739,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Проверяет корректность операции "validate rule" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/{id}/validate")
     @Operation(summary = "Validate a rule without changing its status")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleValidationResponse>>> validateRule(
@@ -527,6 +755,17 @@ public class FeatureRuleAdminController {
 
     // ── Revisions & scope (Stage 2) ─────────────────────────────────────────
 
+    /**
+     * Создает результат операции "create draft" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Выполняет операции "revisions" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/{id}/revisions")
     @Operation(summary = "Revision history of a rule (newest first)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureRuleRevisionResponse>>>> revisions(
@@ -536,6 +775,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create draft" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/{id}/create-draft")
     @Operation(summary = "Create a new editable draft revision from the approved one")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> createDraft(
@@ -550,6 +796,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет бросок операции "rollback" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/{id}/rollback")
     @Operation(summary = "Roll back the rule to a prior revision (makes it the active approved one)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleResponse>>> rollback(
@@ -565,6 +818,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rulesets" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/rulesets")
     @Operation(summary = "List game rulesets (editions) for scope selection")
     public CompletableFuture<ResponseEntity<ApiResponse<List<RulesetResponse>>>> rulesets() {
@@ -573,6 +830,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rule sources" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/rule-sources")
     @Operation(summary = "List game sources (sourcebooks) for scope selection")
     public CompletableFuture<ResponseEntity<ApiResponse<List<RuleSourceResponse>>>> ruleSources() {
@@ -583,6 +844,14 @@ public class FeatureRuleAdminController {
 
     // ── Issues ──────────────────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "global issues" в рамках бизнес-логики API.
+     * @param severity входящее значение severity, используемое бизнес-сценарием
+     * @param resolved входящее значение resolved, используемое бизнес-сценарием
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/class-features/issues")
     @Operation(summary = "Global list of class-feature issues, filterable by severity/resolved/class")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureRuleIssueResponse>>>> globalIssues(
@@ -596,6 +865,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "feature issues" в рамках бизнес-логики API.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/class-features/{featureId}/issues")
     @Operation(summary = "List the issues raised on a class feature")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureRuleIssueResponse>>>> featureIssues(
@@ -606,6 +881,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create issue" в рамках бизнес-логики API.
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/class-features/{featureId}/issues")
     @Operation(summary = "Raise an issue on a class feature or one of its rules")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleIssueResponse>>> createIssue(
@@ -618,6 +900,13 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resolve issue" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rule-issues/{id}/resolve")
     @Operation(summary = "Mark an issue as resolved by the current admin")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleIssueResponse>>> resolveIssue(
@@ -633,6 +922,11 @@ public class FeatureRuleAdminController {
 
     // ── Backfill, coverage & bulk review (Stage 12) ─────────────────────────
 
+    /**
+     * Выполняет операции "coverage" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-rules/coverage")
     @Operation(summary = "Coverage of the runtime features by the feature-rules model")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleCoverageReport>>> coverage(
@@ -642,6 +936,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики API.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/backfill")
     @Operation(summary = "Backfill structured rules for the 305 runtime features (dry-run unless apply=true)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureRuleBackfillResult>>> backfill(
@@ -654,6 +953,11 @@ public class FeatureRuleAdminController {
 
     @PostMapping("/feature-rules/backfill-backgrounds")
     @Operation(summary = "Backfill static skill-grant rules for backgrounds (S1; dry-run unless apply=true)")
+    /**
+     * Выполняет обратное заполнение операции "backfill backgrounds" в рамках бизнес-логики API.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> backfillBackgrounds(
             @RequestParam(defaultValue = "false") boolean apply) {
         return CompletableFuture.supplyAsync(() ->
@@ -664,6 +968,11 @@ public class FeatureRuleAdminController {
 
     @PostMapping("/feature-rules/backfill-spells")
     @Operation(summary = "Backfill spell mechanics (056–062) into SPELL-owned rules (S2; dry-run unless apply=true)")
+    /**
+     * Выполняет обратное заполнение операции "backfill spells" в рамках бизнес-логики API.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<SpellRuleBackfillResult>>> backfillSpells(
             @RequestParam(defaultValue = "false") boolean apply) {
         return CompletableFuture.supplyAsync(() ->
@@ -672,6 +981,12 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "batch approve" в рамках бизнес-логики API.
+     * @param ruleType входящее значение rule type, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/batch-approve")
     @Operation(summary = "Batch-approve valid needs_review rules of a low-risk type")
     public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> batchApprove(
@@ -683,6 +998,10 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "cleanup" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-rules/maintenance/cleanup")
     @Operation(summary = "Cleanup: expire due effects, expire pending prompts, end stale transformations")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureMaintenanceResult>>> cleanup() {
@@ -693,8 +1012,18 @@ public class FeatureRuleAdminController {
 
     // ── Formulas (Stage 3) ──────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "formula vocabulary" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/feature-formulas/vocabulary")
     @Operation(summary = "DSL vocabulary (functions + scalars) for the formula autocomplete; names from the evaluator allowlist")
+    /**
+     * Выполняет операции "formula vocabulary" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<FormulaVocabularyResponse>>> formulaVocabulary(
             @RequestParam(name = "lang", required = false) String lang) {
         return CompletableFuture.supplyAsync(() ->
@@ -702,6 +1031,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Проверяет корректность операции "validate formula" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-formulas/validate")
     @Operation(summary = "Validate a DSL expression against a declared result type")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureFormulaValidationResponse>>> validateFormula(
@@ -712,6 +1046,11 @@ public class FeatureRuleAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "preview formula" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/feature-formulas/evaluate-preview")
     @Operation(summary = "Evaluate a DSL expression against an explicit preview context")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureFormulaEvaluateResponse>>> previewFormula(

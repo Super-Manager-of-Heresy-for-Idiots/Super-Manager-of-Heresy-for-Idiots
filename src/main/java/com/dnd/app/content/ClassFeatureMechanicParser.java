@@ -7,9 +7,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Best-effort parser for imported class-feature prose. The result is intentionally
- * conservative: ambiguous rows are flagged so admins can review them before the
- * runtime relies on the parsed mechanics.
+ * Класс ClassFeatureMechanicParser описывает компонент загрузки справочного контента для игровых бизнес-сценариев.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class ClassFeatureMechanicParser {
 
@@ -34,6 +33,12 @@ public final class ClassFeatureMechanicParser {
     private ClassFeatureMechanicParser() {
     }
 
+    /**
+     * Выполняет операции "parse" в рамках бизнес-логики приложения.
+     * @param title входящее значение title, используемое бизнес-сценарием
+     * @param description входящее значение description, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Result parse(String title, String description) {
         String text = join(title, description);
         if (text.isBlank()) {
@@ -181,6 +186,19 @@ public final class ClassFeatureMechanicParser {
         return false;
     }
 
+    /**
+     * Запись Result описывает компонент загрузки справочного контента для игровых бизнес-сценариев.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     * @param activationType входящее значение activation type, используемое бизнес-сценарием
+     * @param attackRoll входящее значение attack roll, используемое бизнес-сценарием
+     * @param saveAbility входящее значение save ability, используемое бизнес-сценарием
+     * @param damageDice входящее значение damage dice, используемое бизнес-сценарием
+     * @param damageType входящее значение damage type, используемое бизнес-сценарием
+     * @param healingDice входящее значение healing dice, используемое бизнес-сценарием
+     * @param healingFlat входящее значение healing flat, используемое бизнес-сценарием
+     * @param warning входящее значение warning, используемое бизнес-сценарием
+     * @param warningReason входящее значение warning reason, используемое бизнес-сценарием
+     */
     public record Result(
             String activationType,
             boolean attackRoll,

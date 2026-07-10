@@ -5,6 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс QuestNpc описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "quest_npcs",
         uniqueConstraints = @UniqueConstraint(columnNames = {"quest_id", "npc_id"}))

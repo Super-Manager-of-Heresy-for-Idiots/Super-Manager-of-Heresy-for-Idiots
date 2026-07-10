@@ -57,10 +57,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Creates characters on the NEW content model (Phase 5). Reads options and validates
- * choices against the normalized tables (character_class, class_skill_option, skill,
- * spell, currency) and stores the new content IDs in the runtime tables. This is the
- * sole character-creation flow; the legacy wizard was removed in Phase 11/12.
+ * Класс ContentCharacterCreationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -94,9 +92,23 @@ public class ContentCharacterCreationService {
     private final LevelThresholdService levelThresholdService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Создает результат операции "create campaign character" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @PersistenceContext
     private EntityManager entityManager;
 
+    /**
+     * Создает результат операции "create campaign character" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ContentCharacterCreationResponse createCampaignCharacter(
             UUID campaignId, CreateContentCharacterRequest req, String username) {
@@ -112,6 +124,12 @@ public class ContentCharacterCreationService {
         return create(campaign, charClass, species, req, owner);
     }
 
+    /**
+     * Создает результат операции "create vanilla character" в рамках бизнес-логики домена.
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ContentCharacterCreationResponse createVanillaCharacter(
             CreateContentCharacterRequest req, String username) {

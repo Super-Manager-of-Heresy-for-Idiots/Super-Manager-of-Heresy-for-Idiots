@@ -31,11 +31,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Executes a feature use: validates the character has the feature and an approved action cost, spends the
- * feature's resource (if any), and records an audit log entry. Gated by {@code app.feature-rules.actions}.
- *
- * <p>Stage 6 scope: resource + action-cost handling + audit. In-combat action-economy enforcement and the
- * typed FeatureUsed event/reaction bus arrive in later stages (8 and 11).</p>
+ * Класс FeatureUseService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -58,6 +55,13 @@ public class FeatureUseService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureUseLogRepository useLogRepository;
 
+    /**
+     * Выполняет операции "use" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureUseResult use(PlayerCharacter character, UUID featureId, FeatureUseRequest request) {
         if (!flags.actionsActive()) {

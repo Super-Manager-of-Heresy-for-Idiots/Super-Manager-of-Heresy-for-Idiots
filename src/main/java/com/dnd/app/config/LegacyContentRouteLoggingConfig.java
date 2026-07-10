@@ -11,13 +11,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * Phase 11: temporary observability to catch accidental use of the legacy non-bestiary
- * content routes after the new content-model endpoints became the default. Logs a WARN
- * whenever a legacy route is hit so leftover callers are easy to spot before the routes
- * are removed in Phase 12. Read-only: it never blocks or alters requests.
- *
- * <p>Patterns use single-segment {@code *}, so the new {@code .../content/...} routes
- * (which carry an extra path segment) are NOT matched.</p>
+ * Класс LegacyContentRouteLoggingConfig описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Configuration
@@ -34,10 +29,26 @@ public class LegacyContentRouteLoggingConfig implements WebMvcConfigurer {
             "/api/characters/legacy/full",
             "/api/campaigns/*/characters/legacy/full");
 
+            /**
+             * Выполняет операции "pre handle" в рамках бизнес-логики инфраструктуры.
+             * @param request входящие данные запроса для выполнения бизнес-сценария
+             * @param response входящее значение response, используемое бизнес-сценарием
+             * @param handler входящее значение handler, используемое бизнес-сценарием
+    /**
+     * Добавляет результат операции "add interceptors" в рамках бизнес-логики инфраструктуры.
+     * @param registry входящее значение registry, используемое бизнес-сценарием
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
             @Override
+            /**
+             * Выполняет операции "pre handle" в рамках бизнес-логики инфраструктуры.
+             * @param request входящие данные запроса для выполнения бизнес-сценария
+             * @param response входящее значение response, используемое бизнес-сценарием
+             * @param handler входящее значение handler, используемое бизнес-сценарием
+             * @return результат выполнения бизнес-операции
+             */
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
                 log.warn("LEGACY content route hit (superseded by new content model): {} {}",
                         request.getMethod(), request.getRequestURI());

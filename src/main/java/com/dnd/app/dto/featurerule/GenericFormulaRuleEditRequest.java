@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/** Replace-style edit payload for named generic formulas. */
+/**
+ * Класс GenericFormulaRuleEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

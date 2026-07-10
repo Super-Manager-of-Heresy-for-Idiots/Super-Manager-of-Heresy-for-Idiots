@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Класс CampaignService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,12 @@ public class CampaignService {
     private final com.dnd.app.mapper.CharacterMapper characterMapper;
     private final WebSocketEventService webSocketEventService;
 
+    /**
+     * Создает результат операции "create campaign" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignResponse createCampaign(CreateCampaignRequest request, String username) {
         User user = getUser(username);
@@ -65,6 +75,12 @@ public class CampaignService {
         return toCampaignResponse(campaign, user);
     }
 
+    /**
+     * Возвращает результат операции "get campaign by id" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CampaignResponse getCampaignById(UUID id, String username) {
         Campaign campaign = findCampaign(id);
@@ -73,6 +89,12 @@ public class CampaignService {
         return toCampaignResponse(campaign, user);
     }
 
+    /**
+     * Возвращает результат операции "get campaign detail" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CampaignDetailResponse getCampaignDetail(UUID id, String username) {
         Campaign campaign = findCampaign(id);
@@ -99,6 +121,12 @@ public class CampaignService {
                 .build();
     }
 
+    /**
+     * Возвращает список для операции "list my campaigns" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<CampaignResponse> listMyCampaigns(String username, Pageable pageable) {
         User user = getUser(username);
@@ -113,6 +141,13 @@ public class CampaignService {
         return page.map(c -> toCampaignResponse(c, user));
     }
 
+    /**
+     * Обновляет результат операции "update campaign" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignResponse updateCampaign(UUID id, UpdateCampaignRequest request, String username) {
         Campaign campaign = findCampaign(id);
@@ -125,6 +160,11 @@ public class CampaignService {
         return toCampaignResponse(campaign, user);
     }
 
+    /**
+     * Удаляет результат операции "delete campaign" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteCampaign(UUID id, String username) {
         Campaign campaign = findCampaign(id);
@@ -141,6 +181,12 @@ public class CampaignService {
         campaignRepository.delete(campaign);
     }
 
+    /**
+     * Выполняет операции "join campaign" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignResponse joinCampaign(JoinCampaignRequest request, String username) {
         User user = getUser(username);
@@ -176,6 +222,11 @@ public class CampaignService {
         return toCampaignResponse(campaign, user);
     }
 
+    /**
+     * Выполняет операции "leave campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void leaveCampaign(UUID campaignId, String username) {
         Campaign campaign = findCampaign(campaignId);
@@ -207,6 +258,12 @@ public class CampaignService {
         log.info("User left campaign: user={}, campaignId={}", username, campaignId);
     }
 
+    /**
+     * Выполняет операции "kick member" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void kickMember(UUID campaignId, KickMemberRequest request, String username) {
         Campaign campaign = findCampaign(campaignId);
@@ -248,6 +305,13 @@ public class CampaignService {
                 Map.of("userId", request.getUserId()), creator.getId());
     }
 
+    /**
+     * Выполняет операции "change campaign status" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignResponse changeCampaignStatus(UUID campaignId, ChangeCampaignStatusRequest request, String username) {
         Campaign campaign = findCampaign(campaignId);
@@ -270,6 +334,12 @@ public class CampaignService {
         return toCampaignResponse(campaign, user);
     }
 
+    /**
+     * Выполняет операции "regenerate invite code" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public InviteCodeResponse regenerateInviteCode(UUID campaignId, String username) {
         Campaign campaign = findCampaign(campaignId);
@@ -281,6 +351,12 @@ public class CampaignService {
         return InviteCodeResponse.builder().inviteCode(campaign.getInviteCode()).build();
     }
 
+    /**
+     * Возвращает результат операции "get invite code" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public InviteCodeResponse getInviteCode(UUID campaignId, String username) {
         Campaign campaign = findCampaign(campaignId);
@@ -292,6 +368,14 @@ public class CampaignService {
         return InviteCodeResponse.builder().inviteCode(campaign.getInviteCode()).build();
     }
 
+    /**
+     * Выполняет операции "reassign character" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterResponse reassignCharacter(UUID campaignId, UUID characterId,
                                                 ReassignCharacterRequest request, String username) {
@@ -387,16 +471,34 @@ public class CampaignService {
     }
 
     // --- Helper: check if user is GM in campaign ---
+    /**
+     * Проверяет условие операции "is gm in campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isGmInCampaign(UUID campaignId, UUID userId) {
         return campaignMemberRepository.findByCampaignIdAndUserId(campaignId, userId)
                 .map(m -> !m.getKicked() && m.getRoleInCampaign() == CampaignRole.GM)
                 .orElse(false);
     }
 
+    /**
+     * Проверяет условие операции "is member of campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isMemberOfCampaign(UUID campaignId, UUID userId) {
         return campaignMemberRepository.existsByCampaignIdAndUserIdAndKickedFalse(campaignId, userId);
     }
 
+    /**
+     * Возвращает результат операции "get membership" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public CampaignMember getMembership(UUID campaignId, UUID userId) {
         return campaignMemberRepository.findByCampaignIdAndUserId(campaignId, userId)
                 .filter(m -> !m.getKicked())
@@ -404,8 +506,10 @@ public class CampaignService {
     }
 
     /**
-     * Read-only projection for map-service. ADMINs and campaign GMs can manage maps and move any
-     * token; regular campaign members can view maps and move tokens for their own characters.
+     * Возвращает результат операции "get campaign access" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public CampaignAccessResponse getCampaignAccess(UUID campaignId, UUID userId) {
@@ -437,6 +541,11 @@ public class CampaignService {
 
     // --- Access enforcement helpers ---
 
+    /**
+     * Проверяет требуемое условие операции "enforce gm or admin" в рамках бизнес-логики домена.
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     * @param user входящее значение user, используемое бизнес-сценарием
+     */
     public void enforceGmOrAdmin(Campaign campaign, User user) {
         if (user.getRole() == Role.ADMIN) return;
         if (!isGmInCampaign(campaign.getId(), user.getId())) {
@@ -444,6 +553,11 @@ public class CampaignService {
         }
     }
 
+    /**
+     * Проверяет требуемое условие операции "enforce creator or admin" в рамках бизнес-логики домена.
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     * @param user входящее значение user, используемое бизнес-сценарием
+     */
     public void enforceCreatorOrAdmin(Campaign campaign, User user) {
         if (user.getRole() == Role.ADMIN) return;
         CampaignMember member = campaignMemberRepository
@@ -454,6 +568,11 @@ public class CampaignService {
         }
     }
 
+    /**
+     * Проверяет требуемое условие операции "enforce membership or admin" в рамках бизнес-логики домена.
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     * @param user входящее значение user, используемое бизнес-сценарием
+     */
     public void enforceMembershipOrAdmin(Campaign campaign, User user) {
         if (user.getRole() == Role.ADMIN) return;
         if (!isMemberOfCampaign(campaign.getId(), user.getId())) {
@@ -461,12 +580,21 @@ public class CampaignService {
         }
     }
 
+    /**
+     * Проверяет требуемое условие операции "enforce campaign active" в рамках бизнес-логики домена.
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     */
     public void enforceCampaignActive(Campaign campaign) {
         if (campaign.getStatus() != CampaignStatus.ACTIVE) {
             throw new BadRequestException("Campaign is not active");
         }
     }
 
+    /**
+     * Проверяет требуемое условие операции "enforce campaign active for player" в рамках бизнес-логики домена.
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     * @param user входящее значение user, используемое бизнес-сценарием
+     */
     public void enforceCampaignActiveForPlayer(Campaign campaign, User user) {
         if (user.getRole() == Role.ADMIN) return;
         if (campaign.getStatus() != CampaignStatus.ACTIVE && user.getRole() == Role.PLAYER) {
@@ -487,6 +615,11 @@ public class CampaignService {
         return gmCount == 0;
     }
 
+    /**
+     * Находит результат операции "find campaign" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public Campaign findCampaign(UUID id) {
         return campaignRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found"));

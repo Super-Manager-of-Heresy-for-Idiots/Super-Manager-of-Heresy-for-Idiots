@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Validate and evaluate bounded feature formulas. Wraps {@link FeatureFormulaEvaluator} with result-type
- * checking, rounding/clamping, and typed accessors the later stages use (resource max, duration, DC, dice).
+ * Класс FeatureFormulaService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,12 @@ public class FeatureFormulaService {
 
     // ── Validation ──────────────────────────────────────────────────────────
 
+    /**
+     * Проверяет корректность операции "validate" в рамках бизнес-логики домена.
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @param resultTypeCode входящее значение result type code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureFormulaValidationResponse validate(String expression, String resultTypeCode) {
         FormulaResultType type = FormulaResultType.fromCode(resultTypeCode).orElse(null);
         if (type == null) {
@@ -55,7 +61,11 @@ public class FeatureFormulaService {
         }
     }
 
-    /** Validate a stored formula and stamp validation_status/message/context_requirements onto it. */
+    /**
+     * Проверяет корректность операции "validate and stamp" в рамках бизнес-логики домена.
+     * @param formula входящее значение formula, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureFormula validateAndStamp(FeatureFormula formula) {
         FeatureFormulaValidationResponse result = validate(formula.getExpression(), formula.getResultType());
         formula.setValidationStatus(result.isValid() ? "valid" : "invalid");
@@ -68,6 +78,11 @@ public class FeatureFormulaService {
 
     // ── Preview ─────────────────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "evaluate preview" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     public FeatureFormulaEvaluateResponse evaluatePreview(FeatureFormulaEvaluateRequest request) {
         FormulaResultType type = FormulaResultType.fromCode(request.getResultType()).orElse(null);
         if (type == null) {
@@ -89,21 +104,48 @@ public class FeatureFormulaService {
 
     // ── Typed evaluation (used by later stages) ─────────────────────────────
 
+    /**
+     * Выполняет операции "evaluate integer" в рамках бизнес-логики домена.
+     * @param formula входящее значение formula, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public int evaluateInteger(FeatureFormula formula, FormulaContext ctx) {
         double v = numeric(formula.getExpression(), ctx);
         return (int) clamp(roundForInteger(v, roundingOf(formula)), formula.getMinValue(), formula.getMaxValue());
     }
 
+    /**
+     * Выполняет операции "evaluate integer" в рамках бизнес-логики домена.
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @param rounding входящее значение rounding, используемое бизнес-сценарием
+     * @param min входящее значение min, используемое бизнес-сценарием
+     * @param max входящее значение max, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public int evaluateInteger(String expression, FormulaContext ctx, FormulaRoundingMode rounding,
                                Double min, Double max) {
         double v = numeric(expression, ctx);
         return (int) clamp(roundForInteger(v, rounding), min, max);
     }
 
+    /**
+     * Выполняет операции "evaluate duration" в рамках бизнес-логики домена.
+     * @param formula входящее значение formula, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public int evaluateDuration(FeatureFormula formula, FormulaContext ctx) {
         return evaluateInteger(formula, ctx);
     }
 
+    /**
+     * Выполняет операции "evaluate boolean" в рамках бизнес-логики домена.
+     * @param formula входящее значение formula, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public boolean evaluateBoolean(FeatureFormula formula, FormulaContext ctx) {
         Object result = evaluator.evaluate(formula.getExpression(), ctx);
         if (result instanceof Boolean b) {
@@ -112,6 +154,12 @@ public class FeatureFormulaService {
         throw new FormulaException("Ожидалось логическое значение, получено «" + typeOf(result) + "»");
     }
 
+    /**
+     * Выполняет операции "evaluate dice" в рамках бизнес-логики домена.
+     * @param formula входящее значение formula, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public DiceValue evaluateDice(FeatureFormula formula, FormulaContext ctx) {
         Object result = evaluator.evaluate(formula.getExpression(), ctx);
         if (result instanceof DiceValue d) {

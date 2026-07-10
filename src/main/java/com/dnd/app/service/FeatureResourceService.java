@@ -27,9 +27,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Feature resources: creation on feature grant, max recomputation, spending and manual adjustment.
- * Gated by {@code app.feature-rules.resources} (via the master switch). Shared pools resolve to one
- * character row per {@code shared_pool_key} so Channel-Divinity-like resources are not duplicated.
+ * Класс FeatureResourceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -43,7 +42,11 @@ public class FeatureResourceService {
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
 
-    /** Create resource state for the given (approved) rules' resource definitions, if missing. */
+    /**
+     * Выполняет операции "ensure resources for rules" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param ruleIds входящее значение rule ids, используемое бизнес-сценарием
+     */
     @Transactional
     public void ensureResourcesForRules(PlayerCharacter character, Collection<UUID> ruleIds) {
         if (!flags.resourcesActive() || ruleIds.isEmpty()) {
@@ -70,7 +73,10 @@ public class FeatureResourceService {
         }
     }
 
-    /** Recompute max for all of a character's resources (e.g. after level-up); clamp current to max. */
+    /**
+     * Выполняет операции "recalc max" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     */
     @Transactional
     public void recalcMax(PlayerCharacter character) {
         if (!flags.resourcesActive()) {
@@ -95,7 +101,13 @@ public class FeatureResourceService {
         }
     }
 
-    /** Spend {@code amount} from a resource; rejects going below 0 unless the definition allows it. */
+    /**
+     * Выполняет операции "spend" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param resourceId идентификатор resource, используемый для выбора нужного бизнес-объекта
+     * @param amount входящее значение amount, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterFeatureResource spend(UUID characterId, UUID resourceId, int amount) {
         CharacterFeatureResource res = require(characterId, resourceId);
@@ -109,7 +121,13 @@ public class FeatureResourceService {
         return resourceRepository.save(res);
     }
 
-    /** GM/manual set of a resource's current value (clamped to [0..max] when a max is known). */
+    /**
+     * Устанавливает результат операции "set value" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param resourceId идентификатор resource, используемый для выбора нужного бизнес-объекта
+     * @param value входящее значение value, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterFeatureResource setValue(UUID characterId, UUID resourceId, int value) {
         CharacterFeatureResource res = require(characterId, resourceId);
@@ -121,11 +139,21 @@ public class FeatureResourceService {
         return resourceRepository.save(res);
     }
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterFeatureResource> list(UUID characterId) {
         return resourceRepository.findByCharacterId(characterId);
     }
 
+    /**
+     * Возвращает список для операции "list responses" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterFeatureResourceResponse> listResponses(UUID characterId) {
         List<CharacterFeatureResource> resources = resourceRepository.findByCharacterId(characterId);
@@ -152,6 +180,11 @@ public class FeatureResourceService {
         }).toList();
     }
 
+    /**
+     * Преобразует данные операции "to response" в рамках бизнес-логики домена.
+     * @param res входящее значение res, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CharacterFeatureResourceResponse toResponse(CharacterFeatureResource res) {
         FeatureResourceDefinition def = definitionRepository.findById(res.getResourceDefinitionId()).orElse(null);
         return CharacterFeatureResourceResponse.builder()
@@ -167,6 +200,11 @@ public class FeatureResourceService {
                 .build();
     }
 
+    /**
+     * Выполняет операции "definition" в рамках бизнес-логики домена.
+     * @param definitionId идентификатор definition, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Optional<FeatureResourceDefinition> definition(UUID definitionId) {
         return definitionRepository.findById(definitionId);

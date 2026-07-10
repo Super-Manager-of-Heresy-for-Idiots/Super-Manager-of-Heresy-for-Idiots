@@ -25,19 +25,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Idempotent backfill of class reward groups for the new content model.
- *
- * <p>v1 seeds the one reward group that is reliably derivable from the imported
- * data and matches PHB 2024 rules: the <b>subclass-choice</b> group. Every core
- * class chooses a subclass at level 3, so this creates a CHOICE group at that level
- * whose options are the class's real (non-placeholder) subclasses, each carrying a
- * SUBCLASS grant.</p>
- *
- * <p>Idempotency key: (classId, level=3, a CHOICE group already containing a SUBCLASS
- * grant). Safe to rerun; never overwrites or touches homebrew classes. Class features
- * and other reward groups (ASI, skill choices, etc.) are not fabricated here because
- * the imported feature list cannot be reliably split into base vs subclass features —
- * those gaps are tracked by {@link ContentDataAuditService}.</p>
+ * Класс ClassRewardSeedService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -54,6 +43,10 @@ public class ClassRewardSeedService {
     private final ClassLevelRewardGrantRepository grantRepo;
     private final ClassLevelRewardGrantSubclassRepository subclassGrantRepo;
 
+    /**
+     * Выполняет операции "seed core subclass choice groups" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ContentSeedSummary seedCoreSubclassChoiceGroups() {
         List<ContentCharacterClass> coreClasses = classRepo.findAllByHomebrewIsNull();

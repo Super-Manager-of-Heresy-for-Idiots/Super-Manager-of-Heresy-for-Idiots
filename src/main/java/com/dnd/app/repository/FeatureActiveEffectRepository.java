@@ -7,6 +7,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт FeatureActiveEffectRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface FeatureActiveEffectRepository extends JpaRepository<FeatureActiveEffect, UUID> {
 
     List<FeatureActiveEffect> findByCharacterIdAndStatus(UUID characterId, String status);

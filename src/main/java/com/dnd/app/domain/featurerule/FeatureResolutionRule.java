@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A saving throw / ability check / attack roll a feature requires, with DC and success/failure links. */
+/**
+ * Класс FeatureResolutionRule описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_resolution_rule")
 @Getter

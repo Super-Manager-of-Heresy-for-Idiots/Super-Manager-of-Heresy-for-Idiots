@@ -26,12 +26,24 @@ final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler 
 
     private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
 
+    /**
+     * Обрабатывает событие операции "handle" в рамках бизнес-логики инфраструктуры.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param response входящее значение response, используемое бизнес-сценарием
+     * @param csrfToken входящее значение csrf token, используемое бизнес-сценарием
+     */
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> csrfToken) {
         // Always BREACH-protect the token when it is rendered into a response.
         this.delegate.handle(request, response, csrfToken);
     }
 
+    /**
+     * Выполняет операции "resolve csrf token value" в рамках бизнес-логики инфраструктуры.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param csrfToken входящее значение csrf token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
         // Header present → SPA double-submit: the value is the raw token, resolve it plainly.

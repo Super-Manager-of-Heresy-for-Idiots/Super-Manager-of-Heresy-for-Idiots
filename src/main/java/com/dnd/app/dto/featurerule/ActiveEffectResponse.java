@@ -9,7 +9,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** A character's live feature effect with its modifiers, for the sheet / combat / GM tools. */
+/**
+ * Класс ActiveEffectResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

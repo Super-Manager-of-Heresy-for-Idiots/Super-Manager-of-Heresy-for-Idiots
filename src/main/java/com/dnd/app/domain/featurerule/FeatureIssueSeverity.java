@@ -4,11 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Severity of a {@code feature_rule_issue} (see
- * {@code anal-integration/00_STAGE_SCOPE_AND_EXECUTION_CONTRACT.md}).
- *
- * <p>An {@link #ERROR} issue that is still unresolved blocks approval of the related rule: a rule
- * cannot be moved to {@link FeatureReviewStatus#APPROVED} while it has an unresolved error.</p>
+ * Перечисление FeatureIssueSeverity описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum FeatureIssueSeverity {
 
@@ -25,17 +22,27 @@ public enum FeatureIssueSeverity {
         this.code = code;
     }
 
-    /** Stable snake_case identifier used in persistence and API payloads. */
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** True for severities whose unresolved presence must block rule approval. */
+    /**
+     * Выполняет операции "blocks approval" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean blocksApproval() {
         return this == ERROR;
     }
 
-    /** Resolve a severity from its persisted {@link #getCode() code}. */
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FeatureIssueSeverity> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

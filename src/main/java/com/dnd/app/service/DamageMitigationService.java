@@ -9,19 +9,8 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 
 /**
- * Applies a target's damage resistance / immunity / vulnerability to a typed damage total — the one
- * place combat consults these, so both characters and monsters are handled consistently (BTL-07).
- *
- * <ul>
- *   <li><b>Character</b> targets: from active feature effects, legacy buffs and species traits via
- *       {@link ModifierAggregator#damageMultiplier} (0.0 = immune, 0.5 = resist, 2.0 = vulnerable).</li>
- *   <li><b>Monster</b> targets: innate resistances/immunities/vulnerabilities authored on the bestiary
- *       statblock. These were previously ignored entirely (the old resistance step was a character-only
- *       no-op for monsters).</li>
- * </ul>
- *
- * <p><b>Untyped damage</b> (no {@code damageTypeId}) is never modified — this is a deliberate rule, not
- * a gap: effects that deal generic/untyped damage bypass elemental resistances by design.
+ * Класс DamageMitigationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,7 +18,10 @@ public class DamageMitigationService {
 
     private final ModifierAggregator modifierAggregator;
 
-    /** How the target's defences changed the incoming damage — surfaced in the attack log/UI. */
+    /**
+     * Перечисление DamageModifier описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     */
     public enum DamageModifier {
         NONE,
         RESISTED,
@@ -37,13 +29,21 @@ public class DamageMitigationService {
         VULNERABLE
     }
 
-    /** The mitigated damage and which modifier (if any) was applied. */
+    /**
+     * Запись Mitigation описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     * @param finalDamage входящее значение final damage, используемое бизнес-сценарием
+     * @param modifier входящее значение modifier, используемое бизнес-сценарием
+     */
     public record Mitigation(int finalDamage, DamageModifier modifier) {
     }
 
     /**
-     * Mitigate a positive, typed {@code damage} total against {@code target}. Non-positive damage and
-     * untyped damage ({@code damageTypeId == null}) pass through unchanged as {@link DamageModifier#NONE}.
+     * Выполняет операции "mitigate" в рамках бизнес-логики домена.
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @param damage входящее значение damage, используемое бизнес-сценарием
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     public Mitigation mitigate(BattleCombatant target, int damage, UUID damageTypeId) {
         if (target == null || damage <= 0 || damageTypeId == null) {

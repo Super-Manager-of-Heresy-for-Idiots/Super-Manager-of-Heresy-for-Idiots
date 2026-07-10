@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Класс CharacterEffectService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,6 +39,14 @@ public class CharacterEffectService {
     private final WebSocketEventService webSocketEventService;
     private final ModifierAggregator modifierAggregator;
 
+    /**
+     * Выполняет операции "apply effect" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CharacterActiveEffectResponse applyEffect(UUID campaignId, UUID characterId,
                                                       ApplyEffectRequest request, String username) {
@@ -65,6 +77,13 @@ public class CharacterEffectService {
         return response;
     }
 
+    /**
+     * Удаляет результат операции "remove effect" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void removeEffect(UUID campaignId, UUID characterId, UUID effectId, String username) {
         User user = getUser(username);
@@ -88,6 +107,12 @@ public class CharacterEffectService {
                 characterId, Map.of("effectId", effectId), user.getId());
     }
 
+    /**
+     * Возвращает результат операции "get active effects" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CharacterActiveEffectResponse> getActiveEffects(UUID characterId, String username) {
         User user = getUser(username);
@@ -112,6 +137,13 @@ public class CharacterEffectService {
                 .toList();
     }
 
+    /**
+     * Рассчитывает результат операции "calculate ability check modifier" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param statTypeId идентификатор stat type, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public AbilityCheckResponse calculateAbilityCheckModifier(UUID characterId, UUID statTypeId, String username) {
         User user = getUser(username);
@@ -177,6 +209,10 @@ public class CharacterEffectService {
                 .build();
     }
 
+    /**
+     * Выполняет операции "decrement rounds" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void decrementRounds(UUID characterId) {
         List<CharacterActiveEffect> effects = characterActiveEffectRepository.findByCharacterId(characterId);

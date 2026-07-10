@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single feat in the new content model (D&D 2024).
- * Carries the category, repeatable flag, prerequisites and the ordered body sections.
+ * Класс FeatDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

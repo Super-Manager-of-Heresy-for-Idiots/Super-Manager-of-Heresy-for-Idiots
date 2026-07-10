@@ -40,6 +40,10 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.InvalidCsrfTokenException;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
 
+/**
+ * Класс SecurityConfig описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -52,6 +56,11 @@ public class SecurityConfig {
     private final InternalApiKeyFilter internalApiKeyFilter;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Выполняет операции "auth rate limit filter registration" в рамках бизнес-логики инфраструктуры.
+     * @param filter входящее значение filter, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public FilterRegistrationBean<AuthRateLimitFilter> authRateLimitFilterRegistration(AuthRateLimitFilter filter) {
         FilterRegistrationBean<AuthRateLimitFilter> registration = new FilterRegistrationBean<>(filter);
@@ -59,6 +68,11 @@ public class SecurityConfig {
         return registration;
     }
 
+    /**
+     * Выполняет операции "filter chain" в рамках бизнес-логики инфраструктуры.
+     * @param http входящее значение http, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -141,6 +155,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Converts Spring Security denial exceptions into stable API reason codes.
+     */
     private String securityDenialReason(
             org.springframework.security.access.AccessDeniedException exception,
             Authentication authentication) {
@@ -158,6 +175,9 @@ public class SecurityConfig {
         return "ACCESS_DENIED";
     }
 
+    /**
+     * Maps a denial reason code to the response message sent in {@link ApiResponse}.
+     */
     private String securityDenialMessage(String reason) {
         return switch (reason) {
             case "CSRF_MISSING" -> "CSRF token is missing";
@@ -167,26 +187,46 @@ public class SecurityConfig {
         };
     }
 
+    /**
+     * Reads the request correlation id emitted by {@link RequestLoggingFilter}.
+     */
     private String requestId(jakarta.servlet.http.HttpServletRequest request) {
         Object requestId = request.getAttribute(RequestLoggingFilter.REQUEST_ID_ATTRIBUTE);
         return requestId == null ? "-" : requestId.toString();
     }
 
+    /**
+     * Reconstructs the request path used in structured security logs.
+     */
     private String buildPath(jakarta.servlet.http.HttpServletRequest request) {
         String query = request.getQueryString();
         return query == null ? request.getRequestURI() : request.getRequestURI() + "?" + query;
     }
 
+    /**
+     * Выполняет операции "authentication manager" в рамках бизнес-логики инфраструктуры.
+     * @param config входящее значение config, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Выполняет операции "password encoder" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Выполняет операции "cors configuration source" в рамках бизнес-логики инфраструктуры.
+     * @param allowedOrigins входящее значение allowed origins, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.allowed-origins}") String allowedOrigins) {

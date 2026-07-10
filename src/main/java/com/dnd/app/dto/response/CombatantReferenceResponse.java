@@ -8,10 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Minimal, safe identity of a single battle combatant for map-service to create a token-combat
- * link from. Deliberately excludes private character-sheet data. {@code widthCells}/{@code
- * heightCells} default to a 1x1 footprint — token sizing is a spatial concern owned by
- * map-service, core BE only states the default.
+ * Класс CombatantReferenceResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

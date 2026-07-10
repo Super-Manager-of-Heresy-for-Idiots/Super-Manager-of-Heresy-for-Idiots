@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт EquipmentItemRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface EquipmentItemRepository extends JpaRepository<EquipmentItem, UUID> {
 
     List<EquipmentItem> findAllByHomebrewIsNull();

@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin edit of a feature DAMAGE rule (dice / flat formulas + damage type + attack/save gating). */
+/**
+ * Класс DamageRuleEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

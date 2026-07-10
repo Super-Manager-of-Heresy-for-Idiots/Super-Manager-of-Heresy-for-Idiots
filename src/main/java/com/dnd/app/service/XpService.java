@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Класс XpService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,13 @@ public class XpService {
     private final UserRepository userRepository;
     private final WebSocketEventService webSocketEventService;
 
+    /**
+     * Выполняет операции "distribute xp" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public Map<String, Object> distributeXp(UUID campaignId, DistributeXpRequest request, String username) {
         User user = userRepository.findByUsername(username)

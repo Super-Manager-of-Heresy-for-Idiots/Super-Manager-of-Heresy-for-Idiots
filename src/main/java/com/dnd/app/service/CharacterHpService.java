@@ -17,14 +17,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The single primitive for changing a character's hit points. Every write path — attacks, item use,
- * GM adjustments, feature resolution and rest — must go through here so temp-HP absorption, the
- * pessimistic write lock, live combat-tracker mirroring and the {@code HP_CHANGED} broadcast happen
- * exactly once and identically. Extracted from {@code BattleService.applyDamageOrHeal} so the
- * feature-rules runtime shares the same accounting instead of writing {@code current_hp} directly.
- *
- * <p>Lock order: callers that already hold combat locks acquire them as battle → combatant → this
- * character lock, so joining an existing transaction here cannot invert the order.</p>
+ * Класс CharacterHpService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -37,12 +31,12 @@ public class CharacterHpService {
     private final GameplayEventService gameplayEventService;
 
     /**
-     * Applies a signed HP {@code delta} to a character (negative damages, positive heals). Temp HP
-     * absorbs damage first; healing is capped at max HP. The character is loaded under a pessimistic
-     * write lock so simultaneous changes accumulate. Every active combat tracker for the character is
-     * mirrored, an {@code HP_CHANGED} event is broadcast (skipped when {@code campaignId} is null),
-     * and dropping to 0 publishes an {@code hp_reached_zero} gameplay event (a hook for death/
-     * concentration; a no-op unless the triggers subsystem is enabled).
+     * Выполняет операции "apply delta" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param delta входящее значение delta, используемое бизнес-сценарием
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public HpChangeResult applyDelta(UUID characterId, int delta, UUID campaignId, UUID actorUserId) {
@@ -72,9 +66,13 @@ public class CharacterHpService {
     }
 
     /**
-     * Convenience for damage that carries a type. Resistance/vulnerability is not yet applied here —
-     * that is wired in when the modifier aggregator lands ({@code ModifierAggregator}); for now this
-     * clamps to non-negative and applies it as a delta so callers can already thread a damage type.
+     * Выполняет операции "apply damage" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param amount входящее значение amount, используемое бизнес-сценарием
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public HpChangeResult applyDamage(UUID characterId, int amount, UUID damageTypeId,
@@ -83,9 +81,12 @@ public class CharacterHpService {
     }
 
     /**
-     * Grants temporary HP (does not stack — the larger pool wins). Temp HP lives only on the sheet,
-     * so combat trackers (which store current/max only) are not mirrored, but an {@code HP_CHANGED}
-     * event is still broadcast so views refresh.
+     * Выполняет операции "apply temp hp" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param amount входящее значение amount, используемое бизнес-сценарием
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public HpChangeResult applyTempHp(UUID characterId, int amount, UUID campaignId, UUID actorUserId) {
@@ -104,9 +105,11 @@ public class CharacterHpService {
     }
 
     /**
-     * Restores a character to full HP and clears temporary HP — the HP half of a long rest. Uses the
-     * same lock, tracker mirroring and broadcast as {@link #applyDelta}. When max HP is unknown the
-     * current value is left as the ceiling so healing is never negative.
+     * Выполняет операции "restore to full" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public HpChangeResult restoreToFull(UUID characterId, UUID campaignId, UUID actorUserId) {

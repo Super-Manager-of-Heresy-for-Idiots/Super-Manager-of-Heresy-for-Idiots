@@ -16,6 +16,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс XpController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/xp")
 @RequiredArgsConstructor
@@ -25,6 +29,13 @@ public class XpController {
     private final XpService xpService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Выполняет операции "distribute xp" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Distribute XP to characters (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Map<String, Object>>>> distributeXp(

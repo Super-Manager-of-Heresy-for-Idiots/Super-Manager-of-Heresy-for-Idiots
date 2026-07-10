@@ -17,11 +17,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Character creation request against the NEW content model. All content references
- * resolve to the normalized tables: {@code classId} -> character_class,
- * {@code chosenSkillIds} -> skill, {@code backgroundId} -> background,
- * {@code cantripIds}/{@code spellIds} -> spell, {@code startingCoins} -> currency.
- * Created characters store these new content IDs (see Phase 5 storage decision).
+ * Класс CreateContentCharacterRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

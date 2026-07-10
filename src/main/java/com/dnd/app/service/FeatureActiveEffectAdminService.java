@@ -29,7 +29,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin CRUD for an ACTIVE_EFFECT rule: the effect definition plus its modifiers and end conditions. */
+/**
+ * Класс FeatureActiveEffectAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureActiveEffectAdminService {
@@ -44,6 +47,10 @@ public class FeatureActiveEffectAdminService {
     private final TriggerEventTypeRepository triggerEventTypeRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Выполняет операции "metadata" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public EffectMetadataResponse metadata() {
         return EffectMetadataResponse.builder()
@@ -73,11 +80,22 @@ public class FeatureActiveEffectAdminService {
         return v != null ? v : 0;
     }
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ActiveEffectAdminResponse get(UUID ruleId) {
         return definitionRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toResponse).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ActiveEffectAdminResponse upsert(UUID ruleId, ActiveEffectEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

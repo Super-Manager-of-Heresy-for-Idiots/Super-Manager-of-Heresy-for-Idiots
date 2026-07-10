@@ -11,6 +11,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт MonsterRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface MonsterRepository extends JpaRepository<Monster, UUID> {
 
     Optional<Monster> findBySlug(String slug);

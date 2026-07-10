@@ -20,6 +20,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс CampaignBlueprintController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaign-blueprints")
 @RequiredArgsConstructor
@@ -32,6 +36,12 @@ public class CampaignBlueprintController {
 
     // ============================ Authoring ============================
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my")
     @Operation(summary = "Создать шаблон кампании (мастер игры/админ)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> create(
@@ -43,6 +53,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list mine" в рамках бизнес-логики API.
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my")
     @Operation(summary = "Список моих шаблонов кампаний (постранично)")
     public CompletableFuture<ResponseEntity<ApiResponse<Page<CampaignBlueprintResponse>>>> listMine(
@@ -53,6 +69,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get mine" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my/{id}")
     @Operation(summary = "Получить мой шаблон кампании")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> getMine(
@@ -63,6 +85,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/my/{id}")
     @Operation(summary = "Обновить шаблон кампании (только черновик)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> update(
@@ -74,6 +103,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}")
     @Operation(summary = "Удалить шаблон кампании (мягкое удаление)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> delete(
@@ -84,6 +119,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Публикует событие операции "publish" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/publish")
     @Operation(summary = "Опубликовать шаблон кампании")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> publish(
@@ -94,6 +135,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "unpublish" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/unpublish")
     @Operation(summary = "Снять шаблон с публикации")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> unpublish(
@@ -106,6 +153,13 @@ public class CampaignBlueprintController {
 
     // ============================ NPCs ============================
 
+    /**
+     * Создает результат операции "create npc" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/npcs")
     @Operation(summary = "Добавить NPC в шаблон")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> createNpc(
@@ -116,6 +170,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list npcs" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my/{id}/npcs")
     @Operation(summary = "Список NPC шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<List<NpcResponse>>>> listNpcs(
@@ -125,6 +185,14 @@ public class CampaignBlueprintController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update npc" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/my/{id}/npcs/{npcId}")
     @Operation(summary = "Обновить NPC шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<NpcResponse>>> updateNpc(
@@ -136,6 +204,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete npc" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/npcs/{npcId}")
     @Operation(summary = "Удалить NPC шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNpc(
@@ -148,6 +223,13 @@ public class CampaignBlueprintController {
 
     // ============================ Quests ============================
 
+    /**
+     * Создает результат операции "create quest" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/quests")
     @Operation(summary = "Добавить квест в шаблон")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestResponse>>> createQuest(
@@ -158,6 +240,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list quests" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my/{id}/quests")
     @Operation(summary = "Список квестов шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<List<QuestResponse>>>> listQuests(
@@ -167,6 +255,14 @@ public class CampaignBlueprintController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update quest" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/my/{id}/quests/{questId}")
     @Operation(summary = "Обновить квест шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestResponse>>> updateQuest(
@@ -178,6 +274,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete quest" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/quests/{questId}")
     @Operation(summary = "Удалить квест шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteQuest(
@@ -188,6 +291,14 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add reward" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/quests/{questId}/rewards")
     @Operation(summary = "Добавить награду к квесту шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestRewardResponse>>> addReward(
@@ -199,6 +310,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list rewards" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my/{id}/quests/{questId}/rewards")
     @Operation(summary = "Список наград квеста шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<List<QuestRewardResponse>>>> listRewards(
@@ -208,6 +326,14 @@ public class CampaignBlueprintController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete reward" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param rewardId идентификатор reward, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/quests/{questId}/rewards/{rewardId}")
     @Operation(summary = "Удалить награду квеста шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteReward(
@@ -220,6 +346,13 @@ public class CampaignBlueprintController {
 
     // ============================ Locations ============================
 
+    /**
+     * Создает результат операции "create location" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/locations")
     @Operation(summary = "Добавить локацию в шаблон")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> createLocation(
@@ -230,6 +363,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list locations" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/my/{id}/locations")
     @Operation(summary = "Список локаций шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<List<LocationResponse>>>> listLocations(
@@ -239,6 +378,14 @@ public class CampaignBlueprintController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update location" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/my/{id}/locations/{locationId}")
     @Operation(summary = "Обновить локацию шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> updateLocation(
@@ -250,6 +397,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete location" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/locations/{locationId}")
     @Operation(summary = "Удалить локацию шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteLocation(
@@ -262,6 +416,13 @@ public class CampaignBlueprintController {
 
     // ============================ Homebrew ============================
 
+    /**
+     * Выполняет операции "attach homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/homebrew")
     @Operation(summary = "Подключить homebrew-пакет к шаблону")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> attachHomebrew(
@@ -273,6 +434,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "detach homebrew" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/homebrew/{packageId}")
     @Operation(summary = "Отключить homebrew-пакет от шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> detachHomebrew(
@@ -285,6 +453,13 @@ public class CampaignBlueprintController {
 
     // ============================ Pre-built characters ============================
 
+    /**
+     * Выполняет операции "link character" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/my/{id}/characters/{characterId}")
     @Operation(summary = "Привязать персонажа-пребилд к шаблону")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> linkCharacter(
@@ -296,6 +471,13 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "unlink character" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/my/{id}/characters/{characterId}")
     @Operation(summary = "Отвязать персонажа-пребилд от шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> unlinkCharacter(
@@ -308,6 +490,16 @@ public class CampaignBlueprintController {
 
     // ============================ Marketplace ============================
 
+    /**
+     * Выполняет операции "browse marketplace" в рамках бизнес-логики API.
+     * @param search входящее значение search, используемое бизнес-сценарием
+     * @param universe входящее значение universe, используемое бизнес-сценарием
+     * @param sort входящее значение sort, используемое бизнес-сценарием
+     * @param page входящее значение page, используемое бизнес-сценарием
+     * @param size входящее значение size, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/marketplace")
     @Operation(summary = "Каталог опубликованных шаблонов (доступно всем)")
     public CompletableFuture<ResponseEntity<ApiResponse<Page<CampaignBlueprintResponse>>>> browseMarketplace(
@@ -324,6 +516,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get marketplace blueprint" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/marketplace/{id}")
     @Operation(summary = "Детали опубликованного шаблона (доступно всем)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> getMarketplaceBlueprint(
@@ -334,6 +532,12 @@ public class CampaignBlueprintController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "fork" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/marketplace/{id}/fork")
     @Operation(summary = "Форкнуть опубликованный шаблон (мастер игры/админ)")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignBlueprintDetailResponse>>> fork(
@@ -347,6 +551,13 @@ public class CampaignBlueprintController {
 
     // ============================ Instantiate ============================
 
+    /**
+     * Выполняет операции "instantiate" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{id}/instantiate")
     @Operation(summary = "Создать кампанию из шаблона")
     public CompletableFuture<ResponseEntity<ApiResponse<CampaignResponse>>> instantiate(

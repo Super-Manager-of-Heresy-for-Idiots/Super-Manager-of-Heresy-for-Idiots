@@ -21,7 +21,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin CRUD for a feature ACTION_COST rule (Rule Workbench action-cost editor). */
+/**
+ * Класс FeatureActionCostAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureActionCostAdminService {
@@ -31,6 +34,10 @@ public class FeatureActionCostAdminService {
     private final ActionTypeRepository actionTypeRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает список для операции "list action types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ActionTypeOption> listActionTypes() {
         return actionTypeRepository.findAll().stream()
@@ -39,11 +46,22 @@ public class FeatureActionCostAdminService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ActionCostAdminResponse get(UUID ruleId) {
         return actionCostRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toResponse).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ActionCostAdminResponse upsert(UUID ruleId, ActionCostEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Structured damage output of a feature (dice + flat via formula, type, attack/save gating). */
+/**
+ * Класс FeatureDamageRule описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_damage_rule")
 @Getter

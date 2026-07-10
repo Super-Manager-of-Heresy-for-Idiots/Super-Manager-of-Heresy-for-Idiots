@@ -20,9 +20,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Checks whether a bestiary monster is an eligible form for a feature: creature type and max CR (via
- * formula) are enforced; size/movement/source filters are advisory for now (documented). Used by Wild
- * Shape-like transformations and known-form learning.
+ * Класс FeatureMonsterEligibilityService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -33,6 +32,13 @@ public class FeatureMonsterEligibilityService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
 
+    /**
+     * Выполняет операции "check" в рамках бизнес-логики домена.
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param filter входящее значение filter, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MonsterEligibilityResult check(UUID monsterId, FeatureAllowedMonsterFilter filter, FormulaContext ctx) {
         Monster monster = monsterRepository.findById(monsterId).orElse(null);
@@ -47,7 +53,15 @@ public class FeatureMonsterEligibilityService {
         return decide(monsterId, typeCodes, monster.getCrValue(), filter, maxCr);
     }
 
-    /** Pure eligibility decision (no DB), so it can be unit-tested with plain data. */
+    /**
+     * Выполняет операции "decide" в рамках бизнес-логики домена.
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param creatureTypeCodes входящее значение creature type codes, используемое бизнес-сценарием
+     * @param crValue входящее значение cr value, используемое бизнес-сценарием
+     * @param filter входящее значение filter, используемое бизнес-сценарием
+     * @param maxCr входящее значение max cr, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public MonsterEligibilityResult decide(UUID monsterId, Set<String> creatureTypeCodes, BigDecimal crValue,
                                            FeatureAllowedMonsterFilter filter, Integer maxCr) {
         if (filter == null) {

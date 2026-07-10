@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * SPELL grant — grants fixed spells or a filtered choice. Reference-only:
- * spells are never created inline here.
+ * Класс SpellGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

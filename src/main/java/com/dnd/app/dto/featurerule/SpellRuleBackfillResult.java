@@ -6,10 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Outcome of the spell → feature-rules backfill (S2 absorption), per source aspect. The reconciliation
- * invariant of every pass is {@code sourceSpells == rulesCreated + skippedExisting}: each spell whose
- * legacy columns carry usable data of that kind ends up with exactly one MIGRATION-sourced rule of the
- * matching type (created now, or already present from an earlier run).
+ * Класс SpellRuleBackfillResult описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

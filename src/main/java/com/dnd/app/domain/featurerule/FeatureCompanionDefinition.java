@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Rule-authored definition for companions/summons before character-specific instances are created. */
+/**
+ * Класс FeatureCompanionDefinition описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_companion_definition")
 @Getter

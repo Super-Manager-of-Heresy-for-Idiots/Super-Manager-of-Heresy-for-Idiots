@@ -11,9 +11,8 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Feature-runtime cleanup (Stage 13): expire due active effects, expire pending prompts, and end stale
- * transformations. Idempotent and safe to run repeatedly; can be triggered from admin or wired to a
- * scheduler later. Does nothing meaningful until the runtime is used, so it is inert by default.
+ * Класс FeatureRuntimeMaintenanceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -23,6 +22,10 @@ public class FeatureRuntimeMaintenanceService {
     private final PendingGameplayPromptService pendingGameplayPromptService;
     private final CharacterTransformationRepository transformationRepository;
 
+    /**
+     * Выполняет операции "run cleanup" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureMaintenanceResult runCleanup() {
         int effects = effectExpirationService.expireDue();

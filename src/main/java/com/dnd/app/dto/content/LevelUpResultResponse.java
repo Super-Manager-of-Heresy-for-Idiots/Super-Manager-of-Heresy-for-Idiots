@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Final level-up result (new content model). Reports derived changes, the grants
- * that were applied deterministically, and any manual action items the player must
- * complete on their sheet (non-deterministic/custom grants are not auto-applied).
+ * Класс LevelUpResultResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

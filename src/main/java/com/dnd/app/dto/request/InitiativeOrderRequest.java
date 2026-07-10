@@ -11,9 +11,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Full replacement of the initiative values for a battle (GM quick tool, Phase 1.7). Every combatant
- * in the battle must be listed exactly once; the server sets each initiative, re-sorts the tracker
- * and keeps the turn anchored on whoever is currently acting.
+ * Класс InitiativeOrderRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @NoArgsConstructor

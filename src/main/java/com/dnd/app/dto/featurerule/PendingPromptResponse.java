@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A durable pending gameplay prompt (optional trigger/reaction awaiting a decision). */
+/**
+ * Класс PendingPromptResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

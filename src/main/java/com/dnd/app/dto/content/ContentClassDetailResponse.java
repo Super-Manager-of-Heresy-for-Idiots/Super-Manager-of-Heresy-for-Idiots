@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single class in the new content model. Carries
- * mechanics + features + the full reward-group graph. Returned by reference and
- * authoring endpoints (the latter wraps it in a save result).
+ * Класс ContentClassDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

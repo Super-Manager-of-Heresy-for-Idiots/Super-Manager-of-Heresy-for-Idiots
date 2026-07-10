@@ -8,9 +8,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * An immutable snapshot of a {@link FeatureRule}. Editing produces new revisions; approval promotes
- * exactly one revision to be the rule's {@code approved_revision_id}. The runtime only ever executes
- * the approved revision, so a draft/needs_review revision can be prepared without touching gameplay.
+ * Класс FeatureRuleRevision описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "feature_rule_revision")

@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A single stat modifier an effect applies (ac_bonus, resistance, advantage, temp_hp, …). */
+/**
+ * Класс FeatureEffectModifier описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_effect_modifier")
 @Getter

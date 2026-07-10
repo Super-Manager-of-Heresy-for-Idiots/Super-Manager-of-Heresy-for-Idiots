@@ -27,8 +27,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Known forms, Wild Shape-like transformations, companions, and the tactical snapshot for a character
- * (Stage 10). All flag-gated (no data unless {@code app.feature-rules.forms}). Access = owner/GM/ADMIN.
+ * Класс CharacterFormController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/characters/{characterId}/features")
@@ -43,6 +43,12 @@ public class CharacterFormController {
 
     // ── Known forms ─────────────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "forms" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/forms")
     @Operation(summary = "List a character's known monster forms")
     public CompletableFuture<ResponseEntity<ApiResponse<List<KnownFormResponse>>>> forms(
@@ -54,6 +60,15 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "learn form" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/forms")
     @Operation(summary = "Learn a monster form (checked against the feature's eligibility filter)")
     public CompletableFuture<ResponseEntity<ApiResponse<KnownFormResponse>>> learnForm(
@@ -68,6 +83,13 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "approve form" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param formId идентификатор form, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/forms/{formId}/approve")
     @Operation(summary = "GM: approve a known form")
     public CompletableFuture<ResponseEntity<ApiResponse<KnownFormResponse>>> approveForm(
@@ -81,6 +103,12 @@ public class CharacterFormController {
 
     // ── Transformation ──────────────────────────────────────────────────────
 
+    /**
+     * Выполняет операции "current transformation" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/transformation")
     @Operation(summary = "Get the character's current transformation (if any)")
     public CompletableFuture<ResponseEntity<ApiResponse<TransformationResponse>>> currentTransformation(
@@ -92,6 +120,14 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "transform" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/transformation")
     @Operation(summary = "Transform into a monster form")
     public CompletableFuture<ResponseEntity<ApiResponse<TransformationResponse>>> transform(
@@ -105,6 +141,12 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "end transformation" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/transformation/end")
     @Operation(summary = "End the character's active transformation")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> endTransformation(
@@ -119,6 +161,20 @@ public class CharacterFormController {
 
     // ── Companions & tactical snapshot ──────────────────────────────────────
 
+    /**
+     * Создает результат операции "create companion" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @param name входящее значение name, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Выполняет операции "companions" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/companions")
     @Operation(summary = "List a character's feature companions")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CompanionResponse>>>> companions(
@@ -130,6 +186,15 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create companion" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param sourceFeatureId идентификатор source feature, используемый для выбора нужного бизнес-объекта
+     * @param name входящее значение name, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/companions")
     @Operation(summary = "Create a feature companion")
     public CompletableFuture<ResponseEntity<ApiResponse<CompanionResponse>>> createCompanion(
@@ -144,6 +209,13 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "dismiss companion" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param companionId идентификатор companion, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/companions/{companionId}/dismiss")
     @Operation(summary = "Dismiss a feature companion")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> dismissCompanion(
@@ -156,6 +228,12 @@ public class CharacterFormController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "tactical snapshot" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/tactical-snapshot")
     @Operation(summary = "Tactical projection (active transformation + companions) for the frontend/map-service")
     public CompletableFuture<ResponseEntity<ApiResponse<TacticalSnapshot>>> tacticalSnapshot(

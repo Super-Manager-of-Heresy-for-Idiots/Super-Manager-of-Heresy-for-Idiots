@@ -17,7 +17,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-/** Resolves which base-class features a character has, and their approved+enabled feature rules. */
+/**
+ * Класс CharacterFeatureResolver описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class CharacterFeatureResolver {
@@ -29,7 +32,11 @@ public class CharacterFeatureResolver {
     private final ClassFeatureRepository classFeatureRepository;
     private final FeatureRuleRepository ruleRepository;
 
-    /** All base-class (subclass == null) features the character has, i.e. feature level ≤ its class level. */
+    /**
+     * Выполняет операции "known base class features" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ClassFeature> knownBaseClassFeatures(UUID characterId) {
         List<ClassFeature> out = new ArrayList<>();
@@ -42,13 +49,22 @@ public class CharacterFeatureResolver {
         return out;
     }
 
-    /** Approved, enabled, runtime-eligible rules (with an approved revision) for the given features. */
+    /**
+     * Выполняет операции "approved enabled rules" в рамках бизнес-логики домена.
+     * @param featureIds входящее значение feature ids, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRule> approvedEnabledRules(Collection<UUID> featureIds) {
         return approvedEnabledRules(FeatureRuleOwnerType.CLASS_FEATURE, featureIds);
     }
 
-    /** Same runtime-eligibility filter for any rule owner (class feature, background, feat, spell). */
+    /**
+     * Выполняет операции "approved enabled rules" в рамках бизнес-логики домена.
+     * @param ownerType входящее значение owner type, используемое бизнес-сценарием
+     * @param ownerIds входящее значение owner ids, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatureRule> approvedEnabledRules(FeatureRuleOwnerType ownerType, Collection<UUID> ownerIds) {
         if (ownerIds.isEmpty()) {

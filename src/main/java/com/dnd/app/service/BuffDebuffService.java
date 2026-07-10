@@ -20,6 +20,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Класс BuffDebuffService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,12 @@ public class BuffDebuffService {
     private final EnchantmentTypeRepository enchantmentTypeRepository;
     private final StatTypeRepository statTypeRepository;
 
+    /**
+     * Находит результат операции "find all" в рамках бизнес-логики домена.
+     * @param isBuff входящее значение is buff, используемое бизнес-сценарием
+     * @param effectType входящее значение effect type, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BuffDebuffResponse> findAll(Boolean isBuff, String effectType) {
         List<BuffDebuff> results;
@@ -49,6 +59,11 @@ public class BuffDebuffService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Находит результат операции "find by id" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public BuffDebuffResponse findById(UUID id) {
         BuffDebuff buffDebuff = buffDebuffRepository.findById(id)
@@ -56,6 +71,11 @@ public class BuffDebuffService {
         return toResponse(buffDebuff);
     }
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BuffDebuffResponse create(CreateBuffDebuffRequest request) {
         validateRequest(request, null);
@@ -68,6 +88,12 @@ public class BuffDebuffService {
         return toResponse(saved);
     }
 
+    /**
+     * Обновляет результат операции "update" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BuffDebuffResponse update(UUID id, CreateBuffDebuffRequest request) {
         BuffDebuff buffDebuff = buffDebuffRepository.findById(id)
@@ -82,6 +108,10 @@ public class BuffDebuffService {
         return toResponse(saved);
     }
 
+    /**
+     * Удаляет результат операции "delete" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void delete(UUID id) {
         if (!buffDebuffRepository.existsById(id)) {

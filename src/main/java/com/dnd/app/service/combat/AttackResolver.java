@@ -4,10 +4,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Resolves a single attack roll against a target's armor class. A natural 20 always crits, a
- * natural 1 always misses; otherwise the attack hits when {@code d20 + attackBonus} reaches the
- * target's AC. Pure and side-effect free so the rules can be unit-tested in isolation — the dice
- * themselves are rolled by {@link DiceRoller}.
+ * Класс AttackResolver описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class AttackResolver {
 
@@ -23,15 +21,26 @@ public final class AttackResolver {
     private AttackResolver() {
     }
 
+    /**
+     * Перечисление Outcome описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     */
     public enum Outcome {
         HIT, MISS, CRIT;
 
+        /**
+         * Выполняет операции "deals damage" в рамках бизнес-логики боя.
+         * @return результат выполнения бизнес-операции
+         */
         public boolean dealsDamage() {
             return this != MISS;
         }
     }
 
-    /** Outcome of a saving throw vs a difficulty class. */
+    /**
+     * Перечисление SaveOutcome описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     */
     public enum SaveOutcome {
         /** Target failed the save: full effect/damage. */
         FAIL,
@@ -39,7 +48,13 @@ public final class AttackResolver {
         SUCCESS
     }
 
-    /** Outcome of a d20 attack vs the target's AC. */
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики боя.
+     * @param d20 входящее значение d20, используемое бизнес-сценарием
+     * @param attackBonus входящее значение attack bonus, используемое бизнес-сценарием
+     * @param targetAc входящее значение target ac, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Outcome resolve(int d20, int attackBonus, int targetAc) {
         if (d20 >= 20) {
             return Outcome.CRIT;
@@ -51,8 +66,11 @@ public final class AttackResolver {
     }
 
     /**
-     * Resolves a target's saving throw: {@code d20 + saveBonus} reaching the {@code saveDc} is a
-     * success, otherwise a failure. A natural 1 always fails and a natural 20 always succeeds.
+     * Выполняет операции "resolve save" в рамках бизнес-логики боя.
+     * @param d20 входящее значение d20, используемое бизнес-сценарием
+     * @param saveBonus входящее значение save bonus, используемое бизнес-сценарием
+     * @param saveDc входящее значение save dc, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static SaveOutcome resolveSave(int d20, int saveBonus, int saveDc) {
         if (d20 >= 20) {
@@ -64,7 +82,11 @@ public final class AttackResolver {
         return (d20 + saveBonus >= saveDc) ? SaveOutcome.SUCCESS : SaveOutcome.FAIL;
     }
 
-    /** Parses a signed attack bonus such as "+5", "5" or "-1"; unparseable/blank → 0. */
+    /**
+     * Выполняет операции "parse attack bonus" в рамках бизнес-логики боя.
+     * @param bonus входящее значение bonus, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static int parseAttackBonus(String bonus) {
         if (bonus == null || bonus.isBlank()) {
             return 0;
@@ -78,11 +100,9 @@ public final class AttackResolver {
     }
 
     /**
-     * Extracts a damage expression from a monster attack's free-text description, where weapon
-     * damage is authored inline rather than in structured rows, e.g.
-     * {@code "Попадание : 5 ( 1к4 + 3 ) колющего урона"} → {@code "1к4 + 3"}, or a flat
-     * {@code "Попадание : 1 дробящего урона"} → {@code "1"}. Anchors on the hit clause to avoid
-     * grabbing the to-hit bonus or reach. Returns {@code null} when no damage is present.
+     * Выполняет операции "extract damage expression" в рамках бизнес-логики боя.
+     * @param description входящее значение description, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static String extractDamageExpression(String description) {
         if (description == null || description.isBlank()) {

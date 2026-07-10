@@ -20,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+/**
+ * Класс CampaignContentService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,13 @@ public class CampaignContentService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
 
+    /**
+     * Выполняет операции "activate homebrew" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignHomebrewResponse activateHomebrew(UUID campaignId, ActivateHomebrewRequest request, String username) {
         Campaign campaign = campaignService.findCampaign(campaignId);
@@ -64,6 +75,12 @@ public class CampaignContentService {
         return buildResponse(pkg, null);
     }
 
+    /**
+     * Выполняет операции "deactivate homebrew" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deactivateHomebrew(UUID campaignId, UUID packageId, String username) {
         Campaign campaign = campaignService.findCampaign(campaignId);
@@ -78,6 +95,14 @@ public class CampaignContentService {
         log.info("Homebrew deactivated: packageId={}, campaignId={}, by user={}", packageId, campaignId, username);
     }
 
+    /**
+     * Обновляет результат операции "update pinned version" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignHomebrewResponse updatePinnedVersion(UUID campaignId, UUID packageId,
                                                          UpdatePinnedVersionRequest request, String username) {
@@ -105,6 +130,12 @@ public class CampaignContentService {
         return buildResponse(pkg, request.getPinnedVersion());
     }
 
+    /**
+     * Возвращает список для операции "list active homebrew" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CampaignHomebrewResponse> listActiveHomebrew(UUID campaignId, String username) {
         Campaign campaign = campaignService.findCampaign(campaignId);
@@ -118,6 +149,12 @@ public class CampaignContentService {
         }).toList();
     }
 
+    /**
+     * Возвращает результат операции "get available content" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CampaignAvailableContentResponse getAvailableContent(UUID campaignId, String username) {
         Campaign campaign = campaignService.findCampaign(campaignId);
@@ -196,6 +233,12 @@ public class CampaignContentService {
                 .build();
     }
 
+    /**
+     * Проверяет условие операции "is class available in campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isClassAvailableInCampaign(UUID campaignId, UUID classId) {
         ContentCharacterClass cc = classRepository.findById(classId).orElse(null);
         if (cc == null) return false;

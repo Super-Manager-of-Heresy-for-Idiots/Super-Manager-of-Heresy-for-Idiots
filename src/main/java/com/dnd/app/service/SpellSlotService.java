@@ -27,14 +27,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Spell slot consumption for a character. The maximum slots per spell level are derived
- * on demand from the class progression tables (never stored); only what the character has
- * spent is persisted in {@code character_spell_slot_usage}. Supports spending a slot and
- * restoring all / half of the expended slots (long rest / partial recovery).
- *
- * <p>Multiclass note: maxima are summed naively per spell level across the character's
- * caster classes. This is exact for single-class casters (the common case) and an
- * approximation for multiclass spellcasters, which use the combined caster-level table.</p>
+ * Класс SpellSlotService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -54,7 +48,11 @@ public class SpellSlotService {
      */
     public static final String SHARED_POOL_KEY_FORMAT = "spell_slot_L%d";
 
-    /** The reserved {@code shared_pool_key} for the given slot level (see {@link #SHARED_POOL_KEY_FORMAT}). */
+    /**
+     * Выполняет операции "shared pool key" в рамках бизнес-логики домена.
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static String sharedPoolKey(int spellLevel) {
         return String.format(SHARED_POOL_KEY_FORMAT, spellLevel);
     }
@@ -66,12 +64,25 @@ public class SpellSlotService {
     private final CharacterSpellSlotUsageRepository usageRepository;
     private final CampaignService campaignService;
 
+    /**
+     * Возвращает результат операции "get slots" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpellSlotsResponse getSlots(UUID characterId, String username) {
         loadAndAuthorize(characterId, username, false);
         return buildResponse(characterId);
     }
 
+    /**
+     * Выполняет операции "expend" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellSlotsResponse expend(UUID characterId, String username, int spellLevel) {
         loadAndAuthorize(characterId, username, true);
@@ -80,8 +91,10 @@ public class SpellSlotService {
     }
 
     /**
-     * Spend one slot on behalf of an already-authorized flow (the feature-rules cast path, which does
-     * its own owner/GM access check on the caster). Same availability rules as {@link #expend}.
+     * Выполняет операции "expend internal" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public SpellSlotsResponse expendInternal(UUID characterId, int spellLevel) {
@@ -109,6 +122,12 @@ public class SpellSlotService {
         usageRepository.save(usage);
     }
 
+    /**
+     * Выполняет операции "restore all" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellSlotsResponse restoreAll(UUID characterId, String username) {
         loadAndAuthorize(characterId, username, true);
@@ -122,8 +141,11 @@ public class SpellSlotService {
     }
 
     /**
-     * Restore one expended slot of the given level (GM granular adjust / partial recovery). No-op
-     * when nothing of that level is spent. Owner/GM/ADMIN, same authorization as spending.
+     * Выполняет операции "restore one" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param spellLevel входящее значение spell level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public SpellSlotsResponse restoreOne(UUID characterId, String username, int spellLevel) {
@@ -140,6 +162,12 @@ public class SpellSlotService {
         return buildResponse(characterId);
     }
 
+    /**
+     * Выполняет операции "restore half" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellSlotsResponse restoreHalf(UUID characterId, String username) {
         loadAndAuthorize(characterId, username, true);

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A reward group attached to a class at a given class level. AUTO groups grant
- * directly via {@code grants}; CHOICE groups present {@code options}.
+ * Класс RewardGroupDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

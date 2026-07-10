@@ -8,9 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Result of a resolved attack on the tracker: the roll breakdown, the outcome and the target's
- * HP after damage. {@link #battle} carries the fresh authoritative state so the client can sync
- * its cache without an extra round-trip (WebSocket fan-out still notifies the other participants).
+ * Класс BattleActionResultResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

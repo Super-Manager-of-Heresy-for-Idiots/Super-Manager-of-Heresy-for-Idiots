@@ -6,9 +6,8 @@ import lombok.*;
 import java.util.UUID;
 
 /**
- * Tracks how many spell slots a character has SPENT at a given spell level. The maximum
- * number of slots is always derived from class progression and never stored here; this
- * table holds only consumption so that available = derivedMax - expendedCount.
+ * Класс CharacterSpellSlotUsage описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "character_spell_slot_usage")

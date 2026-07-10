@@ -8,6 +8,10 @@ import org.hibernate.annotations.NotFoundAction;
 
 import java.util.UUID;
 
+/**
+ * Класс ItemType описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "item_types")
 @Getter

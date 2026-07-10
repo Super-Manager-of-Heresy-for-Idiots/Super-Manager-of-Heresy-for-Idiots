@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Service-to-service answer to "what may this user do in this campaign?".
- * Consumed by map-service for campaign map and map asset authorization.
+ * Класс CampaignAccessResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

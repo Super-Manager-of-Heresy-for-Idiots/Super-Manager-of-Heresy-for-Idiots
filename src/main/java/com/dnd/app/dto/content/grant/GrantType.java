@@ -1,9 +1,8 @@
 package com.dnd.app.dto.content.grant;
 
 /**
- * Known reward grant types. The DB column {@code grant_type} is flexible text:
- * the app recognizes these known values and renders anything else as
- * {@link #CUSTOM_TEXT} (custom/manual).
+ * Перечисление GrantType описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum GrantType {
     FEATURE,
@@ -15,7 +14,11 @@ public enum GrantType {
     NUMERIC_MODIFIER,
     CUSTOM_TEXT;
 
-    /** Resolve a free-text grant type to a known value, defaulting to CUSTOM_TEXT. */
+    /**
+     * Выполняет операции "from text or custom" в рамках бизнес-логики передачи данных.
+     * @param raw входящее значение raw, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static GrantType fromTextOrCustom(String raw) {
         if (raw == null) {
             return CUSTOM_TEXT;

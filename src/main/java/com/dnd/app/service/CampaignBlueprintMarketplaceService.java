@@ -27,6 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashSet;
 import java.util.UUID;
 
+/**
+ * Класс CampaignBlueprintMarketplaceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,6 +56,16 @@ public class CampaignBlueprintMarketplaceService {
 
     // ============================ Marketplace read (PLAYER+) ============================
 
+    /**
+     * Выполняет операции "browse marketplace" в рамках бизнес-логики домена.
+     * @param search входящее значение search, используемое бизнес-сценарием
+     * @param universeSlug входящее значение universe slug, используемое бизнес-сценарием
+     * @param sort входящее значение sort, используемое бизнес-сценарием
+     * @param page входящее значение page, используемое бизнес-сценарием
+     * @param size входящее значение size, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<CampaignBlueprintResponse> browseMarketplace(String search, String universeSlug,
                                                              String sort, int page, int size, String username) {
@@ -75,6 +89,12 @@ public class CampaignBlueprintMarketplaceService {
         return blueprints.map(blueprintService::toResponse);
     }
 
+    /**
+     * Возвращает результат операции "get marketplace blueprint" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CampaignBlueprintDetailResponse getMarketplaceBlueprint(UUID id, String username) {
         blueprintService.getUser(username);
@@ -85,6 +105,12 @@ public class CampaignBlueprintMarketplaceService {
 
     // ============================ Fork (GM/ADMIN) ============================
 
+    /**
+     * Выполняет операции "fork" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignBlueprintDetailResponse fork(UUID id, String username) {
         User caller = blueprintService.getAuthoringUser(username);
@@ -188,6 +214,13 @@ public class CampaignBlueprintMarketplaceService {
 
     // ============================ Instantiate into a Campaign ============================
 
+    /**
+     * Выполняет операции "instantiate" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignResponse instantiate(UUID id, InstantiateBlueprintRequest request, String username) {
         User caller = blueprintService.getUser(username);

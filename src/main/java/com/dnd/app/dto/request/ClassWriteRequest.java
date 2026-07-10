@@ -24,10 +24,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Aggregate class-authoring request (create or update). One request describes the whole
- * class graph (mechanics + features + subclasses + reward groups → options → grants).
- * Children carry {@code id} (update existing) or {@code key} (create new; grants can
- * reference not-yet-saved features/subclasses by key). See class-authoring-contract.md.
+ * Класс ClassWriteRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

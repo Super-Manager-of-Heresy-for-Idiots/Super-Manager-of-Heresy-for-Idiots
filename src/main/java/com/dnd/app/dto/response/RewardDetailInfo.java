@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Расширенная информация о награде (контрактное поле RewardEntry.detail / AcquiredRewardSummary.detail).
- * Заполняется по типу награды; неиспользуемые поля не сериализуются (NON_NULL).
+ * Класс RewardDetailInfo описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

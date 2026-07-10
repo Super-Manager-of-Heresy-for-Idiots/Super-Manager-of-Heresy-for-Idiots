@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Reference row for a rest/reset window (short_rest, long_rest, dawn, …). Seeded in migration 066. */
+/**
+ * Класс RestType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "rest_type")
 @Getter

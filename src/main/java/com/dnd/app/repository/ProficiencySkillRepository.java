@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт ProficiencySkillRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface ProficiencySkillRepository extends JpaRepository<ProficiencySkill, UUID> {
 
     Optional<ProficiencySkill> findByName(String name);

@@ -24,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Admin editor for class resource templates ({@code custom_resource_types}) — the single, player-facing
- * resource system. URL-gated to ADMIN by {@code /api/admin/**}.
+ * Класс CustomResourceTypeAdminController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/admin/resource-types")
@@ -36,6 +36,10 @@ public class CustomResourceTypeAdminController {
     private final CustomResourceTypeAdminService service;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List vanilla class resource templates")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CustomResourceTypeAdminResponse>>>> list() {
@@ -43,6 +47,11 @@ public class CustomResourceTypeAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create a class resource template")
     public CompletableFuture<ResponseEntity<ApiResponse<CustomResourceTypeAdminResponse>>> create(
@@ -52,6 +61,12 @@ public class CustomResourceTypeAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update a class resource template (max / formula / class binding)")
     public CompletableFuture<ResponseEntity<ApiResponse<CustomResourceTypeAdminResponse>>> update(
@@ -61,6 +76,11 @@ public class CustomResourceTypeAdminController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a class resource template (also removes its per-character instances)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable UUID id) {

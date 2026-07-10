@@ -14,14 +14,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * The combatant whose turn it currently is strikes a target. The attacker rolls their own d20
- * (tabletop style, like the initiative join); the server resolves hit/crit against the target's
- * AC and rolls the named attack's damage.
- *
- * <p>Roll mode: for ADVANTAGE/DISADVANTAGE supply two manual dice ({@code d20A}/{@code d20B}) and
- * the server keeps the higher/lower; omit all dice to have the server roll virtually. The legacy
- * single {@code d20} is still accepted for NORMAL. {@code advantageReason} is a frontend-supplied
- * hint (e.g. high-ground) recorded as-is — it is NOT independently validated by core BE in this phase.
+ * Класс BattleAttackRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

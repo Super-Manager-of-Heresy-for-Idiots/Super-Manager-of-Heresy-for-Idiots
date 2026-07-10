@@ -19,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс CharacterResourceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,6 +36,12 @@ public class CharacterResourceService {
     private final CharacterFormulaContextFactory formulaContextFactory;
     private final FeatureFormulaService featureFormulaService;
 
+    /**
+     * Возвращает результат операции "get resources" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<ResourceResponse> getResources(UUID characterId, String username) {
         User user = getUser(username);
@@ -75,9 +85,9 @@ public class CharacterResourceService {
     }
 
     /**
-     * Ensures the character has the resources bound to the given feats (e.g. Luck Points from the Lucky
-     * feat), auto-provisioned when a feat is added — previously such resources had to be attached by hand
-     * because there was no character↔feat table. Idempotent: creates only the missing rows, starting full.
+     * Выполняет операции "provision feat resources" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param featIds входящее значение feat ids, используемое бизнес-сценарием
      */
     @Transactional
     public void provisionFeatResources(PlayerCharacter character, java.util.Collection<UUID> featIds) {
@@ -112,6 +122,13 @@ public class CharacterResourceService {
         return type.getMaxValue();
     }
 
+    /**
+     * Выполняет операции "modify resource" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ResourceResponse modifyResource(UUID characterId, ModifyResourceRequest request, String username) {
         User user = getUser(username);
@@ -141,6 +158,13 @@ public class CharacterResourceService {
         return toResponse(resource, ctx);
     }
 
+    /**
+     * Добавляет результат операции "add resource" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param resourceTypeId идентификатор resource type, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ResourceResponse addResource(UUID characterId, UUID resourceTypeId, String username) {
         User user = getUser(username);
@@ -170,9 +194,11 @@ public class CharacterResourceService {
     }
 
     /**
-     * Applies the given rest's recovery to every resource. Each resource declares an independent recovery mode
-     * for the short and the long rest ({@code none} | {@code full} | {@code formula}); {@code full} restores to
-     * the (formula-evaluated) max, {@code formula} adds a DSL-computed number of charges capped at the max.
+     * Выполняет операции "rest reset" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param restType входящее значение rest type, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public List<ResourceResponse> restReset(UUID characterId, String restType, String username) {

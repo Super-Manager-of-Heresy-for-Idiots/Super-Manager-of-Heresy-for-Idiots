@@ -7,7 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Audit entry for a single feature use (Stage 6). Superseded/augmented by the gameplay event bus in Stage 11. */
+/**
+ * Класс FeatureUseLog описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_use_log")
 @Getter

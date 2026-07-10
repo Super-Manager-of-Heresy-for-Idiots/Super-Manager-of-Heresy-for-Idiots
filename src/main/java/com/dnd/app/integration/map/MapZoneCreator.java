@@ -3,9 +3,8 @@ package com.dnd.app.integration.map;
 import java.util.UUID;
 
 /**
- * Core → map: materialize a lingering spell zone (Web etc., Phase 2.3) on the battle's live map
- * sessions. Best-effort like {@link MapSessionCloser}: the cast itself never depends on map-service
- * being up — a missing zone is a board-state gap the GM can recreate, not a failed cast.
+ * Контракт MapZoneCreator описывает интеграционный компонент, который связывает backend с внешним сервисом.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public interface MapZoneCreator {
 

@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin edit of an ACTIVE_EFFECT rule: the effect definition plus its modifiers and end conditions (replaced wholesale). */
+/**
+ * Класс ActiveEffectEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -27,9 +27,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Rest recovery for feature resources: preview what a short/long rest (or other reset window) would
- * restore, and apply it. Resources with a {@code reset_amount_formula} regain that many (capped at max);
- * otherwise a matching rest fully restores to max. Gated by {@code app.feature-rules.resources}.
+ * Класс RestFeatureRuntimeService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -45,11 +44,23 @@ public class RestFeatureRuntimeService {
     private final CharacterFormulaContextFactory contextFactory;
     private final EffectExpirationService effectExpirationService;
 
+    /**
+     * Выполняет операции "preview" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param restTypeCode входящее значение rest type code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<RestResourcePreview> preview(PlayerCharacter character, String restTypeCode) {
         return compute(character, restTypeCode, false);
     }
 
+    /**
+     * Выполняет операции "complete" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param restTypeCode входящее значение rest type code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<RestResourcePreview> complete(PlayerCharacter character, String restTypeCode) {
         List<RestResourcePreview> restored = compute(character, restTypeCode, true);

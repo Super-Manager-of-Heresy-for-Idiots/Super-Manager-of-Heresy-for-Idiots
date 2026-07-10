@@ -8,14 +8,13 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс CharacterSkillProficiency описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "character_skill_proficiencies",
         uniqueConstraints = @UniqueConstraint(columnNames = {"character_id", "skill_id"}))
-/**
- * Character proficiency table. {@code skill_id} references the content {@code skill}
- * (ContentSkill). The FK stays NO_CONSTRAINT until existing legacy rows are migrated by
- * {@link com.dnd.app.service.RuntimeDataMigrationService}; a real FK is added afterwards.
- */
 @Getter
 @Setter
 @NoArgsConstructor

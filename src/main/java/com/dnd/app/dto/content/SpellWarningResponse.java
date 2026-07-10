@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Admin review row for a spell flagged as needing manual resolution
- * ({@code is_warning = true}). Carries the current auto-derived values plus the
- * full description so an admin can confirm/correct them from the console.
+ * Класс SpellWarningResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

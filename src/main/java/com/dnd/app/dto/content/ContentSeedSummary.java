@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Result of an idempotent content backfill run.
+ * Класс ContentSeedSummary описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

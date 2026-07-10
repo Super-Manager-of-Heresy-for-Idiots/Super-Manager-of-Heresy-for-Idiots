@@ -8,9 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A concentration saving throw the player rolls (Phase 2.2). Omit {@code d20} to have the server roll
- * (AUTO); supply it (1–20) for a manual physical roll. The save bonus (Con) is computed server-side and
- * checked against the pending DC recorded when the character took damage.
+ * Класс ConcentrationCheckRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

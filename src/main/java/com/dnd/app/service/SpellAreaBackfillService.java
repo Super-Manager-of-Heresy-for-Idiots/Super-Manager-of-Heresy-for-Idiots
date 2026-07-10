@@ -13,15 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Parses each spell's RU description into the structured area/zone columns of changeset 091
- * (Phase 2.3): the AoE shape + size («сфера с радиусом 20 футов», «куб с длиной ребра 20 футов»,
- * «конус», «линия», «цилиндр») and the lingering-zone properties («труднопроходимая местность» →
- * DIFFICULT, «слабо/сильно заслоняет» → LIGHT/HEAVY). A zone marker also sets {@code zonePersists}.
- *
- * <p>Idempotent and non-destructive: a spell is only touched while ALL its area/zone columns are
- * still empty, so admin corrections are never overwritten and re-running on every boot is a no-op
- * after the first pass. Unparseable spells simply stay empty — nothing unreliable is guessed
- * (same philosophy as the 056–062 loaders' {@code is_warning}).</p>
+ * Класс SpellAreaBackfillService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -44,6 +37,10 @@ public class SpellAreaBackfillService {
     private record ShapeMatch(String shape, int sizeFt, int position) {
     }
 
+    /**
+     * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public int backfill() {
         List<Spell> spells = spellRepository.findAll();

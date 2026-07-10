@@ -17,7 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Read model for a character's active feature effects and their derived modifiers. */
+/**
+ * Класс ActiveEffectQueryService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class ActiveEffectQueryService {
@@ -28,6 +31,11 @@ public class ActiveEffectQueryService {
     private final FeatureEffectDefinitionRepository definitionRepository;
     private final FeatureEffectModifierRepository modifierRepository;
 
+    /**
+     * Возвращает список для операции "list active" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ActiveEffectResponse> listActive(UUID characterId) {
         List<FeatureActiveEffect> effects = activeRepository.findByCharacterIdAndStatus(characterId, ACTIVE);

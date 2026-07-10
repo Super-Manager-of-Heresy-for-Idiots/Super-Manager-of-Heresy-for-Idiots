@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Класс EnchantmentService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,10 @@ public class EnchantmentService {
 
     // ==================== Enchantment Type CRUD (admin) ====================
 
+    /**
+     * Возвращает список для операции "list enchantment types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<EnchantmentTypeResponse> listEnchantmentTypes() {
         return enchantmentTypeRepository.findAll().stream()
@@ -45,6 +53,11 @@ public class EnchantmentService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Возвращает результат операции "get enchantment type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public EnchantmentTypeResponse getEnchantmentType(UUID id) {
         EnchantmentType enchantmentType = enchantmentTypeRepository.findById(id)
@@ -52,6 +65,11 @@ public class EnchantmentService {
         return toEnchantmentTypeResponse(enchantmentType);
     }
 
+    /**
+     * Создает результат операции "create enchantment type" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public EnchantmentTypeResponse createEnchantmentType(CreateEnchantmentTypeRequest request) {
         validateEnchantmentTypeRequest(request, null);
@@ -64,6 +82,12 @@ public class EnchantmentService {
         return toEnchantmentTypeResponse(saved);
     }
 
+    /**
+     * Обновляет результат операции "update enchantment type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public EnchantmentTypeResponse updateEnchantmentType(UUID id, CreateEnchantmentTypeRequest request) {
         EnchantmentType enchantmentType = enchantmentTypeRepository.findById(id)
@@ -78,6 +102,10 @@ public class EnchantmentService {
         return toEnchantmentTypeResponse(saved);
     }
 
+    /**
+     * Удаляет результат операции "delete enchantment type" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void deleteEnchantmentType(UUID id) {
         if (!enchantmentTypeRepository.existsById(id)) {
@@ -96,6 +124,14 @@ public class EnchantmentService {
 
     // ==================== Item instance enchantment operations ====================
 
+    /**
+     * Добавляет результат операции "add item enchantment" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public EnchantmentResponse addItemEnchantment(UUID characterId, UUID instanceId, AddEnchantmentRequest request, String username) {
         User user = userRepository.findByUsername(username)
@@ -130,6 +166,12 @@ public class EnchantmentService {
         return toItemEnchantmentResponse(saved);
     }
 
+    /**
+     * Удаляет результат операции "remove item enchantment" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param enchantmentId идентификатор enchantment, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void removeItemEnchantment(UUID characterId, UUID enchantmentId, String username) {
         User user = userRepository.findByUsername(username)
@@ -150,6 +192,13 @@ public class EnchantmentService {
         log.info("Удалено зачарование {} с предмета персонажа {}", enchantmentId, characterId);
     }
 
+    /**
+     * Возвращает результат операции "get item enchantments" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<EnchantmentResponse> getItemEnchantments(UUID characterId, UUID instanceId, String username) {
         User user = userRepository.findByUsername(username)

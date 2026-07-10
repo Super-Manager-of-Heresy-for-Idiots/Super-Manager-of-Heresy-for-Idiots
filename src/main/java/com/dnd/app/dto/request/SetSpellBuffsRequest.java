@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Replaces the full set of buffs/debuffs linked to a spell. A null or empty list clears the links.
+ * Класс SetSpellBuffsRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

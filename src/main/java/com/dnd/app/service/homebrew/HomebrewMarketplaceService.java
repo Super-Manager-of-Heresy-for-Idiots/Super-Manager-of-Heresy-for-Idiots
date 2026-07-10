@@ -26,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+/**
+ * Класс HomebrewMarketplaceService описывает сервис homebrew-логики, который проверяет и обслуживает пользовательский контент.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,6 +41,16 @@ public class HomebrewMarketplaceService {
     private final UserRepository userRepository;
     private final HomebrewAuthoringService authoringService;
 
+    /**
+     * Выполняет операции "browse marketplace" в рамках бизнес-логики homebrew-контента.
+     * @param search входящее значение search, используемое бизнес-сценарием
+     * @param tags входящее значение tags, используемое бизнес-сценарием
+     * @param sort входящее значение sort, используемое бизнес-сценарием
+     * @param page входящее значение page, используемое бизнес-сценарием
+     * @param size входящее значение size, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<HomebrewPackageResponse> browseMarketplace(String search, List<String> tags,
                                                             String sort, int page, int size,
@@ -61,6 +75,12 @@ public class HomebrewMarketplaceService {
         return packages.map(authoringService::toPackageResponse);
     }
 
+    /**
+     * Возвращает результат операции "get marketplace package" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public HomebrewDetailResponse getMarketplacePackage(UUID id, String username) {
         getGameMaster(username);
@@ -69,6 +89,12 @@ public class HomebrewMarketplaceService {
         return authoringService.toDetailResponse(pkg);
     }
 
+    /**
+     * Выполняет операции "install package" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public Map<String, Object> installPackage(UUID packageId, String username) {
         User gm = getGameMaster(username);
@@ -100,6 +126,12 @@ public class HomebrewMarketplaceService {
         return result;
     }
 
+    /**
+     * Возвращает список для операции "list installed" в рамках бизнес-логики homebrew-контента.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<InstalledHomebrewResponse> listInstalled(String username, Pageable pageable) {
         User gm = getGameMaster(username);
@@ -131,6 +163,11 @@ public class HomebrewMarketplaceService {
                 responses.subList(start, end), pageable, responses.size());
     }
 
+    /**
+     * Выполняет операции "uninstall" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void uninstall(UUID packageId, String username) {
         User gm = getGameMaster(username);
@@ -141,6 +178,13 @@ public class HomebrewMarketplaceService {
         log.info("Package removed from library: packageId={}, by={}", packageId, username);
     }
 
+    /**
+     * Выполняет операции "rate package" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewRatingResponse ratePackage(UUID packageId, RateHomebrewRequest request, String username) {
         User user = getGameMaster(username);
@@ -170,6 +214,12 @@ public class HomebrewMarketplaceService {
         return buildRatingResponse(packageId, user.getId());
     }
 
+    /**
+     * Возвращает результат операции "get package rating" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public HomebrewRatingResponse getPackageRating(UUID packageId, String username) {
         User user = getGameMaster(username);

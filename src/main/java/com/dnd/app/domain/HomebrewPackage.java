@@ -9,6 +9,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.*;
 
+/**
+ * Класс HomebrewPackage описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "homebrew_packages")
 @Getter
@@ -84,6 +88,10 @@ public class HomebrewPackage {
     @Builder.Default
     private List<HomebrewContentItem> contentItems = new ArrayList<>();
 
+    /**
+     * Проверяет условие операции "is deleted" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isDeleted() {
         return deletedAt != null;
     }

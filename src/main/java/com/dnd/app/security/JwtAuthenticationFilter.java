@@ -19,6 +19,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Set;
 
+/**
+ * Класс JwtAuthenticationFilter описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,6 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthCookieService cookieService;
 
     @Override
+    /**
+     * Populates the Spring Security context when a valid access token is present.
+     */
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 

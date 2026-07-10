@@ -25,19 +25,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * One-time migration of existing runtime FK columns from legacy plural-table IDs to the
- * new content-model IDs (Phase 10 / roadmap R6).
- *
- * <p>The runtime entities already map to the new content tables (ability_score, currency,
- * spell, background, character_class, skill). On a fresh database every runtime id is
- * already a content id and is reported as {@code alreadyNew}. On a legacy database some
- * rows still carry old plural-table ids; those are remapped here.</p>
- *
- * <p>Mapping strategy: legacy rows carry no slug, so matching is by name — the legacy
- * {@code name} (and, for class/skill, the localized variants) is matched against the new
- * {@code nameEn}/{@code nameRu}. A unique match is applied; multiple candidates are
- * <b>ambiguous</b> and never auto-applied; no candidate is <b>unmapped</b>. Dry-run by
- * default; applying requires explicit backup confirmation. User data is never guessed.</p>
+ * Класс RuntimeDataMigrationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -49,6 +38,12 @@ public class RuntimeDataMigrationService {
     private final ContentSkillRepository contentSkillRepository;
     private final ProficiencySkillRepository legacySkillRepository;
 
+    /**
+     * Выполняет операции "migrate" в рамках бизнес-логики домена.
+     * @param dryRun входящее значение dry run, используемое бизнес-сценарием
+     * @param confirmBackup входящее значение confirm backup, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public RuntimeMigrationReport migrate(boolean dryRun, boolean confirmBackup) {
         if (!dryRun && !confirmBackup) {

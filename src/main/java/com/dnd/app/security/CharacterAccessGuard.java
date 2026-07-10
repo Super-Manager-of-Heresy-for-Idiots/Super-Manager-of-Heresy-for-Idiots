@@ -14,7 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/** Shared character access check: the character's owner, its campaign GM, or an ADMIN. */
+/**
+ * Класс CharacterAccessGuard описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Component
 @RequiredArgsConstructor
 public class CharacterAccessGuard {
@@ -23,6 +26,12 @@ public class CharacterAccessGuard {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
 
+    /**
+     * Проверяет требуемое условие операции "require" в рамках бизнес-логики безопасности.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public PlayerCharacter require(UUID characterId, String username) {
         PlayerCharacter character = characterRepository.findById(characterId)

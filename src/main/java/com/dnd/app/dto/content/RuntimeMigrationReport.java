@@ -10,11 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Report of a runtime-data migration run (legacy plural-table IDs → new content IDs).
- * Covers every runtime FK column that may still hold a legacy id: class, skill, stat,
- * currency (wallets + transactions), known spell, background. Each is reported as a
- * separate {@link EntityMigration}. Legacy acquired-rewards are report-only — they are
- * counted as needing manual review and never auto-converted to reward selections.
+ * Класс RuntimeMigrationReport описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

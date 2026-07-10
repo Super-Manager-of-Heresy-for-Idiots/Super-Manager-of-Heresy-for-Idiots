@@ -9,14 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Read-only targeting metadata for one actionable option (weapon strike, spell, class ability or
- * monster feature) of the combatant whose turn it is. It exists so the frontend tactical map can
- * draw targeting previews (range rings, AoE templates) — core BE never owns map/spatial state and
- * does not resolve spells through this DTO.
- *
- * <p>Values are deliberately forgiving: where the underlying data is not reliably structured the
- * field is left null and the enum-like string carries {@code UNKNOWN}. Nothing here is parsed out
- * of free localized text.
+ * Класс TacticalActionResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

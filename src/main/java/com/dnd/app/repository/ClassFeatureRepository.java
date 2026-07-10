@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт ClassFeatureRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface ClassFeatureRepository extends JpaRepository<ClassFeature, UUID> {
 
     Optional<ClassFeature> findByCharacterClassIdAndSubclassIsNullAndSlug(UUID classId, String slug);

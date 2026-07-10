@@ -33,6 +33,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Класс NpcService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -49,6 +53,13 @@ public class NpcService {
     private final MonsterRepository monsterRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
 
+    /**
+     * Создает результат операции "create npc" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NpcResponse createNpc(UUID campaignId, CreateNpcRequest request, String username) {
         User user = getUser(username);
@@ -76,6 +87,12 @@ public class NpcService {
         return toResponse(npc, true);
     }
 
+    /**
+     * Возвращает список для операции "list npcs" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<NpcResponse> listNpcs(UUID campaignId, String username) {
         User user = getUser(username);
@@ -92,6 +109,12 @@ public class NpcService {
         return npcs.stream().map(npc -> toResponse(npc, isGm)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get npc" в рамках бизнес-логики домена.
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public NpcResponse getNpc(UUID npcId, String username) {
         User user = getUser(username);
@@ -105,6 +128,13 @@ public class NpcService {
         return toResponse(npc, isGm);
     }
 
+    /**
+     * Обновляет результат операции "update npc" в рамках бизнес-логики домена.
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NpcResponse updateNpc(UUID npcId, UpdateNpcRequest request, String username) {
         User user = getUser(username);
@@ -125,6 +155,11 @@ public class NpcService {
         return toResponse(npc, true);
     }
 
+    /**
+     * Удаляет результат операции "delete npc" в рамках бизнес-логики домена.
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteNpc(UUID npcId, String username) {
         User user = getUser(username);
@@ -135,6 +170,12 @@ public class NpcService {
         log.info("NPC deleted: id={}, by={}", npcId, username);
     }
 
+    /**
+     * Преобразует данные операции "toggle visibility" в рамках бизнес-логики домена.
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NpcResponse toggleVisibility(UUID npcId, String username) {
         User user = getUser(username);
@@ -155,6 +196,13 @@ public class NpcService {
 
     // --- Notes ---
 
+    /**
+     * Добавляет результат операции "add note" в рамках бизнес-логики домена.
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NoteResponse addNote(UUID npcId, CreateNoteRequest request, String username) {
         User user = getUser(username);
@@ -179,6 +227,13 @@ public class NpcService {
         return toNoteResponse(note);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NoteResponse updateNote(UUID noteId, UpdateNoteRequest request, String username) {
         User user = getUser(username);
@@ -198,6 +253,11 @@ public class NpcService {
         return toNoteResponse(note);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteNote(UUID noteId, String username) {
         User user = getUser(username);

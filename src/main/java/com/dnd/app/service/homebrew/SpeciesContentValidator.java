@@ -10,9 +10,8 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Homebrew-package reference validator for the new content-model {@link Species}
- * (D&D 2024 race replacement). Mirrors {@code CharacterClassContentValidator};
- * the legacy {@code RaceContentValidator} ("RACE") is removed in S5.
+ * Класс SpeciesContentValidator описывает сервис homebrew-логики, который проверяет и обслуживает пользовательский контент.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 @RequiredArgsConstructor
@@ -20,11 +19,19 @@ public class SpeciesContentValidator implements HomebrewContentValidator {
 
     private final SpeciesRepository speciesRepository;
 
+    /**
+     * Возвращает результат операции "get supported type" в рамках бизнес-логики homebrew-контента.
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public String getSupportedType() {
         return "SPECIES";
     }
 
+    /**
+     * Проверяет корректность операции "validate exists" в рамках бизнес-логики homebrew-контента.
+     * @param contentId идентификатор content, используемый для выбора нужного бизнес-объекта
+     */
     @Override
     public void validateExists(UUID contentId) {
         if (!speciesRepository.existsById(contentId)) {
@@ -32,6 +39,11 @@ public class SpeciesContentValidator implements HomebrewContentValidator {
         }
     }
 
+    /**
+     * Выполняет операции "summarize" в рамках бизнес-логики homebrew-контента.
+     * @param contentId идентификатор content, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public ContentSummaryDto summarize(UUID contentId) {
         Species species = speciesRepository.findById(contentId)
@@ -43,6 +55,11 @@ public class SpeciesContentValidator implements HomebrewContentValidator {
                 .build();
     }
 
+    /**
+     * Возвращает результат операции "get owner id" в рамках бизнес-логики homebrew-контента.
+     * @param contentId идентификатор content, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Override
     public UUID getOwnerId(UUID contentId) {
         Species species = speciesRepository.findById(contentId)

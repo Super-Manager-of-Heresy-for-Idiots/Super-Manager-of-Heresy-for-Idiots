@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single magic item in the new content model (D&D 2024):
- * type, rarity, attunement, cost and the equipment items it can be applied to.
+ * Класс MagicItemDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

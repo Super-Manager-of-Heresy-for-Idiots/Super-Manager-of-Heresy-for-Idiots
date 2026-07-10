@@ -7,6 +7,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт CustomResourceTypeRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CustomResourceTypeRepository extends JpaRepository<CustomResourceType, UUID> {
 
     List<CustomResourceType> findByHomebrewIsNull();

@@ -9,10 +9,8 @@ import jakarta.persistence.ManyToOne;
 import lombok.*;
 
 /**
- * Embeddable row of the {@code spell_damage} table, owned by a {@code Spell} via
- * {@code @ElementCollection}. Structured base damage lifted from the normalized
- * source's {@code detected_damage[]}: the dice formula (canonicalised to {@code NdM}),
- * the damage type reference, and the original raw text for provenance.
+ * Класс SpellDamage описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Embeddable
 @Getter

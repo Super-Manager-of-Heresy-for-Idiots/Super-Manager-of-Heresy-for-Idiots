@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * NUMERIC_MODIFIER grant — a numeric modifier keyed by an open text key
- * (homebrew flexibility). Known keys are suggested but not enforced.
+ * Класс NumericModifierGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

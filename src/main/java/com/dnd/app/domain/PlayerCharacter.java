@@ -12,6 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс PlayerCharacter описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "characters")
 @Getter
@@ -168,14 +172,9 @@ public class PlayerCharacter {
     private Instant updatedAt;
 
     /**
-     * Applies a signed HP change in place using D&D damage/heal rules, so every write path stays
-     * consistent: a negative delta drains temp HP first and then current HP (floored at 0); a positive
-     * delta heals current HP, capped at {@code maxHpCap} when it is positive (a non-positive cap means
-     * the max is unknown, so healing is left uncapped). Null current/temp HP are treated as 0.
-     *
-     * <p>Concurrency: callers must load the row under a pessimistic write lock
-     * ({@link com.dnd.app.repository.PlayerCharacterRepository#findByIdForUpdate}) so simultaneous
-     * damage/heal events accumulate instead of overwriting one another.
+     * Выполняет операции "apply hp delta" в рамках бизнес-логики домена.
+     * @param delta входящее значение delta, используемое бизнес-сценарием
+     * @param maxHpCap входящее значение max hp cap, используемое бизнес-сценарием
      */
     public void applyHpDelta(int delta, int maxHpCap) {
         int curHp = currentHp != null ? currentHp : 0;
@@ -193,10 +192,8 @@ public class PlayerCharacter {
     }
 
     /**
-     * Grants temporary hit points. Temp HP does not stack (D&D rule): the character keeps whichever
-     * pool is larger, so a smaller grant is ignored and a larger one replaces the current temp HP.
-     * A non-positive amount is a no-op. Callers must hold the same pessimistic write lock as
-     * {@link #applyHpDelta(int, int)} so concurrent grants/damage stay consistent.
+     * Выполняет операции "grant temp hp" в рамках бизнес-логики домена.
+     * @param amount входящее значение amount, используемое бизнес-сценарием
      */
     public void grantTempHp(int amount) {
         if (amount <= 0) {

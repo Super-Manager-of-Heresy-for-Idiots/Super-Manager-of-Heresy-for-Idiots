@@ -9,12 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Spellcasting profile for a class. Null on the owning class => not a spellcaster.
- *
- * <p>v1 models the profile only (caster type / ability / preparation / ritual).
- * Per-level slot &amp; cantrip progression tables are intentionally NOT modeled here
- * (see class-authoring-contract "Open decisions"); derive from {@code casterProgression}
- * or add a dedicated progression contract later.</p>
+ * Класс SpellcastingDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

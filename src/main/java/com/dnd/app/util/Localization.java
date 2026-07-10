@@ -1,13 +1,8 @@
 package com.dnd.app.util;
 
 /**
- * Picks a user-facing string for the requested UI language.
- *
- * Reference rows store two parallel columns per localized field:
- * {@code *_engloc} (English) and {@code *_rusloc} (Russian). The canonical
- * column ({@code name}/{@code description}/...) is always English and is never
- * null, so it serves as the last-resort fallback for rows that predate the
- * localization seed (their {@code *_engloc}/{@code *_rusloc} are still null).
+ * Класс Localization описывает утилиту, которая поддерживает повторяемые операции бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public final class Localization {
 
@@ -18,15 +13,22 @@ public final class Localization {
     private Localization() {
     }
 
-    /** Normalizes any incoming value to {@code "ru"} or {@code "en"} (default). */
+    /**
+     * Выполняет операции "normalize" в рамках бизнес-логики приложения.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static String normalize(String lang) {
         return RU.equalsIgnoreCase(lang) ? RU : EN;
     }
 
     /**
-     * Returns the requested locale if present; otherwise the other locale;
-     * otherwise the canonical (English) value. Never returns null unless the
-     * canonical itself is null.
+     * Выполняет операции "pick" в рамках бизнес-логики приложения.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param rusloc входящее значение rusloc, используемое бизнес-сценарием
+     * @param engloc входящее значение engloc, используемое бизнес-сценарием
+     * @param canonical входящее значение canonical, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public static String pick(String lang, String rusloc, String engloc, String canonical) {
         boolean ru = RU.equalsIgnoreCase(lang);

@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin edit of a TRIGGER_REACTION rule (event, timing, predicate, reaction/confirmation flags). */
+/**
+ * Класс TriggerEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

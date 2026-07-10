@@ -30,6 +30,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Класс FriendService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -48,6 +52,13 @@ public class FriendService {
 
     // --- User search ---------------------------------------------------------
 
+    /**
+     * Выполняет операции "search users" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param query входящее значение query, используемое бизнес-сценарием
+     * @param limit ограничение размера результата бизнес-операции
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<UserSearchResultResponse> searchUsers(String actorUsername, String query, Integer limit) {
         User actor = requireUser(actorUsername);
@@ -69,6 +80,12 @@ public class FriendService {
 
     // --- Friend requests -----------------------------------------------------
 
+    /**
+     * Публикует событие операции "send friend request" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param targetUserId идентификатор target user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FriendRequestResponse sendFriendRequest(String actorUsername, UUID targetUserId) {
         User actor = requireUser(actorUsername);
@@ -107,6 +124,12 @@ public class FriendService {
                 .build();
     }
 
+    /**
+     * Возвращает список для операции "list requests" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param direction входящее значение direction, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FriendRequestResponse> listRequests(String actorUsername, FriendRequestDirection direction) {
         User actor = requireUser(actorUsername);
@@ -118,6 +141,12 @@ public class FriendService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "accept friend request" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FriendResponse acceptFriendRequest(String actorUsername, UUID relationshipId) {
         User actor = requireUser(actorUsername);
@@ -140,6 +169,11 @@ public class FriendService {
                 .build();
     }
 
+    /**
+     * Выполняет операции "decline friend request" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void declineFriendRequest(String actorUsername, UUID relationshipId) {
         User actor = requireUser(actorUsername);
@@ -147,6 +181,11 @@ public class FriendService {
         relationshipRepository.delete(relationship);
     }
 
+    /**
+     * Проверяет условие операции "cancel friend request" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param relationshipId идентификатор relationship, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void cancelFriendRequest(String actorUsername, UUID relationshipId) {
         User actor = requireUser(actorUsername);
@@ -161,6 +200,11 @@ public class FriendService {
 
     // --- Friends -------------------------------------------------------------
 
+    /**
+     * Возвращает список для операции "list friends" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FriendResponse> listFriends(String actorUsername) {
         User actor = requireUser(actorUsername);
@@ -176,6 +220,11 @@ public class FriendService {
         return friends;
     }
 
+    /**
+     * Удаляет результат операции "remove friend" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param otherUserId идентификатор other user, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void removeFriend(String actorUsername, UUID otherUserId) {
         User actor = requireUser(actorUsername);
@@ -193,6 +242,11 @@ public class FriendService {
 
     // --- Blocking ------------------------------------------------------------
 
+    /**
+     * Выполняет операции "block user" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param otherUserId идентификатор other user, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void blockUser(String actorUsername, UUID otherUserId) {
         User actor = requireUser(actorUsername);
@@ -214,6 +268,11 @@ public class FriendService {
         messengerClient.closeSessionForPair(pair[0], pair[1], RELATIONSHIP_ENDED);
     }
 
+    /**
+     * Выполняет операции "unblock user" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param otherUserId идентификатор other user, используемый для выбора нужного бизнес-объекта
+     */
     @Transactional
     public void unblockUser(String actorUsername, UUID otherUserId) {
         User actor = requireUser(actorUsername);
@@ -224,6 +283,11 @@ public class FriendService {
         relationshipRepository.delete(relationship);
     }
 
+    /**
+     * Возвращает список для операции "list blocked" в рамках бизнес-логики домена.
+     * @param actorUsername имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BlockedUserResponse> listBlocked(String actorUsername) {
         User actor = requireUser(actorUsername);
@@ -240,6 +304,12 @@ public class FriendService {
 
     // --- Internal (service-to-service) --------------------------------------
 
+    /**
+     * Выполняет операции "resolve relationship" в рамках бизнес-логики домена.
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @param otherUserId идентификатор other user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public InternalRelationshipResponse resolveRelationship(UUID userId, UUID otherUserId) {
         Optional<UserRelationship> pair = findPair(userId, otherUserId);

@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Класс BugReportService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,14 @@ public class BugReportService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param ip IP-адрес клиента для аудита пользовательского обращения
+     * @param userAgent заголовок клиента, используемый для аудита пользовательского обращения
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BugReportResponse create(CreateBugReportRequest request, String username, String ip, String userAgent) {
         UUID userId = resolveUserId(username).orElse(null);

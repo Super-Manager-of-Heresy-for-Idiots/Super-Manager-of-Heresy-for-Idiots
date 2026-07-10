@@ -10,6 +10,10 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
+/**
+ * Класс LoginPageStatsService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class LoginPageStatsService {
@@ -20,6 +24,10 @@ public class LoginPageStatsService {
     private final UserRepository userRepository;
     private final Clock appClock;
 
+    /**
+     * Возвращает результат операции "get stats" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public LoginPageStatsResponse getStats() {
         return LoginPageStatsResponse.builder()
                 .campaignCount(campaignRepository.count())

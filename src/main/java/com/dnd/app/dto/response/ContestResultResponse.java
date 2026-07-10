@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Result of an opposed Grapple/Shove contest (Phase 2.7): both totals, who won, and the condition
- * applied on a win. {@link #battle} carries the fresh authoritative state for cache sync.
+ * Класс ContestResultResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

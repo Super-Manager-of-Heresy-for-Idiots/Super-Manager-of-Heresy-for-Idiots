@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт BattleCombatantConditionRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface BattleCombatantConditionRepository extends JpaRepository<BattleCombatantCondition, UUID> {
 
     List<BattleCombatantCondition> findByCombatantId(UUID combatantId);

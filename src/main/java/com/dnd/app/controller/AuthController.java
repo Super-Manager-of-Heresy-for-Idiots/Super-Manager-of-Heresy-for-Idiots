@@ -26,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс AuthController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
@@ -36,11 +40,20 @@ public class AuthController {
     private final AuthCookieService cookieService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Выполняет операции "csrf" в рамках бизнес-логики API.
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/csrf")
     public ResponseEntity<ApiResponse<Void>> csrf() {
         return ResponseEntity.ok(ApiResponse.ok(null, "CSRF initialized"));
     }
 
+    /**
+     * Выполняет операции "register" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/register")
     public CompletableFuture<ResponseEntity<ApiResponse<UserResponse>>> register(@Valid @RequestBody RegisterRequest request) {
         return CompletableFuture.supplyAsync(() -> {
@@ -63,6 +76,12 @@ public class AuthController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "login" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param httpRequest входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/login")
     public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
@@ -86,9 +105,10 @@ public class AuthController {
     }
 
     /**
-     * Silent renewal endpoint. The browser sends the HttpOnly refresh cookie automatically;
-     * we rotate it and hand back a fresh access token (body + cookie). Public: it authenticates
-     * via the refresh cookie itself, not via an access token.
+     * Выполняет операции "refresh" в рамках бизнес-логики API.
+     * @param refreshToken входящее значение refresh token, используемое бизнес-сценарием
+     * @param httpRequest входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
      */
     @PostMapping("/refresh")
     public CompletableFuture<ResponseEntity<ApiResponse<AuthResponse>>> refresh(
@@ -104,8 +124,9 @@ public class AuthController {
     }
 
     /**
-     * Revokes the server-side session family and clears both cookies. Idempotent and public —
-     * always succeeds even if the refresh cookie is absent or already revoked.
+     * Выполняет операции "logout" в рамках бизнес-логики API.
+     * @param refreshToken входящее значение refresh token, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(

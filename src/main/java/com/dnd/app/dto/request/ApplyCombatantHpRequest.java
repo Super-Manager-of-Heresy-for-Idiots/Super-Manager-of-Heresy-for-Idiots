@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * GM manual HP adjustment of a single combatant on the tracker: a negative {@code delta} deals
- * damage, a positive one heals. Used to bookkeep NPCs and correct HP outside the attack flow.
+ * Класс ApplyCombatantHpRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

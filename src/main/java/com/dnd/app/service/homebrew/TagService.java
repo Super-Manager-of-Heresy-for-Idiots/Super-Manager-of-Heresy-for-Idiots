@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Класс TagService описывает сервис homebrew-логики, который проверяет и обслуживает пользовательский контент.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -19,6 +23,11 @@ public class TagService {
 
     private final HomebrewTagRepository tagRepository;
 
+    /**
+     * Находит результат операции "find or create tags" в рамках бизнес-логики homebrew-контента.
+     * @param tagNames входящее значение tag names, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public Set<HomebrewTag> findOrCreateTags(List<String> tagNames) {
         if (tagNames == null || tagNames.isEmpty()) {

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Data-completeness report for the new content model. Surfaces gaps so the
- * migration's missing data is visible and trackable without DB access.
+ * Класс ContentDataAuditReport описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

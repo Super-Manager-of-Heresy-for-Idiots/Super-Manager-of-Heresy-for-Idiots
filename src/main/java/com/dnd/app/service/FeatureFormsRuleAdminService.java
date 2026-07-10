@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/** Admin CRUD for the three "advanced" feature rules: MONSTER_FORM, TRIGGER_REACTION, SPELL_GRANT. */
+/**
+ * Класс FeatureFormsRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureFormsRuleAdminService {
@@ -43,11 +46,22 @@ public class FeatureFormsRuleAdminService {
     }
 
     // ── MONSTER_FORM ──
+    /**
+     * Возвращает результат операции "get monster form" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MonsterFormAdminResponse getMonsterForm(UUID ruleId) {
         return monsterFilterRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toForm).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert monster form" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterFormAdminResponse upsertMonsterForm(UUID ruleId, MonsterFormEditRequest req) {
         FeatureRule rule = requireRule(ruleId);
@@ -77,11 +91,22 @@ public class FeatureFormsRuleAdminService {
     }
 
     // ── TRIGGER_REACTION ──
+    /**
+     * Возвращает результат операции "get trigger" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public TriggerAdminResponse getTrigger(UUID ruleId) {
         return triggerRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toTrigger).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert trigger" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public TriggerAdminResponse upsertTrigger(UUID ruleId, TriggerEditRequest req) {
         FeatureRule rule = requireRule(ruleId);
@@ -111,11 +136,22 @@ public class FeatureFormsRuleAdminService {
     }
 
     // ── SPELL_GRANT ──
+    /**
+     * Возвращает результат операции "get spell grant" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SpellGrantAdminResponse getSpellGrant(UUID ruleId) {
         return spellGrantRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toGrant).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert spell grant" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellGrantAdminResponse upsertSpellGrant(UUID ruleId, SpellGrantEditRequest req) {
         FeatureRule rule = requireRule(ruleId);

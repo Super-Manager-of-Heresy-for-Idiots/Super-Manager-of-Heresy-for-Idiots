@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** One selectable option in a {@link FeatureChoiceGroup} (or a filter over a pool of entities). */
+/**
+ * Класс FeatureChoiceOption описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_choice_option")
 @Getter

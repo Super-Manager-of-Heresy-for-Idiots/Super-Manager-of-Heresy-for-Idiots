@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Body for revision lifecycle actions (approve, disable, create-draft-from-approved, rollback).
- * All fields optional; {@code targetRevisionId} is only used by rollback.
+ * Класс RevisionActionRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

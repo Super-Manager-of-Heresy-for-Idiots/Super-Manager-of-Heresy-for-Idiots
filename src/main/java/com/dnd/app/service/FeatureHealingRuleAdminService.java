@@ -20,7 +20,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin CRUD for a feature HEALING rule (Rule Workbench healing editor). */
+/**
+ * Класс FeatureHealingRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureHealingRuleAdminService {
@@ -30,6 +33,10 @@ public class FeatureHealingRuleAdminService {
     private final TargetTypeRepository targetTypeRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает список для операции "list target types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<TargetTypeOption> listTargetTypes() {
         return targetTypeRepository.findAll().stream()
@@ -38,11 +45,22 @@ public class FeatureHealingRuleAdminService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public HealingRuleAdminResponse get(UUID ruleId) {
         return healingRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toResponse).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HealingRuleAdminResponse upsert(UUID ruleId, HealingRuleEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

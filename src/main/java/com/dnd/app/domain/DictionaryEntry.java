@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Shared shape of the 10 bestiary reference dictionaries (code + localized names +
- * optional homebrew owner). Lets one generic service/repository handle all of them.
+ * Контракт DictionaryEntry описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public interface DictionaryEntry {
 

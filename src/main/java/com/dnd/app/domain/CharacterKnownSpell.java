@@ -5,6 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс CharacterKnownSpell описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "character_known_spells",
         uniqueConstraints = @UniqueConstraint(columnNames = {"character_id", "spell_id"}))

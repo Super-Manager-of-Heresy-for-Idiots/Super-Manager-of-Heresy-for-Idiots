@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс UniverseController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/universes")
 @RequiredArgsConstructor
@@ -26,6 +30,11 @@ public class UniverseController {
     private final UniverseService universeService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list universes" в рамках бизнес-логики API.
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "Список вселенных (для выбора)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<UniverseResponse>>>> listUniverses(Authentication auth) {
@@ -35,6 +44,12 @@ public class UniverseController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create universe" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Создать вселенную (мастер игры/админ)")
     public CompletableFuture<ResponseEntity<ApiResponse<UniverseResponse>>> createUniverse(

@@ -19,11 +19,8 @@ import java.security.MessageDigest;
 import java.util.List;
 
 /**
- * Authenticates service-to-service calls to {@code /api/internal/**} with a shared secret carried
- * in the {@code X-Internal-Api-Key} header (map-service -> core BE). A valid key grants the
- * synthetic {@code ROLE_INTERNAL_SERVICE} authority; SecurityConfig then restricts the internal
- * paths to that role, so a missing or wrong key falls through to an unauthenticated request and is
- * rejected. When no key is configured, internal endpoints stay locked down (never authenticated).
+ * Класс InternalApiKeyFilter описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Component
@@ -34,11 +31,18 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
 
     private final String configuredKey;
 
+    /**
+     * Создает экземпляр компонента безопасности и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param configuredKey входящее значение configured key, используемое бизнес-сценарием
+     */
     public InternalApiKeyFilter(@Value("${app.internal.api-key:}") String configuredKey) {
         this.configuredKey = configuredKey;
     }
 
     @Override
+    /**
+     * Authenticates only {@code /api/internal/**}; all other paths pass through unchanged.
+     */
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
@@ -61,6 +65,9 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Compares configured and presented keys without leaking a prefix match through timing.
+     */
     private static boolean constantTimeEquals(String a, String b) {
         return MessageDigest.isEqual(
                 a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));

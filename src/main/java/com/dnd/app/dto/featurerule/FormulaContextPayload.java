@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-/** Explicit formula-evaluation context for admin preview (sample values, not tied to a character yet). */
+/**
+ * Класс FormulaContextPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

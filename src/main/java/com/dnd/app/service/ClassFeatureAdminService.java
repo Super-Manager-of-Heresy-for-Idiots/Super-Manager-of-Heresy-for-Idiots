@@ -15,7 +15,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
-/** Admin-side operations for class-feature mechanics parsed from prose. */
+/**
+ * Класс ClassFeatureAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class ClassFeatureAdminService {
@@ -29,6 +32,17 @@ public class ClassFeatureAdminService {
 
     private final ClassFeatureRepository classFeatureRepository;
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list warnings" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ClassFeatureWarningResponse> listWarnings(String lang) {
         return classFeatureRepository.findWarnings().stream()
@@ -36,6 +50,13 @@ public class ClassFeatureAdminService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "resolve" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ClassFeatureWarningResponse resolve(UUID id, ClassFeatureResolutionRequest request, String lang) {
         ClassFeature feature = classFeatureRepository.findById(id)

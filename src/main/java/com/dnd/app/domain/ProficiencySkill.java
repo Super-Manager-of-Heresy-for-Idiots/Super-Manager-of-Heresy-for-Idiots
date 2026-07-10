@@ -5,12 +5,12 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс ProficiencySkill описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "proficiency_skills")
-/**
- * Legacy proficiency skill catalog mapped to the old plural content table.
- * New proficiency content must use {@link com.dnd.app.domain.content.ContentSkill}.
- */
 // Phase 12: archive-only — read for audit/runtime-data migration; new flows use ContentSkill.
 @Deprecated(forRemoval = false)
 @Getter
@@ -18,6 +18,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+/**
+ * Класс ProficiencySkill описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public class ProficiencySkill {
 
     @Id

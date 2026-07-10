@@ -6,16 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Feature flags for the class-feature rules runtime, bound from {@code app.feature-rules.*}.
- *
- * <p>{@link #runtimeEnabled} is the master switch. When it is {@code false} (the default) the
- * application behaves exactly as before: class-feature descriptions are shown as text and no
- * structured rule is executed. Each per-subsystem flag only takes effect when the master switch is
- * also enabled — use the {@code *Active()} helpers instead of the raw getters when gating runtime
- * behavior, so a single toggle can disable everything.</p>
- *
- * <p>Introduced in Stage 0; all flags default to {@code false} so no behavior changes until later
- * stages explicitly enable a subsystem.</p>
+ * Класс FeatureRulesProperties описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Getter
 @Setter
@@ -44,32 +36,50 @@ public class FeatureRulesProperties {
     /** Spell / feature integration (Stage 9). */
     private boolean spellsEnabled = false;
 
-    /** Resources subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "resources active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean resourcesActive() {
         return runtimeEnabled && resourcesEnabled;
     }
 
-    /** Action economy subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "actions active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean actionsActive() {
         return runtimeEnabled && actionsEnabled;
     }
 
-    /** Active-effects subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "effects active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean effectsActive() {
         return runtimeEnabled && effectsEnabled;
     }
 
-    /** Triggers/reactions subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "triggers active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean triggersActive() {
         return runtimeEnabled && triggersEnabled;
     }
 
-    /** Forms/companions subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "forms active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean formsActive() {
         return runtimeEnabled && formsEnabled;
     }
 
-    /** Spell-integration subsystem is active only when the runtime master switch is also on. */
+    /**
+     * Выполняет операции "spells active" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean spellsActive() {
         return runtimeEnabled && spellsEnabled;
     }

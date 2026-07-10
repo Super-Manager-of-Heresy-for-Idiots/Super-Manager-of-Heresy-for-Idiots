@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Класс QuestService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,6 +57,13 @@ public class QuestService {
     private final WalletService walletService;
     private final XpService xpService;
 
+    /**
+     * Создает результат операции "create quest" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestResponse createQuest(UUID campaignId, CreateQuestRequest request, String username) {
         User user = getUser(username);
@@ -82,6 +93,12 @@ public class QuestService {
         return toResponse(quest, true);
     }
 
+    /**
+     * Возвращает список для операции "list quests" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<QuestResponse> listQuests(UUID campaignId, String username) {
         User user = getUser(username);
@@ -98,6 +115,12 @@ public class QuestService {
         return quests.stream().map(q -> toResponse(q, isGm)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get quest" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public QuestResponse getQuest(UUID questId, String username) {
         User user = getUser(username);
@@ -111,6 +134,13 @@ public class QuestService {
         return toResponse(quest, isGm);
     }
 
+    /**
+     * Обновляет результат операции "update quest" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestResponse updateQuest(UUID questId, UpdateQuestRequest request, String username) {
         User user = getUser(username);
@@ -144,6 +174,11 @@ public class QuestService {
         return toResponse(quest, true);
     }
 
+    /**
+     * Удаляет результат операции "delete quest" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteQuest(UUID questId, String username) {
         User user = getUser(username);
@@ -156,6 +191,13 @@ public class QuestService {
 
     // --- Notes ---
 
+    /**
+     * Добавляет результат операции "add note" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NoteResponse addNote(UUID questId, CreateNoteRequest request, String username) {
         User user = getUser(username);
@@ -180,6 +222,13 @@ public class QuestService {
         return toNoteResponse(note);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NoteResponse updateNote(UUID noteId, UpdateNoteRequest request, String username) {
         User user = getUser(username);
@@ -199,6 +248,11 @@ public class QuestService {
         return toNoteResponse(note);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteNote(UUID noteId, String username) {
         User user = getUser(username);
@@ -218,6 +272,13 @@ public class QuestService {
 
     // --- Rewards ---
 
+    /**
+     * Добавляет результат операции "add reward" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestRewardResponse addReward(UUID questId, CreateQuestRewardRequest request, String username) {
         User user = getUser(username);
@@ -257,6 +318,12 @@ public class QuestService {
         return toRewardResponse(reward);
     }
 
+    /**
+     * Возвращает список для операции "list rewards" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<QuestRewardResponse> listRewards(UUID questId, String username) {
         User user = getUser(username);
@@ -268,6 +335,11 @@ public class QuestService {
                 .toList();
     }
 
+    /**
+     * Удаляет результат операции "delete reward" в рамках бизнес-логики домена.
+     * @param rewardId идентификатор reward, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteReward(UUID rewardId, String username) {
         User user = getUser(username);
@@ -282,15 +354,11 @@ public class QuestService {
     // --- Completion & reward issuance ---
 
     /**
-     * Marks a quest COMPLETED and grants its full reward to the chosen recipient
-     * character: items are added to the recipient's inventory, currency is
-     * credited to the wallet, and XP is added to the character's experience.
-     *
-     * The recipient must belong to the quest's campaign and is selected at the
-     * moment of completion (not at quest creation). The optional {@code xpAmount}
-     * on the request overrides the total XP defined on the reward entries.
-     *
-     * Runs in a single transaction so the status change and all grants are atomic.
+     * Выполняет операции "complete quest" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public QuestCompletionResponse completeQuest(UUID questId, CompleteQuestRequest request, String username) {
@@ -371,6 +439,12 @@ public class QuestService {
 
     // --- Link/Unlink NPC ---
 
+    /**
+     * Выполняет операции "link npc" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void linkNpc(UUID questId, UUID npcId, String username) {
         User user = getUser(username);
@@ -393,6 +467,12 @@ public class QuestService {
         log.info("NPC linked to quest: questId={}, npcId={}, by={}", questId, npcId, username);
     }
 
+    /**
+     * Выполняет операции "unlink npc" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void unlinkNpc(UUID questId, UUID npcId, String username) {
         User user = getUser(username);
@@ -411,6 +491,12 @@ public class QuestService {
 
     // --- Link/Unlink Location ---
 
+    /**
+     * Выполняет операции "link location" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void linkLocation(UUID questId, UUID locationId, String username) {
         User user = getUser(username);
@@ -433,6 +519,12 @@ public class QuestService {
         log.info("Location linked to quest: questId={}, locationId={}, by={}", questId, locationId, username);
     }
 
+    /**
+     * Выполняет операции "unlink location" в рамках бизнес-логики домена.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void unlinkLocation(UUID questId, UUID locationId, String username) {
         User user = getUser(username);

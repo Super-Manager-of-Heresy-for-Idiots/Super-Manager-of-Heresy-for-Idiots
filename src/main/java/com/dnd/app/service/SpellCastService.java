@@ -29,18 +29,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Casting a KNOWN spell through the feature-rules runtime (S2 spell-stack absorption). This service is
- * deliberately only the cost glue — slot, combat action economy, effects, audit — around the shared
- * execution engine: the structured resolution itself (damage dice, DC, healing) is computed by
- * {@link CombatFeatureExecutionService#planForSpell} and outcomes are applied by
- * {@link CombatFeatureExecutionService#applySpellToTarget}, exactly as for class features. There is no
- * separate spell resolution engine.
- *
- * <p>Costs are spent in rollback-safe order: combat action first (throws when the turn slot is already
- * used), then the spell slot — a failure anywhere rolls back the whole cast. Gated by
- * {@code app.feature-rules.spells} (with the master runtime switch). Not covered here yet, by design:
- * ritual casting without a slot, concentration enforcement, and the free-cast path of feature spell
- * grants (Stage 9's {@code castViaFeature}).</p>
+ * Класс SpellCastService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -61,9 +51,12 @@ public class SpellCastService {
     private final FeatureUseLogRepository useLogRepository;
 
     /**
-     * Cast a spell the character knows: spend the combat action (if in combat) and the slot, compute the
-     * roll plan, apply the spell's active effects to {@code effectTarget} (already access-checked by the
-     * controller; the caster when null), publish a {@code spell_cast} gameplay event and log the use.
+     * Применяет заклинание операции "cast" в рамках бизнес-логики домена.
+     * @param caster входящее значение caster, используемое бизнес-сценарием
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param effectTarget входящее значение effect target, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public SpellCastResult cast(PlayerCharacter caster, UUID spellId, SpellCastRequest request,
@@ -129,7 +122,18 @@ public class SpellCastService {
                 .build();
     }
 
-    /** Apply an already-rolled spell outcome to a target — the shared HP primitive, spell-attributed log. */
+    /**
+     * Выполняет операции "apply to target" в рамках бизнес-логики домена.
+     * @param caster входящее значение caster, используемое бизнес-сценарием
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @param damage входящее значение damage, используемое бизнес-сценарием
+     * @param healing входящее значение healing, используемое бизнес-сценарием
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureApplyResult applyToTarget(
             PlayerCharacter caster, UUID spellId, PlayerCharacter target,
@@ -139,7 +143,13 @@ public class SpellCastService {
                 caster, spell, target, damage, healing, damageTypeId, campaignId, actorUserId);
     }
 
-    /** Roll plan for a known spell without spending anything (preview; upcast level optional). */
+    /**
+     * Выполняет операции "plan" в рамках бизнес-логики домена.
+     * @param caster входящее значение caster, используемое бизнес-сценарием
+     * @param spellId идентификатор spell, используемый для выбора нужного бизнес-объекта
+     * @param slotLevel входящее значение slot level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureExecutionPlan plan(PlayerCharacter caster, UUID spellId, Integer slotLevel) {
         Spell spell = requireSpell(spellId);

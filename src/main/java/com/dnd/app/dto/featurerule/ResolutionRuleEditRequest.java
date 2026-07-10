@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin edit of a SAVE_CHECK_ATTACK rule (resolution type + ability/skill + DC formula). */
+/**
+ * Класс ResolutionRuleEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

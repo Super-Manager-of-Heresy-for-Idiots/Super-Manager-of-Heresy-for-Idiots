@@ -24,6 +24,10 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Класс HomebrewAuthoringService описывает сервис homebrew-логики, который проверяет и обслуживает пользовательский контент.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -42,6 +46,12 @@ public class HomebrewAuthoringService {
     private final StatTypeRepository statTypeRepository;
     private final com.dnd.app.service.ContentDictionaryResolver contentDictionaryResolver;
 
+    /**
+     * Создает результат операции "create package" в рамках бизнес-логики homebrew-контента.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse createPackage(CreateHomebrewRequest request, String username) {
         User gm = getGameMaster(username);
@@ -58,6 +68,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Возвращает список для операции "list my packages" в рамках бизнес-логики homebrew-контента.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param status входящее значение status, используемое бизнес-сценарием
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<HomebrewPackageResponse> listMyPackages(String username, String status, Pageable pageable) {
         User gm = getGameMaster(username);
@@ -74,6 +91,12 @@ public class HomebrewAuthoringService {
         return packages.map(this::toPackageResponse);
     }
 
+    /**
+     * Возвращает результат операции "get my package" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public HomebrewDetailResponse getMyPackage(UUID id, String username) {
         User gm = getGameMaster(username);
@@ -82,6 +105,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Обновляет результат операции "update package" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse updatePackage(UUID id, UpdateHomebrewRequest request, String username) {
         User gm = getGameMaster(username);
@@ -108,6 +138,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Добавляет результат операции "add content" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse addContent(UUID packageId, AddContentRequest request, String username) {
         User gm = getGameMaster(username);
@@ -147,6 +184,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(packageRepository.findById(packageId).orElseThrow());
     }
 
+    /**
+     * Создает результат операции "create package item type" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse createPackageItemType(UUID packageId, CreateItemTypeRequest request, String username) {
         User gm = getRequiredGameMaster(username);
@@ -178,6 +222,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Создает результат операции "create package skill" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse createPackageSkill(UUID packageId, CreateSkillRequest request, String username) {
         User gm = getRequiredGameMaster(username);
@@ -202,6 +253,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Создает результат операции "create package feat" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse createPackageFeat(UUID packageId, CreateFeatRequest request, String username) {
         User gm = getRequiredGameMaster(username);
@@ -222,6 +280,13 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Создает результат операции "create package buff debuff" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse createPackageBuffDebuff(UUID packageId, CreateBuffDebuffRequest request, String username) {
         User gm = getRequiredGameMaster(username);
@@ -233,6 +298,12 @@ public class HomebrewAuthoringService {
         return toDetailResponse(packageRepository.findById(packageId).orElseThrow());
     }
 
+    /**
+     * Удаляет результат операции "remove content" в рамках бизнес-логики homebrew-контента.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param contentItemId идентификатор content item, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void removeContent(UUID packageId, UUID contentItemId, String username) {
         User gm = getGameMaster(username);
@@ -254,6 +325,12 @@ public class HomebrewAuthoringService {
         log.info("Content removed from package: packageId={}, contentItemId={}", packageId, contentItemId);
     }
 
+    /**
+     * Публикует событие операции "publish" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse publish(UUID id, String username) {
         User gm = getGameMaster(username);
@@ -283,6 +360,12 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Выполняет операции "unpublish" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public HomebrewDetailResponse unpublish(UUID id, String username) {
         User gm = getGameMaster(username);
@@ -299,6 +382,12 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /**
+     * Выполняет операции "soft delete" в рамках бизнес-логики homebrew-контента.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public Map<String, Object> softDelete(UUID id, String username) {
         User gm = getGameMaster(username);

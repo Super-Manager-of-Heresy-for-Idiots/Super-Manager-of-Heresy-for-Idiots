@@ -10,10 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * ABILITY_SCORE grant — ASI / fixed ability bonus.
- * Classic ASI is two options of one CHOICE group:
- * "+2 to one" {@code (chooseCount=1, bonusPerChoice=2, maxPerAbility=2)} and
- * "+1 to two" {@code (chooseCount=2, bonusPerChoice=1, maxPerAbility=1)}.
+ * Класс AbilityScoreGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

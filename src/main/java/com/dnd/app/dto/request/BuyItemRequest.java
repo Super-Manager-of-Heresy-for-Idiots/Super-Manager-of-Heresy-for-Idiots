@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** A character buys one or more units of an item from a merchant NPC's shop. */
+/**
+ * Класс BuyItemRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

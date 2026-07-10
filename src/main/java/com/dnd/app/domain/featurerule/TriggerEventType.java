@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Reference row for a gameplay event type (feature_used, attack_resolved, …). Seeded in migration 066. */
+/**
+ * Класс TriggerEventType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "trigger_event_type")
 @Getter

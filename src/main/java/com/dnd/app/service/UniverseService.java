@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Класс UniverseService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,6 +29,11 @@ public class UniverseService {
     private final UniverseRepository universeRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Возвращает список для операции "list universes" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<UniverseResponse> listUniverses(String username) {
         // Any authenticated user (incl. PLAYER) may read universes for selection.
@@ -34,6 +43,12 @@ public class UniverseService {
                 .toList();
     }
 
+    /**
+     * Создает результат операции "create universe" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public UniverseResponse createUniverse(CreateUniverseRequest request, String username) {
         User user = getAuthoringUser(username);

@@ -26,17 +26,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Builds a {@link FormulaContext} from a character's live data, so feature formulas (resource max,
- * duration, DC, eligibility) can be evaluated on that character. Values are snapshotted into a plain
- * {@link MapFormulaContext}, avoiding lazy-loading concerns outside the loading transaction.
- *
- * <p>Registered keys:
- * {@code character_level}, {@code proficiency_bonus};
- * {@code spellcasting_ability_mod} (highest modifier of the spellcasting abilities of the
- * character's classes; absent for non-casters);
- * {@code class_level("<name>")} by English/Russian class name (any case);
- * {@code ability_mod("<key>")} by 3-letter code (STR/DEX/…) and English/Russian ability name;
- * {@code feature_resource_count("<resourceKey>")}.</p>
+ * Класс CharacterFormulaContextFactory описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -48,6 +39,11 @@ public class CharacterFormulaContextFactory {
     private final CharacterFeatureResourceRepository resourceRepository;
     private final FeatureResourceDefinitionRepository resourceDefinitionRepository;
 
+    /**
+     * Формирует результат операции "build" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FormulaContext build(PlayerCharacter character) {
         MapFormulaContext ctx = new MapFormulaContext();

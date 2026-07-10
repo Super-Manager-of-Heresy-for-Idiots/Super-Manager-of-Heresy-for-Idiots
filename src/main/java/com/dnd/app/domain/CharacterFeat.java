@@ -7,9 +7,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A feat a character has (S1, FEAT owner). Structured record replacing the free-text
- * {@code character.features} blob for feats — unblocks feature-rule owner_type=FEAT and
- * auto-provisioning of feat-bound resources. Unique per (character, feat).
+ * Класс CharacterFeat описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "character_feats")

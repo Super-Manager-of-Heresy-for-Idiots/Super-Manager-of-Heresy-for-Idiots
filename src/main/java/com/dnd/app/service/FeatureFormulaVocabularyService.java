@@ -9,10 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Builds the formula DSL vocabulary served to the admin autocomplete. The set of NAMES is taken straight from
- * {@link FeatureFormulaEvaluator}'s allowlist (single source of truth — a function the evaluator doesn't accept
- * never appears as a suggestion, and a newly added one shows up automatically), while signatures/descriptions
- * are editorial metadata attached here.
+ * Класс FeatureFormulaVocabularyService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 public class FeatureFormulaVocabularyService {
@@ -60,6 +58,11 @@ public class FeatureFormulaVocabularyService {
             Map.entry("target_condition", new String[]{"target_condition(\"prone\")", "target",
                     "Состояние цели (истина/ложь)", "Target condition (true/false)"}));
 
+    /**
+     * Выполняет операции "vocabulary" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FormulaVocabularyResponse vocabulary(String lang) {
         boolean ru = lang == null || lang.toLowerCase().startsWith("ru");
 

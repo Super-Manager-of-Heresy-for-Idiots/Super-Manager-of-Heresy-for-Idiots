@@ -3,7 +3,10 @@ package com.dnd.app.domain.featurerule;
 import java.util.Arrays;
 import java.util.Optional;
 
-/** Declared result type of a {@code feature_formula}. */
+/**
+ * Перечисление FormulaResultType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public enum FormulaResultType {
 
     INTEGER("integer"),
@@ -19,15 +22,27 @@ public enum FormulaResultType {
         this.code = code;
     }
 
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** True for result types that evaluate to a number (int/decimal/duration/modifier). */
+    /**
+     * Проверяет условие операции "is numeric" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isNumeric() {
         return this == INTEGER || this == DECIMAL || this == DURATION || this == MODIFIER;
     }
 
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FormulaResultType> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

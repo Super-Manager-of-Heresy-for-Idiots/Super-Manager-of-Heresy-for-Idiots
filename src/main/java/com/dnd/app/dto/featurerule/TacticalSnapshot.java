@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Tactical projection of a character's feature-runtime state for the frontend / map-service: the active
- * transformation (if any) and companions. The map-service consumes this snapshot; it does not read the
- * feature tables or interpret rules.
+ * Класс TacticalSnapshot описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

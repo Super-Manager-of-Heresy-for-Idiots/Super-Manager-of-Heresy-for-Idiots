@@ -15,6 +15,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс BuffDebuffController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/admin/buffs-debuffs")
 @RequiredArgsConstructor
@@ -23,6 +27,12 @@ public class BuffDebuffController {
     private final BuffDebuffService buffDebuffService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики API.
+     * @param isBuff входящее значение is buff, используемое бизнес-сценарием
+     * @param effectType входящее значение effect type, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     public CompletableFuture<ResponseEntity<ApiResponse<List<BuffDebuffResponse>>>> list(
             @RequestParam(required = false) Boolean isBuff,
@@ -32,6 +42,11 @@ public class BuffDebuffController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> create(
             @Valid @RequestBody CreateBuffDebuffRequest request) {
@@ -41,6 +56,11 @@ public class BuffDebuffController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> get(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() ->
@@ -48,6 +68,12 @@ public class BuffDebuffController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<BuffDebuffResponse>>> update(
             @PathVariable UUID id, @Valid @RequestBody CreateBuffDebuffRequest request) {
@@ -56,6 +82,11 @@ public class BuffDebuffController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable UUID id) {
         return CompletableFuture.supplyAsync(() -> {

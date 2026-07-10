@@ -3,7 +3,10 @@ package com.dnd.app.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-/** Admin correction of a parsed class feature's mechanics. */
+/**
+ * Класс ClassFeatureResolutionRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Schema(name = "ClassFeatureResolutionRequest")
 public class ClassFeatureResolutionRequest {

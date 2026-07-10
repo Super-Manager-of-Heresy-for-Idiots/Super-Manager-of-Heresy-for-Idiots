@@ -7,9 +7,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Dedup record for class-create requests carrying an Idempotency-Key (R5).
- * A repeated (scope, key) returns the original result instead of creating a
- * second class. Records are pruned by TTL — they are not load-bearing state.
+ * Класс ClassAuthoringIdempotencyRecord описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "class_authoring_idempotency",

@@ -7,6 +7,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Класс ClassLevelRewardGrantSkillProficiency описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "class_level_reward_grant_skill_proficiency")
 @Getter

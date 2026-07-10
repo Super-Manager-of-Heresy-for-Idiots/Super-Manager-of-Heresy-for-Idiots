@@ -51,28 +51,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * S2 (spell-stack absorption): backfills the structured spell mechanics of migrations 056–062 into
- * feature rules with {@code owner_type = SPELL}, one rule per (spell, aspect):
- *
- * <ul>
- *   <li>{@code save_ability}/{@code check_*}/{@code is_attack_roll} → a {@code save_check_attack} rule
- *       (resolution rows with the RAW spell-DC formula {@code 8 + proficiency_bonus +
- *       spellcasting_ability_mod}, plus a spell attack row);</li>
- *   <li>{@code spell_damage} → a {@code damage} rule (one damage row per source entry, dice formula);</li>
- *   <li>{@code spell_healing} → a {@code healing} rule (dice/flat amount formula);</li>
- *   <li>{@code casting_action_slug} → an {@code action_cost} rule (action/bonus_action/reaction;
- *       long casts map to {@code special}, which the combat economy treats as cost-free);</li>
- *   <li>{@code spell_buffs} → an {@code active_effect} rule ({@code buff:<name>} effect keys bridge the
- *       stacking key with the legacy buff system; duration from the spell, concentration flag).</li>
- * </ul>
- *
- * <p>The legacy tables are NOT dropped and stay the read model for the folio/battle DTOs (dual-read
- * period). Rules are {@code MIGRATION}-sourced and auto-approved: the source columns are structured,
- * admin-curated data, the same determinism argument as the background backfill. Spells whose save could
- * not be parsed ({@code is_warning}) simply have no {@code save_ability} — nothing unreliable is copied;
- * re-running the backfill after an admin resolves the warning picks the spell up. Idempotent per
- * (spell, rule type). Where the old schema cannot express a detail ({@code half_on_save}), a WARN issue
- * is attached instead of guessing silently.</p>
+ * Класс SpellRuleBackfillService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -145,6 +125,11 @@ public class SpellRuleBackfillService {
         }
     }
 
+    /**
+     * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики домена.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SpellRuleBackfillResult backfill(boolean apply) {
         Run run = new Run(apply);

@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Summary of a class feature. Base-class features have {@code subclassId == null};
- * subclass features carry the owning subclass id.
+ * Класс ClassFeatureSummaryDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

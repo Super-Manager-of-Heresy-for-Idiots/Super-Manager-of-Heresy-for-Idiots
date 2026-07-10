@@ -2,6 +2,10 @@ package com.dnd.app.util;
 
 import java.security.SecureRandom;
 
+/**
+ * Класс InviteCodeGenerator описывает утилиту, которая поддерживает повторяемые операции бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public final class InviteCodeGenerator {
 
     private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -10,6 +14,10 @@ public final class InviteCodeGenerator {
 
     private InviteCodeGenerator() {}
 
+    /**
+     * Выполняет операции "generate" в рамках бизнес-логики приложения.
+     * @return результат выполнения бизнес-операции
+     */
     public static String generate() {
         StringBuilder sb = new StringBuilder(CODE_LENGTH);
         for (int i = 0; i < CODE_LENGTH; i++) {

@@ -26,14 +26,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * One-time importer for the normalized D&D PHB content bundle in
- * {@code resources/dnd_import/}. It populates the normalized content tables
- * (created by migration 054 in the default {@code public} schema) and is guarded
- * by a row-count check so it runs only once. It never touches the bestiary /
- * homebrew / existing analog tables.
- *
- * Uses raw JDBC (no JPA entities for these content tables exist yet) with explicit
- * Java-generated UUIDs so child rows can be wired to parents in-memory.
+ * Класс DndContentLoader описывает компонент загрузки справочного контента для игровых бизнес-сценариев.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class DndContentLoader implements ApplicationRunner {
@@ -116,6 +110,13 @@ public class DndContentLoader implements ApplicationRunner {
     private UUID sourceId;
     private UUID modId;
 
+    /**
+     * Создает экземпляр компонента приложения и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param jdbc входящее значение jdbc, используемое бизнес-сценарием
+     * @param mapper входящее значение mapper, используемое бизнес-сценарием
+     * @param classRewardSeedService входящее значение class reward seed service, используемое бизнес-сценарием
+     * @param classLevelRewardSeedService входящее значение class level reward seed service, используемое бизнес-сценарием
+     */
     public DndContentLoader(JdbcTemplate jdbc, ObjectMapper mapper,
                             com.dnd.app.service.ClassRewardSeedService classRewardSeedService,
                             com.dnd.app.service.ClassLevelRewardSeedService classLevelRewardSeedService) {
@@ -125,6 +126,10 @@ public class DndContentLoader implements ApplicationRunner {
         this.classLevelRewardSeedService = classLevelRewardSeedService;
     }
 
+    /**
+     * Выполняет операции "run" в рамках бизнес-логики приложения.
+     * @param args входящее значение args, используемое бизнес-сценарием
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {

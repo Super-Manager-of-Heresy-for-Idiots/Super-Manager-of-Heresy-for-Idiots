@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * SKILL_PROFICIENCY grant — grants fixed skills, a choice from a pool, or any skill.
- * Reference-only to {@code skill}.
+ * Класс SkillProficiencyGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

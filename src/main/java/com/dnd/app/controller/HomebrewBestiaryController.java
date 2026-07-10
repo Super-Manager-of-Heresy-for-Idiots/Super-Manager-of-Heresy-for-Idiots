@@ -24,9 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * GAME_MASTER bestiary authoring inside a homebrew package: reference dictionary
- * entries and monsters (new from reference data, or duplicated from a system/homebrew
- * monster). Ownership and DRAFT-status checks live in the services.
+ * Класс HomebrewBestiaryController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/homebrew/{packageId}/bestiary")
@@ -40,6 +39,12 @@ public class HomebrewBestiaryController {
 
     // === Homebrew dictionaries ===
 
+    /**
+     * Возвращает список для операции "list dictionary" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/dictionaries/{kind}")
     @Operation(summary = "List homebrew dictionary entries")
     public CompletableFuture<ResponseEntity<ApiResponse<List<DictionaryEntryResponse>>>> listDictionary(
@@ -51,6 +56,14 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create dictionary" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/dictionaries/{kind}")
     @Operation(summary = "Create homebrew dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<DictionaryEntryResponse>>> createDictionary(
@@ -63,6 +76,15 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update dictionary" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/dictionaries/{kind}/{id}")
     @Operation(summary = "Update homebrew dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<DictionaryEntryResponse>>> updateDictionary(
@@ -76,6 +98,14 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete dictionary" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/dictionaries/{kind}/{id}")
     @Operation(summary = "Delete homebrew dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteDictionary(
@@ -90,6 +120,13 @@ public class HomebrewBestiaryController {
 
     // === Homebrew monsters ===
 
+    /**
+     * Возвращает список для операции "list monsters" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters")
     @Operation(summary = "List homebrew monsters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
@@ -101,6 +138,14 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
@@ -113,6 +158,14 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create monster" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/monsters")
     @Operation(summary = "Create homebrew monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
@@ -125,6 +178,14 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "duplicate monster" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/monsters/duplicate/{sourceId}")
     @Operation(summary = "Duplicate a system or homebrew monster into this package")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> duplicateMonster(
@@ -137,6 +198,15 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update monster" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/monsters/{id}")
     @Operation(summary = "Update homebrew monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
@@ -150,6 +220,13 @@ public class HomebrewBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete monster" в рамках бизнес-логики API.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/monsters/{id}")
     @Operation(summary = "Delete homebrew monster")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteMonster(

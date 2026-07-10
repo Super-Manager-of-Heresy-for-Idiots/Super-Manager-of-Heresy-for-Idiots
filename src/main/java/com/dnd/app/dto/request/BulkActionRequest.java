@@ -10,9 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A mass GM operation over several combatants at once (Phase 2.4): damage/heal an amount, or add/remove
- * a condition. Reuses the same per-target primitives as the single-target flows (mitigation, save,
- * ConditionService) — no parallel logic. GM/admin only.
+ * Класс BulkActionRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder
@@ -20,6 +19,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class BulkActionRequest {
 
+    /**
+     * Перечисление Type описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+     * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+     */
     public enum Type { DAMAGE, HEAL, CONDITION_ADD, CONDITION_REMOVE }
 
     @NotEmpty(message = "combatantIds must not be empty")

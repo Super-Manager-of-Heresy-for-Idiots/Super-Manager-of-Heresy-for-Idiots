@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single species in the new content model (D&D 2024).
- * Carries creature type, size options, speeds and the trait graph (with mechanical
- * effects). Ability bonuses / proficiencies / languages live on Background, not here.
+ * Класс SpeciesDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

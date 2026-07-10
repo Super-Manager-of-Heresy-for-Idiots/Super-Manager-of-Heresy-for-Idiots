@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Класс SharedStorageService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,13 @@ public class SharedStorageService {
     private final CampaignService campaignService;
     private final UserRepository userRepository;
 
+    /**
+     * Создает результат операции "create storage" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public SharedStorageResponse createStorage(UUID campaignId, CreateSharedStorageRequest request, String username) {
         User user = getUser(username);
@@ -51,6 +62,12 @@ public class SharedStorageService {
         return toResponse(storage);
     }
 
+    /**
+     * Возвращает список для операции "list storages" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SharedStorageResponse> listStorages(UUID campaignId, String username) {
         User user = getUser(username);
@@ -62,6 +79,12 @@ public class SharedStorageService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get storage" в рамках бизнес-логики домена.
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public SharedStorageResponse getStorage(UUID storageId, String username) {
         User user = getUser(username);
@@ -71,6 +94,11 @@ public class SharedStorageService {
         return toResponseWithItems(storage);
     }
 
+    /**
+     * Удаляет результат операции "delete storage" в рамках бизнес-логики домена.
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteStorage(UUID storageId, String username) {
         User user = getUser(username);
@@ -81,6 +109,13 @@ public class SharedStorageService {
         log.info("Shared storage deleted: id={}, by={}", storageId, username);
     }
 
+    /**
+     * Добавляет результат операции "add item to storage" в рамках бизнес-логики домена.
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param quantity входящее значение quantity, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void addItemToStorage(UUID storageId, UUID instanceId, Integer quantity, String username) {
         User user = getUser(username);
@@ -170,6 +205,14 @@ public class SharedStorageService {
         log.info("Item added to storage: instanceId={}, storageId={}, by={}", instanceId, storageId, username);
     }
 
+    /**
+     * Выполняет операции "take item from storage" в рамках бизнес-логики домена.
+     * @param storageId идентификатор storage, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param quantity входящее значение quantity, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void takeItemFromStorage(UUID storageId, UUID instanceId, UUID characterId, Integer quantity, String username) {
         User user = getUser(username);

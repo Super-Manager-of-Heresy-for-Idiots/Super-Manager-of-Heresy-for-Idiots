@@ -30,10 +30,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Structured hit dice: derive per-die-size pools from the character's class levels, spend them on a short
- * rest (heal {@code die roll + CON modifier}), and regain half on a long rest. Provisioning is idempotent
- * and self-healing (runs on list / rest), so no explicit creation/level-up hook is needed. Access mirrors
- * character resources: owner / campaign GM / ADMIN modify, campaign members view.
+ * Класс CharacterHitDiceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -49,6 +47,12 @@ public class CharacterHitDiceService {
     private final CampaignService campaignService;
     private final CharacterHpService characterHpService;
 
+    /**
+     * Возвращает список для операции "list and provision" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<HitDiceResponse> listAndProvision(UUID characterId, String username) {
         PlayerCharacter character = findCharacter(characterId);
@@ -61,9 +65,8 @@ public class CharacterHitDiceService {
     }
 
     /**
-     * Idempotent self-heal: the total hit dice of each die size is the sum of class levels of classes using
-     * that die. Creates missing pools full, and when a die's total grows (level-up) adds the new dice to the
-     * remaining pool. Never lowers remaining.
+     * Выполняет операции "provision" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
      */
     @Transactional
     public void provision(PlayerCharacter character) {
@@ -91,9 +94,14 @@ public class CharacterHitDiceService {
     }
 
     /**
-     * Spend {@code count} hit dice of size {@code die} on a short rest. The client supplies the rolled dice
-     * sum ({@code rolledTotal}); the server adds the CON modifier once per die and heals through the shared
-     * HP primitive. Heal floored at 0.
+     * Выполняет операции "spend" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param die входящее значение die, используемое бизнес-сценарием
+     * @param count входящее значение count, используемое бизнес-сценарием
+     * @param rolledTotal входящее значение rolled total, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public HitDiceSpendResponse spend(UUID campaignId, UUID characterId, int die, int count,
@@ -124,7 +132,10 @@ public class CharacterHitDiceService {
                 .build();
     }
 
-    /** Long rest: regain half the total hit dice (min 1), capped at how many were spent, largest die first. */
+    /**
+     * Выполняет операции "restore on long rest" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     */
     @Transactional
     public void restoreOnLongRest(PlayerCharacter character) {
         provision(character);

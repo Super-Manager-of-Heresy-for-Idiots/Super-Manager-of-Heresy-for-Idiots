@@ -8,6 +8,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт FeatureResourceDefinitionRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface FeatureResourceDefinitionRepository extends JpaRepository<FeatureResourceDefinition, UUID> {
     List<FeatureResourceDefinition> findByFeatureRuleId(UUID featureRuleId);
     List<FeatureResourceDefinition> findByFeatureRuleIdIn(Collection<UUID> featureRuleIds);

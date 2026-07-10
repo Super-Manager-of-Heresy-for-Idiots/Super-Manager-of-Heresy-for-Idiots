@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Lightweight reference label for any new-content entity (ability_score, skill,
- * feat, spell, subclass, …). Used for dropdowns and inline references in the
- * normalized content model.
+ * Класс ContentLabelDto описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

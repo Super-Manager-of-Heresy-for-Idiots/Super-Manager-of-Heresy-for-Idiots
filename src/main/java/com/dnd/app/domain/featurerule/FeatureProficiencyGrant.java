@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A proficiency/expertise a feature rule confers (skill, weapon, armor, tool, saving throw). */
+/**
+ * Класс FeatureProficiencyGrant описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_proficiency_grant")
 @Getter

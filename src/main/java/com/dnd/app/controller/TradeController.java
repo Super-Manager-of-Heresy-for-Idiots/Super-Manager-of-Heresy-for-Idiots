@@ -22,8 +22,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Trading with a merchant NPC's shop. The GM stocks the shop; campaign members buy from and sell
- * to it with their characters. Prices are in gold pieces and settle through the character wallet.
+ * Класс TradeController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/npcs/{npcId}/shop")
@@ -34,6 +34,13 @@ public class TradeController {
     private final TradeService tradeService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list shop" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List a merchant's shop inventory (members)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ShopItemResponse>>>> listShop(
@@ -45,6 +52,14 @@ public class TradeController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "stock shop" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/stock")
     @Operation(summary = "Stock the merchant's shop with an item (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<ShopItemResponse>>> stockShop(
@@ -57,6 +72,14 @@ public class TradeController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "buy" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/buy")
     @Operation(summary = "Buy an item from the merchant for one of your characters")
     public CompletableFuture<ResponseEntity<ApiResponse<TradeResultResponse>>> buy(
@@ -69,6 +92,14 @@ public class TradeController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "sell" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/sell")
     @Operation(summary = "Sell a carried item to the merchant")
     public CompletableFuture<ResponseEntity<ApiResponse<TradeResultResponse>>> sell(

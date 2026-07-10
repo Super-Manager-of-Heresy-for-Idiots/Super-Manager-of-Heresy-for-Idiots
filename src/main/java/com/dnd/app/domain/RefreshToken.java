@@ -7,10 +7,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Server-side record of one issued refresh token. Each login starts a {@code familyId}
- * chain; every silent refresh rotates the token, marking the previous row consumed
- * ({@code revoked} + {@code replacedBy}). Presenting an already-consumed token is a theft
- * signal — the whole family is then revoked. Logout revokes the family too.
+ * Класс RefreshToken описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "refresh_token", indexes = @Index(name = "idx_refresh_token_user", columnList = "user_id"))

@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A generic named formula attached directly to a feature rule. */
+/**
+ * Класс FeatureRuleFormula описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_rule_formula")
 @Getter

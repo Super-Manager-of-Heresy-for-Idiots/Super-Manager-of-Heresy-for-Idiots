@@ -23,9 +23,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Resolves item/character content codes (damage type, rarity, equipment slot, size, ability)
- * to their homebrew-friendly dictionary rows. A homebrew package, when supplied, is searched
- * before the system (vanilla) rows so a package can shadow or extend the core set.
+ * Класс ContentDictionaryResolver описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 @RequiredArgsConstructor
@@ -37,39 +36,76 @@ public class ContentDictionaryResolver {
     private final CreatureSizeRepository creatureSizeRepository;
     private final StatTypeRepository statTypeRepository;
 
+    /**
+     * Выполняет операции "resolve damage type" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrew входящее значение homebrew, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public DamageType resolveDamageType(String code, HomebrewPackage homebrew) {
         return resolveBySlug(code, homebrew,
                 damageTypeRepository::findBySlugAndHomebrew_Id,
                 damageTypeRepository::findBySlugAndHomebrewIsNull, "damageType");
     }
 
+    /**
+     * Выполняет операции "resolve rarity" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrew входящее значение homebrew, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public Rarity resolveRarity(String code, HomebrewPackage homebrew) {
         return resolveBySlug(code, homebrew,
                 rarityRepository::findBySlugAndHomebrew_Id,
                 rarityRepository::findBySlugAndHomebrewIsNull, "rarity");
     }
 
+    /**
+     * Выполняет операции "resolve equipment slot" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrew входящее значение homebrew, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public EquipmentSlot resolveEquipmentSlot(String code, HomebrewPackage homebrew) {
         return resolve(equipmentSlotRepository, code, homebrew, "slot");
     }
 
-    /** Equipment slot lookup against the system (vanilla) catalogue only. */
+    /**
+     * Выполняет операции "resolve system slot" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public EquipmentSlot resolveSystemSlot(String code) {
         return resolve(equipmentSlotRepository, code, null, "slot");
     }
 
+    /**
+     * Проверяет корректность операции "validate size" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrewId идентификатор homebrew, используемый для выбора нужного бизнес-объекта
+     */
     public void validateSize(String code, UUID homebrewId) {
         validateBySlug(code, homebrewId,
                 creatureSizeRepository::existsBySlugAndHomebrew_Id,
                 creatureSizeRepository::existsBySlugAndHomebrewIsNull, "size");
     }
 
+    /**
+     * Проверяет корректность операции "validate damage type" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrewId идентификатор homebrew, используемый для выбора нужного бизнес-объекта
+     */
     public void validateDamageType(String code, UUID homebrewId) {
         validateBySlug(code, homebrewId,
                 damageTypeRepository::existsBySlugAndHomebrew_Id,
                 damageTypeRepository::existsBySlugAndHomebrewIsNull, "damageType");
     }
 
+    /**
+     * Проверяет корректность операции "validate ability" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param homebrewId идентификатор homebrew, используемый для выбора нужного бизнес-объекта
+     */
     public void validateAbility(String code, UUID homebrewId) {
         if (code == null) {
             throw new BadRequestException("ability is required");

@@ -38,10 +38,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Final level-up READ model on the new content model (Phase 6). Surfaces the reward
- * groups/options/grants available for the next level of each eligible class, plus
- * derived data and already-selected state. Commit is implemented separately
- * (Phase 7); this service is read-only.
+ * Класс LevelUpQueryService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -62,6 +60,13 @@ public class LevelUpQueryService {
     private final LevelThresholdService thresholdService;
     private final CampaignService campaignService;
 
+    /**
+     * Возвращает результат операции "get level up options" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public LevelUpOptionsResponse getLevelUpOptions(UUID characterId, String username, String lang) {
         String resolvedLang = Localization.normalize(lang);

@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Admin create/update of a class resource template ({@code custom_resource_types}). */
+/**
+ * Класс CustomResourceTypeRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

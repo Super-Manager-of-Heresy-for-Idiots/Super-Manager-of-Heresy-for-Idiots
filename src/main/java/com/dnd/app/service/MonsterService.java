@@ -26,8 +26,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Three monster scopes: SYSTEM (admin), HOMEBREW (game master), CAMPAIGN (campaign GM).
- * Reads return the full nested graph; role checks live here (URL gates only /api/admin/**).
+ * Класс MonsterService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -58,11 +58,22 @@ public class MonsterService {
 
     // =================================== Reads ===================================
 
+    /**
+     * Возвращает список для операции "list system monsters" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listSystemMonsters(String username) {
         return listSystemMonsters(username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Возвращает список для операции "list system monsters" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listSystemMonsters(String username, String lang) {
         User user = getUser(username);
@@ -72,22 +83,48 @@ public class MonsterService {
         return list.stream().map(m -> toSummary(m, lang)).toList();
     }
 
+    /**
+     * Возвращает список для операции "list homebrew monsters" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listHomebrewMonsters(UUID packageId, String username) {
         return listHomebrewMonsters(packageId, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Возвращает список для операции "list homebrew monsters" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listHomebrewMonsters(UUID packageId, String username, String lang) {
         getUser(username);
         return monsterRepository.findAllByHomebrewId(packageId).stream().map(m -> toSummary(m, lang)).toList();
     }
 
+    /**
+     * Возвращает список для операции "list campaign monsters" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listCampaignMonsters(UUID campaignId, String username) {
         return listCampaignMonsters(campaignId, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Возвращает список для операции "list campaign monsters" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listCampaignMonsters(UUID campaignId, String username, String lang) {
         User user = getUser(username);
@@ -100,11 +137,24 @@ public class MonsterService {
         return list.stream().map(m -> toSummary(m, lang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MonsterResponse getMonster(UUID id, String username) {
         return getMonster(id, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public MonsterResponse getMonster(UUID id, String username, String lang) {
         User user = getUser(username);
@@ -114,10 +164,11 @@ public class MonsterService {
     }
 
     /**
-     * Loads a monster the GM may field in a battle within {@code campaignId}: a system monster,
-     * a monster of this very campaign, or a homebrew monster whose package is installed in the
-     * campaign. Applies the same scope rules as cloning a monster into a campaign and returns
-     * the entity (callers need raw CR / XP / DEX values).
+     * Возвращает результат операции "get usable campaign monster" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param monsterId идентификатор monster, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public Monster getUsableCampaignMonster(UUID campaignId, UUID monsterId, String username) {
@@ -130,11 +181,30 @@ public class MonsterService {
 
     // ============================= ADMIN system CRUD =============================
 
+    /**
+     * Создает результат операции "create system monster" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Создает результат операции "create system monster" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createSystemMonster(MonsterRequest request, String username) {
         return createSystemMonster(request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Создает результат операции "create system monster" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createSystemMonster(MonsterRequest request, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
@@ -145,11 +215,26 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Обновляет результат операции "update system monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateSystemMonster(UUID id, MonsterRequest request, String username) {
         return updateSystemMonster(id, request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Обновляет результат операции "update system monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateSystemMonster(UUID id, MonsterRequest request, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
@@ -159,11 +244,26 @@ public class MonsterService {
         return toResponse(monsterRepository.save(monster), lang);
     }
 
+    /**
+     * Устанавливает результат операции "set system monster active" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param active входящее значение active, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse setSystemMonsterActive(UUID id, boolean active, String username) {
         return setSystemMonsterActive(id, active, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Устанавливает результат операции "set system monster active" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param active входящее значение active, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse setSystemMonsterActive(UUID id, boolean active, String username, String lang) {
         User admin = requireRole(username, Role.ADMIN);
@@ -174,6 +274,11 @@ public class MonsterService {
         return toResponse(monsterRepository.save(monster), lang);
     }
 
+    /**
+     * Удаляет результат операции "delete system monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteSystemMonster(UUID id, String username) {
         requireRole(username, Role.ADMIN);
@@ -185,11 +290,26 @@ public class MonsterService {
 
     // ============================ GM homebrew CRUD ============================
 
+    /**
+     * Создает результат операции "create homebrew monster" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createHomebrewMonster(UUID packageId, MonsterRequest request, String username) {
         return createHomebrewMonster(packageId, request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Создает результат операции "create homebrew monster" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createHomebrewMonster(UUID packageId, MonsterRequest request, String username, String lang) {
         User gm = requireGameMaster(username);
@@ -202,11 +322,28 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Обновляет результат операции "update homebrew monster" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateHomebrewMonster(UUID packageId, UUID id, MonsterRequest request, String username) {
         return updateHomebrewMonster(packageId, id, request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Обновляет результат операции "update homebrew monster" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateHomebrewMonster(UUID packageId, UUID id, MonsterRequest request, String username, String lang) {
         User gm = requireGameMaster(username);
@@ -217,6 +354,12 @@ public class MonsterService {
         return toResponse(monsterRepository.save(monster), lang);
     }
 
+    /**
+     * Удаляет результат операции "delete homebrew monster" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteHomebrewMonster(UUID packageId, UUID id, String username) {
         User gm = requireGameMaster(username);
@@ -230,11 +373,26 @@ public class MonsterService {
         log.info("Homebrew monster deleted: packageId={}, id={}, by={}", packageId, id, username);
     }
 
+    /**
+     * Выполняет операции "duplicate monster into homebrew" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse duplicateMonsterIntoHomebrew(UUID packageId, UUID sourceId, String username) {
         return duplicateMonsterIntoHomebrew(packageId, sourceId, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Выполняет операции "duplicate monster into homebrew" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse duplicateMonsterIntoHomebrew(UUID packageId, UUID sourceId, String username, String lang) {
         User gm = requireGameMaster(username);
@@ -255,11 +413,32 @@ public class MonsterService {
 
     // ========================= Campaign (master) CRUD =========================
 
+    /**
+     * Создает результат операции "create campaign monster" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+    /**
+     * Создает результат операции "create campaign monster" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createCampaignMonster(UUID campaignId, MonsterRequest request, String username) {
         return createCampaignMonster(campaignId, request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Создает результат операции "create campaign monster" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse createCampaignMonster(UUID campaignId, MonsterRequest request, String username, String lang) {
         User user = getUser(username);
@@ -275,11 +454,26 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Выполняет операции "clone monster into campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse cloneMonsterIntoCampaign(UUID campaignId, UUID sourceId, String username) {
         return cloneMonsterIntoCampaign(campaignId, sourceId, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Выполняет операции "clone monster into campaign" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param sourceId идентификатор source, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse cloneMonsterIntoCampaign(UUID campaignId, UUID sourceId, String username, String lang) {
         User user = getUser(username);
@@ -297,11 +491,26 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Обновляет результат операции "update campaign monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateCampaignMonster(UUID id, MonsterRequest request, String username) {
         return updateCampaignMonster(id, request, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Обновляет результат операции "update campaign monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse updateCampaignMonster(UUID id, MonsterRequest request, String username, String lang) {
         User user = getUser(username);
@@ -318,11 +527,24 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Преобразует данные операции "toggle campaign monster visibility" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse toggleCampaignMonsterVisibility(UUID id, String username) {
         return toggleCampaignMonsterVisibility(id, username, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Преобразует данные операции "toggle campaign monster visibility" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public MonsterResponse toggleCampaignMonsterVisibility(UUID id, String username, String lang) {
         User user = getUser(username);
@@ -338,6 +560,11 @@ public class MonsterService {
         return toResponse(saved, lang);
     }
 
+    /**
+     * Удаляет результат операции "delete campaign monster" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteCampaignMonster(UUID id, String username) {
         User user = getUser(username);

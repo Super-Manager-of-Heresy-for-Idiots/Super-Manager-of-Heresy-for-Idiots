@@ -21,7 +21,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Coverage of the runtime features by the feature-rules model (Stage 12 dashboard). */
+/**
+ * Класс FeatureRuleCoverageService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureRuleCoverageService {
@@ -35,6 +38,11 @@ public class FeatureRuleCoverageService {
     private final FeatureRuleRepository ruleRepository;
     private final FeatureRuleIssueRepository issueRepository;
 
+    /**
+     * Выполняет операции "report" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public FeatureRuleCoverageReport report(String lang) {
         Map<UUID, ClassFeature> features = classFeatureRepository.findAll().stream()

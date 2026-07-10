@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** The action-economy cost to use a feature (action/bonus/reaction/…). */
+/**
+ * Класс FeatureActionCost описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_action_cost")
 @Getter

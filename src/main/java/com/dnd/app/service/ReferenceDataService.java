@@ -23,6 +23,10 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Класс ReferenceDataService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -48,6 +52,13 @@ public class ReferenceDataService {
 
     // getRaces(...) removed in S5 — species reference now served by ContentReferenceService.
 
+    /**
+     * Возвращает результат операции "get backgrounds" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BackgroundResponse> getBackgrounds(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -61,6 +72,13 @@ public class ReferenceDataService {
         return bgs.stream().map(bg -> mapBackground(bg, lang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get skills" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> getSkills(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -74,6 +92,12 @@ public class ReferenceDataService {
         return skills.stream().map(s -> mapContentSkill(s, lang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get stat types" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getStatTypes(UUID campaignId, String username) {
         enforceAccess(campaignId, username);
@@ -85,6 +109,13 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get currencies" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<CurrencyTypeResponse> getCurrencies(UUID campaignId, String username, String lang) {
         enforceAccess(campaignId, username);
@@ -100,6 +131,16 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get spells" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param school входящее значение school, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<SpellResponse> getSpells(UUID campaignId, String username,
                                           UUID classId, Integer level, String school, String lang) {
@@ -122,6 +163,11 @@ public class ReferenceDataService {
 
     // getVanillaRaces(...) removed in S5 — species reference now served by ContentReferenceService.
 
+    /**
+     * Возвращает результат операции "get vanilla backgrounds" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Cacheable(value = CacheConfig.VANILLA_BACKGROUNDS, key = "#lang")
     @Transactional(readOnly = true)
     public List<BackgroundResponse> getVanillaBackgrounds(String lang) {
@@ -129,6 +175,11 @@ public class ReferenceDataService {
                 .map(bg -> mapBackground(bg, lang)).toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla skills" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Cacheable(value = CacheConfig.VANILLA_SKILLS, key = "#lang")
     @Transactional(readOnly = true)
     public List<ProficiencySkillResponse> getVanillaSkills(String lang) {
@@ -137,6 +188,10 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla stat types" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Cacheable(CacheConfig.VANILLA_STAT_TYPES)
     @Transactional(readOnly = true)
     public List<StatTypeResponse> getVanillaStatTypes() {
@@ -148,6 +203,11 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla currencies" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Cacheable(value = CacheConfig.VANILLA_CURRENCIES, key = "#lang")
     @Transactional(readOnly = true)
     public List<CurrencyTypeResponse> getVanillaCurrencies(String lang) {
@@ -156,6 +216,14 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla spells" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param school входящее значение school, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Cacheable(value = CacheConfig.VANILLA_SPELLS,
             key = "T(java.util.Objects).hash(#classId, #level, #school, #lang)")
     @Transactional(readOnly = true)
@@ -166,6 +234,11 @@ public class ReferenceDataService {
 
     // --- Authoring reference lookups (class builder dropdowns) ---
 
+    /**
+     * Возвращает результат операции "get vanilla abilities" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getVanillaAbilities(String lang) {
         return statTypeRepository.findByHomebrewIsNull().stream()
@@ -179,6 +252,12 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get vanilla feats" в рамках бизнес-логики домена.
+     * @param query входящее значение query, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<FeatOptionDto> getVanillaFeats(String query, String lang) {
         String needle = query == null ? null : query.trim().toLowerCase();
@@ -197,6 +276,11 @@ public class ReferenceDataService {
 
     // --- System dictionary lookups (item/spell/size authoring dropdowns) ---
 
+    /**
+     * Возвращает результат операции "get rarities" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getRarities(String lang) {
         return rarityRepository.findByHomebrewIsNullOrderBySortOrderAscNameRuAsc().stream()
@@ -204,6 +288,11 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get damage types" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getDamageTypes(String lang) {
         return damageTypeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
@@ -211,7 +300,11 @@ public class ReferenceDataService {
                 .toList();
     }
 
-    /** Combat conditions catalogue (Blinded, Prone, …) for the tracker's apply-condition picker (1.1). */
+    /**
+     * Возвращает результат операции "get conditions" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getConditions(String lang) {
         return bestiaryConditionRepository.findAll().stream()
@@ -221,6 +314,11 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get spell schools" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getSpellSchools(String lang) {
         return spellSchoolRepository.findAllByOrderByNameRuAsc().stream()
@@ -228,6 +326,11 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get sizes" в рамках бизнес-логики домена.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ContentLabelDto> getSizes(String lang) {
         return creatureSizeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
@@ -245,6 +348,10 @@ public class ReferenceDataService {
                 .build();
     }
 
+    /**
+     * Возвращает результат операции "get modifier keys" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public List<ModifierKeyDto> getModifierKeys() {
         return List.of(
                 ModifierKeyDto.builder().key("speed").label("Скорость").defaultUnit("ft").build(),
@@ -261,11 +368,21 @@ public class ReferenceDataService {
 
     // mapRaceDetail(...) removed in S5 along with the legacy race reference endpoints.
 
-    /** Canonical (English) mapping for callers without a UI-language context. */
+    /**
+     * Преобразует данные операции "map background" в рамках бизнес-логики домена.
+     * @param bg входящее значение bg, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public BackgroundResponse mapBackground(Background bg) {
         return mapBackground(bg, Localization.DEFAULT_LANG);
     }
 
+    /**
+     * Преобразует данные операции "map background" в рамках бизнес-логики домена.
+     * @param bg входящее значение bg, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public BackgroundResponse mapBackground(Background bg, String lang) {
         return BackgroundResponse.builder()
                 .id(bg.getId())
@@ -310,6 +427,11 @@ public class ReferenceDataService {
                 .build();
     }
 
+    /**
+     * Выполняет операции "parse json string list" в рамках бизнес-логики домена.
+     * @param json входящее значение json, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public List<String> parseJsonStringList(String json) {
         if (json == null || json.isBlank()) return List.of();
         try {

@@ -62,11 +62,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Lifecycle and turn logic of a campaign battle. The GM assembles a monster group (preview of
- * average danger / total xp), starts the fight (rolling initiative for every monster), players
- * join their characters with a d20, and the shared initiative tracker drives turn passing.
- * Every state change is broadcast to the campaign topic so all participants stay in sync; the
- * client re-fetches the authoritative {@link BattleResponse} on each ping.
+ * Класс BattleService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -112,6 +109,13 @@ public class BattleService {
 
     // ================================ Lifecycle ================================
 
+    /**
+     * Создает результат операции "create battle" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse createBattle(UUID campaignId, CreateBattleRequest request, String username) {
         User user = getUser(username);
@@ -131,6 +135,12 @@ public class BattleService {
         return toResponse(battle, List.of());
     }
 
+    /**
+     * Возвращает список для операции "list battles" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BattleResponse> listBattles(UUID campaignId, String username) {
         User user = getUser(username);
@@ -142,6 +152,13 @@ public class BattleService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get battle" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public BattleResponse getBattle(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -152,8 +169,13 @@ public class BattleService {
     }
 
     /**
-     * Combat log for a battle (Phase 1.2), seq-ordered after {@code afterSeq}. Non-GM callers never
-     * receive GM_ONLY rows (e.g. private death-save pips) — the filter is applied server-side.
+     * Возвращает результат операции "get battle log" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param afterSeq граница выборки, используемая для продолжения бизнес-потока
+     * @param limit ограничение размера результата бизнес-операции
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public List<BattleLogEntryResponse> getBattleLog(UUID campaignId, UUID battleId, Long afterSeq,
@@ -167,6 +189,13 @@ public class BattleService {
                 limit == null ? 0 : limit, isGm);
     }
 
+    /**
+     * Выполняет операции "end battle" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse endBattle(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -189,7 +218,15 @@ public class BattleService {
 
     // ============================== Conditions ==============================
 
-    /** Apply a condition to a combatant. GM applies to anyone; a player only to their own character (like HP delta). */
+    /**
+     * Выполняет операции "apply condition" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<CombatantConditionResponse> applyCondition(UUID campaignId, UUID battleId, UUID combatantId,
                                                            ApplyConditionRequest request, String username) {
@@ -219,7 +256,15 @@ public class BattleService {
         return result;
     }
 
-    /** Remove a condition from a combatant (same permission rules as applying one). */
+    /**
+     * Удаляет результат операции "remove condition" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param conditionId идентификатор condition, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public List<CombatantConditionResponse> removeCondition(UUID campaignId, UUID battleId, UUID combatantId,
                                                             UUID conditionId, String username) {
@@ -246,10 +291,12 @@ public class BattleService {
     }
 
     /**
-     * Mass GM operation over several combatants at once (Phase 2.4): damage/heal a flat amount, or
-     * add/remove a condition. Reuses the SAME per-target primitives as the single-target flows
-     * ({@code applyDamageOrHeal} + save/mitigation, {@link ConditionService}) — no copied logic — in a
-     * single transaction, with one summary GM log entry and one battle-updated broadcast. GM/admin only.
+     * Выполняет операции "bulk action" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse bulkAction(UUID campaignId, UUID battleId, BulkActionRequest request, String username) {
@@ -341,9 +388,13 @@ public class BattleService {
     // ============================== Death saves ==============================
 
     /**
-     * Roll a death saving throw for a dying (0 HP) character (server d20 or a manual result). nat20 →
-     * back up at 1 HP; nat1 → two failures; 10+ → a success (three ⇒ stable); below 10 → a failure
-     * (three ⇒ dead). Permission as for HP: the GM or the character's owner (1.3).
+     * Выполняет бросок операции "roll death save" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param manualRoll входящее значение manual roll, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse rollDeathSave(UUID campaignId, UUID battleId, UUID combatantId, Integer manualRoll, String username) {
@@ -399,7 +450,14 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
-    /** Stabilize a dying character (GM/healer, Medicine done by hand): clear the death-save counters; stays unconscious. */
+    /**
+     * Выполняет операции "stabilize" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse stabilize(UUID campaignId, UUID battleId, UUID combatantId, String username) {
         User user = getUser(username);
@@ -419,9 +477,12 @@ public class BattleService {
     }
 
     /**
-     * Reroll one combatant's initiative (GM quick tool, Phase 1.7): the server rolls a d20, recomputes
-     * initiative (d20 + Dexterity/statblock bonus), re-sorts the whole tracker and keeps the turn
-     * anchored on whoever is currently acting. Logs it and broadcasts a turn change. GM/admin only.
+     * Выполняет операции "reroll initiative" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse rerollInitiative(UUID campaignId, UUID battleId, UUID combatantId, String username) {
@@ -472,10 +533,12 @@ public class BattleService {
     }
 
     /**
-     * Replace the whole tracker's initiative values in one shot (GM quick tool, Phase 1.7): the
-     * request must list every combatant of the battle exactly once. Each initiative is set as a
-     * manual GM value (roll cleared), the tracker is re-sorted and the turn stays anchored on
-     * whoever is currently acting. GM/admin only. Broadcasts a turn change and logs it.
+     * Устанавливает результат операции "set initiative order" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param entries входящее значение entries, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse setInitiativeOrder(UUID campaignId, UUID battleId,
@@ -519,16 +582,12 @@ public class BattleService {
     }
 
     /**
-     * Cast a spell inside the battle flow (Phase 2.1). Validates it is the caster's turn and that the
-     * caller controls them, then delegates to the SINGLE cast path — {@link SpellCastService#cast}
-     * (which spends the action via the unified economy with {@code combatId=battleId}, spends the
-     * slot, runs the shared feature-rules engine and publishes {@code spell_cast}) — and records a
-     * {@code SPELL} battle-log entry. Returns the cast result (incl. the execution plan: dice / DC /
-     * save ability). Gated by {@code app.feature-rules.*}: throws when the runtime is disabled.
-     *
-     * <p>Effects apply to a character effect-target (self/ally); spell DAMAGE to monster combatants
-     * (the plan → resolve → {@code applyDamageOrHeal} bridge reusing 0.4/0.5) is a follow-up (2.1b).
-     * Monster spellcasters are out of scope here.
+     * Применяет заклинание операции "cast spell" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public SpellCastResult castSpell(UUID campaignId, UUID battleId, BattleCastSpellRequest request, String username) {
@@ -766,9 +825,12 @@ public class BattleService {
     }
 
     /**
-     * Roll ONE shared initiative die for a group of combatants (Phase 2.4): every listed combatant
-     * takes the same d20 (keeping its own Dexterity/statblock bonus), the tracker re-sorts and the turn
-     * stays anchored. GM/admin only. Reuses the same {@link CombatCalculator} math as a single reroll.
+     * Выполняет операции "group initiative" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantIds входящее значение combatant ids, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse groupInitiative(UUID campaignId, UUID battleId, List<UUID> combatantIds, String username) {
@@ -842,6 +904,14 @@ public class BattleService {
 
     // ============================== Group assembly ==============================
 
+    /**
+     * Добавляет результат операции "add monsters" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse addMonsters(UUID campaignId, UUID battleId,
                                       AddBattleMonstersRequest request, String username) {
@@ -880,6 +950,14 @@ public class BattleService {
         return toResponse(battle, combatants);
     }
 
+    /**
+     * Удаляет результат операции "remove combatant" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse removeCombatant(UUID campaignId, UUID battleId, UUID combatantId, String username) {
         User user = getUser(username);
@@ -901,6 +979,14 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /**
+     * Устанавливает результат операции "set override xp" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse setOverrideXp(UUID campaignId, UUID battleId,
                                         UpdateBattleXpRequest request, String username) {
@@ -924,6 +1010,13 @@ public class BattleService {
 
     // ================================== Start ==================================
 
+    /**
+     * Выполняет операции "start battle" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse startBattle(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -965,6 +1058,14 @@ public class BattleService {
 
     // =============================== Player join ===============================
 
+    /**
+     * Выполняет операции "join characters" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse joinCharacters(UUID campaignId, UUID battleId,
                                          JoinBattleRequest request, String username) {
@@ -1031,9 +1132,12 @@ public class BattleService {
     }
 
     /**
-     * The fixed part of a character's initiative — Dexterity modifier plus the net of active
-     * Dexterity buffs/debuffs — so the client can preview the final initiative live as the
-     * player enters or rolls a d20 ({@code initiative = d20 + bonus}). Same math the join uses.
+     * Возвращает результат операции "get character initiative bonus" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public int getCharacterInitiativeBonus(UUID campaignId, UUID battleId, UUID characterId, String username) {
@@ -1056,6 +1160,13 @@ public class BattleService {
 
     // ============================== Turn passing ===============================
 
+    /**
+     * Выполняет операции "end turn" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleResponse endTurn(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -1112,6 +1223,13 @@ public class BattleService {
         return toResponse(battle, combatants);
     }
 
+    /**
+     * Возвращает результат операции "get current turn" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CombatantTurnResponse getCurrentTurn(UUID campaignId, UUID battleId, String username) {
         User user = getUser(username);
@@ -1323,12 +1441,12 @@ public class BattleService {
     // ============================ Attacks & damage ============================
 
     /**
-     * The combatant whose turn it currently is strikes a target. The attacker supplies their own
-     * d20 (tabletop style); the server resolves hit/crit against the target's AC, rolls the named
-     * attack's damage and applies it to the target's HP. When the target is a character the change
-     * is written through to its sheet (with temp-HP absorption) so death/HP persists after the
-     * battle. Authorization: the GM (any combatant, e.g. monsters) or the owner of the active
-     * character, and only on that combatant's own turn.
+     * Выполняет операции "perform attack" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleActionResultResponse performAttack(UUID campaignId, UUID battleId,
@@ -1652,10 +1770,12 @@ public class BattleService {
     }
 
     /**
-     * The active character consumes a carried item (e.g. drinks a healing potion). Only the
-     * combatant whose turn it is may act, and only with an item they own. The item's healing dice
-     * (the consumable template's damage dice, read as restoration) are rolled and applied to the
-     * chosen target — by default the user themselves — then one unit of the item is spent.
+     * Выполняет операции "perform use item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleActionResultResponse performUseItem(UUID campaignId, UUID battleId,
@@ -1769,9 +1889,13 @@ public class BattleService {
     }
 
     /**
-     * Declaratively marks one of a combatant's action-economy slots (action / bonus action /
-     * reaction) as spent for this turn. Actions and bonus actions may only be spent on the
-     * combatant's own turn; a reaction can be spent at any time. Re-spending a slot is rejected.
+     * Выполняет операции "spend action" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse spendAction(UUID campaignId, UUID battleId, UUID combatantId,
@@ -1868,10 +1992,13 @@ public class BattleService {
     }
 
     /**
-     * A combatant takes a standard action (Dash / Dodge / Disengage / Help / Hide) on its own turn.
-     * The action economy is spent through the chosen slot; the effect is a turn-scoped state that the
-     * attack resolver and movement budget read (Phase 2.7). HELP flags an ally's next attack with
-     * advantage; HIDE resolves a Stealth check (manual or server-rolled) against an optional DC.
+     * Выполняет операции "standard action" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse standardAction(UUID campaignId, UUID battleId, UUID combatantId,
@@ -1965,10 +2092,13 @@ public class BattleService {
     }
 
     /**
-     * An opposed melee contest — Grapple or Shove — on the actor's turn (Phase 2.7). Both sides make
-     * a check (d20 + supplied bonus; manual or server-rolled); the defender wins ties. On the actor's
-     * win the target is grappled (Grapple) or knocked prone (Shove PRONE); a PUSH shove is forced
-     * movement executed via map (Phase 2.12). The action is spent regardless of the outcome.
+     * Выполняет операции "contest" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public ContestResultResponse contest(UUID campaignId, UUID battleId, UUID combatantId,
@@ -2066,9 +2196,13 @@ public class BattleService {
     }
 
     /**
-     * GM manual HP adjustment of any combatant (negative {@code delta} damages, positive heals).
-     * Bookkeeping for NPCs and corrections outside the attack flow; writes through to the sheet
-     * for characters.
+     * Выполняет операции "apply combatant hp" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse applyCombatantHp(UUID campaignId, UUID battleId, UUID combatantId,
@@ -2100,9 +2234,13 @@ public class BattleService {
     }
 
     /**
-     * GM adjustment of a combatant's action-economy maxima (action / bonus action / legendary
-     * action). Models the pools growing with level or spells and grants legendary actions. Only the
-     * provided fields change; spent counters are clamped so they never exceed the new maximum.
+     * Выполняет операции "adjust action economy" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse adjustActionEconomy(UUID campaignId, UUID battleId, UUID combatantId,
@@ -2562,9 +2700,13 @@ public class BattleService {
     }
 
     /**
-     * Resolve a pending concentration save the PLAYER (or GM) rolls (Phase 2.2): a manual d20 or, when
-     * {@code d20} is null, a server AUTO roll. A failure ends the character's concentration; either way
-     * the pending check is cleared. Authorization: the character's owner or the GM.
+     * Выполняет операции "resolve concentration" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @param d20 входящее значение d20, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public BattleResponse resolveConcentration(UUID campaignId, UUID battleId, UUID combatantId,
@@ -2786,10 +2928,11 @@ public class BattleService {
     // ====================== Map-service integration contracts ======================
 
     /**
-     * Read-only projection of what a given user may do in a battle, for service-to-service callers
-     * (map-service) that must authorize token control without touching the core DB or duplicating
-     * combat permission rules. GM/admin manage the battle and control any combatant; a player can
-     * only control their own character combatants; a non-member sees {@code canView=false}.
+     * Возвращает результат операции "get battle access" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public BattleAccessResponse getBattleAccess(UUID campaignId, UUID battleId, UUID userId) {
@@ -2830,9 +2973,11 @@ public class BattleService {
     }
 
     /**
-     * Minimal, safe identity of one combatant for map-service to create a token-combat link from.
-     * Deliberately omits private character-sheet data; token footprint defaults to 1x1 because
-     * spatial sizing is owned by map-service, not core BE.
+     * Возвращает результат операции "get combatant reference" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public CombatantReferenceResponse getCombatantReference(UUID campaignId, UUID battleId, UUID combatantId) {
@@ -2979,14 +3124,11 @@ public class BattleService {
     // ============================== Movement budget ============================
 
     /**
-     * Internal (map-service) contract: validate and commit a combatant's movement spend for the
-     * current turn. The spatial cost ({@code feet}) is computed authoritatively in map-service; the
-     * per-turn budget lives here. Returns an allowed-flag envelope (never a 4xx for a legal "no")
-     * carrying the reason and remaining budget so the caller can react precisely.
-     *
-     * <p>Concurrency: locks the battle row first (serializing all mutations on this battle), then the
-     * combatant row — the established battle→combatant lock order — so two simultaneous moves cannot
-     * drive the budget negative.
+     * Выполняет операции "apply movement" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public MovementResultResponse applyMovement(UUID campaignId, UUID battleId, MovementRequest request) {
@@ -3046,8 +3188,10 @@ public class BattleService {
     }
 
     /**
-     * Read-only movement snapshot (active combatant + every combatant's speed/spent) so the tactical
-     * UI (via map) can preview remaining movement without recomputing speed from the character sheet.
+     * Выполняет операции "movement context" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public MovementContextResponse movementContext(UUID campaignId, UUID battleId) {

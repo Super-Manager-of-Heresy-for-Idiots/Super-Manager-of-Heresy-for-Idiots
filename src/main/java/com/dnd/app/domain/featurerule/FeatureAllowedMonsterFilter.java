@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Filter constraining which monsters a feature (e.g. Wild Shape) may transform into. */
+/**
+ * Класс FeatureAllowedMonsterFilter описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_allowed_monster_filter")
 @Getter

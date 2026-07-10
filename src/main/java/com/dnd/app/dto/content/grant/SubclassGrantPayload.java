@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * SUBCLASS grant — selects/grants a subclass of this class.
- * "Choose a subclass" is modeled as a CHOICE group whose options each carry one
- * SUBCLASS grant.
+ * Класс SubclassGrantPayload описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

@@ -8,9 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * GM adjustment of a combatant's action-economy maxima during a battle. Each field is optional;
- * only the provided pools are changed. Used to model actions/bonus actions growing with level or
- * spells, and to grant legendary actions. Spent counters are clamped to the new maxima.
+ * Класс AdjustActionEconomyRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

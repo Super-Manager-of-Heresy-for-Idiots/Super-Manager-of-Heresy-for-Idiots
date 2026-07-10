@@ -24,8 +24,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * Role-based CRUD for the 10 bestiary reference dictionaries. ADMIN manages system rows
- * (homebrew NULL); GAME_MASTER adds rows scoped to a homebrew package they own.
+ * Класс BestiaryDictionaryService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -73,11 +73,22 @@ public class BestiaryDictionaryService {
 
     // --- Reads ---
 
+    /**
+     * Возвращает список для операции "list system" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<DictionaryEntryResponse> listSystem(DictionaryKind kind) {
         return handler(kind).repo().findAllByHomebrewIsNull().stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Возвращает список для операции "list for homebrew" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<DictionaryEntryResponse> listForHomebrew(DictionaryKind kind, UUID packageId) {
         return handler(kind).repo().findAllByHomebrewId(packageId).stream().map(this::toResponse).toList();
@@ -85,6 +96,20 @@ public class BestiaryDictionaryService {
 
     // --- ADMIN system CRUD ---
 
+    /**
+     * Обновляет результат операции "update system" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+    /**
+     * Создает результат операции "create system" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public DictionaryEntryResponse createSystem(DictionaryKind kind, DictionaryEntryRequest request, String username) {
         requireRole(username, Role.ADMIN);
@@ -99,6 +124,14 @@ public class BestiaryDictionaryService {
         return toResponse(saved);
     }
 
+    /**
+     * Обновляет результат операции "update system" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public DictionaryEntryResponse updateSystem(DictionaryKind kind, UUID id, DictionaryEntryRequest request, String username) {
         requireRole(username, Role.ADMIN);
@@ -114,6 +147,12 @@ public class BestiaryDictionaryService {
         return toResponse(save(h, entry));
     }
 
+    /**
+     * Удаляет результат операции "delete system" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteSystem(DictionaryKind kind, UUID id, String username) {
         requireRole(username, Role.ADMIN);
@@ -128,6 +167,22 @@ public class BestiaryDictionaryService {
 
     // --- GM homebrew CRUD ---
 
+    /**
+     * Обновляет результат операции "update homebrew" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+    /**
+     * Создает результат операции "create homebrew" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public DictionaryEntryResponse createHomebrew(DictionaryKind kind, UUID packageId, DictionaryEntryRequest request, String username) {
         User gm = requireGameMaster(username);
@@ -143,6 +198,15 @@ public class BestiaryDictionaryService {
         return toResponse(saved);
     }
 
+    /**
+     * Обновляет результат операции "update homebrew" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public DictionaryEntryResponse updateHomebrew(DictionaryKind kind, UUID packageId, UUID id, DictionaryEntryRequest request, String username) {
         User gm = requireGameMaster(username);
@@ -157,6 +221,13 @@ public class BestiaryDictionaryService {
         return toResponse(save(h, entry));
     }
 
+    /**
+     * Удаляет результат операции "delete homebrew" в рамках бизнес-логики домена.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteHomebrew(DictionaryKind kind, UUID packageId, UUID id, String username) {
         User gm = requireGameMaster(username);

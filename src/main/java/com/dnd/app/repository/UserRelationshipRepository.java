@@ -9,9 +9,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/**
+ * Контракт UserRelationshipRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface UserRelationshipRepository extends JpaRepository<UserRelationship, UUID> {
 
-    /** Lookup by the already-normalized pair (userAId < userBId). */
+    /** Lookup by the already-normalized pair (userAId &lt; userBId). */
     Optional<UserRelationship> findByUserAIdAndUserBId(UUID userAId, UUID userBId);
 
     /** All relationships in a given status where the user is either side of the pair. */

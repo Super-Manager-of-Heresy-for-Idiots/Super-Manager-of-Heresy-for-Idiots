@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс ItemTemplateService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,12 @@ public class ItemTemplateService {
     private final CampaignService campaignService;
     private final ContentDictionaryResolver contentDictionaryResolver;
 
+    /**
+     * Создает результат операции "create template" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemTemplateResponse createTemplate(CreateItemTemplateRequest request, String username) {
         User user = getUser(username);
@@ -51,6 +61,11 @@ public class ItemTemplateService {
         return toResponse(template);
     }
 
+    /**
+     * Возвращает результат операции "get template" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ItemTemplateResponse getTemplate(UUID id) {
         ItemTemplate template = itemTemplateRepository.findById(id)
@@ -58,6 +73,11 @@ public class ItemTemplateService {
         return toResponse(template);
     }
 
+    /**
+     * Возвращает список для операции "list all vanilla" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemTemplateResponse> listAllVanilla(String username) {
         User user = getUser(username);
@@ -69,6 +89,12 @@ public class ItemTemplateService {
                 .toList();
     }
 
+    /**
+     * Возвращает список для операции "list templates" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemTemplateResponse> listTemplates(UUID campaignId, String username) {
         User user = getUser(username);
@@ -95,6 +121,13 @@ public class ItemTemplateService {
                 .toList();
     }
 
+    /**
+     * Обновляет результат операции "update template" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemTemplateResponse updateTemplate(UUID id, CreateItemTemplateRequest request, String username) {
         User user = getUser(username);
@@ -126,6 +159,11 @@ public class ItemTemplateService {
         return toResponse(template);
     }
 
+    /**
+     * Удаляет результат операции "delete template" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteTemplate(UUID id, String username) {
         User user = getUser(username);

@@ -1,8 +1,8 @@
 package com.dnd.app.domain.enums;
 
 /**
- * Discriminates the two kinds of participant on the battle tracker: GM-controlled
- * monsters and player-controlled characters.
+ * Перечисление CombatantType описывает перечисление домена, которое фиксирует допустимые значения игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum CombatantType {
     MONSTER,

@@ -8,16 +8,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Safe, dependency-free evaluator for the bounded feature-formula DSL.
- *
- * <p>Supported: decimal numbers; dice literals {@code NdM}; arithmetic {@code + - * /} with parentheses;
- * comparisons {@code < <= > >= == !=}; logic {@code && || !}; boolean literals; an allowlist of functions
- * ({@code floor ceil round abs min max step dice class_level ability_mod feature_resource_count
- * target_condition}); and the bare context scalars {@code character_level proficiency_bonus
- * spell_slot_level spellcasting_ability_mod monster_cr combat_round}.</p>
- *
- * <p>There is NO access to Java objects, fields, reflection, or arbitrary names — anything outside the
- * allowlist raises {@link FormulaException}. Division by zero and type mismatches also raise it.</p>
+ * Класс FeatureFormulaEvaluator описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class FeatureFormulaEvaluator {
@@ -30,17 +22,26 @@ public class FeatureFormulaEvaluator {
     private static final Set<String> MATH_FUNCTIONS = Set.of("floor", "ceil", "round", "abs", "min", "max");
     private static final String STEP_FUNCTION = "step";
 
-    /** The bare context scalars the DSL allows (source of truth for admin autocomplete). */
+    /**
+     * Выполняет операции "scalar names" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public static Set<String> scalarNames() {
         return new TreeSet<>(SCALARS);
     }
 
-    /** Keyed functions taking a string argument (class_level, ability_mod, …). */
+    /**
+     * Выполняет операции "keyed function names" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public static Set<String> keyedFunctionNames() {
         return new TreeSet<>(KEYED_FUNCTIONS);
     }
 
-    /** Every callable function name in the DSL allowlist (math + keyed + step + dice). */
+    /**
+     * Выполняет операции "function names" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public static Set<String> functionNames() {
         Set<String> out = new TreeSet<>(MATH_FUNCTIONS);
         out.addAll(KEYED_FUNCTIONS);
@@ -49,12 +50,21 @@ public class FeatureFormulaEvaluator {
         return out;
     }
 
-    /** Evaluate an expression against a context. Returns Double, Boolean, or {@link DiceValue}. */
+    /**
+     * Выполняет операции "evaluate" в рамках бизнес-логики домена.
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @param ctx входящее значение ctx, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public Object evaluate(String expression, FormulaContext ctx) {
         return eval(parse(expression), ctx);
     }
 
-    /** Parse-only check + collect the context variables/functions the expression references. */
+    /**
+     * Проверяет требуемое условие операции "required context" в рамках бизнес-логики домена.
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public Set<String> requiredContext(String expression) {
         Set<String> out = new TreeSet<>();
         collect(parse(expression), out);

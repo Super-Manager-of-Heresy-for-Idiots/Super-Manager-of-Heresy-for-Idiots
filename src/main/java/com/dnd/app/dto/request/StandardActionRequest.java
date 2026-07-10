@@ -12,13 +12,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * A combatant takes a standard action (Dash / Dodge / Disengage / Help / Hide) on its own turn.
- * The action economy is spent through {@code slot} (default ACTION; some class features let these
- * be a bonus action). HELP requires {@code targetCombatantId} (the aided ally). HIDE resolves a
- * Stealth check — the actor supplies a manual {@code stealthD20} or omits it for the server to
- * roll; {@code stealthBonus} is the actor's Stealth modifier and {@code hideDc} the contest DC
- * (the highest enemy passive Perception, computed by the FE); if omitted the hide auto-succeeds
- * for the GM to adjudicate.
+ * Класс StandardActionRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

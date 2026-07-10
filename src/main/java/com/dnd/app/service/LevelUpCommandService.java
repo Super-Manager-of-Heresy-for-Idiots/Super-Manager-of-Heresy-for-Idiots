@@ -72,13 +72,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Final level-up COMMIT on the new content model (Phase 7). Validates the requested
- * reward-group selections, persists them to the final reward-selection model
- * (character_reward_selection + ability/skill/spell child selections), applies
- * deterministic grants, and returns manual action items for non-deterministic ones.
- *
- * <p>Writes only to the new reward-selection model — it never touches the legacy
- * character_acquired_rewards path. Runs in parallel with the legacy LevelUpService.</p>
+ * Класс LevelUpCommandService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -109,9 +104,25 @@ public class LevelUpCommandService {
     private final LevelThresholdService thresholdService;
     private final CharacterFeatureGrantService characterFeatureGrantService;
 
+    /**
+     * Выполняет операции "commit level up" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PersistenceContext
     private EntityManager entityManager;
 
+    /**
+     * Выполняет операции "commit level up" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LevelUpResultResponse commitLevelUp(UUID characterId, String username, LevelUpRequest request, String lang) {
         String resolvedLang = Localization.normalize(lang);
@@ -210,9 +221,12 @@ public class LevelUpCommandService {
     }
 
     /**
-     * Applies and persists selections for level-1 reward groups during character creation.
-     * This uses the final reward-selection model and intentionally does not change class
-     * level, total level, HP, XP, or proficiency.
+     * Выполняет операции "apply initial reward selections" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @param targetClass входящее значение target class, используемое бизнес-сценарием
+     * @param selections входящее значение selections, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public LevelUpResultResponse applyInitialRewardSelections(
             PlayerCharacter character,

@@ -17,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс LocationController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/locations")
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class LocationController {
     private final LocationService locationService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create location (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> createLocation(
@@ -37,6 +48,12 @@ public class LocationController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list locations" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List locations")
     public CompletableFuture<ResponseEntity<ApiResponse<List<LocationResponse>>>> listLocations(
@@ -47,6 +64,13 @@ public class LocationController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{locationId}")
     @Operation(summary = "Get location details")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> getLocation(
@@ -58,6 +82,14 @@ public class LocationController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{locationId}")
     @Operation(summary = "Update location (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> updateLocation(
@@ -70,6 +102,13 @@ public class LocationController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{locationId}")
     @Operation(summary = "Delete location (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteLocation(
@@ -81,6 +120,13 @@ public class LocationController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Преобразует данные операции "toggle visibility" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{locationId}/toggle-visibility")
     @Operation(summary = "Toggle location visibility (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<LocationResponse>>> toggleVisibility(

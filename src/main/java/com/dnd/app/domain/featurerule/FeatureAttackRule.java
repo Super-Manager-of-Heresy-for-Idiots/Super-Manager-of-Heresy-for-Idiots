@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Attack-economy rule (Extra Attack count, weapon filter, damage override). */
+/**
+ * Класс FeatureAttackRule описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_attack_rule")
 @Getter

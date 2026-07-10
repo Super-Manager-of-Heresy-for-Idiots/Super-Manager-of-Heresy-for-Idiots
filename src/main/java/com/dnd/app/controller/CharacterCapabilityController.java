@@ -21,10 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Class-aware capability profile for a character — the single read the frontend uses to decide which
- * panels/tabs to render (see {@code docs/FEATURE_RULES_FRONTEND_REWORK_PLAN.md} §0). The spellcasting block
- * is always populated from class content; feature-rules presence flags reflect the active
- * {@code app.feature-rules.*} subsystems. Access = owner / campaign GM / ADMIN.
+ * Класс CharacterCapabilityController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/characters")
@@ -36,6 +34,12 @@ public class CharacterCapabilityController {
     private final CharacterAccessGuard accessGuard;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Выполняет операции "capability profile" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/capability-profile")
     @Operation(summary = "Get a character's class-aware capability profile")
     public CompletableFuture<ResponseEntity<ApiResponse<CapabilityProfileResponse>>> capabilityProfile(
@@ -47,6 +51,12 @@ public class CharacterCapabilityController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "class features" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{characterId}/class-features")
     @Operation(summary = "Get a character's structured class features (the real abilities, for the Features tab)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterClassFeatureResponse>>>> classFeatures(

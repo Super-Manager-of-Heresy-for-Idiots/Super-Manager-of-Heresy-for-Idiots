@@ -7,6 +7,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт PendingGameplayPromptRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface PendingGameplayPromptRepository extends JpaRepository<PendingGameplayPrompt, UUID> {
     List<PendingGameplayPrompt> findByCharacterIdAndStatus(UUID characterId, String status);
     List<PendingGameplayPrompt> findByStatusAndExpiresAtIsNotNullAndExpiresAtBefore(String status, Instant cutoff);

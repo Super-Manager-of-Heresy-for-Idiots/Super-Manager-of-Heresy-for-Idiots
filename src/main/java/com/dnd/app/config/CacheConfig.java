@@ -11,23 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 
 /**
- * Caching for read-mostly, effectively-static system ("vanilla") 5e reference data.
- *
- * <p>Deliberately a <b>local per-pod</b> Caffeine cache rather than a distributed one:
- * <ul>
- *   <li>The cached data ({@link com.dnd.app.service.ReferenceDataService} vanilla
- *       classes/races/backgrounds/skills/stat-types/currencies/spells) is system-seeded
- *       reference data that changes only via migrations/deploys, so cross-pod staleness
- *       is bounded by a short TTL and needs no shared invalidation channel.</li>
- *   <li>A local cache adds zero infrastructure (no Redis), survives pod restarts cleanly,
- *       and each pod warms independently — which scales linearly as pods are added.</li>
- * </ul>
- *
- * <p>If campaign-scoped or homebrew-affected reference data is cached later, that data
- * <em>does</em> mutate at runtime and would require either a very short TTL or a distributed
- * cache with explicit eviction (Redis). Keep mutable data out of this cache manager.
- *
- * <p>TTL and size are env-configurable so memory footprint can be tuned per pod resource grant.
+ * Класс CacheConfig описывает конфигурационный компонент, который подключает инфраструктуру к бизнес-сценариям приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Configuration
 @EnableCaching
@@ -42,12 +27,20 @@ public class CacheConfig {
     /** New content-model core classes; evicted explicitly on core class authoring. */
     public static final String CONTENT_VANILLA_CLASSES = "contentVanillaClasses";
 
+    /**
+     * Выполняет операции "cache manager" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     @Value("${app.cache.reference.ttl-minutes:60}")
     private long referenceTtlMinutes;
 
     @Value("${app.cache.reference.max-size:1000}")
     private long referenceMaxSize;
 
+    /**
+     * Выполняет операции "cache manager" в рамках бизнес-логики инфраструктуры.
+     * @return результат выполнения бизнес-операции
+     */
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager(

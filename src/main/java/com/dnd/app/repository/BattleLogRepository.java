@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Контракт BattleLogRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface BattleLogRepository extends JpaRepository<BattleLog, UUID> {
 
     /** Highest seq recorded for a battle, or null when the log is empty (next seq = this + 1). */

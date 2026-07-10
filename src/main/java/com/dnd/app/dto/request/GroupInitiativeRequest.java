@@ -9,8 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Roll ONE shared initiative die for a group of combatants (Phase 2.4): all listed combatants take the
- * same d20 (each keeps its own bonus), then the tracker re-sorts. GM/admin only.
+ * Класс GroupInitiativeRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

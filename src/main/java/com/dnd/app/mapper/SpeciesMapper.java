@@ -16,14 +16,24 @@ import org.springframework.stereotype.Component;
 import java.util.Comparator;
 import java.util.List;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param s входящее значение s, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content species graph ({@link Species} + sizes + speeds + traits +
- * trait effects) to {@link SpeciesDetailResponse}. Must run inside a read-only
- * transaction: lazy collections are resolved on demand.
+ * Класс SpeciesMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class SpeciesMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param s входящее значение s, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public SpeciesDetailResponse toDetail(Species s, String lang) {
         return SpeciesDetailResponse.builder()
                 .id(s.getId())

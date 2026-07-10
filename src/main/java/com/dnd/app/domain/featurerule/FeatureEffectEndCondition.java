@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A way an effect can end: on an event, a condition, feature reuse, a rest, or a predicate. */
+/**
+ * Класс FeatureEffectEndCondition описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_effect_end_condition")
 @Getter

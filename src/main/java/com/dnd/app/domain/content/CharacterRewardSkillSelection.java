@@ -3,6 +3,10 @@ package com.dnd.app.domain.content;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Класс CharacterRewardSkillSelection описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "character_reward_skill_selection")
 @Getter

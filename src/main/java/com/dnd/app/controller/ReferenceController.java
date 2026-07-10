@@ -14,6 +14,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс ReferenceController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/reference")
 @RequiredArgsConstructor
@@ -29,6 +33,13 @@ public class ReferenceController {
     // Legacy race reference endpoint removed in S5 — superseded by
     // GET /api/campaigns/{campaignId}/reference/content/species (ContentReferenceController).
 
+    /**
+     * Возвращает результат операции "get backgrounds" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/backgrounds")
     @Operation(summary = "Get available backgrounds")
     public CompletableFuture<ResponseEntity<ApiResponse<List<BackgroundResponse>>>> getBackgrounds(
@@ -41,6 +52,13 @@ public class ReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get skills" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/skills")
     @Operation(summary = "Get 18 proficiency skills")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ProficiencySkillResponse>>>> getSkills(
@@ -53,6 +71,12 @@ public class ReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get stat types" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/stat-types")
     @Operation(summary = "Get 6 ability score types")
     public CompletableFuture<ResponseEntity<ApiResponse<List<StatTypeResponse>>>> getStatTypes(
@@ -63,6 +87,13 @@ public class ReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get currencies" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/currencies")
     @Operation(summary = "Get available currency types")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CurrencyTypeResponse>>>> getCurrencies(
@@ -75,6 +106,16 @@ public class ReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get spells" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @param school входящее значение school, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spells")
     @Operation(summary = "Get spells with optional filters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpellResponse>>>> getSpells(

@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/** Admin CRUD for a feature DAMAGE rule (Rule Workbench damage editor). */
+/**
+ * Класс FeatureDamageRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureDamageRuleAdminService {
@@ -24,11 +27,22 @@ public class FeatureDamageRuleAdminService {
     private final FeatureDamageRuleRepository damageRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public DamageRuleAdminResponse get(UUID ruleId) {
         return damageRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toResponse).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public DamageRuleAdminResponse upsert(UUID ruleId, DamageRuleEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

@@ -22,12 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Service-to-service contracts that let map-service link tactical map tokens to core battle
- * combatants without reaching into the core database or duplicating combat permission rules.
- * Combat authority stays in core BE; these are read-only projections and carry no map/grid state.
- *
- * <p>Secured by a shared service API key (see {@code com.dnd.app.security.InternalApiKeyFilter}),
- * not the user JWT: callers must present {@code X-Internal-Api-Key}.
+ * Класс InternalBattleController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/internal/campaigns/{campaignId}/battles/{battleId}")
@@ -37,6 +33,13 @@ public class InternalBattleController {
 
     private final BattleService battleService;
 
+    /**
+     * Возвращает результат операции "get battle access" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param userId идентификатор user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/access")
     @Operation(summary = "What a user may do in this battle (for map-service token control)")
     public ResponseEntity<BattleAccessResponse> getBattleAccess(
@@ -47,6 +50,13 @@ public class InternalBattleController {
         return ResponseEntity.ok(data);
     }
 
+    /**
+     * Возвращает результат операции "get combatant reference" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param combatantId идентификатор combatant, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/combatants/{combatantId}/reference")
     @Operation(summary = "Safe combatant identity to create a token-combat link from")
     public ResponseEntity<CombatantReferenceResponse> getCombatantReference(
@@ -57,6 +67,13 @@ public class InternalBattleController {
         return ResponseEntity.ok(data);
     }
 
+    /**
+     * Выполняет операции "apply movement" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/movement")
     @Operation(summary = "Validate and commit a combatant's movement budget for the current turn")
     public ResponseEntity<MovementResultResponse> applyMovement(
@@ -67,6 +84,12 @@ public class InternalBattleController {
         return ResponseEntity.ok(data);
     }
 
+    /**
+     * Выполняет операции "movement context" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/movement-context")
     @Operation(summary = "Active combatant plus every combatant's speed and spent movement (for FE previews)")
     public ResponseEntity<MovementContextResponse> movementContext(

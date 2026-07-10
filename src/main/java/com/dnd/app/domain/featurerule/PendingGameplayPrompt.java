@@ -7,7 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A durable prompt for an optional trigger/reaction, surviving client reload and backend restart. */
+/**
+ * Класс PendingGameplayPrompt описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "pending_gameplay_prompt")
 @Getter

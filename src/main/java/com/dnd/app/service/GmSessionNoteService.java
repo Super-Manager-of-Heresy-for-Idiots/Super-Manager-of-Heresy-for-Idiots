@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс GmSessionNoteService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class GmSessionNoteService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
 
+    /**
+     * Создает результат операции "create note" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public GmSessionNoteResponse createNote(UUID campaignId, CreateGmNoteRequest request, String username) {
         User user = getUser(username);
@@ -44,6 +55,12 @@ public class GmSessionNoteService {
         return toResponse(note);
     }
 
+    /**
+     * Возвращает список для операции "list notes" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<GmSessionNoteResponse> listNotes(UUID campaignId, String username) {
         User user = getUser(username);
@@ -55,6 +72,12 @@ public class GmSessionNoteService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public GmSessionNoteResponse getNote(UUID noteId, String username) {
         User user = getUser(username);
@@ -64,6 +87,13 @@ public class GmSessionNoteService {
         return toResponse(note);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public GmSessionNoteResponse updateNote(UUID noteId, UpdateGmNoteRequest request, String username) {
         User user = getUser(username);
@@ -82,6 +112,11 @@ public class GmSessionNoteService {
         return toResponse(note);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики домена.
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteNote(UUID noteId, String username) {
         User user = getUser(username);

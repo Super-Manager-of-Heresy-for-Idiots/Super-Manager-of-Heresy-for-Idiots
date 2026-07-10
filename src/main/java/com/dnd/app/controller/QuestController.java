@@ -17,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс QuestController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/quests")
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class QuestController {
     private final QuestService questService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create quest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestResponse>>> createQuest(
@@ -37,6 +48,12 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list quests" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List quests")
     public CompletableFuture<ResponseEntity<ApiResponse<List<QuestResponse>>>> listQuests(
@@ -47,6 +64,13 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get quest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{questId}")
     @Operation(summary = "Get quest details")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestResponse>>> getQuest(
@@ -58,6 +82,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update quest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{questId}")
     @Operation(summary = "Update quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestResponse>>> updateQuest(
@@ -70,6 +102,13 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete quest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{questId}")
     @Operation(summary = "Delete quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteQuest(
@@ -81,6 +120,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "complete quest" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{questId}/complete")
     @Operation(summary = "Complete quest and grant its reward to a recipient character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestCompletionResponse>>> completeQuest(
@@ -95,6 +142,13 @@ public class QuestController {
 
     // --- Quest rewards ---
 
+    /**
+     * Возвращает список для операции "list rewards" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{questId}/rewards")
     @Operation(summary = "List quest rewards")
     public CompletableFuture<ResponseEntity<ApiResponse<List<QuestRewardResponse>>>> listRewards(
@@ -106,6 +160,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Добавляет результат операции "add reward" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{questId}/rewards")
     @Operation(summary = "Add reward to quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<QuestRewardResponse>>> addReward(
@@ -118,6 +180,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete reward" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param rewardId идентификатор reward, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{questId}/rewards/{rewardId}")
     @Operation(summary = "Delete quest reward (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteReward(
@@ -132,6 +202,14 @@ public class QuestController {
 
     // --- Notes ---
 
+    /**
+     * Добавляет результат операции "add note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{questId}/notes")
     @Operation(summary = "Add note to quest")
     public CompletableFuture<ResponseEntity<ApiResponse<NoteResponse>>> addNote(
@@ -144,6 +222,15 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{questId}/notes/{noteId}")
     @Operation(summary = "Update quest note")
     public CompletableFuture<ResponseEntity<ApiResponse<NoteResponse>>> updateNote(
@@ -157,6 +244,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{questId}/notes/{noteId}")
     @Operation(summary = "Delete quest note")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNote(
@@ -169,6 +264,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "link npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{questId}/npcs/{npcId}")
     @Operation(summary = "Link NPC to quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> linkNpc(
@@ -181,6 +284,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "unlink npc" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{questId}/npcs/{npcId}")
     @Operation(summary = "Unlink NPC from quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> unlinkNpc(
@@ -193,6 +304,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "link location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{questId}/locations/{locationId}")
     @Operation(summary = "Link location to quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> linkLocation(
@@ -205,6 +324,14 @@ public class QuestController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "unlink location" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{questId}/locations/{locationId}")
     @Operation(summary = "Unlink location from quest (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> unlinkLocation(

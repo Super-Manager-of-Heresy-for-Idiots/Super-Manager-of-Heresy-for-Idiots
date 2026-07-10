@@ -20,9 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Admin CRUD for a feature RESOURCE rule's definition (Rule Workbench resource editor): resource key,
- * display name, the max-value DSL formula (validated + stamped), reset window and pooling. This is the piece
- * that lets a GM/admin actually author "how many charges and by what formula" — e.g. {@code ability_mod("INT")}.
+ * Класс FeatureResourceDefinitionAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,6 +34,11 @@ public class FeatureResourceDefinitionAdminService {
     private final FeatureFormulaService formulaService;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ResourceDefinitionAdminResponse get(UUID ruleId) {
         return definitionRepository.findByFeatureRuleId(ruleId).stream()
@@ -43,12 +47,26 @@ public class FeatureResourceDefinitionAdminService {
                 .orElse(null);
     }
 
-    /** Distinct resource keys already defined — powers the workbench autocomplete for keys and formula args. */
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list resource keys" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public java.util.List<String> listResourceKeys() {
         return definitionRepository.findDistinctResourceKeys();
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ResourceDefinitionAdminResponse upsert(UUID ruleId, ResourceDefinitionEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

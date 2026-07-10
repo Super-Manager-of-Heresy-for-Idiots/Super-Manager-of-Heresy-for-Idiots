@@ -26,6 +26,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Класс ItemInstanceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,6 +48,14 @@ public class ItemInstanceService {
     private final WebSocketEventService webSocketEventService;
     private final ContentDictionaryResolver contentDictionaryResolver;
 
+    /**
+     * Выполняет операции "grant item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemInstanceResponse grantItem(UUID campaignId, UUID characterId,
                                            GrantItemRequest request, String username) {
@@ -124,6 +136,12 @@ public class ItemInstanceService {
         return response;
     }
 
+    /**
+     * Возвращает результат операции "get inventory" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemInstanceResponse> getInventory(UUID characterId, String username) {
         User user = getUser(username);
@@ -135,6 +153,12 @@ public class ItemInstanceService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get equipped items" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemInstanceResponse> getEquippedItems(UUID characterId, String username) {
         User user = getUser(username);
@@ -146,6 +170,12 @@ public class ItemInstanceService {
                 .toList();
     }
 
+    /**
+     * Возвращает результат операции "get backpack items" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<ItemInstanceResponse> getBackpackItems(UUID characterId, String username) {
         User user = getUser(username);
@@ -157,6 +187,14 @@ public class ItemInstanceService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "equip item" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemInstanceResponse equipItem(UUID characterId, UUID instanceId,
                                            EquipItemRequest request, String username) {
@@ -190,6 +228,13 @@ public class ItemInstanceService {
         return toResponse(instance);
     }
 
+    /**
+     * Выполняет операции "unequip item" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemInstanceResponse unequipItem(UUID characterId, UUID instanceId, String username) {
         User user = getUser(username);
@@ -213,6 +258,13 @@ public class ItemInstanceService {
         return toResponse(instance);
     }
 
+    /**
+     * Удаляет результат операции "remove item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void removeItem(UUID campaignId, UUID characterId, UUID instanceId, String username) {
         User user = getUser(username);
@@ -249,6 +301,15 @@ public class ItemInstanceService {
                 characterId, Map.of("instanceId", instanceId), user.getId());
     }
 
+    /**
+     * Выполняет операции "transfer item" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param fromCharId идентификатор from char, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemInstanceResponse transferItem(UUID campaignId, UUID fromCharId, UUID instanceId,
                                               TransferItemRequest request, String username) {
@@ -291,6 +352,14 @@ public class ItemInstanceService {
         return toResponse(instance);
     }
 
+    /**
+     * Выполняет операции "rename item" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param instanceId идентификатор instance, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ItemInstanceResponse renameItem(UUID characterId, UUID instanceId,
                                             RenameItemRequest request, String username) {

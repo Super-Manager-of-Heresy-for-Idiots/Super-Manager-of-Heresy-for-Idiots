@@ -6,6 +6,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс ClassLevelRewardGrantFeat описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "class_level_reward_grant_feat")
 @Getter

@@ -18,6 +18,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс ItemTemplateController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/item-templates")
 @RequiredArgsConstructor
@@ -27,6 +31,12 @@ public class ItemTemplateController {
     private final ItemTemplateService itemTemplateService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create template" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create item template (Admin/GM)")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> createTemplate(
@@ -37,6 +47,11 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list all templates" в рамках бизнес-логики API.
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List all vanilla item templates (Admin only)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemTemplateResponse>>>> listAllTemplates(
@@ -47,6 +62,11 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get template" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get item template")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> getTemplate(@PathVariable UUID id) {
@@ -56,6 +76,12 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list templates" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/campaign/{campaignId}")
     @Operation(summary = "List available item templates for campaign")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ItemTemplateResponse>>>> listTemplates(
@@ -66,6 +92,13 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update template" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update item template")
     public CompletableFuture<ResponseEntity<ApiResponse<ItemTemplateResponse>>> updateTemplate(
@@ -77,6 +110,12 @@ public class ItemTemplateController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete template" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete item template (Admin only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteTemplate(

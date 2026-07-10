@@ -7,9 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Now extends {@link DictionaryRepository} (code-based lookups for the bestiary dictionary framework)
- * on top of the original slug-based lookups (rules / content side) — one repository for the unified
- * damage type.
+ * Контракт DamageTypeRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public interface DamageTypeRepository extends DictionaryRepository<DamageType> {
 

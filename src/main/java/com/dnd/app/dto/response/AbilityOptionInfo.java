@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Одна характеристика как вариант для ASI: текущее значение и потолок.
- * Список таких опций приходит в RewardDetailInfo.abilityOptions для награды
- * типа ABILITY_SCORE_IMPROVEMENT.
+ * Класс AbilityOptionInfo описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

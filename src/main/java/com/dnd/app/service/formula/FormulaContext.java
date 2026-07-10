@@ -1,9 +1,8 @@
 package com.dnd.app.service.formula;
 
 /**
- * Typed evaluation context for the formula DSL. Implementations resolve the allowlisted variables and
- * keyed accessors from a character/combat snapshot. Returning {@code null} means "not available", which
- * the evaluator turns into a controlled {@link FormulaException} rather than a silent 0.
+ * Контракт FormulaContext описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public interface FormulaContext {
 

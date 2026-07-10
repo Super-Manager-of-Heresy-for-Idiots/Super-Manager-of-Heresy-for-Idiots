@@ -15,11 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bridges the class progression system into combat. A character unlocks class features as they
- * level up; this service lists those the character has reached (level &lt;= current class level)
- * so the combat panel can show progression-based, class-specific actions (e.g. a Fighter's
- * abilities). Features whose description carries a damage expression are additionally turned into
- * resolvable {@link CharacterAttackResponse} attacks so they can be used through the attack flow.
+ * Класс ClassAbilityCombatService описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,7 +27,11 @@ public class ClassAbilityCombatService {
 
     private final ClassFeatureRepository classFeatureRepository;
 
-    /** Every class feature the character has unlocked at their current class levels. */
+    /**
+     * Возвращает список для операции "list abilities" в рамках бизнес-логики боя.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public List<ClassAbilityResponse> listAbilities(PlayerCharacter character) {
         List<ClassAbilityResponse> result = new ArrayList<>();
         if (character.getClassLevels() == null) {
@@ -71,7 +72,11 @@ public class ClassAbilityCombatService {
         return result;
     }
 
-    /** The subset of unlocked class features that carry a damage expression, as usable attacks. */
+    /**
+     * Выполняет операции "class attacks" в рамках бизнес-логики боя.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public List<CharacterAttackResponse> classAttacks(PlayerCharacter character) {
         int profBonus = proficiencyBonus(character.getTotalLevel() != null ? character.getTotalLevel() : 1);
         int abilityMod = Math.max(abilityModifier(character, STR), abilityModifier(character, DEX));

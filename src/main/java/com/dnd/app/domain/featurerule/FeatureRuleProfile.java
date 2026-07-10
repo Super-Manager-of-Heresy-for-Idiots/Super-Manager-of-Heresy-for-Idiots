@@ -4,18 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Canonical set of "rule profiles" for class-feature mechanics (see
- * {@code docs/CLASS_FEATURE_MECHANICS_AUDIT_2026-07-03.md} and
- * {@code anal-integration/00_STAGE_SCOPE_AND_EXECUTION_CONTRACT.md}).
- *
- * <p>A single class feature ("умение") is a composition of one or more independent rule rows.
- * Each rule row carries a profile, which decides what specialized table/runtime handles it. The
- * {@link #getCode() code} of each profile is the stable identifier stored in the
- * {@code feature_rule.rule_type} column and seeded into the {@code feature_rule_type} reference
- * table in Stage 1.</p>
- *
- * <p>This enum only fixes the vocabulary; no runtime executes these profiles yet (Stage 0 does not
- * change application behavior).</p>
+ * Перечисление FeatureRuleProfile описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum FeatureRuleProfile {
 
@@ -60,17 +50,27 @@ public enum FeatureRuleProfile {
         this.description = description;
     }
 
-    /** Stable snake_case identifier used in persistence and API payloads. */
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** Human-readable description for admin UIs / documentation. */
+    /**
+     * Возвращает результат операции "get description" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getDescription() {
         return description;
     }
 
-    /** Resolve a profile from its persisted {@link #getCode() code}. */
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FeatureRuleProfile> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

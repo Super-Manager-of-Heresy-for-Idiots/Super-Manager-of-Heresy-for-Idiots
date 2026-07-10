@@ -10,16 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Per-character "capability profile": the single source of truth the frontend uses to decide which
- * class-aware panels/tabs/sections to render (spells, spellbook, resources, actions, effects, wild-shape
- * forms, companions, spell grants, pending choices/prompts). See
- * {@code docs/FEATURE_RULES_FRONTEND_REWORK_PLAN.md} §0.
- *
- * <p>The {@link #spellcasting} block is derived from class content ({@code character_class}) and is always
- * populated (it is independent of the feature-rules runtime flags), so gating the spells tab by
- * {@code spellcasting.isCaster} works even when the runtime is off. All feature-rules presence flags below
- * are only computed when the corresponding {@code app.feature-rules.*} subsystem is active; otherwise they
- * are {@code false}/{@code 0} so the profile always reflects what the backend will actually serve.</p>
+ * Класс CapabilityProfileResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

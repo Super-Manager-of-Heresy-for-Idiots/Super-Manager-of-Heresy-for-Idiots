@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Apply a condition (from the bestiary catalogue) to a battle combatant. */
+/**
+ * Класс ApplyConditionRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

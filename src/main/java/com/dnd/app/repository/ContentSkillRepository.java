@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Контракт ContentSkillRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface ContentSkillRepository extends JpaRepository<ContentSkill, UUID> {
 
     Optional<ContentSkill> findBySlugAndHomebrewIsNull(String slug);

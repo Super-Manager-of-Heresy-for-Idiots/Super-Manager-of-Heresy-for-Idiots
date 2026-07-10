@@ -2,6 +2,10 @@ package com.dnd.app.service;
 
 import org.springframework.stereotype.Service;
 
+/**
+ * Класс LevelThresholdService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 public class LevelThresholdService {
 
@@ -29,10 +33,9 @@ public class LevelThresholdService {
     };
 
     /**
-     * Total XP required to be at the given total level. Equals the threshold to reach
-     * that level: a character with exactly this much XP is ready to level up into it but
-     * not beyond. Used when a character is created at level 1 but should be able to climb
-     * to a requested target level via the level-up mechanic.
+     * Выполняет операции "experience for level" в рамках бизнес-логики домена.
+     * @param level входящее значение level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public long experienceForLevel(int level) {
         if (level < 1 || level > 20) {
@@ -41,6 +44,12 @@ public class LevelThresholdService {
         return XP_THRESHOLDS[level - 1];
     }
 
+    /**
+     * Проверяет условие операции "is ready to level up" в рамках бизнес-логики домена.
+     * @param experience входящее значение experience, используемое бизнес-сценарием
+     * @param currentTotalLevel входящее значение current total level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isReadyToLevelUp(long experience, int currentTotalLevel) {
         if (currentTotalLevel >= 20) {
             return false;
@@ -48,6 +57,12 @@ public class LevelThresholdService {
         return experience >= XP_THRESHOLDS[currentTotalLevel];
     }
 
+    /**
+     * Выполняет операции "xp to next level" в рамках бизнес-логики домена.
+     * @param experience входящее значение experience, используемое бизнес-сценарием
+     * @param currentTotalLevel входящее значение current total level, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public long xpToNextLevel(long experience, int currentTotalLevel) {
         if (currentTotalLevel >= 20) {
             return 0;

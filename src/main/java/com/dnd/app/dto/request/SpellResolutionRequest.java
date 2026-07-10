@@ -4,9 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * Admin correction of a spell's parsed resolution. Submitted from the spell-warning
- * review console: the confirmed saving-throw ability and/or attack-roll flag, plus
- * whether the record should remain flagged for review.
+ * Класс SpellResolutionRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Schema(name = "SpellResolutionRequest")

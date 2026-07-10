@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Класс LocationService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,13 @@ public class LocationService {
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
 
+    /**
+     * Создает результат операции "create location" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LocationResponse createLocation(UUID campaignId, CreateLocationRequest request, String username) {
         User user = getUser(username);
@@ -47,6 +58,12 @@ public class LocationService {
         return toResponse(location);
     }
 
+    /**
+     * Возвращает список для операции "list locations" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<LocationResponse> listLocations(UUID campaignId, String username) {
         User user = getUser(username);
@@ -63,6 +80,12 @@ public class LocationService {
         return locations.stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Возвращает результат операции "get location" в рамках бизнес-логики домена.
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public LocationResponse getLocation(UUID locationId, String username) {
         User user = getUser(username);
@@ -76,6 +99,13 @@ public class LocationService {
         return toResponse(location);
     }
 
+    /**
+     * Обновляет результат операции "update location" в рамках бизнес-логики домена.
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LocationResponse updateLocation(UUID locationId, UpdateLocationRequest request, String username) {
         User user = getUser(username);
@@ -91,6 +121,11 @@ public class LocationService {
         return toResponse(location);
     }
 
+    /**
+     * Удаляет результат операции "delete location" в рамках бизнес-логики домена.
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteLocation(UUID locationId, String username) {
         User user = getUser(username);
@@ -101,6 +136,12 @@ public class LocationService {
         log.info("Location deleted: id={}, by={}", locationId, username);
     }
 
+    /**
+     * Преобразует данные операции "toggle visibility" в рамках бизнес-логики домена.
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LocationResponse toggleVisibility(UUID locationId, String username) {
         User user = getUser(username);

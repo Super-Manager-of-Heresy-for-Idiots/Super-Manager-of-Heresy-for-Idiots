@@ -3,10 +3,10 @@ package com.dnd.app.event;
 import com.dnd.app.dto.response.WebSocketEventPayload;
 
 /**
- * Internal application event: "broadcast this payload to a campaign topic".
- * Published inside a transaction and delivered to the STOMP broker only AFTER the
- * transaction commits (see {@code WebSocketBroadcastListener}), so subscribers never
- * observe an event for state that was later rolled back.
+ * Запись WsCampaignBroadcastEvent описывает событие домена, которое передает изменения бизнес-состояния подписчикам.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ * @param destination входящее значение destination, используемое бизнес-сценарием
+ * @param payload входящее значение payload, используемое бизнес-сценарием
  */
 public record WsCampaignBroadcastEvent(String destination, WebSocketEventPayload payload) {
 }

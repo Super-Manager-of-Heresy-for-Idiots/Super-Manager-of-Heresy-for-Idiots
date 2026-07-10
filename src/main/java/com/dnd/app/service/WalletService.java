@@ -23,6 +23,10 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Класс WalletService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,12 @@ public class WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WebSocketEventService webSocketEventService;
 
+    /**
+     * Возвращает результат операции "get wallet" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<WalletEntryResponse> getWallet(UUID characterId, String username) {
         User user = getUser(username);
@@ -47,6 +57,13 @@ public class WalletService {
                 .toList();
     }
 
+    /**
+     * Выполняет операции "modify currency" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public WalletEntryResponse modifyCurrency(UUID characterId, ModifyCurrencyRequest request, String username) {
         User user = getUser(username);
@@ -102,6 +119,13 @@ public class WalletService {
         return response;
     }
 
+    /**
+     * Возвращает результат операции "get wallet history" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public PageResponse<WalletHistoryEntryResponse> getWalletHistory(UUID characterId, Pageable pageable, String username) {
         User user = getUser(username);
@@ -114,6 +138,10 @@ public class WalletService {
         return PageResponse.of(page);
     }
 
+    /**
+     * Выполняет операции "initialize default wallet" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     */
     @Transactional
     public void initializeDefaultWallet(PlayerCharacter character) {
         // Create Gold wallet entry with 0 amount

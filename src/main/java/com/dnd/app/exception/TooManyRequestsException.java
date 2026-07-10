@@ -1,7 +1,14 @@
 package com.dnd.app.exception;
 
-/** Thrown when a per-user rate limit is exceeded; mapped to HTTP 429 by the global handler. */
+/**
+ * Класс TooManyRequestsException описывает исключение бизнес-логики, которое сообщает о нарушении ожидаемого сценария.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public class TooManyRequestsException extends RuntimeException {
+    /**
+     * Создает экземпляр компонента приложения и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param message входящее значение message, используемое бизнес-сценарием
+     */
     public TooManyRequestsException(String message) {
         super(message);
     }

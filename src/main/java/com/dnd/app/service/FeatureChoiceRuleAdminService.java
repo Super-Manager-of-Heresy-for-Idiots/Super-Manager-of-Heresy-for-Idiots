@@ -16,7 +16,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin replace-style editor for CHOICE rule groups and options. */
+/**
+ * Класс FeatureChoiceRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureChoiceRuleAdminService {
@@ -26,12 +29,23 @@ public class FeatureChoiceRuleAdminService {
     private final FeatureChoiceOptionRepository optionRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ChoiceRuleAdminResponse get(UUID ruleId) {
         requireRule(ruleId);
         return toResponse(ruleId);
     }
 
+    /**
+     * Выполняет операции "replace" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ChoiceRuleAdminResponse replace(UUID ruleId, ChoiceRuleEditRequest req) {
         FeatureRule rule = requireRule(ruleId);

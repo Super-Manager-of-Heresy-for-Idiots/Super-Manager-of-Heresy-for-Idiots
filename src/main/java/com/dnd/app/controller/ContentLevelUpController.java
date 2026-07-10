@@ -24,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Level-up endpoints on the new content model. The in-place routes are the final
- * contract; the /content aliases are kept during rollout.
+ * Класс ContentLevelUpController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -36,6 +36,13 @@ public class ContentLevelUpController {
     private final LevelUpCommandService levelUpCommandService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает результат операции "get level up options" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/characters/{characterId}/level-up-options",
             "/api/characters/{characterId}/content/level-up-options"
@@ -51,6 +58,14 @@ public class ContentLevelUpController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "commit level up" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping({
             "/api/characters/{characterId}/level-up",
             "/api/characters/{characterId}/content/level-up"

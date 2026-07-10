@@ -1,9 +1,8 @@
 package com.dnd.app.domain.enums;
 
 /**
- * Cover the target benefits from (D&D 5e). HALF gives +2, THREE_QUARTERS +5 to the target's AC and
- * Dexterity saving throws; TOTAL cannot be targeted directly. Chosen manually by the attacker in
- * this phase (automatic line-of-sight evaluation from walls is a later map concern).
+ * Перечисление CoverType описывает перечисление домена, которое фиксирует допустимые значения игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum CoverType {
     NONE(0),
@@ -17,7 +16,10 @@ public enum CoverType {
         this.bonus = bonus;
     }
 
-    /** AC / Dex-save bonus this cover grants the target (0 for NONE and TOTAL — TOTAL blocks targeting entirely). */
+    /**
+     * Выполняет операции "bonus" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public int bonus() {
         return bonus;
     }

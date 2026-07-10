@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Deeper data-quality findings for the new content model (admin view): features that
- * grant nothing, grants missing their typed payload, and orphan grant rows.
+ * Класс ContentDataQualityReport описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

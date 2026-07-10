@@ -10,9 +10,8 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Combined outcome of a single orchestrated rest, so the client gets one response instead of firing
- * (and having to reconcile) three or four separate rest calls. Sub-results are null/empty when the
- * rest type or feature flags do not touch that subsystem.
+ * Класс RestResult описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

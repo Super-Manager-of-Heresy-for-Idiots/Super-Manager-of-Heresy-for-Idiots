@@ -17,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+/**
+ * Класс GmSessionNoteController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @RestController
 @RequestMapping("/api/campaigns/{campaignId}/gm-notes")
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class GmSessionNoteController {
     private final GmSessionNoteService gmSessionNoteService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Создает результат операции "create note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping
     @Operation(summary = "Create GM session note")
     public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> createNote(
@@ -37,6 +48,12 @@ public class GmSessionNoteController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list notes" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping
     @Operation(summary = "List GM session notes")
     public CompletableFuture<ResponseEntity<ApiResponse<List<GmSessionNoteResponse>>>> listNotes(
@@ -47,6 +64,13 @@ public class GmSessionNoteController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{noteId}")
     @Operation(summary = "Get GM session note")
     public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> getNote(
@@ -58,6 +82,14 @@ public class GmSessionNoteController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/{noteId}")
     @Operation(summary = "Update GM session note")
     public CompletableFuture<ResponseEntity<ApiResponse<GmSessionNoteResponse>>> updateNote(
@@ -70,6 +102,13 @@ public class GmSessionNoteController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete note" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param noteId идентификатор note, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/{noteId}")
     @Operation(summary = "Delete GM session note")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteNote(

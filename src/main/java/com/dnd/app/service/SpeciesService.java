@@ -23,10 +23,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Selectable-species resolution and the runtime species snapshot, on the new content
- * model (D&D 2024). Replaces the race-selection / snapshot behaviour of
- * {@link RaceService} for character creation. Ability bonuses / proficiencies /
- * languages are NOT sourced here — they live on Background.
+ * Класс SpeciesService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -37,7 +35,12 @@ public class SpeciesService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final ObjectMapper objectMapper;
 
-    /** Core species are always selectable; homebrew only if its package is active in the campaign. */
+    /**
+     * Возвращает результат операции "get selectable species" в рамках бизнес-логики домена.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Species getSelectableSpecies(UUID campaignId, UUID speciesId) {
         Species species = getOrThrow(speciesId);
@@ -51,6 +54,11 @@ public class SpeciesService {
         return species;
     }
 
+    /**
+     * Возвращает результат операции "get selectable vanilla species" в рамках бизнес-логики домена.
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Species getSelectableVanillaSpecies(UUID speciesId) {
         Species species = getOrThrow(speciesId);
@@ -60,7 +68,11 @@ public class SpeciesService {
         return species;
     }
 
-    /** Builds the runtime race-snapshot JSON (same shape the sheet already reads) from a species. */
+    /**
+     * Формирует результат операции "build species snapshot json" в рамках бизнес-логики домена.
+     * @param species входящее значение species, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public String buildSpeciesSnapshotJson(Species species) {
         CharacterRaceSnapshotResponse snapshot = CharacterRaceSnapshotResponse.builder()
@@ -81,7 +93,11 @@ public class SpeciesService {
         return write(snapshot);
     }
 
-    /** Parses a stored race-snapshot JSON back into the sheet DTO (moved off RaceService in S5). */
+    /**
+     * Выполняет операции "parse snapshot" в рамках бизнес-логики домена.
+     * @param snapshotJson входящее значение snapshot json, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CharacterRaceSnapshotResponse parseSnapshot(String snapshotJson) {
         if (snapshotJson == null || snapshotJson.isBlank()) {
             return null;

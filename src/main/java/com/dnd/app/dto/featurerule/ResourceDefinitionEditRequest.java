@@ -7,9 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Admin edit of a feature RESOURCE rule's definition: what the resource is called, how its maximum is
- * computed (a DSL formula, e.g. {@code ability_mod("INT")}), and when it resets. Used by the Rule Workbench
- * resource editor.
+ * Класс ResourceDefinitionEditRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

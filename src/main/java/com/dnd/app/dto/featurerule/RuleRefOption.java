@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Generic reference-table option for admin dropdowns. {@code id} is null for code-only enums (e.g. stacking policy). */
+/**
+ * Класс RuleRefOption описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

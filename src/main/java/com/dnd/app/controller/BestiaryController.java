@@ -20,8 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Authenticated read access to the bestiary: system reference dictionaries and
- * system monsters. Per-monster visibility (campaign scope) is enforced in the service.
+ * Класс BestiaryController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/bestiary")
@@ -33,6 +33,11 @@ public class BestiaryController {
     private final MonsterService monsterService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает список для операции "list system dictionary" в рамках бизнес-логики API.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/dictionaries/{kind}")
     @Operation(summary = "List system dictionary entries")
     public CompletableFuture<ResponseEntity<ApiResponse<List<DictionaryEntryResponse>>>> listSystemDictionary(
@@ -43,6 +48,12 @@ public class BestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает список для операции "list system monsters" в рамках бизнес-логики API.
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters")
     @Operation(summary = "List system monsters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listSystemMonsters(
@@ -54,6 +65,13 @@ public class BestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(

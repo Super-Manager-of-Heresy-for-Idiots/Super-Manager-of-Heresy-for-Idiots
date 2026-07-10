@@ -4,16 +4,8 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * What a {@code feature_rule} / {@code feature_rule_issue} is attached to.
- *
- * <p>{@link #CLASS_FEATURE} was the only wired owner in the first wave; {@link #BACKGROUND} and
- * {@link #FEAT} extend the same rules runtime to those owners (the {@code owner_id → class_feature}
- * FK is dropped once a second owner type exists — see migration 082). {@link #SPELL} absorbs the
- * legacy spell mechanics (056–062): rules owned by a {@code spell.spell_id} carry the spell's damage,
- * healing, save/check/attack resolution, action cost and applied effects, so casting runs through the
- * same runtime as features instead of a parallel spell stack. The {@code owner_type}/{@code owner_id}
- * shape exists so the runtime can be reused for race features, items and homebrew without reshaping
- * the tables — see {@code anal-integration/01_STAGE_RULE_SCHEMA_FOUNDATION.md}.</p>
+ * Перечисление FeatureRuleOwnerType описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum FeatureRuleOwnerType {
 
@@ -28,12 +20,19 @@ public enum FeatureRuleOwnerType {
         this.code = code;
     }
 
-    /** Stable identifier stored in the {@code owner_type} column. */
+    /**
+     * Возвращает результат операции "get code" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     public String getCode() {
         return code;
     }
 
-    /** Resolve an owner type from its persisted {@link #getCode() code}. */
+    /**
+     * Выполняет операции "from code" в рамках бизнес-логики домена.
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static Optional<FeatureRuleOwnerType> fromCode(String code) {
         if (code == null) {
             return Optional.empty();

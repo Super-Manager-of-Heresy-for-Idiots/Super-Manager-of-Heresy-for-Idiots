@@ -10,7 +10,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A content-import warning surfaced to admins.
+ * Класс ImportWarningResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

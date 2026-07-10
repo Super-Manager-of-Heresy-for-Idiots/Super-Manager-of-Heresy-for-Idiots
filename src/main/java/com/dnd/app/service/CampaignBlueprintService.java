@@ -41,6 +41,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Класс CampaignBlueprintService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -71,6 +75,12 @@ public class CampaignBlueprintService {
 
     // ============================ Blueprint authoring ============================
 
+    /**
+     * Создает результат операции "create blueprint" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignBlueprintDetailResponse createBlueprint(CreateCampaignBlueprintRequest request, String username) {
         User author = getAuthoringUser(username);
@@ -91,6 +101,12 @@ public class CampaignBlueprintService {
         return toDetailResponse(blueprint);
     }
 
+    /**
+     * Возвращает результат операции "get my blueprint" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CampaignBlueprintDetailResponse getMyBlueprint(UUID id, String username) {
         User user = getUser(username);
@@ -98,6 +114,12 @@ public class CampaignBlueprintService {
         return toDetailResponse(blueprint);
     }
 
+    /**
+     * Возвращает список для операции "list my blueprints" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param pageable параметры постраничной выдачи для бизнес-списка
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public Page<CampaignBlueprintResponse> listMyBlueprints(String username, Pageable pageable) {
         User user = getUser(username);
@@ -105,6 +127,13 @@ public class CampaignBlueprintService {
                 .map(this::toResponse);
     }
 
+    /**
+     * Обновляет результат операции "update blueprint" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignBlueprintDetailResponse updateBlueprint(UUID id, UpdateCampaignBlueprintRequest request, String username) {
         User user = getUser(username);
@@ -121,6 +150,11 @@ public class CampaignBlueprintService {
         return toDetailResponse(blueprint);
     }
 
+    /**
+     * Выполняет операции "soft delete blueprint" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void softDeleteBlueprint(UUID id, String username) {
         User user = getUser(username);
@@ -132,6 +166,12 @@ public class CampaignBlueprintService {
         log.info("Campaign blueprint soft-deleted: id={}, by={}", id, username);
     }
 
+    /**
+     * Публикует событие операции "publish" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignBlueprintDetailResponse publish(UUID id, String username) {
         User user = getUser(username);
@@ -163,6 +203,12 @@ public class CampaignBlueprintService {
         return toDetailResponse(blueprint);
     }
 
+    /**
+     * Выполняет операции "unpublish" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CampaignBlueprintDetailResponse unpublish(UUID id, String username) {
         User user = getUser(username);
@@ -179,6 +225,13 @@ public class CampaignBlueprintService {
 
     // ============================ Blueprint NPCs ============================
 
+    /**
+     * Создает результат операции "create npc" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NpcResponse createNpc(UUID blueprintId, CreateNpcRequest request, String username) {
         User user = getUser(username);
@@ -201,6 +254,19 @@ public class CampaignBlueprintService {
         return toNpcResponse(npc);
     }
 
+    /**
+     * Обновляет результат операции "update npc" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list npcs" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<NpcResponse> listNpcs(UUID blueprintId, String username) {
         User user = getUser(username);
@@ -208,6 +274,14 @@ public class CampaignBlueprintService {
         return npcRepository.findByBlueprintId(blueprintId).stream().map(this::toNpcResponse).toList();
     }
 
+    /**
+     * Обновляет результат операции "update npc" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public NpcResponse updateNpc(UUID blueprintId, UUID npcId, UpdateNpcRequest request, String username) {
         User user = getUser(username);
@@ -260,6 +334,12 @@ public class CampaignBlueprintService {
         return toNpcResponse(npc);
     }
 
+    /**
+     * Удаляет результат операции "delete npc" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteNpc(UUID blueprintId, UUID npcId, String username) {
         User user = getUser(username);
@@ -272,6 +352,13 @@ public class CampaignBlueprintService {
 
     // ============================ Blueprint quests ============================
 
+    /**
+     * Создает результат операции "create quest" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestResponse createQuest(UUID blueprintId, CreateQuestRequest request, String username) {
         User user = getUser(username);
@@ -290,6 +377,19 @@ public class CampaignBlueprintService {
         return toQuestResponse(quest);
     }
 
+    /**
+     * Обновляет результат операции "update quest" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list quests" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<QuestResponse> listQuests(UUID blueprintId, String username) {
         User user = getUser(username);
@@ -297,6 +397,14 @@ public class CampaignBlueprintService {
         return questRepository.findByBlueprintId(blueprintId).stream().map(this::toQuestResponse).toList();
     }
 
+    /**
+     * Обновляет результат операции "update quest" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestResponse updateQuest(UUID blueprintId, UUID questId, UpdateQuestRequest request, String username) {
         User user = getUser(username);
@@ -314,6 +422,12 @@ public class CampaignBlueprintService {
         return toQuestResponse(quest);
     }
 
+    /**
+     * Удаляет результат операции "delete quest" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteQuest(UUID blueprintId, UUID questId, String username) {
         User user = getUser(username);
@@ -324,6 +438,14 @@ public class CampaignBlueprintService {
         log.info("Blueprint quest deleted: id={}, blueprintId={}, by={}", questId, blueprintId, username);
     }
 
+    /**
+     * Добавляет результат операции "add reward" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public QuestRewardResponse addReward(UUID blueprintId, UUID questId, CreateQuestRewardRequest request, String username) {
         User user = getUser(username);
@@ -360,6 +482,13 @@ public class CampaignBlueprintService {
         return toRewardResponse(reward);
     }
 
+    /**
+     * Возвращает список для операции "list rewards" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<QuestRewardResponse> listRewards(UUID blueprintId, UUID questId, String username) {
         User user = getUser(username);
@@ -369,6 +498,13 @@ public class CampaignBlueprintService {
         return quest.getRewards().stream().map(this::toRewardResponse).toList();
     }
 
+    /**
+     * Удаляет результат операции "delete reward" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param rewardId идентификатор reward, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteReward(UUID blueprintId, UUID questId, UUID rewardId, String username) {
         User user = getUser(username);
@@ -385,6 +521,13 @@ public class CampaignBlueprintService {
 
     // ============================ Blueprint locations ============================
 
+    /**
+     * Создает результат операции "create location" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LocationResponse createLocation(UUID blueprintId, CreateLocationRequest request, String username) {
         User user = getUser(username);
@@ -402,6 +545,19 @@ public class CampaignBlueprintService {
         return toLocationResponse(location);
     }
 
+    /**
+     * Обновляет результат операции "update location" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+    /**
+     * Возвращает список для операции "list locations" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<LocationResponse> listLocations(UUID blueprintId, String username) {
         User user = getUser(username);
@@ -409,6 +565,14 @@ public class CampaignBlueprintService {
         return locationRepository.findByBlueprintId(blueprintId).stream().map(this::toLocationResponse).toList();
     }
 
+    /**
+     * Обновляет результат операции "update location" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public LocationResponse updateLocation(UUID blueprintId, UUID locationId, UpdateLocationRequest request, String username) {
         User user = getUser(username);
@@ -425,6 +589,12 @@ public class CampaignBlueprintService {
         return toLocationResponse(location);
     }
 
+    /**
+     * Удаляет результат операции "delete location" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deleteLocation(UUID blueprintId, UUID locationId, String username) {
         User user = getUser(username);
@@ -437,6 +607,12 @@ public class CampaignBlueprintService {
 
     // ============================ Blueprint homebrew ============================
 
+    /**
+     * Выполняет операции "attach homebrew" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void attachHomebrew(UUID blueprintId, ActivateHomebrewRequest request, String username) {
         User user = getUser(username);
@@ -463,6 +639,12 @@ public class CampaignBlueprintService {
         log.info("Homebrew attached to blueprint: package='{}', blueprintId={}, by={}", pkg.getTitle(), blueprintId, username);
     }
 
+    /**
+     * Выполняет операции "detach homebrew" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void detachHomebrew(UUID blueprintId, UUID packageId, String username) {
         User user = getUser(username);
@@ -476,6 +658,12 @@ public class CampaignBlueprintService {
 
     // ============================ Pre-built characters ============================
 
+    /**
+     * Выполняет операции "link character" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void linkCharacter(UUID blueprintId, UUID characterId, String username) {
         User user = getUser(username);
@@ -497,6 +685,12 @@ public class CampaignBlueprintService {
         log.info("Character linked to blueprint as pre-build: characterId={}, blueprintId={}, by={}", characterId, blueprintId, username);
     }
 
+    /**
+     * Выполняет операции "unlink character" в рамках бизнес-логики домена.
+     * @param blueprintId идентификатор blueprint, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void unlinkCharacter(UUID blueprintId, UUID characterId, String username) {
         User user = getUser(username);
@@ -514,10 +708,13 @@ public class CampaignBlueprintService {
     // ============================ Shared deep-copy of a character ============================
 
     /**
-     * Deep-copies a character (scalar fields + class levels, stats, item instances,
-     * wallets, resources) onto a new owner and target. Exactly one of {@code campaign}
-     * / {@code blueprint} should be set (enforced by callers). Mirrors
-     * {@link CampaignService#reassignCharacter}.
+     * Выполняет операции "copy character" в рамках бизнес-логики домена.
+     * @param original входящее значение original, используемое бизнес-сценарием
+     * @param newOwner входящее значение new owner, используемое бизнес-сценарием
+     * @param campaign входящее значение campaign, используемое бизнес-сценарием
+     * @param blueprint входящее значение blueprint, используемое бизнес-сценарием
+     * @param status входящее значение status, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional
     public PlayerCharacter copyCharacter(PlayerCharacter original, User newOwner, Campaign campaign,
@@ -589,6 +786,11 @@ public class CampaignBlueprintService {
 
     // ============================ Access / lookup helpers ============================
 
+    /**
+     * Возвращает результат операции "get authoring user" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     public User getAuthoringUser(String username) {
         User user = getUser(username);
         if (user.getRole() != Role.GAME_MASTER && user.getRole() != Role.ADMIN) {
@@ -597,11 +799,21 @@ public class CampaignBlueprintService {
         return user;
     }
 
+    /**
+     * Возвращает результат операции "get user" в рамках бизнес-логики домена.
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @return результат выполнения бизнес-операции
+     */
     public User getUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
     }
 
+    /**
+     * Находит результат операции "find blueprint" в рамках бизнес-логики домена.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     public CampaignBlueprint findBlueprint(UUID id) {
         return blueprintRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Шаблон кампании не найден"));
@@ -716,6 +928,11 @@ public class CampaignBlueprintService {
 
     // ============================ Mappers ============================
 
+    /**
+     * Преобразует данные операции "to response" в рамках бизнес-логики домена.
+     * @param b входящее значение b, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CampaignBlueprintResponse toResponse(CampaignBlueprint b) {
         return CampaignBlueprintResponse.builder()
                 .id(b.getId())
@@ -737,6 +954,11 @@ public class CampaignBlueprintService {
                 .build();
     }
 
+    /**
+     * Преобразует данные операции "to detail response" в рамках бизнес-логики домена.
+     * @param b входящее значение b, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CampaignBlueprintDetailResponse toDetailResponse(CampaignBlueprint b) {
         List<CampaignBlueprintDetailResponse.NpcSummary> npcs = npcRepository.findByBlueprintId(b.getId()).stream()
                 .map(n -> CampaignBlueprintDetailResponse.NpcSummary.builder()

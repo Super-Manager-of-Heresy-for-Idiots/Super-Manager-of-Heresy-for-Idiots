@@ -5,17 +5,25 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Thin, injectable wrapper over RNG so combat rolls can be stubbed in tests.
+ * Класс DiceRoller описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class DiceRoller {
 
-    /** Uniformly rolls a d20 (1–20 inclusive). */
+    /**
+     * Выполняет бросок операции "roll d20" в рамках бизнес-логики боя.
+     * @return результат выполнения бизнес-операции
+     */
     public int rollD20() {
         return ThreadLocalRandom.current().nextInt(1, 21);
     }
 
-    /** Rolls a single die with the given number of sides (1..sides); non-positive sides → 0. */
+    /**
+     * Выполняет бросок операции "roll die" в рамках бизнес-логики боя.
+     * @param sides входящее значение sides, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public int rollDie(int sides) {
         if (sides < 1) {
             return 0;
@@ -24,9 +32,10 @@ public class DiceRoller {
     }
 
     /**
-     * Rolls a damage expression such as "2d6+3", "1d8" or a flat "5". On a critical hit the dice
-     * count is doubled (the flat modifier is not). Unparseable/empty expressions yield 0 and the
-     * result is floored at 0.
+     * Выполняет бросок операции "roll damage" в рамках бизнес-логики боя.
+     * @param expression входящее значение expression, используемое бизнес-сценарием
+     * @param critical входящее значение critical, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     public int rollDamage(String expression, boolean critical) {
         DiceExpression dice = DiceExpression.parse(expression);

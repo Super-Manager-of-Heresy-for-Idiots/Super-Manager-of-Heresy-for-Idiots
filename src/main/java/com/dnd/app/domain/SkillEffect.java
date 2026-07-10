@@ -6,6 +6,10 @@ import lombok.*;
 
 import java.util.UUID;
 
+/**
+ * Класс SkillEffect описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "skill_effects", uniqueConstraints = {
         @UniqueConstraint(name = "uq_skill_buff", columnNames = {"skill_id", "buff_debuff_id"})

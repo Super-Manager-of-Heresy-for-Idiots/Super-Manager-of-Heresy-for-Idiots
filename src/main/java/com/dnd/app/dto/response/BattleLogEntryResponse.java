@@ -9,9 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * One combat-log entry (Phase 1.2). {@code payload} is the parsed JSON object (formula, dice,
- * modifier, …) so the UI can expand a result without re-parsing a string. Non-GM callers never
- * receive GM_ONLY rows — they are filtered server-side in the log API.
+ * Класс BattleLogEntryResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

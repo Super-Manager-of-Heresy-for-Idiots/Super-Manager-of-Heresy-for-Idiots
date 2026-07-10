@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** A language a feature rule grants (specific language, or a choice governed by a filter). */
+/**
+ * Класс FeatureLanguageGrant описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_language_grant")
 @Getter

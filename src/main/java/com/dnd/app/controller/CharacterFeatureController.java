@@ -52,9 +52,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Player/GM-facing feature-rules runtime for a character: resource counters, spending, GM adjustment,
- * and rest recovery (Stage 5). All endpoints are no-ops in effect unless {@code app.feature-rules} is
- * enabled (no resource rows exist otherwise). Access = character owner, campaign GM, or ADMIN.
+ * Класс CharacterFeatureController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/characters/{characterId}/features")
@@ -77,6 +76,12 @@ public class CharacterFeatureController {
     private final CampaignService campaignService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Выполняет операции "resources" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/resources")
     @Operation(summary = "List a character's feature resource counters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterFeatureResourceResponse>>>> resources(
@@ -88,6 +93,14 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "spend" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param resourceId идентификатор resource, используемый для выбора нужного бизнес-объекта
+     * @param amount входящее значение amount, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/resources/{resourceId}/spend")
     @Operation(summary = "Spend from a feature resource")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterFeatureResourceResponse>>> spend(
@@ -101,6 +114,14 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "adjust" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param resourceId идентификатор resource, используемый для выбора нужного бизнес-объекта
+     * @param value входящее значение value, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/resources/{resourceId}/adjust")
     @Operation(summary = "GM/manual set of a feature resource's current value")
     public CompletableFuture<ResponseEntity<ApiResponse<CharacterFeatureResourceResponse>>> adjust(
@@ -114,6 +135,12 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "actions" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/actions")
     @Operation(summary = "List feature actions a character can currently use (with cost/availability)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<AvailableFeatureAction>>>> actions(
@@ -125,6 +152,14 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "use" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{featureId}/use")
     @Operation(summary = "Use a feature: spend its action/resource cost and record it")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureUseResult>>> use(
@@ -138,6 +173,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "plan" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/{featureId}/plan")
     @Operation(summary = "Compute a feature's structured combat resolution (damage/DC/save/attack)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureExecutionPlan>>> plan(
@@ -149,6 +191,14 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "apply" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param featureId идентификатор feature, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/{featureId}/apply")
     @Operation(summary = "Apply a rolled feature outcome (damage/healing) to a target character")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureApplyResult>>> apply(
@@ -166,6 +216,12 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "pending prompts" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/pending-prompts")
     @Operation(summary = "List a character's pending gameplay prompts (reactions/optional triggers)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<PendingPromptResponse>>>> pendingPrompts(
@@ -177,6 +233,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "resolve prompt" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param promptId идентификатор prompt, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/pending-prompts/{promptId}/resolve")
     @Operation(summary = "Resolve a pending prompt (spend reaction/resource and apply)")
     public CompletableFuture<ResponseEntity<ApiResponse<PendingPromptResponse>>> resolvePrompt(
@@ -189,6 +252,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "decline prompt" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param promptId идентификатор prompt, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/pending-prompts/{promptId}/decline")
     @Operation(summary = "Decline a pending prompt")
     public CompletableFuture<ResponseEntity<ApiResponse<PendingPromptResponse>>> declinePrompt(
@@ -201,6 +271,12 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "choices" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/choices")
     @Operation(summary = "List a character's feature choices (Fighting Style, Expertise, Metamagic…)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureChoiceGroupResponse>>>> choices(
@@ -214,6 +290,15 @@ public class CharacterFeatureController {
 
     @PostMapping("/choices/{groupId}")
     @Operation(summary = "Record a feature choice selection (applies skills; other types recorded)")
+    /**
+     * Выполняет операции "choose feature" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param groupId идентификатор group, используемый для выбора нужного бизнес-объекта
+     * @param optionType входящее значение option type, используемое бизнес-сценарием
+     * @param targetEntityId идентификатор target entity, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureChoiceGroupResponse>>> chooseFeature(
             @PathVariable UUID characterId, @PathVariable UUID groupId,
             @RequestParam String optionType, @RequestParam(required = false) UUID targetEntityId,
@@ -226,6 +311,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "remove choice" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param choiceId идентификатор choice, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/choices/{choiceId}")
     @Operation(summary = "Remove a feature choice selection")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeChoice(
@@ -238,6 +330,12 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "spells" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/spells")
     @Operation(summary = "List spells a character's features grant (with prepared/known/free-cast flags)")
     public CompletableFuture<ResponseEntity<ApiResponse<List<FeatureSpellGrantResponse>>>> spells(
@@ -249,6 +347,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Применяет заклинание операции "cast via feature" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param grantId идентификатор grant, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/spell-grants/{grantId}/cast")
     @Operation(summary = "Cast a spell via a feature grant (free cast / resource spend)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureSpellCastResult>>> castViaFeature(
@@ -261,6 +366,12 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "effects" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/effects")
     @Operation(summary = "List a character's active feature effects with modifiers")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ActiveEffectResponse>>>> effects(
@@ -272,6 +383,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "end effect" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/effects/{effectId}/end")
     @Operation(summary = "GM: end an active feature effect")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> endEffect(
@@ -284,6 +402,14 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set effect rounds" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param effectId идентификатор effect, используемый для выбора нужного бизнес-объекта
+     * @param value входящее значение value, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/effects/{effectId}/rounds")
     @Operation(summary = "GM: set the remaining rounds of an active feature effect")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> setEffectRounds(
@@ -297,6 +423,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rest preview" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param restType входящее значение rest type, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/rest/preview")
     @Operation(summary = "Preview what a rest would restore for feature resources")
     public CompletableFuture<ResponseEntity<ApiResponse<List<RestResourcePreview>>>> restPreview(
@@ -308,6 +441,13 @@ public class CharacterFeatureController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Выполняет операции "rest complete" в рамках бизнес-логики API.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param restType входящее значение rest type, используемое бизнес-сценарием
+     * @param authentication входящее значение authentication, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/rest/complete")
     @Operation(summary = "Apply a rest's feature-resource recovery")
     public CompletableFuture<ResponseEntity<ApiResponse<List<RestResourcePreview>>>> restComplete(

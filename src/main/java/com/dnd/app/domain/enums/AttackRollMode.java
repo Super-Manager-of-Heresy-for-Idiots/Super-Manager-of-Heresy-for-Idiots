@@ -1,9 +1,8 @@
 package com.dnd.app.domain.enums;
 
 /**
- * How an attack's d20 is rolled. ADVANTAGE rolls two dice and keeps the higher, DISADVANTAGE the
- * lower; NORMAL is a single die. Virtual dice apply this directly; manual dice supply {@code d20A}
- * and {@code d20B} (or a single legacy {@code d20} for NORMAL).
+ * Перечисление AttackRollMode описывает перечисление домена, которое фиксирует допустимые значения игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 public enum AttackRollMode {
     NORMAL,

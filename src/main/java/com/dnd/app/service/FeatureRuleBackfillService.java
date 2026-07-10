@@ -26,10 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Backfills structured feature rules for the 305 runtime features from the mechanics already parsed onto
- * {@code class_feature} (activation/damage/save/healing/warning). Everything is created as {@code parser}-
- * sourced and {@code needs_review} — nothing is auto-approved (high-risk rules stay for manual review).
- * Idempotent: a feature that already has parser-sourced rules is skipped.
+ * Класс FeatureRuleBackfillService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -46,6 +44,11 @@ public class FeatureRuleBackfillService {
     private final FeatureHealingRuleRepository healingRuleRepository;
     private final FeatureRuleRevisionService revisionService;
 
+    /**
+     * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики домена.
+     * @param apply признак применения изменений вместо пробного расчета
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public FeatureRuleBackfillResult backfill(boolean apply) {
         List<ClassFeature> features = classFeatureRepository.findAll().stream()

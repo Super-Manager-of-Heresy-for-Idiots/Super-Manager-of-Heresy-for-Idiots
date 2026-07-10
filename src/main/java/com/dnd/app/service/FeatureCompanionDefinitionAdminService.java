@@ -19,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin replace-style editor for COMPANION rule definitions. */
+/**
+ * Класс FeatureCompanionDefinitionAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureCompanionDefinitionAdminService {
@@ -29,12 +32,23 @@ public class FeatureCompanionDefinitionAdminService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public CompanionDefinitionAdminResponse get(UUID ruleId) {
         requireRule(ruleId);
         return toResponse(ruleId);
     }
 
+    /**
+     * Выполняет операции "replace" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public CompanionDefinitionAdminResponse replace(UUID ruleId, CompanionDefinitionEditRequest req) {
         FeatureRule rule = requireRule(ruleId);

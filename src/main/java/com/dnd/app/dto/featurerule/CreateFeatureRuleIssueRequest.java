@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/** Raise an issue on a feature (feature-level) or on a specific rule ({@code featureRuleId} set). */
+/**
+ * Класс CreateFeatureRuleIssueRequest описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Data
 @Builder
 @NoArgsConstructor

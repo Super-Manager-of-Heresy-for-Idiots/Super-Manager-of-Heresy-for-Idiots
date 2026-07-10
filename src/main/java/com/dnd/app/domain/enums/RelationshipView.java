@@ -1,6 +1,9 @@
 package com.dnd.app.domain.enums;
 
-/** The caller-relative relationship shown in user-search results. */
+/**
+ * Перечисление RelationshipView описывает перечисление домена, которое фиксирует допустимые значения игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public enum RelationshipView {
     NONE,
     PENDING_OUTGOING,

@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A single structured validation issue, addressed by a JSON path into the request so
- * the UI can attach a badge to the offending group/option/grant.
+ * Класс ValidationIssue описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder
@@ -30,14 +30,32 @@ public class ValidationIssue {
     @Schema(description = "Human-readable message")
     private String message;
 
+    /**
+     * Выполняет операции "error" в рамках бизнес-логики передачи данных.
+     * @param path входящее значение path, используемое бизнес-сценарием
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param message входящее значение message, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static ValidationIssue error(String path, String code, String message) {
         return ValidationIssue.builder().path(path).code(code).severity("ERROR").message(message).build();
     }
 
+    /**
+     * Выполняет операции "warning" в рамках бизнес-логики передачи данных.
+     * @param path входящее значение path, используемое бизнес-сценарием
+     * @param code входящее значение code, используемое бизнес-сценарием
+     * @param message входящее значение message, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static ValidationIssue warning(String path, String code, String message) {
         return ValidationIssue.builder().path(path).code(code).severity("WARNING").message(message).build();
     }
 
+    /**
+     * Проверяет условие операции "is error" в рамках бизнес-логики передачи данных.
+     * @return результат выполнения бизнес-операции
+     */
     public boolean isError() {
         return "ERROR".equals(severity);
     }

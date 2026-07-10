@@ -38,18 +38,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * The single place that answers "what modifies X for this character?", reading BOTH effect systems:
- * the legacy {@code buffs_debuffs} (via {@code character_active_effects}) and the feature-rules
- * effects ({@code feature_effect_modifier} via {@code character_active_effect}, whose value formulas
- * are finally evaluated here). Modifiers sharing a {@code stackKey} do not stack — the aggregator
- * keeps the maximum — which closes the "+2 from an item and the same +2 as a feature = +4" trap while
- * two genuinely different sources still sum.
- *
- * <p>Source B modifier-type vocabulary is defined here (it had no consumer before): {@code ac_bonus},
- * {@code attack_bonus}, {@code damage_bonus}, {@code save_bonus}, {@code check_bonus},
- * {@code initiative_bonus}, {@code stat_bonus} (affects check/save/initiative), and for
- * {@link #damageMultiplier} the {@code damage_resistance}/{@code damage_vulnerability} flags. Unknown
- * types are ignored so bad data can never silently change a number.</p>
+ * Класс ModifierAggregator описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -70,7 +60,12 @@ public class ModifierAggregator {
     private final SpeciesTraitEffectRepository speciesTraitEffectRepository;
     private final ObjectMapper objectMapper;
 
-    /** Every modifier (both sources) contributing to {@code target}, before the stacking rule. */
+    /**
+     * Выполняет операции "modifiers for" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<AppliedModifier> modifiersFor(UUID characterId, ModifierTarget target) {
         List<AppliedModifier> out = new ArrayList<>(collectLegacy(characterId, target));
@@ -78,16 +73,22 @@ public class ModifierAggregator {
         return out;
     }
 
-    /** Net modifier from BOTH sources for {@code target}, applying the non-stacking (max) rule. */
+    /**
+     * Преобразует данные операции "total for" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public int totalFor(UUID characterId, ModifierTarget target) {
         return sumWithStacking(modifiersFor(characterId, target));
     }
 
     /**
-     * Net modifier from the FEATURE source only. For callers (like the legacy ability-check path) that
-     * already sum the legacy buffs natively — adding this gives them feature-effect contributions
-     * without double-counting the legacy ones.
+     * Выполняет операции "feature total" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param target входящее значение target, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public int featureTotal(UUID characterId, ModifierTarget target) {
@@ -95,10 +96,10 @@ public class ModifierAggregator {
     }
 
     /**
-     * Damage multiplier for an incoming damage type from feature resistances/vulnerabilities AND the
-     * character's racial resistances ({@code species_trait_effect}): {@code 0.5} if resistant, {@code 2.0}
-     * if vulnerable, {@code 1.0} if neither or both (they cancel per RAW). A feature resistance/vulnerability
-     * with no damage type applies to all types.
+     * Выполняет операции "damage multiplier" в рамках бизнес-логики домена.
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param damageTypeId идентификатор damage type, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
     public double damageMultiplier(UUID characterId, UUID damageTypeId) {

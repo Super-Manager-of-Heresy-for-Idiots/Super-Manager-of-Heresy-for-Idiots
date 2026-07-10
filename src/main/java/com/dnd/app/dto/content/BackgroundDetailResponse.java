@@ -11,9 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Canonical read model for a single background in the new content model (D&D 2024):
- * granted feat, ability-score / skill options, feat / tool / language choices and the
- * starting-equipment choice groups.
+ * Класс BackgroundDetailResponse описывает DTO, который переносит данные между API и бизнес-логикой.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

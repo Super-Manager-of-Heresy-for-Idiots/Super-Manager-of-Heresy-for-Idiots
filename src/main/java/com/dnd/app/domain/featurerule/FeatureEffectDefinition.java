@@ -5,7 +5,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-/** Definition of an active effect a feature can apply (duration, stacking, concentration, target). */
+/**
+ * Класс FeatureEffectDefinition описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Entity
 @Table(name = "feature_effect_definition")
 @Getter

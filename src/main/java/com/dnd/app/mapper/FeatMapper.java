@@ -10,14 +10,24 @@ import com.dnd.app.dto.content.FeatDetailResponse;
 import com.dnd.app.util.Localization;
 import org.springframework.stereotype.Component;
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param f входящее значение f, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
 /**
- * Maps the new-content feat graph ({@link Feat} + category + prerequisites + sections)
- * to {@link FeatDetailResponse}. Must run inside a read-only transaction: lazy
- * collections are resolved on demand.
+ * Класс FeatMapper описывает маппер, который преобразует доменные модели и DTO без изменения бизнес-правил.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
 public class FeatMapper {
 
+    /**
+     * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
+     * @param f входящее значение f, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public FeatDetailResponse toDetail(Feat f, String lang) {
         return FeatDetailResponse.builder()
                 .id(f.getId())

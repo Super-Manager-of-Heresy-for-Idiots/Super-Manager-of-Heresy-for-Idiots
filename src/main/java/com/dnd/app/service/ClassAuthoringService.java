@@ -87,11 +87,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Aggregate class authoring on the new content model (Phase 8). One request describes
- * the whole class graph; the service validates it (structured 422), then persists
- * mechanics + subclasses + features + reward groups/options/typed grants. Used for both
- * admin/core (homebrew = null) and homebrew packages (homebrew = package, ownership
- * enforced). Update replaces the child graph; delete cascades.
+ * Класс ClassAuthoringService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -128,6 +125,22 @@ public class ClassAuthoringService {
 
     // --- public API: admin/core ---
 
+    /**
+     * Обновляет результат операции "update core class" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+    /**
+     * Создает результат операции "create core class" в рамках бизнес-логики домена.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param idemKey входящее значение idem key, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @org.springframework.cache.annotation.CacheEvict(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
@@ -136,6 +149,15 @@ public class ClassAuthoringService {
         return createIdempotent("core:" + username, null, idemKey, request, lang, () -> create(null, request, lang));
     }
 
+    /**
+     * Обновляет результат операции "update core class" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @org.springframework.cache.annotation.CacheEvict(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
@@ -150,6 +172,11 @@ public class ClassAuthoringService {
         return update(existing, null, request, lang);
     }
 
+    /**
+     * Удаляет результат операции "delete core class" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @org.springframework.cache.annotation.CacheEvict(
             value = com.dnd.app.config.CacheConfig.CONTENT_VANILLA_CLASSES, allEntries = true)
     @Transactional
@@ -165,6 +192,22 @@ public class ClassAuthoringService {
 
     // --- public API: homebrew package ---
 
+    /**
+     * Обновляет результат операции "update package class" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+    /**
+     * Создает результат операции "create package class" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param idemKey входящее значение idem key, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ClassSaveResult createPackageClass(UUID packageId, ClassWriteRequest request, String username, String lang,
                                               String idemKey) {
@@ -173,6 +216,16 @@ public class ClassAuthoringService {
                 () -> create(pkg, request, lang));
     }
 
+    /**
+     * Обновляет результат операции "update package class" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param ifMatch входящее значение if match, используемое бизнес-сценарием
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ClassSaveResult updatePackageClass(UUID packageId, UUID classId, ClassWriteRequest request,
                                               String ifMatch, String username, String lang) {
@@ -185,6 +238,12 @@ public class ClassAuthoringService {
         return update(existing, pkg, request, lang);
     }
 
+    /**
+     * Удаляет результат операции "delete package class" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     */
     @Transactional
     public void deletePackageClass(UUID packageId, UUID classId, String username) {
         HomebrewPackage pkg = loadOwnedPackage(packageId, username);
@@ -198,6 +257,13 @@ public class ClassAuthoringService {
 
     // --- public API: read detail ---
 
+    /**
+     * Возвращает результат операции "get core class" в рамках бизнес-логики домена.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentClassDetailResponse getCoreClass(UUID classId, String username, String lang) {
         requireAdmin(username);
@@ -208,6 +274,14 @@ public class ClassAuthoringService {
         return classMapper.toDetail(clazz, lang);
     }
 
+    /**
+     * Возвращает результат операции "get package class" в рамках бизнес-логики домена.
+     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ContentClassDetailResponse getPackageClass(UUID packageId, UUID classId, String username, String lang) {
         HomebrewPackage pkg = loadOwnedPackage(packageId, username);
@@ -218,7 +292,11 @@ public class ClassAuthoringService {
         return classMapper.toDetail(clazz, lang);
     }
 
-    /** Strong validator over the canonical read model — changes whenever the class graph changes. */
+    /**
+     * Выполняет операции "etag for" в рамках бизнес-логики домена.
+     * @param detail входящее значение detail, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public String etagFor(ContentClassDetailResponse detail) {
         try {
             byte[] json = objectMapper.writeValueAsBytes(detail);

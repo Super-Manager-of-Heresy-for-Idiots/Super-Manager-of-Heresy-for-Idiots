@@ -21,7 +21,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin CRUD for a SAVE_CHECK_ATTACK (resolution) rule in the Rule Workbench. */
+/**
+ * Класс FeatureResolutionRuleAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureResolutionRuleAdminService {
@@ -36,6 +39,10 @@ public class FeatureResolutionRuleAdminService {
     private final SkillRepository skillRepository;
     private final FeatureFormulaAdminHelper formulaHelper;
 
+    /**
+     * Выполняет операции "metadata" в рамках бизнес-логики домена.
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ResolutionMetadataResponse metadata() {
         return ResolutionMetadataResponse.builder()
@@ -56,11 +63,22 @@ public class FeatureResolutionRuleAdminService {
                 .build();
     }
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public ResolutionRuleAdminResponse get(UUID ruleId) {
         return resolutionRepository.findByFeatureRuleId(ruleId).stream().findFirst().map(this::toResponse).orElse(null);
     }
 
+    /**
+     * Выполняет операции "upsert" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public ResolutionRuleAdminResponse upsert(UUID ruleId, ResolutionRuleEditRequest req) {
         FeatureRule rule = ruleRepository.findById(ruleId)

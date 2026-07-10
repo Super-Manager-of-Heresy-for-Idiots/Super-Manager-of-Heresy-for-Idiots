@@ -8,10 +8,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A live condition instance on a battle combatant (from the {@code bestiary_conditions} catalogue).
- * {@code remainingRounds} null means "until removed"; otherwise it decrements on each round boundary
- * and the row is deleted at 0. Phase 1.1 tracks the marker + duration; advantage/save automation from
- * conditions is Phase 2, layered on the same table.
+ * Класс BattleCombatantCondition описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "battle_combatant_condition")

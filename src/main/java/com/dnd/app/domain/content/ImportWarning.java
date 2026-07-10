@@ -17,8 +17,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A content import warning recorded by the loader (table created in migration 054).
- * Surfaced to admins so non-fatal import issues are visible without DB access.
+ * Класс ImportWarning описывает доменную модель, которая хранит состояние и инварианты игровой бизнес-логики.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "import_warning")

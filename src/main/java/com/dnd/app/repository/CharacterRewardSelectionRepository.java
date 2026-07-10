@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт CharacterRewardSelectionRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface CharacterRewardSelectionRepository extends JpaRepository<CharacterRewardSelection, UUID> {
 
     Optional<CharacterRewardSelection> findByCharacterIdAndRewardGroupId(UUID characterId, UUID groupId);

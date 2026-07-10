@@ -20,8 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * Read-only reference endpoints for the new normalized content model. The in-place
- * routes are the final contract; the /content aliases are kept during rollout.
+ * Класс ContentReferenceController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequiredArgsConstructor
@@ -31,6 +31,11 @@ public class ContentReferenceController {
     private final ContentReferenceService contentReferenceService;
     private final Executor controllerTaskExecutor;
 
+    /**
+     * Возвращает результат операции "get vanilla classes" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/classes", "/api/reference/content/classes"})
     @Operation(summary = "Get core (vanilla) classes from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<ContentClassDetailResponse>>>> getVanillaClasses(
@@ -40,6 +45,12 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla class" в рамках бизнес-логики API.
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/classes/{classId}", "/api/reference/content/classes/{classId}"})
     @Operation(summary = "Get a single core (vanilla) class from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<ContentClassDetailResponse>>> getVanillaClass(
@@ -50,6 +61,13 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign classes" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/classes",
             "/api/campaigns/{campaignId}/reference/content/classes"
@@ -65,6 +83,14 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign class" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param classId идентификатор class, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/classes/{classId}",
             "/api/campaigns/{campaignId}/reference/content/classes/{classId}"
@@ -83,6 +109,11 @@ public class ContentReferenceController {
 
     // --- species (D&D 2024 race replacement) ---
 
+    /**
+     * Возвращает результат операции "get vanilla species" в рамках бизнес-логики API.
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/species", "/api/reference/content/species"})
     @Operation(summary = "Get core (vanilla) species from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<List<SpeciesDetailResponse>>>> getVanillaSpecies(
@@ -92,6 +123,12 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get vanilla species by id" в рамках бизнес-логики API.
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({"/api/reference/species/{speciesId}", "/api/reference/content/species/{speciesId}"})
     @Operation(summary = "Get a single core (vanilla) species from the new content model")
     public CompletableFuture<ResponseEntity<ApiResponse<SpeciesDetailResponse>>> getVanillaSpeciesById(
@@ -102,6 +139,13 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign species" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/species",
             "/api/campaigns/{campaignId}/reference/content/species"
@@ -117,6 +161,14 @@ public class ContentReferenceController {
                 controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get campaign species by id" в рамках бизнес-логики API.
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param speciesId идентификатор species, используемый для выбора нужного бизнес-объекта
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping({
             "/api/campaigns/{campaignId}/reference/species/{speciesId}",
             "/api/campaigns/{campaignId}/reference/content/species/{speciesId}"

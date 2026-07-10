@@ -29,7 +29,10 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Collects the feature actions a character can currently use, with action + resource cost/availability. */
+/**
+ * Класс FeatureActionService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -45,6 +48,11 @@ public class FeatureActionService {
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
 
+    /**
+     * Возвращает список для операции "list available actions" в рамках бизнес-логики домена.
+     * @param character входящее значение character, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<AvailableFeatureAction> listAvailableActions(PlayerCharacter character) {
         if (!flags.actionsActive()) {

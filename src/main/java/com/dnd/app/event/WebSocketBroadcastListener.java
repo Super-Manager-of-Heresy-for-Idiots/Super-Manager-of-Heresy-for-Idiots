@@ -9,13 +9,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Delivers buffered WebSocket broadcasts to the STOMP broker (in-memory SimpleBroker or
- * the RabbitMQ relay) once the surrounding DB transaction has committed.
- *
- * <p>Using {@link TransactionalEventListener} with {@code AFTER_COMMIT} guarantees the
- * client is only notified about changes that are actually durable; {@code fallbackExecution}
- * keeps it working for the rare publisher that runs outside a transaction. {@code @Async}
- * keeps STOMP serialization/delivery off the request (and commit) thread.
+ * Класс WebSocketBroadcastListener описывает событие домена, которое передает изменения бизнес-состояния подписчикам.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Component
@@ -24,6 +19,10 @@ public class WebSocketBroadcastListener {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    /**
+     * Обрабатывает событие операции "on campaign broadcast" в рамках бизнес-логики приложения.
+     * @param event входящее значение event, используемое бизнес-сценарием
+     */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onCampaignBroadcast(WsCampaignBroadcastEvent event) {
@@ -32,6 +31,10 @@ public class WebSocketBroadcastListener {
                 event.destination(), event.payload().getType());
     }
 
+    /**
+     * Обрабатывает событие операции "on user broadcast" в рамках бизнес-логики приложения.
+     * @param event входящее значение event, используемое бизнес-сценарием
+     */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onUserBroadcast(WsUserBroadcastEvent event) {

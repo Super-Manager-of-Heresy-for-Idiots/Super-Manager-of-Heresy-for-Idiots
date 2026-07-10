@@ -40,27 +40,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Idempotent backfill of the per-level reward groups that drive the content level-up
- * flow, derived from {@code dnd_import/classes.normalized.json}. Without this data a
- * level-up only bumps HP, because there are no reward groups to surface or apply.
- *
- * <p>For every core class and every gained level 2..20 it seeds, from the authoritative
- * {@code klassovye-umeniya} progression column and the spell progression columns:</p>
- * <ul>
- *   <li>base class features &rarr; AUTO group + FEATURE grant (also ensures the
- *       {@code class_feature} row exists);</li>
- *   <li>"Увеличение характеристик" &rarr; mandatory CHOICE group + ABILITY_SCORE grant
- *       (+1/+1 to two distinct abilities);</li>
- *   <li>features whose text confers Экспертность &rarr; mandatory CHOICE group +
- *       SKILL_PROFICIENCY grant ({@code grantsExpertise=true});</li>
- *   <li>increases in prepared spells / cantrips &rarr; mandatory CHOICE group + SPELL
- *       grant forcing the player to pick the new spells.</li>
- * </ul>
- *
- * <p>The subclass-choice group (level 3) is owned by {@link ClassRewardSeedService};
- * "Подкласс" features are skipped here. Idempotency key: a (class, level) is skipped
- * entirely once any FEATURE/ABILITY_SCORE/SKILL_PROFICIENCY/SPELL group exists for it.
- * Never touches homebrew. Safe to run on every startup.</p>
+ * Класс ClassLevelRewardSeedService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -90,6 +71,9 @@ public class ClassLevelRewardSeedService {
     private final ClassLevelRewardGrantSkillProficiencyRepository skillGrantRepo;
     private final ClassLevelRewardGrantSpellRepository spellGrantRepo;
 
+    /**
+     * Выполняет операции "seed core level rewards" в рамках бизнес-логики домена.
+     */
     @Transactional
     public void seedCoreLevelRewards() {
         JsonNode root = read();

@@ -4,10 +4,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A parsed dice expression — {@code count}d{@code sides} ± {@code modifier}. Supports the forms
- * authored on character attacks and monster features: "2d6+3", "1d8", "d20", "1к8" (Cyrillic die
- * marker) and flat numbers like "5". Pure and side-effect free so it can be unit-tested; the
- * actual rolling lives in {@link DiceRoller}.
+ * Запись DiceExpression описывает сервис боевой логики, который рассчитывает и применяет правила боя.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ * @param count входящее значение count, используемое бизнес-сценарием
+ * @param sides входящее значение sides, используемое бизнес-сценарием
+ * @param modifier входящее значение modifier, используемое бизнес-сценарием
  */
 public record DiceExpression(int count, int sides, int modifier) {
 
@@ -15,7 +16,11 @@ public record DiceExpression(int count, int sides, int modifier) {
             "\\s*(\\d*)\\s*[dDкКkK]\\s*(\\d+)\\s*([+\\-]\\s*\\d+)?\\s*");
     private static final Pattern FLAT = Pattern.compile("\\s*([+\\-]?\\d+)\\s*");
 
-    /** Parses an expression, returning {@code null} when nothing usable is present. */
+    /**
+     * Выполняет операции "parse" в рамках бизнес-логики боя.
+     * @param expr входящее значение expr, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     public static DiceExpression parse(String expr) {
         if (expr == null || expr.isBlank()) {
             return null;
@@ -34,12 +39,18 @@ public record DiceExpression(int count, int sides, int modifier) {
         return null;
     }
 
-    /** Smallest possible total (every die shows 1). */
+    /**
+     * Выполняет операции "min" в рамках бизнес-логики боя.
+     * @return результат выполнения бизнес-операции
+     */
     public int min() {
         return count + modifier;
     }
 
-    /** Largest possible total (every die shows its max face). */
+    /**
+     * Выполняет операции "max" в рамках бизнес-логики боя.
+     * @return результат выполнения бизнес-операции
+     */
     public int max() {
         return count * sides + modifier;
     }

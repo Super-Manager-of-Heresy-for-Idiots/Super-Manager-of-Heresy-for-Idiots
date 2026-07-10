@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * The active character consumes one of their carried items in combat (e.g. drinks a healing
- * potion). The item must be a consumable the character owns; one unit is spent. When
- * {@link #targetCombatantId} is omitted the effect applies to the user themselves.
+ * Класс BattleUseItemRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

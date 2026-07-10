@@ -18,10 +18,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * HTTP implementation of {@link MapZoneCreator}: POSTs the zone to map-service's internal endpoint
- * ({@code /api/internal/sessions/by-battle/{battleId}/zones}) with the shared X-Internal-Api-Key.
- * Best-effort — failures are logged and swallowed (the cast never depends on map-service). The
- * startup key/url fail-fast lives on {@link HttpMapSessionCloser}, which shares this configuration.
+ * Класс HttpMapZoneCreator описывает интеграционный компонент, который связывает backend с внешним сервисом.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Component
@@ -36,7 +34,20 @@ public class HttpMapZoneCreator implements MapZoneCreator {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    /**
+     * Создает экземпляр компонента приложения и получает зависимости, необходимые для выполнения бизнес-логики.
+     * @param battle входящее значение battle, используемое бизнес-сценарием
+     * @param spec входящее значение spec, используемое бизнес-сценарием
+     * @param baseUrl входящее значение base url, используемое бизнес-сценарием
+     * @param apiKey входящее значение api key, используемое бизнес-сценарием
+     * @param objectMapper входящее значение object mapper, используемое бизнес-сценарием
+     */
     public HttpMapZoneCreator(
+    /**
+     * Создает результат операции "create zone for battle" в рамках бизнес-логики приложения.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param spec входящее значение spec, используемое бизнес-сценарием
+     */
             @Value("${map-service.base-url:}") String baseUrl,
             @Value("${app.internal.api-key:}") String apiKey,
             ObjectMapper objectMapper
@@ -47,6 +58,11 @@ public class HttpMapZoneCreator implements MapZoneCreator {
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
     }
 
+    /**
+     * Создает результат операции "create zone for battle" в рамках бизнес-логики приложения.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param spec входящее значение spec, используемое бизнес-сценарием
+     */
     @Override
     public void createZoneForBattle(UUID battleId, ZoneSpec spec) {
         if (!StringUtils.hasText(baseUrl)) {

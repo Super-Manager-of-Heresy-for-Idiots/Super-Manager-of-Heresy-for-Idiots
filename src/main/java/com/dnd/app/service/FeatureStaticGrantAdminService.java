@@ -21,7 +21,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Admin replace-style editor for STATIC_GRANT rule details. */
+/**
+ * Класс FeatureStaticGrantAdminService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class FeatureStaticGrantAdminService {
@@ -30,12 +33,23 @@ public class FeatureStaticGrantAdminService {
     private final FeatureProficiencyGrantRepository proficiencyRepository;
     private final FeatureLanguageGrantRepository languageRepository;
 
+    /**
+     * Возвращает результат операции "get" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public StaticGrantAdminResponse get(UUID ruleId) {
         requireRule(ruleId);
         return toResponse(ruleId);
     }
 
+    /**
+     * Выполняет операции "replace" в рамках бизнес-логики домена.
+     * @param ruleId идентификатор rule, используемый для выбора нужного бизнес-объекта
+     * @param req входящее значение req, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public StaticGrantAdminResponse replace(UUID ruleId, StaticGrantEditRequest req) {
         FeatureRule rule = requireRule(ruleId);

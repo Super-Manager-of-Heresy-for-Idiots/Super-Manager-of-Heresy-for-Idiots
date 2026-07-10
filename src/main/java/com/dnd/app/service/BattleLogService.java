@@ -20,13 +20,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Single write point for the persistent combat log (Phase 1.2). Every meaningful battle event is
- * appended here from the flow that performs it, in the SAME transaction, so the log can never
- * diverge from state. {@code seq} is assigned as {@code max(seq)+1} per battle and the row is flushed
- * immediately so a second append within one action (ATTACK then DAMAGE) gets the next number.
- *
- * PUBLIC entries are also pushed live over the campaign topic; GM_ONLY entries are pulled by the GM
- * via the log API only (there is no GM-scoped WS topic in the MVP — a documented limitation).
+ * Класс BattleLogService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Slf4j
 @Service
@@ -39,6 +34,18 @@ public class BattleLogService {
     private final WebSocketEventService webSocketEventService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Выполняет операции "append" в рамках бизнес-логики домена.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param type входящее значение type, используемое бизнес-сценарием
+     * @param actorCombatantId идентификатор actor combatant, используемый для выбора нужного бизнес-объекта
+     * @param targetCombatantId идентификатор target combatant, используемый для выбора нужного бизнес-объекта
+     * @param payload входящее значение payload, используемое бизнес-сценарием
+     * @param visibility входящее значение visibility, используемое бизнес-сценарием
+     * @param actorUserId идентификатор actor user, используемый для выбора нужного бизнес-объекта
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional
     public BattleLog append(UUID battleId, UUID campaignId, BattleLogType type,
                             UUID actorCombatantId, UUID targetCombatantId,
@@ -63,6 +70,14 @@ public class BattleLogService {
         return entry;
     }
 
+    /**
+     * Возвращает список для операции "list" в рамках бизнес-логики домена.
+     * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
+     * @param afterSeq граница выборки, используемая для продолжения бизнес-потока
+     * @param limit ограничение размера результата бизнес-операции
+     * @param includeGmOnly признак включения дополнительных данных в бизнес-ответ
+     * @return результат выполнения бизнес-операции
+     */
     @Transactional(readOnly = true)
     public List<BattleLogEntryResponse> list(UUID battleId, long afterSeq, int limit, boolean includeGmOnly) {
         int capped = limit <= 0 ? MAX_PAGE : Math.min(limit, MAX_PAGE);

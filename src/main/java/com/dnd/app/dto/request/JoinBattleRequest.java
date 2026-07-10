@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A player joins one or more of their characters to an active battle. For each character the
- * d20 may be supplied manually; when {@code d20} is null the server rolls it (1–20).
+ * Класс JoinBattleRequest описывает DTO входящего запроса, который переносит данные клиента в бизнес-сценарий.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Data
 @Builder

@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Контракт HomebrewTagRepository описывает репозиторий, который предоставляет доступ к данным доменной модели.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ */
 public interface HomebrewTagRepository extends JpaRepository<HomebrewTag, UUID> {
 
     Optional<HomebrewTag> findByName(String name);

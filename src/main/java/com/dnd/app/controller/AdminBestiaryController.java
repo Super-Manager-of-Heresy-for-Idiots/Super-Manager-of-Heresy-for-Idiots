@@ -24,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * ADMIN-only bestiary management (URL-gated by /api/admin/** in SecurityConfig):
- * system reference dictionaries + system monsters.
+ * Класс AdminBestiaryController описывает REST-контроллер, который связывает HTTP-запросы с бизнес-сценариями приложения.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @RestController
 @RequestMapping("/api/admin/bestiary")
@@ -39,6 +39,11 @@ public class AdminBestiaryController {
 
     // === System dictionaries ===
 
+    /**
+     * Возвращает список для операции "list system" в рамках бизнес-логики API.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/dictionaries/{kind}")
     @Operation(summary = "List system dictionary entries")
     public CompletableFuture<ResponseEntity<ApiResponse<List<DictionaryEntryResponse>>>> listSystem(
@@ -49,6 +54,13 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create system" в рамках бизнес-логики API.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/dictionaries/{kind}")
     @Operation(summary = "Create system dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<DictionaryEntryResponse>>> createSystem(
@@ -60,6 +72,14 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update system" в рамках бизнес-логики API.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/dictionaries/{kind}/{id}")
     @Operation(summary = "Update system dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<DictionaryEntryResponse>>> updateSystem(
@@ -72,6 +92,13 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete system" в рамках бизнес-логики API.
+     * @param kind входящее значение kind, используемое бизнес-сценарием
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/dictionaries/{kind}/{id}")
     @Operation(summary = "Delete system dictionary entry")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteSystem(
@@ -85,6 +112,12 @@ public class AdminBestiaryController {
 
     // === System monsters ===
 
+    /**
+     * Возвращает список для операции "list monsters" в рамках бизнес-логики API.
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters")
     @Operation(summary = "List system monsters")
     public CompletableFuture<ResponseEntity<ApiResponse<List<MonsterSummaryResponse>>>> listMonsters(
@@ -96,6 +129,13 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Возвращает результат операции "get monster" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @GetMapping("/monsters/{id}")
     @Operation(summary = "Get monster details")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> getMonster(
@@ -107,6 +147,13 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создает результат операции "create monster" в рамках бизнес-логики API.
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/monsters")
     @Operation(summary = "Create system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> createMonster(
@@ -118,6 +165,14 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Обновляет результат операции "update monster" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PutMapping("/monsters/{id}")
     @Operation(summary = "Update system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> updateMonster(
@@ -130,6 +185,14 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Устанавливает результат операции "set active" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param active входящее значение active, используемое бизнес-сценарием
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @PostMapping("/monsters/{id}/active")
     @Operation(summary = "Activate or deactivate a system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<MonsterResponse>>> setActive(
@@ -142,6 +205,12 @@ public class AdminBestiaryController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Удаляет результат операции "delete monster" в рамках бизнес-логики API.
+     * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
     @DeleteMapping("/monsters/{id}")
     @Operation(summary = "Delete system monster")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteMonster(

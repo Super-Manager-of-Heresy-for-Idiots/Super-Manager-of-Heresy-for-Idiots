@@ -9,11 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A tracked problem with a class feature or one of its rules.
- *
- * <p>Replaces {@code class_feature.is_warning} as the primary tracking model: severity, type, the
- * source text fragment that triggered it, and resolution state. An unresolved {@code error} issue
- * blocks approval of the related rule.</p>
+ * Класс FeatureRuleIssue описывает доменную модель правил возможностей, которая хранит исполняемые игровые эффекты.
+ * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Entity
 @Table(name = "feature_rule_issue")
