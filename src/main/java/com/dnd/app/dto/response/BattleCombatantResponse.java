@@ -76,4 +76,10 @@ public class BattleCombatantResponse {
     private int legendaryResistanceUsed;
     /** Attacks a Multiattack monster may still make this turn; null for single-attack combatants. */
     private Integer attacksRemaining;
+
+    // ---- Hidden identity (Phase 2.10) ----------------------------------------------------------
+    /** True when this monster's identity is hidden from players (the GM still sees {@link #displayName}). */
+    private boolean identityHidden;
+    /** Generic public label shown to players when the identity is hidden (e.g. "Неизвестное существо #2"). */
+    private String publicName;
 }

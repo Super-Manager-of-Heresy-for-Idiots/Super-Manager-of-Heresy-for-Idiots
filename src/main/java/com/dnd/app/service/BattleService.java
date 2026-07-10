@@ -2183,6 +2183,32 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /**
+     * GM hides or reveals a monster's identity in the tracker (Phase 2.10). While hidden, players see
+     * a generic public label; the GM always sees the real name. The token's visual visibility on the
+     * map is a separate map-side toggle (1.7).
+     */
+    @Transactional
+    public BattleResponse setIdentityHidden(UUID campaignId, UUID battleId, UUID combatantId,
+                                            boolean hidden, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        combatant.setIdentityHidden(hidden);
+        combatantRepository.save(combatant);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Identity {} for combatant: battleId={}, combatantId={}, by={}",
+                hidden ? "hidden" : "revealed", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
     private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
         switch (slot) {
@@ -3324,6 +3350,9 @@ public class BattleService {
                 .legendaryResistanceMax(nz(c.getLegendaryResistanceMax()))
                 .legendaryResistanceUsed(nz(c.getLegendaryResistanceUsed()))
                 .attacksRemaining(c.getAttacksRemaining())
+                .identityHidden(Boolean.TRUE.equals(c.getIdentityHidden()))
+                .publicName(Boolean.TRUE.equals(c.getIdentityHidden())
+                        ? "Неизвестное существо #" + nz(c.getInstanceIndex()) : null)
                 .build();
     }
 

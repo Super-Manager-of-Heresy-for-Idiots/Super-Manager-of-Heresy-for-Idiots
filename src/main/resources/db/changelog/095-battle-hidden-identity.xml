@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Hidden monster identity (Phase 2.10). When set, players see a generic public label
+      ("Неизвестное существо") in the tracker while the GM keeps the real name (e.g. "Вампир-шпион #2").
+      Mirrors the map's name/gmName split (1.7); the token's visual visibility stays a map concern.
+    -->
+    <changeSet id="095-battle-hidden-identity" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="identity_hidden" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

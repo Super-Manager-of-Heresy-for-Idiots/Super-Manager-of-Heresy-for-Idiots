@@ -391,6 +391,19 @@ public class BattleController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    @PatchMapping("/{battleId}/combatants/{combatantId}/identity")
+    @Operation(summary = "GM hides or reveals a monster's identity in the tracker (players see a generic label)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setIdentityHidden(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @RequestParam boolean hidden, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.setIdentityHidden(campaignId, battleId, combatantId, hidden, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, hidden ? "Identity hidden" : "Identity revealed"));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/{battleId}/combatants/{combatantId}/legendary-resistance")
     @Operation(summary = "GM spends a Legendary Resistance use to auto-succeed a failed save")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> useLegendaryResistance(

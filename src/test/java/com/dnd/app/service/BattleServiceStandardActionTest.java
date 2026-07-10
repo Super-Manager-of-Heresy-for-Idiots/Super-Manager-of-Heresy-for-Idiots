@@ -388,6 +388,19 @@ class BattleServiceStandardActionTest {
         assertThrows(BadRequestException.class, () -> monsterAttack(breath().d20(15).build()));
     }
 
+    // ---- Hidden identity (Phase 2.10) ------------------------------------------------------------
+
+    @Test
+    @DisplayName("Hidden identity: скрытие даёт публичный ярлык, раскрытие убирает его")
+    void identityHidden_togglesAndExposesPublicName() {
+        BattleResponse hidden = battleService.setIdentityHidden(campaignId, battleId, monsterC.getId(), true, username);
+        assertTrue(monsterIn(hidden).isIdentityHidden());
+        assertNotNull(monsterIn(hidden).getPublicName());
+        BattleResponse shown = battleService.setIdentityHidden(campaignId, battleId, monsterC.getId(), false, username);
+        assertFalse(monsterIn(shown).isIdentityHidden());
+        assertNull(monsterIn(shown).getPublicName());
+    }
+
     @Test
     @DisplayName("Recharge: бросок d6 ≥ порога в начале хода перезаряжает способность")
     void recharge_rollAtTurnStartRecharges() {

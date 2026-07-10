@@ -169,6 +169,11 @@ public class BattleCombatant {
     @Column(name = "attacks_remaining")
     private Integer attacksRemaining;
 
+    /** Hidden identity (Phase 2.10): players see a generic public label, the GM keeps the real name. */
+    @Column(name = "identity_hidden", nullable = false)
+    @Builder.Default
+    private Boolean identityHidden = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;
