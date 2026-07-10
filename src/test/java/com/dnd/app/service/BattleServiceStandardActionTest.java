@@ -71,6 +71,7 @@ class BattleServiceStandardActionTest {
     private final UUID battleId = UUID.randomUUID();
     private BattleCombatant monsterC;
     private BattleCombatant characterC;
+    private MonsterFeature breathFeature;
 
     @BeforeEach
     void setUp() {
@@ -103,10 +104,17 @@ class BattleServiceStandardActionTest {
                 .nameRusloc("Укус").attackType("melee").attackBonus((short) 5)
                 .damages(new java.util.ArrayList<>(List.of(dmg)))
                 .descriptionRusloc("bite").build();
+        FeatureDamage breathDmg = FeatureDamage.builder().id(UUID.randomUUID()).sortOrder(0).dice("6к6").build();
+        breathFeature = MonsterFeature.builder()
+                .id(UUID.randomUUID()).section("actions").sortOrder(2).kind("action")
+                .nameRusloc("Дыхание").attackType("ranged").attackBonus((short) 0)
+                .rechargeMin((short) 5).rechargeMax((short) 6)
+                .damages(new java.util.ArrayList<>(List.of(breathDmg)))
+                .descriptionRusloc("breath").build();
         Monster monster = Monster.builder()
                 .id(UUID.randomUUID()).nameRusloc("Гоблин").armorClass((short) 15)
                 .crValue(new BigDecimal("1")).xpBase(100)
-                .features(new java.util.ArrayList<>(List.of(bite))).build();
+                .features(new java.util.ArrayList<>(List.of(bite, breathFeature))).build();
 
         monsterC = BattleCombatant.builder()
                 .id(UUID.randomUUID()).battle(battle).type(CombatantType.MONSTER).monster(monster)
@@ -330,5 +338,65 @@ class BattleServiceStandardActionTest {
         monsterC.setReactionUsed(true);
         BattleAttackRequest req = bite().d20(15).reaction(true).attackerCombatantId(monsterC.getId()).build();
         assertThrows(BadRequestException.class, () -> monsterAttack(req));
+    }
+
+    // ---- Legendary Resistance (Phase 2.9) --------------------------------------------------------
+
+    @Test
+    @DisplayName("Legendary Resistance: расходует использование, пока есть запас")
+    void legendaryResistance_decrementsPool() {
+        monsterC.setLegendaryResistanceMax(2);
+        BattleResponse r1 = battleService.useLegendaryResistance(campaignId, battleId, monsterC.getId(), username);
+        assertEquals(1, monsterIn(r1).getLegendaryResistanceUsed());
+        BattleResponse r2 = battleService.useLegendaryResistance(campaignId, battleId, monsterC.getId(), username);
+        assertEquals(2, monsterIn(r2).getLegendaryResistanceUsed());
+    }
+
+    @Test
+    @DisplayName("Legendary Resistance: без запаса отклоняется")
+    void legendaryResistance_exhausted_rejected() {
+        monsterC.setLegendaryResistanceMax(1);
+        monsterC.setLegendaryResistanceUsed(1);
+        assertThrows(BadRequestException.class,
+                () -> battleService.useLegendaryResistance(campaignId, battleId, monsterC.getId(), username));
+    }
+
+    // ---- Multiattack (Phase 2.9) -----------------------------------------------------------------
+
+    @Test
+    @DisplayName("Multiattack: несколько атак за одно действие, потом отказ")
+    void multiattack_allowsBudgetThenRejects() {
+        monsterC.setAttacksRemaining(2);
+        BattleActionResultResponse r1 = monsterAttack(bite().d20(15).build());
+        assertEquals(1, monsterIn(r1.getBattle()).getAttacksRemaining());
+        assertEquals(0, monsterIn(r1.getBattle()).getActionSpent()); // action not spent per-attack
+        BattleActionResultResponse r2 = monsterAttack(bite().d20(15).build());
+        assertEquals(0, monsterIn(r2.getBattle()).getAttacksRemaining());
+        assertThrows(BadRequestException.class, () -> monsterAttack(bite().d20(15).build()));
+    }
+
+    // ---- Recharge abilities (Phase 2.9) ----------------------------------------------------------
+
+    private BattleAttackRequest.BattleAttackRequestBuilder breath() {
+        return BattleAttackRequest.builder().targetCombatantId(characterC.getId()).attackName("Дыхание");
+    }
+
+    @Test
+    @DisplayName("Recharge: повторное использование до перезарядки отклоняется")
+    void recharge_blocksReuseUntilRecharged() {
+        monsterAttack(breath().d20(15).build()); // first use spends it
+        assertThrows(BadRequestException.class, () -> monsterAttack(breath().d20(15).build()));
+    }
+
+    @Test
+    @DisplayName("Recharge: бросок d6 ≥ порога в начале хода перезаряжает способность")
+    void recharge_rollAtTurnStartRecharges() {
+        monsterAttack(breath().d20(15).build()); // expend the breath
+        when(diceRoller.rollDie(6)).thenReturn(6); // recharges (≥5)
+        // End the character's turn so the monster's next turn starts and rolls recharge.
+        battleService.endTurn(campaignId, battleId, username); // monster(0)→character(1)
+        battleService.endTurn(campaignId, battleId, username); // character(1)→monster(0): recharge rolls
+        BattleActionResultResponse again = monsterAttack(breath().d20(15).build());
+        assertEquals("HIT", again.getOutcome()); // usable again
     }
 }

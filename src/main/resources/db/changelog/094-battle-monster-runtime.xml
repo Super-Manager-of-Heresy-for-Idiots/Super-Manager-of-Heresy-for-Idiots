@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Monster runtime state (Phase 2.9). Legendary Resistance is a per-day pool the GM spends to turn
+      a failed save into a success (auto-success over the 0.4 save mechanic). Legendary actions reuse
+      the existing legendary_action_max/spent columns; here we add the resistance counter and a
+      per-combatant set of expended recharge-ability feature ids (rolled to recharge at turn start).
+    -->
+    <changeSet id="094-battle-monster-runtime" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="legendary_resistance_max" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="legendary_resistance_used" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recharge_spent_feature_ids" type="text"/>
+            <!-- Multiattack budget for the current turn: number of attacks the monster may still make
+                 with its Attack action (null = not a multiattacker, use the normal one-action guard). -->
+            <column name="attacks_remaining" type="int"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

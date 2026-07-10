@@ -142,5 +142,6 @@
     <include file="db/changelog/091-spell-area-zone.xml"/>
     <include file="db/changelog/092-battle-standard-actions.xml"/>
     <include file="db/changelog/093-trusted-device-accounts.xml"/>
+    <include file="db/changelog/094-battle-monster-runtime.xml"/>
 
 </databaseChangeLog>

@@ -150,6 +150,25 @@ public class BattleCombatant {
     @Builder.Default
     private Boolean helpAdvantage = false;
 
+    // ---- Monster runtime (Phase 2.9) -----------------------------------------------------
+    // Legendary Resistance: a per-day pool the GM spends to turn a failed save into a success.
+    // Recharge: JSON list of feature ids currently expended (rolled to recharge at the monster's
+    // turn start). Legendary actions reuse the action-economy columns above.
+    @Column(name = "legendary_resistance_max", nullable = false)
+    @Builder.Default
+    private Integer legendaryResistanceMax = 0;
+
+    @Column(name = "legendary_resistance_used", nullable = false)
+    @Builder.Default
+    private Integer legendaryResistanceUsed = 0;
+
+    @Column(name = "recharge_spent_feature_ids", columnDefinition = "text")
+    private String rechargeSpentFeatureIds;
+
+    /** Attacks the monster may still make with its Attack action this turn (Multiattack); null = single-attack. */
+    @Column(name = "attacks_remaining")
+    private Integer attacksRemaining;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

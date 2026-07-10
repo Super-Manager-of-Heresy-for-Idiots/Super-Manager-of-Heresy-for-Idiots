@@ -286,6 +286,18 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    @GetMapping("/{battleId}/combatants/{combatantId}/turn")
+    @Operation(summary = "Get any combatant's actionable detail (attacks) — for off-turn reaction / OA resolution")
+    public CompletableFuture<ResponseEntity<ApiResponse<CombatantTurnResponse>>> getCombatantTurn(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            CombatantTurnResponse data = battleService.getCombatantTurn(campaignId, battleId, combatantId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
     /**
      * Выполняет операции "attack" в рамках бизнес-логики API.
      * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
@@ -379,6 +391,18 @@ public class BattleController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    @PostMapping("/{battleId}/combatants/{combatantId}/legendary-resistance")
+    @Operation(summary = "GM spends a Legendary Resistance use to auto-succeed a failed save")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> useLegendaryResistance(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.useLegendaryResistance(campaignId, battleId, combatantId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Legendary Resistance used"));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/{battleId}/combatants/{combatantId}/contest")
     @Operation(summary = "Opposed melee contest — Grapple or Shove — against a target (own turn)")
     public CompletableFuture<ResponseEntity<ApiResponse<ContestResultResponse>>> contest(

@@ -936,6 +936,11 @@ public class BattleService {
                         .dexTiebreak(monster.getDexScore() != null ? monster.getDexScore().intValue() : null)
                         .currentHp(monster.getHpAverage())
                         .maxHp(monster.getHpAverage())
+                        // Monster runtime (Phase 2.9): legendary actions from the statblock and the
+                        // Legendary Resistance pool parsed from its trait text.
+                        .legendaryActionMax(monster.getLegendaryUsesBase() != null
+                                ? monster.getLegendaryUsesBase().intValue() : 0)
+                        .legendaryResistanceMax(parseLegendaryResistance(monster))
                         .addedBy(user)
                         .build();
                 combatantRepository.save(combatant);
@@ -1211,6 +1216,15 @@ public class BattleService {
         BattleCombatant nowOnTurn = combatants.get(nextIndex);
         resetActionEconomy(nowOnTurn);
 
+        // Recharge abilities roll to recharge at the start of the monster's turn (Phase 2.9).
+        List<String> recharged = rollRecharge(nowOnTurn);
+        if (!recharged.isEmpty()) {
+            combatantRepository.save(nowOnTurn);
+            battleLogService.append(battleId, campaignId, BattleLogType.EFFECT, nowOnTurn.getId(), null,
+                    Map.of("event", "RECHARGE", "combatant", nowOnTurn.getDisplayName(), "abilities", recharged),
+                    BattleLogVisibility.PUBLIC, user.getId());
+        }
+
         battleLogService.append(battleId, campaignId, BattleLogType.TURN, nowOnTurn.getId(), null,
                 Map.of("combatantName", nowOnTurn.getDisplayName(), "turnIndex", nextIndex,
                         "round", battle.getRoundNumber()), BattleLogVisibility.PUBLIC, user.getId());
@@ -1245,7 +1259,34 @@ public class BattleService {
             throw new BadRequestException("Battle has no combatants");
         }
         BattleCombatant current = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        return buildCombatantTurn(current, battle, user, campaignId, username);
+    }
 
+    /**
+     * The full actionable detail (attacks / abilities / resources) for ANY combatant in an active
+     * battle — used both for the current turn and, off-turn, to resolve a reaction / opportunity
+     * attack by a non-active combatant (Phase 2.8). GM-only for a monster's statblock.
+     */
+    @Transactional(readOnly = true)
+    public CombatantTurnResponse getCombatantTurn(UUID campaignId, UUID battleId, UUID combatantId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        if (battle.getStatus() != BattleStatus.ACTIVE) {
+            throw new BadRequestException("Battle is not active");
+        }
+        BattleCombatant combatant = combatantRepository.findById(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        return buildCombatantTurn(combatant, battle, user, campaignId, username);
+    }
+
+    /** Builds the actionable turn detail for one combatant (shared by current-turn and reaction flows). */
+    private CombatantTurnResponse buildCombatantTurn(BattleCombatant current, Battle battle, User user,
+                                                     UUID campaignId, String username) {
         CombatantTurnResponse.CombatantTurnResponseBuilder builder = CombatantTurnResponse.builder()
                 .combatant(toCombatantResponse(current, battle));
 
@@ -1465,6 +1506,7 @@ public class BattleService {
         // combatant and spends its reaction; a normal attack is made by the active combatant and
         // spends its action. Both go through this one server-authoritative path (A3 — no side door).
         boolean reaction = Boolean.TRUE.equals(request.getReaction());
+        boolean multiattack = false;
         BattleCombatant attacker;
         if (reaction) {
             if (request.getAttackerCombatantId() == null) {
@@ -1482,11 +1524,16 @@ public class BattleService {
         } else {
             attacker = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
             enforceControls(campaignId, user, attacker);
-            // Lock the attacker row and reject a second action this turn: one action per turn is modelled,
-            // multi-attack is not, so a duplicate/racing attack must not spend the action again.
             attacker = combatantRepository.findByIdForUpdate(attacker.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Attacker combatant not found"));
-            if (attacker.getActionSpent() >= attacker.getActionMax()) {
+            // A Multiattack monster spends its Attack action on several strikes (Phase 2.9): the
+            // per-turn attacksRemaining budget guards it. Everyone else is one attack per action.
+            multiattack = attacker.getType() == CombatantType.MONSTER && attacker.getAttacksRemaining() != null;
+            if (multiattack) {
+                if (attacker.getAttacksRemaining() <= 0) {
+                    throw new BadRequestException("No attacks remain this turn");
+                }
+            } else if (attacker.getActionSpent() >= attacker.getActionMax()) {
                 throw new BadRequestException("The action has already been used this turn");
             }
         }
@@ -1506,6 +1553,13 @@ public class BattleService {
 
         // Range/reach gate (Phase 2.5): reject a strike out of reach or a shot beyond long range;
         // long range / ranged-in-melee force disadvantage below. GM may override the whole gate.
+        // Recharge gate (Phase 2.9): a recharge ability (e.g. a breath weapon) can't be used again
+        // until it recharges at the start of the monster's turn.
+        if (attack.rechargeMin() != null && attack.featureId() != null
+                && rechargeSpentIds(attacker).contains(attack.featureId())) {
+            throw new BadRequestException("'" + attack.name() + "' is recharging and cannot be used yet");
+        }
+
         RangeEvaluation range = evaluateRange(request, attack);
         boolean gmOverrideRange = Boolean.TRUE.equals(request.getGmOverrideRange());
         if (range.outOfRange() && !gmOverrideRange) {
@@ -1701,11 +1755,18 @@ public class BattleService {
         // combatant, and an ally's Help is spent on this attack. Persisted by the save below.
         attacker.setHidden(false);
         attacker.setHelpAdvantage(false);
-        // Spend the reaction for an opportunity/reaction attack, otherwise the action (Phase 2.8).
+        // Spend the reaction for an opportunity/reaction attack; decrement the Multiattack budget for a
+        // multiattacking monster; otherwise spend the action (Phase 2.8 / 2.9).
         if (reaction) {
             attacker.setReactionUsed(true);
+        } else if (multiattack) {
+            attacker.setAttacksRemaining(attacker.getAttacksRemaining() - 1);
         } else {
             attacker.setActionSpent(attacker.getActionSpent() + 1);
+        }
+        // Expend a recharge ability so it can't be reused until it recharges at the monster's turn start.
+        if (attack.rechargeMin() != null && attack.featureId() != null) {
+            markRechargeSpent(attacker, attack.featureId());
         }
         combatantRepository.save(attacker);
 
@@ -1958,6 +2019,167 @@ public class BattleService {
 
         log.info("Action economy spent: battleId={}, combatant={}, slot={}, by={}",
                 battleId, combatant.getDisplayName(), slot, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    private static final java.util.regex.Pattern LEGENDARY_RESISTANCE = java.util.regex.Pattern.compile(
+            "(legendary resistance|легендарн\\w* сопротивлен\\w*)", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /** The Legendary Resistance uses/day parsed from a monster's trait text (e.g. "(3/Day)"); 0 if none. */
+    private int parseLegendaryResistance(Monster monster) {
+        if (monster.getFeatures() == null) {
+            return 0;
+        }
+        for (MonsterFeature f : monster.getFeatures()) {
+            String name = (f.getNameRusloc() != null ? f.getNameRusloc() : "")
+                    + " " + (f.getNameEngloc() != null ? f.getNameEngloc() : "");
+            if (LEGENDARY_RESISTANCE.matcher(name).find()) {
+                int[] nums = parseFeet(name + " " + (f.getDescriptionRusloc() != null ? f.getDescriptionRusloc() : ""));
+                if (nums.length > 0 && nums[0] > 0 && nums[0] <= 9) {
+                    return nums[0];
+                }
+                return 3; // default per 5e when the count is not written structurally
+            }
+        }
+        return 0;
+    }
+
+    // ---- Recharge abilities (Phase 2.9) ----------------------------------------------------------
+
+    /** The set of recharge-ability feature ids currently expended on this combatant. */
+    private java.util.Set<UUID> rechargeSpentIds(BattleCombatant combatant) {
+        String json = combatant.getRechargeSpentFeatureIds();
+        if (json == null || json.isBlank()) {
+            return new java.util.HashSet<>();
+        }
+        try {
+            List<String> ids = objectMapper.readValue(json, new TypeReference<List<String>>() {});
+            java.util.Set<UUID> out = new java.util.HashSet<>();
+            for (String id : ids) {
+                out.add(UUID.fromString(id));
+            }
+            return out;
+        } catch (Exception e) {
+            return new java.util.HashSet<>();
+        }
+    }
+
+    private void writeRechargeSpent(BattleCombatant combatant, java.util.Set<UUID> ids) {
+        try {
+            combatant.setRechargeSpentFeatureIds(ids.isEmpty() ? null
+                    : objectMapper.writeValueAsString(ids.stream().map(UUID::toString).toList()));
+        } catch (Exception e) {
+            combatant.setRechargeSpentFeatureIds(null);
+        }
+    }
+
+    /** Marks a recharge ability expended (used) so it can't fire again until it recharges. */
+    private void markRechargeSpent(BattleCombatant combatant, UUID featureId) {
+        java.util.Set<UUID> ids = rechargeSpentIds(combatant);
+        ids.add(featureId);
+        writeRechargeSpent(combatant, ids);
+    }
+
+    /**
+     * At the start of a monster's turn, rolls a d6 for each expended recharge ability; on a result of
+     * at least its {@code rechargeMin} the ability recharges (leaves the expended set). Returns the
+     * names that recharged, for the log.
+     */
+    private List<String> rollRecharge(BattleCombatant combatant) {
+        if (combatant.getType() != CombatantType.MONSTER || combatant.getMonster() == null) {
+            return List.of();
+        }
+        java.util.Set<UUID> spent = rechargeSpentIds(combatant);
+        if (spent.isEmpty()) {
+            return List.of();
+        }
+        List<String> recharged = new ArrayList<>();
+        for (MonsterFeature f : combatant.getMonster().getFeatures()) {
+            if (f.getRechargeMin() == null || !spent.contains(f.getId())) {
+                continue;
+            }
+            if (diceRoller.rollDie(6) >= f.getRechargeMin()) {
+                spent.remove(f.getId());
+                recharged.add(f.getNameRusloc());
+            }
+        }
+        writeRechargeSpent(combatant, spent);
+        return recharged;
+    }
+
+    private static final java.util.regex.Pattern MULTIATTACK = java.util.regex.Pattern.compile(
+            "(multiattack|мультиатак\\w*)", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /** The number of attacks a monster's Multiattack grants (0 = no Multiattack; default 2 if unparseable). */
+    private int parseMultiattack(Monster monster) {
+        if (monster.getFeatures() == null) {
+            return 0;
+        }
+        for (MonsterFeature f : monster.getFeatures()) {
+            String name = (f.getNameRusloc() != null ? f.getNameRusloc() : "")
+                    + " " + (f.getNameEngloc() != null ? f.getNameEngloc() : "");
+            if (MULTIATTACK.matcher(name).find()) {
+                int n = numberWord(f.getDescriptionRusloc());
+                return n > 0 ? n : 2;
+            }
+        }
+        return 0;
+    }
+
+    /** Extracts an attack count (2–6) from Multiattack prose — a digit or an en/ru number word. */
+    private static int numberWord(String text) {
+        if (text == null) {
+            return 0;
+        }
+        String s = text.toLowerCase();
+        int[] digits = parseFeet(s);
+        for (int d : digits) {
+            if (d >= 2 && d <= 6) {
+                return d;
+            }
+        }
+        if (s.contains("two") || s.contains("две") || s.contains("два")) return 2;
+        if (s.contains("three") || s.contains("три")) return 3;
+        if (s.contains("four") || s.contains("четыре")) return 4;
+        if (s.contains("five") || s.contains("пять")) return 5;
+        return 0;
+    }
+
+    /**
+     * GM spends one of a monster's Legendary Resistance uses to turn a failed save into an automatic
+     * success (Phase 2.9). This is a manual override over the 0.4 save mechanic: the GM sees the failed
+     * save and clicks to auto-succeed it. Decrements the pool and logs it; rejects when none remain.
+     */
+    @Transactional
+    public BattleResponse useLegendaryResistance(UUID campaignId, UUID battleId, UUID combatantId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Legendary Resistance can only be used in an active battle");
+
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        int max = nz(combatant.getLegendaryResistanceMax());
+        int used = nz(combatant.getLegendaryResistanceUsed());
+        if (used >= max) {
+            throw new BadRequestException("No Legendary Resistance uses remain");
+        }
+        combatant.setLegendaryResistanceUsed(used + 1);
+        combatantRepository.save(combatant);
+
+        battleLogService.append(battleId, campaignId, BattleLogType.GM_OVERRIDE, combatant.getId(), null,
+                Map.of("event", "LEGENDARY_RESISTANCE", "combatant", combatant.getDisplayName(),
+                        "remaining", max - (used + 1)),
+                BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId, "event", "LEGENDARY_RESISTANCE"), user.getId());
+
+        log.info("Legendary Resistance used: battleId={}, combatant={}, remaining={}, by={}",
+                battleId, combatant.getDisplayName(), max - (used + 1), username);
         return toResponse(battle, orderedCombatants(battleId));
     }
 
@@ -2287,7 +2509,8 @@ public class BattleService {
      */
     private record AttackOption(String name, int attackBonus, String damage, String damageType,
                                 UUID damageTypeId, Integer saveDc, String saveAbilityCode,
-                                boolean ranged, Integer reachFt, Integer rangeNormalFt, Integer rangeLongFt) {
+                                boolean ranged, Integer reachFt, Integer rangeNormalFt, Integer rangeLongFt,
+                                UUID featureId, Integer rechargeMin) {
     }
 
     /** Distance/reach gate for an attack (Phase 2.5): whether it was checked, the distance, and its consequences. */
@@ -2553,7 +2776,7 @@ public class BattleService {
                         return new AttackOption(a.getName(),
                                 AttackResolver.parseAttackBonus(a.getAttackBonus()),
                                 a.getDamage(), a.getDamageType(), null, null, null,
-                                ranged, reachFt, rangeNormalFt, rangeLongFt);
+                                ranged, reachFt, rangeNormalFt, rangeLongFt, null, null);
                     })
                     .orElseThrow(() -> new BadRequestException("Attack '" + attackName + "' not found on this character"));
         }
@@ -2588,8 +2811,9 @@ public class BattleService {
             Integer reachFt = feature.getReachFt() != null ? Integer.valueOf(feature.getReachFt()) : null;
             Integer rangeNormalFt = feature.getRangeFt() != null ? Integer.valueOf(feature.getRangeFt()) : null;
             Integer rangeLongFt = feature.getRangeLongFt() != null ? Integer.valueOf(feature.getRangeLongFt()) : rangeNormalFt;
+            Integer rechargeMin = feature.getRechargeMin() != null ? Integer.valueOf(feature.getRechargeMin()) : null;
             return new AttackOption(feature.getNameRusloc(), bonus, dice, damageType, damageTypeId, saveDc, saveAbilityCode,
-                    ranged, reachFt, rangeNormalFt, rangeLongFt);
+                    ranged, reachFt, rangeNormalFt, rangeLongFt, feature.getId(), rechargeMin);
         }
 
         throw new BadRequestException("This combatant cannot attack");
@@ -3097,6 +3321,9 @@ public class BattleService {
                 .disengaged(Boolean.TRUE.equals(c.getDisengaged()))
                 .hidden(Boolean.TRUE.equals(c.getHidden()))
                 .helpAdvantage(Boolean.TRUE.equals(c.getHelpAdvantage()))
+                .legendaryResistanceMax(nz(c.getLegendaryResistanceMax()))
+                .legendaryResistanceUsed(nz(c.getLegendaryResistanceUsed()))
+                .attacksRemaining(c.getAttacksRemaining())
                 .build();
     }
 
@@ -3118,6 +3345,12 @@ public class BattleService {
         combatant.setDodging(false);
         combatant.setDisengaged(false);
         combatant.setHelpAdvantage(false);
+        // Multiattack budget for the turn (Phase 2.9): a monster with Multiattack may make N attacks
+        // with its Attack action; others keep the single-attack (action-based) guard (null budget).
+        if (combatant.getType() == CombatantType.MONSTER && combatant.getMonster() != null) {
+            int multi = parseMultiattack(combatant.getMonster());
+            combatant.setAttacksRemaining(multi > 0 ? multi : null);
+        }
         combatantRepository.save(combatant);
     }
 

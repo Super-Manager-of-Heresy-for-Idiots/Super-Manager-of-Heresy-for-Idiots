@@ -68,4 +68,12 @@ public class BattleCombatantResponse {
     private boolean hidden;
     /** An ally Helped this combatant: its next attack has advantage (consumed on use). */
     private boolean helpAdvantage;
+
+    // ---- Monster runtime (Phase 2.9) -----------------------------------------------------------
+    /** Legendary Resistance uses per day (0 when the monster has none). */
+    private int legendaryResistanceMax;
+    /** Legendary Resistance uses already spent. */
+    private int legendaryResistanceUsed;
+    /** Attacks a Multiattack monster may still make this turn; null for single-attack combatants. */
+    private Integer attacksRemaining;
 }
