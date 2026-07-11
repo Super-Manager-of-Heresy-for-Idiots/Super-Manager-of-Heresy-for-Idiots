@@ -89,7 +89,7 @@ class BattleServiceStandardActionTest {
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class));
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();
@@ -399,6 +399,26 @@ class BattleServiceStandardActionTest {
         BattleResponse shown = battleService.setIdentityHidden(campaignId, battleId, monsterC.getId(), false, username);
         assertFalse(monsterIn(shown).isIdentityHidden());
         assertNull(monsterIn(shown).getPublicName());
+    }
+
+    // ---- Realtime reliability (Phase 2.14) -------------------------------------------------------
+
+    @Test
+    @DisplayName("Двойной next-turn: устаревший индекс хода отклоняется")
+    void endTurn_staleTurnIndex_rejected() {
+        battleService.endTurn(campaignId, battleId, 0, 1, null, username); // 0 → 1
+        assertThrows(BadRequestException.class,
+                () -> battleService.endTurn(campaignId, battleId, 0, 1, null, username)); // индекс 0 уже неактуален
+    }
+
+    @Test
+    @DisplayName("Дедуп: повтор той же команды end-turn не сдвигает ход второй раз")
+    void endTurn_duplicateCommand_isNoOp() {
+        UUID cmd = UUID.randomUUID();
+        BattleResponse r1 = battleService.endTurn(campaignId, battleId, null, null, cmd, username);
+        assertEquals(1, r1.getCurrentTurnIndex());
+        BattleResponse r2 = battleService.endTurn(campaignId, battleId, null, null, cmd, username);
+        assertEquals(1, r2.getCurrentTurnIndex()); // тот же id → no-op, ход не сдвинулся
     }
 
     // ---- Flight (Phase 2.13) ---------------------------------------------------------------------

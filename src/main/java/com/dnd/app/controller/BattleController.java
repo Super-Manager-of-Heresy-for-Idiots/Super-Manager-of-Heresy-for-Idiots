@@ -259,13 +259,31 @@ public class BattleController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    /**
+     * Передаёт ход следующему комбатанту; опциональные параметры дают защиту realtime (фаза 2.14):
+     * дедуп по {@code clientCommandId} и защиту от двойного next-turn по {@code expectedTurnIndex}/
+     * {@code expectedRound}.
+     *
+     * @param campaignId        идентификатор кампании
+     * @param battleId          идентификатор боя
+     * @param expectedTurnIndex ожидаемый индекс хода (опц.)
+     * @param expectedRound     ожидаемый номер раунда (опц.)
+     * @param clientCommandId   идемпотентный ключ команды (опц.)
+     * @param auth              аутентификация инициатора
+     * @return обёрнутое актуальное состояние боя
+     */
     @PostMapping("/{battleId}/end-turn")
     @Operation(summary = "Pass the turn to the next combatant (GM or the active character's owner)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> endTurn(
             @PathVariable UUID campaignId,
-            @PathVariable UUID battleId, Authentication auth) {
+            @PathVariable UUID battleId,
+            @RequestParam(required = false) Integer expectedTurnIndex,
+            @RequestParam(required = false) Integer expectedRound,
+            @RequestParam(required = false) UUID clientCommandId,
+            Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            BattleResponse data = battleService.endTurn(campaignId, battleId, auth.getName());
+            BattleResponse data = battleService.endTurn(campaignId, battleId,
+                    expectedTurnIndex, expectedRound, clientCommandId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Turn passed"));
         }, controllerTaskExecutor);
     }

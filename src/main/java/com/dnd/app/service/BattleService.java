@@ -111,6 +111,8 @@ public class BattleService {
     private final com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
     /** Клиент принудительного перемещения токенов на карте (push/pull/slide/телепорт, фаза 2.12). */
     private final com.dnd.app.integration.map.MapTokenMover mapTokenMover;
+    /** Идемпотентность боевых команд по clientCommandId — защита от дублей (фаза 2.14). */
+    private final CommandDedupService commandDedupService;
 
     // ================================ Lifecycle ================================
 
@@ -1177,8 +1179,37 @@ public class BattleService {
      * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
      * @return результат выполнения бизнес-операции
      */
+    /**
+     * Передаёт ход следующему комбатанту (совместимость): без защиты от повторов. Делегирует
+     * mode-aware версии с {@code null}-параметрами надёжности.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param username   инициатор (владелец активного персонажа или GM)
+     * @return актуальное состояние боя
+     */
     @Transactional
     public BattleResponse endTurn(UUID campaignId, UUID battleId, String username) {
+        return endTurn(campaignId, battleId, null, null, null, username);
+    }
+
+    /**
+     * Передаёт ход следующему комбатанту с защитой realtime (фаза 2.14): {@code clientCommandId}
+     * даёт идемпотентность (повторная отправка не сдвигает ход второй раз), а {@code expectedTurnIndex}
+     * /{@code expectedRound} защищают от двойного next-turn — если клиентский взгляд на ход устарел
+     * (ход уже сменился), запрос отклоняется. Тик состояний/эффектов на границе раунда сохранён.
+     *
+     * @param campaignId        идентификатор кампании
+     * @param battleId          идентификатор боя
+     * @param expectedTurnIndex ожидаемый клиентом текущий индекс хода ({@code null} — проверка пропускается)
+     * @param expectedRound     ожидаемый клиентом номер раунда ({@code null} — проверка пропускается)
+     * @param clientCommandId   идемпотентный ключ команды ({@code null} — без дедупа)
+     * @param username          инициатор (владелец активного персонажа или GM)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse endTurn(UUID campaignId, UUID battleId, Integer expectedTurnIndex,
+                                  Integer expectedRound, UUID clientCommandId, String username) {
         User user = getUser(username);
         Campaign campaign = campaignService.findCampaign(campaignId);
         campaignService.enforceMembershipOrAdmin(campaign, user);
@@ -1186,6 +1217,18 @@ public class BattleService {
         Battle battle = battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Battle not found"));
         requireStatus(battle, BattleStatus.ACTIVE, "Turns can only be passed in an active battle");
+
+        // Идемпотентность: повторная команда с тем же ключом не сдвигает ход второй раз (фаза 2.14).
+        if (!commandDedupService.firstSeen(clientCommandId)) {
+            return toResponse(battle, orderedCombatants(battleId));
+        }
+        // Защита от двойного next-turn: устаревший клиентский индекс/раунд → ход уже сменился.
+        if (expectedTurnIndex != null && battle.getCurrentTurnIndex() != expectedTurnIndex.intValue()) {
+            throw new BadRequestException("The turn has already advanced");
+        }
+        if (expectedRound != null && battle.getRoundNumber() != expectedRound.intValue()) {
+            throw new BadRequestException("The round has already advanced");
+        }
 
         List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
         if (combatants.isEmpty()) {
