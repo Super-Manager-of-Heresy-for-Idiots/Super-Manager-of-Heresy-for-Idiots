@@ -22,5 +22,6 @@ public enum BattleLogType {
     STANDARD_ACTION,
     CONTEST,
     FORCED_MOVE,
-    TELEPORT
+    TELEPORT,
+    TRAP
 }

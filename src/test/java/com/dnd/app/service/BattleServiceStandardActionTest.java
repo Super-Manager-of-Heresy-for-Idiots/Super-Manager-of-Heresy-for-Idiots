@@ -401,6 +401,26 @@ class BattleServiceStandardActionTest {
         assertNull(monsterIn(shown).getPublicName());
     }
 
+    // ---- Traps (Phase 3.2) -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Ловушка без сейва: полный урон применяется к цели")
+    void trap_noSave_appliesDamage() {
+        var req = com.dnd.app.dto.request.TrapTriggerRequest.builder()
+                .targetCombatantId(monsterC.getId()).amount(5).build();
+        BattleResponse r = battleService.triggerTrap(campaignId, battleId, req, username);
+        assertEquals(2, monsterIn(r).getCurrentHp()); // 7 - 5
+    }
+
+    @Test
+    @DisplayName("Ловушка с нулевым уроном: HP не меняется")
+    void trap_zeroDamage_noChange() {
+        var req = com.dnd.app.dto.request.TrapTriggerRequest.builder()
+                .targetCombatantId(monsterC.getId()).amount(0).build();
+        BattleResponse r = battleService.triggerTrap(campaignId, battleId, req, username);
+        assertEquals(7, monsterIn(r).getCurrentHp());
+    }
+
     // ---- Realtime reliability (Phase 2.14) -------------------------------------------------------
 
     @Test

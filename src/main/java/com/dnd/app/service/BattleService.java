@@ -30,6 +30,7 @@ import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.TeleportRequest;
+import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.integration.map.MapTokenMover;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
@@ -2471,6 +2472,77 @@ public class BattleService {
                 Map.of("battleId", battleId), user.getId());
         log.info("Flying {} for combatant: battleId={}, combatantId={}, by={}",
                 flying ? "on" : "off", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Срабатывание ловушки по цели (фаза 3.2): переиспользует примитивы сейва/митигации/HP (как bulkAction)
+     * — цель кидает спасбросок (ручной d20 или AUTO) против DC ловушки, урон полный/половинный/0, применяется
+     * сопротивление, пишется лог {@code TRAP}. Параметры ловушки приходят с карты через фронт (A1). Только GM.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    цель, урон и параметры спасброска ловушки
+     * @param username   инициатор (GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse triggerTrap(UUID campaignId, UUID battleId, TrapTriggerRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Traps only trigger in an active battle");
+
+        BattleCombatant target = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
+        if (!target.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Target does not belong to this battle");
+        }
+
+        int dmg = nz(request.getAmount());
+        String saveOutcome = null;
+        Integer saveTotal = null;
+        if (request.getSaveDc() != null && request.getSaveAbility() != null) {
+            int d20 = request.getSaveD20() != null ? request.getSaveD20() : diceRoller.rollD20();
+            int bonus = resolveTargetSaveBonus(target, request.getSaveAbility());
+            AttackResolver.SaveOutcome save = AttackResolver.resolveSave(d20, bonus, request.getSaveDc());
+            saveOutcome = save.name();
+            saveTotal = d20 + bonus;
+            if (save == AttackResolver.SaveOutcome.SUCCESS) {
+                dmg = Boolean.TRUE.equals(request.getHalfOnSave()) ? dmg / 2 : 0;
+            }
+        }
+        String damageModifier = null;
+        if (dmg > 0) {
+            DamageMitigationService.Mitigation mit = damageMitigationService.mitigate(target, dmg, request.getDamageTypeId());
+            dmg = mit.finalDamage();
+            damageModifier = mit.modifier().name();
+            if (dmg > 0) {
+                applyDamageOrHeal(target, -dmg, user, campaignId);
+            }
+        }
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("target", target.getDisplayName());
+        if (request.getLabel() != null) {
+            logData.put("label", request.getLabel());
+        }
+        if (saveOutcome != null) {
+            logData.put("save", saveOutcome);
+            logData.put("saveTotal", saveTotal);
+            logData.put("saveDc", request.getSaveDc());
+        }
+        logData.put("damage", dmg);
+        if (damageModifier != null && !"NONE".equals(damageModifier)) {
+            logData.put("damageModifier", damageModifier);
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.TRAP, null, target.getId(),
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Trap triggered: battleId={}, target={}, damage={}, by={}",
+                battleId, target.getDisplayName(), dmg, username);
         return toResponse(battle, orderedCombatants(battleId));
     }
 

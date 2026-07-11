@@ -20,6 +20,7 @@ import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.TeleportRequest;
+import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
@@ -512,6 +513,27 @@ public class BattleController {
      * @param auth       аутентификация инициатора (владелец или GM)
      * @return обёрнутое актуальное состояние боя
      */
+    /**
+     * Срабатывание ловушки по цели (фаза 3.2): резолв спасброска/урона и лог.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    цель + параметры сейва/урона ловушки
+     * @param auth       аутентификация инициатора (GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/trap-trigger")
+    @Operation(summary = "Trigger a trap on a combatant — save/damage resolution (GM, Phase 3.2)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> triggerTrap(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody TrapTriggerRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.triggerTrap(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Trap triggered"));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/{battleId}/teleport")
     @Operation(summary = "Teleport a combatant, optionally bringing nearby allies (Phase 2.12)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> teleport(
