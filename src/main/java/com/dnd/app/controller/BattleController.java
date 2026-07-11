@@ -18,6 +18,8 @@ import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.ContestRequest;
+import com.dnd.app.dto.request.ForcedMoveRequest;
+import com.dnd.app.dto.request.TeleportRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.BattleActionResultResponse;
@@ -436,6 +438,48 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.useLegendaryResistance(campaignId, battleId, combatantId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Legendary Resistance used"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Принудительно перемещает комбатанта (push/pull/slide, фаза 2.12).
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    тип/цель/клетки перемещения
+     * @param auth       аутентификация инициатора (GM/админ)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/forced-move")
+    @Operation(summary = "Forced movement — push / pull / slide a combatant (GM, Phase 2.12)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> forcedMove(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody ForcedMoveRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.forcedMovement(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Forced move applied"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Телепортирует комбатанта, при необходимости с прихватом союзников (фаза 2.12).
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    инициатор, точка назначения, дальность и список союзников
+     * @param auth       аутентификация инициатора (владелец или GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/teleport")
+    @Operation(summary = "Teleport a combatant, optionally bringing nearby allies (Phase 2.12)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> teleport(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody TeleportRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.teleport(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Teleported"));
         }, controllerTaskExecutor);
     }
 

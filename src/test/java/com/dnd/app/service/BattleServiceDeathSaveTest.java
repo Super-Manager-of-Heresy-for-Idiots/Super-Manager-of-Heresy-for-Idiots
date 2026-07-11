@@ -78,7 +78,7 @@ class BattleServiceDeathSaveTest {
                 mock(SpellCastService.class),
                 mock(StatTypeRepository.class),
                 mock(FeatureEffectService.class),
-                mock(com.dnd.app.integration.map.MapZoneCreator.class));
+                mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User owner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();

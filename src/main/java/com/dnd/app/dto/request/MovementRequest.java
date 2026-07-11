@@ -31,4 +31,10 @@ public class MovementRequest {
 
     /** Idempotency key for the move command (dedup wired in Phase 2.14). */
     private UUID clientCommandId;
+
+    /**
+     * Режим движения (фаза 2.11): WALK/FLY/SWIM/CLIMB/BURROW. Определяет, какая скорость статблока
+     * используется как бюджет перемещения. {@code null} трактуется как ходьба.
+     */
+    private String mode;
 }

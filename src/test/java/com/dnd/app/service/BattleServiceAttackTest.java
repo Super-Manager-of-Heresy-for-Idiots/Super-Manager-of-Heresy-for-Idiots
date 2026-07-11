@@ -75,7 +75,7 @@ class BattleServiceAttackTest {
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class));
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -159,7 +159,7 @@ class BattleServiceAttackTest {
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class));
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

@@ -20,5 +20,7 @@ public enum BattleLogType {
     SPELL,
     CONCENTRATION,
     STANDARD_ACTION,
-    CONTEST
+    CONTEST,
+    FORCED_MOVE,
+    TELEPORT
 }

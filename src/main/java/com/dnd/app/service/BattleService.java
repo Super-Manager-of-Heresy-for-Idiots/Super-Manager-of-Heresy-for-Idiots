@@ -26,8 +26,11 @@ import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.ContestRequest;
+import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
+import com.dnd.app.dto.request.TeleportRequest;
+import com.dnd.app.integration.map.MapTokenMover;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.SpellCastRequest;
@@ -106,6 +109,8 @@ public class BattleService {
     private final StatTypeRepository statTypeRepository;
     private final FeatureEffectService featureEffectService;
     private final com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
+    /** Клиент принудительного перемещения токенов на карте (push/pull/slide/телепорт, фаза 2.12). */
+    private final com.dnd.app.integration.map.MapTokenMover mapTokenMover;
 
     // ================================ Lifecycle ================================
 
@@ -2245,6 +2250,138 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /** Chebyshev-дистанция между клетками в футах (5 фт/клетка); null, если любая координата не задана. */
+    private static Integer forcedDistanceFt(Integer fromCol, Integer fromRow, Integer toCol, Integer toRow) {
+        if (fromCol == null || fromRow == null || toCol == null || toRow == null) {
+            return null;
+        }
+        return Math.max(Math.abs(fromCol - toCol), Math.abs(fromRow - toRow)) * 5;
+    }
+
+    /**
+     * Принудительно перемещает комбатанта (push/pull/slide, фаза 2.12) без траты его движения и без
+     * провокации атак. Позиции клеток приходят с фронта; core проверяет дистанцию против максимума
+     * эффекта и передаёт итоговую клетку в map (который исполняет перемещение и рассылает событие).
+     * Только GM/админ.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    тип, цель, итоговая клетка и (опц.) исходная клетка + максимум дистанции
+     * @param username   инициатор (проверяется на права GM/админа)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse forcedMovement(UUID campaignId, UUID battleId, ForcedMoveRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Forced movement can only happen in an active battle");
+
+        BattleCombatant target = combatantRepository.findByIdForUpdate(request.getTargetCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Target combatant not found"));
+        if (!target.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Target does not belong to this battle");
+        }
+        Integer distFt = forcedDistanceFt(request.getFromCol(), request.getFromRow(),
+                request.getToCol(), request.getToRow());
+        if (request.getMaxDistanceFt() != null && distFt != null && distFt > request.getMaxDistanceFt()) {
+            throw new BadRequestException("Forced movement exceeds " + request.getMaxDistanceFt() + " ft");
+        }
+
+        mapTokenMover.forcedMove(battleId, new MapTokenMover.ForcedMoveSpec(request.getType().name(),
+                List.of(new MapTokenMover.TokenMove(target.getId(), request.getToCol(), request.getToRow()))));
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("type", request.getType().name());
+        logData.put("target", target.getDisplayName());
+        if (distFt != null) {
+            logData.put("distanceFt", distFt);
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.FORCED_MOVE, null, target.getId(),
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Forced movement: battleId={}, type={}, target={}, by={}",
+                battleId, request.getType(), target.getDisplayName(), username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Телепортирует комбатанта, при необходимости прихватывая ближайших союзников (фаза 2.12 — под
+     * заклинания вида «телепорт с союзником»). Core проверяет, что точка назначения в пределах дальности,
+     * а каждый союзник — в радиусе прихвата от телепортируемого и его точка тоже в пределах дальности;
+     * затем передаёт все перемещения в map. Инициатор — владелец комбатанта или GM.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    инициатор, его точка назначения, дальность/радиус и список прихватываемых союзников
+     * @param username   инициатор (владелец комбатанта или GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse teleport(UUID campaignId, UUID battleId, TeleportRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Teleport can only happen in an active battle");
+
+        BattleCombatant caster = combatantRepository.findByIdForUpdate(request.getCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!caster.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, caster);
+
+        Integer destDist = forcedDistanceFt(request.getFromCol(), request.getFromRow(),
+                request.getToCol(), request.getToRow());
+        if (request.getRangeFt() != null && destDist != null && destDist > request.getRangeFt()) {
+            throw new BadRequestException("Teleport destination is beyond range (" + request.getRangeFt() + " ft)");
+        }
+
+        List<MapTokenMover.TokenMove> moves = new ArrayList<>();
+        moves.add(new MapTokenMover.TokenMove(caster.getId(), request.getToCol(), request.getToRow()));
+        int allyCount = 0;
+        if (request.getAllies() != null) {
+            for (TeleportRequest.Ally ally : request.getAllies()) {
+                if (ally.getCombatantId().equals(caster.getId())) {
+                    continue;
+                }
+                BattleCombatant allyC = combatantRepository.findByIdForUpdate(ally.getCombatantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Ally combatant not found"));
+                if (!allyC.getBattle().getId().equals(battleId)) {
+                    throw new BadRequestException("Ally does not belong to this battle");
+                }
+                Integer pickupDist = forcedDistanceFt(request.getFromCol(), request.getFromRow(),
+                        ally.getFromCol(), ally.getFromRow());
+                if (request.getAllyPickupFt() != null && pickupDist != null && pickupDist > request.getAllyPickupFt()) {
+                    throw new BadRequestException("Ally '" + allyC.getDisplayName() + "' is too far to bring along");
+                }
+                Integer allyDestDist = forcedDistanceFt(request.getFromCol(), request.getFromRow(),
+                        ally.getToCol(), ally.getToRow());
+                if (request.getRangeFt() != null && allyDestDist != null && allyDestDist > request.getRangeFt()) {
+                    throw new BadRequestException("Ally destination is beyond range (" + request.getRangeFt() + " ft)");
+                }
+                moves.add(new MapTokenMover.TokenMove(allyC.getId(), ally.getToCol(), ally.getToRow()));
+                allyCount++;
+            }
+        }
+
+        mapTokenMover.forcedMove(battleId, new MapTokenMover.ForcedMoveSpec("TELEPORT", moves));
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("combatant", caster.getDisplayName());
+        logData.put("allies", allyCount);
+        battleLogService.append(battleId, campaignId, BattleLogType.TELEPORT, caster.getId(), null,
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Teleport: battleId={}, combatant={}, allies={}, by={}",
+                battleId, caster.getDisplayName(), allyCount, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
     private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
         switch (slot) {
@@ -3436,7 +3573,7 @@ public class BattleService {
                 .filter(c -> c.getBattle().getId().equals(battleId))
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
 
-        int speedFt = resolveSpeedFt(combatant);
+        int speedFt = resolveSpeedFt(combatant, request.getMode());
         int used = nz(combatant.getMovementUsedFt());
         int feet = Math.max(0, nz(request.getFeet()));
 
@@ -3516,23 +3653,51 @@ public class BattleService {
     }
 
     /**
-     * A combatant's movement budget this turn, in feet: its base walking speed (character sheet or
-     * monster walk speed), doubled when it has Dashed (Phase 2.7).
+     * Бюджет перемещения комбатанта на этот ход в футах для режима ходьбы (совместимость): делегирует
+     * mode-aware версии с {@code null}-режимом.
+     *
+     * @param combatant комбатант, чей бюджет считаем
+     * @return бюджет перемещения в футах
      */
     private int resolveSpeedFt(BattleCombatant combatant) {
-        int base = baseSpeedFt(combatant);
+        return resolveSpeedFt(combatant, null);
+    }
+
+    /**
+     * Бюджет перемещения комбатанта на этот ход в футах для указанного режима движения (фаза 2.11):
+     * базовая скорость соответствующего режима с учётом GM-override, удвоенная при Dash (фаза 2.7).
+     *
+     * @param combatant комбатант, чей бюджет считаем
+     * @param mode      режим движения (WALK/FLY/SWIM/CLIMB/BURROW; {@code null} → ходьба)
+     * @return бюджет перемещения в футах
+     */
+    private int resolveSpeedFt(BattleCombatant combatant, String mode) {
+        int base = baseSpeedFt(combatant, mode);
         return Boolean.TRUE.equals(combatant.getDashing()) ? base * 2 : base;
     }
 
     /**
-     * Базовая скорость перемещения комбатанта в футах, без учёта Dash. Приоритет — ручной GM-override
-     * (фаза 2.11): если он задан, возвращается он; иначе скорость персонажа с листа или скорость ходьбы
-     * монстра из статблока (по умолчанию {@link #DEFAULT_SPEED_FT}).
+     * Базовая скорость ходьбы комбатанта в футах без учёта Dash (совместимость): делегирует mode-aware
+     * версии с режимом ходьбы.
      *
-     * @param combatant комбатант, чью базовую скорость нужно определить
-     * @return базовая скорость в футах (неотрицательная)
+     * @param combatant комбатант, чью базовую скорость определяем
+     * @return базовая скорость ходьбы в футах
      */
     private int baseSpeedFt(BattleCombatant combatant) {
+        return baseSpeedFt(combatant, null);
+    }
+
+    /**
+     * Базовая скорость перемещения комбатанта в футах для режима движения, без учёта Dash (фаза 2.11).
+     * Приоритет — ручной GM-override; иначе для персонажа берётся его единственная скорость с листа, для
+     * монстра — скорость нужного режима из статблока, а при её отсутствии — скорость ходьбы (по умолчанию
+     * {@link #DEFAULT_SPEED_FT}).
+     *
+     * @param combatant комбатант, чью скорость определяем
+     * @param mode      режим движения (WALK/FLY/SWIM/CLIMB/BURROW; {@code null} → ходьба)
+     * @return базовая скорость в футах (неотрицательная)
+     */
+    private int baseSpeedFt(BattleCombatant combatant, String mode) {
         if (combatant.getSpeedOverrideFt() != null && combatant.getSpeedOverrideFt() >= 0) {
             return combatant.getSpeedOverrideFt();
         }
@@ -3542,6 +3707,16 @@ public class BattleService {
         }
         if (combatant.getType() == CombatantType.MONSTER && combatant.getMonster() != null
                 && combatant.getMonster().getSpeeds() != null) {
+            String code = movementModeCode(mode);
+            Integer byMode = combatant.getMonster().getSpeeds().stream()
+                    .filter(ms -> ms.getMovementType() != null && code.equals(ms.getMovementType().getCode()))
+                    .map(MonsterSpeed::getFt)
+                    .filter(ft -> ft != null && ft > 0)
+                    .findFirst()
+                    .orElse(null);
+            if (byMode != null) {
+                return byMode;
+            }
             return combatant.getMonster().getSpeeds().stream()
                     .filter(ms -> ms.getMovementType() != null && WALK_CODE.equals(ms.getMovementType().getCode()))
                     .map(MonsterSpeed::getFt)
@@ -3550,5 +3725,24 @@ public class BattleService {
                     .orElse(DEFAULT_SPEED_FT);
         }
         return DEFAULT_SPEED_FT;
+    }
+
+    /**
+     * Нормализует режим движения из запроса в код скорости статблока монстра.
+     *
+     * @param mode режим движения (WALK/FLY/SWIM/CLIMB/BURROW; {@code null} → ходьба)
+     * @return код типа перемещения статблока ({@code walk}/{@code fly}/{@code swim}/{@code climb}/{@code burrow})
+     */
+    private static String movementModeCode(String mode) {
+        if (mode == null) {
+            return WALK_CODE;
+        }
+        return switch (mode.toUpperCase()) {
+            case "FLY" -> "fly";
+            case "SWIM" -> "swim";
+            case "CLIMB" -> "climb";
+            case "BURROW" -> "burrow";
+            default -> WALK_CODE;
+        };
     }
 }

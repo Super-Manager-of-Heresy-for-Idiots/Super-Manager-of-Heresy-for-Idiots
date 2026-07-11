@@ -89,7 +89,7 @@ class BattleServiceStandardActionTest {
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class));
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class));
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();
         User playerOwner = User.builder().id(UUID.randomUUID()).username("player").role(Role.PLAYER).build();
@@ -399,6 +399,64 @@ class BattleServiceStandardActionTest {
         BattleResponse shown = battleService.setIdentityHidden(campaignId, battleId, monsterC.getId(), false, username);
         assertFalse(monsterIn(shown).isIdentityHidden());
         assertNull(monsterIn(shown).getPublicName());
+    }
+
+    // ---- Forced movement / teleport (Phase 2.12) -------------------------------------------------
+
+    @Test
+    @DisplayName("Forced move (push): в пределах максимума — применяется")
+    void forcedMove_withinMax_applies() {
+        var req = com.dnd.app.dto.request.ForcedMoveRequest.builder()
+                .type(com.dnd.app.domain.enums.ForcedMoveType.PUSH)
+                .targetCombatantId(characterC.getId())
+                .fromCol(0).fromRow(0).toCol(2).toRow(0).maxDistanceFt(15).build();
+        assertNotNull(battleService.forcedMovement(campaignId, battleId, req, username)); // 10 ≤ 15
+    }
+
+    @Test
+    @DisplayName("Forced move: за пределами максимума — отклоняется")
+    void forcedMove_beyondMax_rejected() {
+        var req = com.dnd.app.dto.request.ForcedMoveRequest.builder()
+                .type(com.dnd.app.domain.enums.ForcedMoveType.PUSH)
+                .targetCombatantId(characterC.getId())
+                .fromCol(0).fromRow(0).toCol(5).toRow(0).maxDistanceFt(15).build(); // 25 > 15
+        assertThrows(BadRequestException.class,
+                () -> battleService.forcedMovement(campaignId, battleId, req, username));
+    }
+
+    @Test
+    @DisplayName("Teleport с прихватом союзника рядом — применяется")
+    void teleport_withNearbyAlly_applies() {
+        var req = com.dnd.app.dto.request.TeleportRequest.builder()
+                .combatantId(characterC.getId())
+                .fromCol(0).fromRow(0).toCol(3).toRow(0).rangeFt(30).allyPickupFt(10)
+                .allies(List.of(com.dnd.app.dto.request.TeleportRequest.Ally.builder()
+                        .combatantId(monsterC.getId()).fromCol(1).fromRow(0).toCol(4).toRow(0).build()))
+                .build();
+        assertNotNull(battleService.teleport(campaignId, battleId, req, username));
+    }
+
+    @Test
+    @DisplayName("Teleport: союзник слишком далеко для прихвата — отклоняется")
+    void teleport_allyTooFar_rejected() {
+        var req = com.dnd.app.dto.request.TeleportRequest.builder()
+                .combatantId(characterC.getId())
+                .fromCol(0).fromRow(0).toCol(3).toRow(0).rangeFt(30).allyPickupFt(10)
+                .allies(List.of(com.dnd.app.dto.request.TeleportRequest.Ally.builder()
+                        .combatantId(monsterC.getId()).fromCol(5).fromRow(0).toCol(4).toRow(0).build())) // 25 > 10
+                .build();
+        assertThrows(BadRequestException.class,
+                () -> battleService.teleport(campaignId, battleId, req, username));
+    }
+
+    @Test
+    @DisplayName("Teleport: точка назначения за пределами дальности — отклоняется")
+    void teleport_beyondRange_rejected() {
+        var req = com.dnd.app.dto.request.TeleportRequest.builder()
+                .combatantId(characterC.getId())
+                .fromCol(0).fromRow(0).toCol(10).toRow(0).rangeFt(30).build(); // 50 > 30
+        assertThrows(BadRequestException.class,
+                () -> battleService.teleport(campaignId, battleId, req, username));
     }
 
     // ---- GM speed override (Phase 2.11) ----------------------------------------------------------
