@@ -82,4 +82,7 @@ public class BattleCombatantResponse {
     private boolean identityHidden;
     /** Generic public label shown to players when the identity is hidden (e.g. "Неизвестное существо #2"). */
     private String publicName;
+
+    /** Manual GM speed override in feet (Phase 2.11); null when the sheet/statblock speed applies. */
+    private Integer speedOverrideFt;
 }

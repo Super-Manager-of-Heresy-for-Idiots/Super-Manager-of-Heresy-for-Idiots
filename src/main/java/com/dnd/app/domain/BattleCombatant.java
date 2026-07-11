@@ -174,6 +174,13 @@ public class BattleCombatant {
     @Builder.Default
     private Boolean identityHidden = false;
 
+    /**
+     * Ручной GM-override скорости в футах (фаза 2.11): когда задан, заменяет базовую скорость
+     * листа/статблока в расчёте бюджета перемещения (Haste/Slow и разовые правки). null = обычная скорость.
+     */
+    @Column(name = "speed_override_ft")
+    private Integer speedOverrideFt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

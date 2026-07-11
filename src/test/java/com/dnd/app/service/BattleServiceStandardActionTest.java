@@ -401,6 +401,24 @@ class BattleServiceStandardActionTest {
         assertNull(monsterIn(shown).getPublicName());
     }
 
+    // ---- GM speed override (Phase 2.11) ----------------------------------------------------------
+
+    @Test
+    @DisplayName("GM speed override: задаётся и снимается")
+    void speedOverride_setAndClear() {
+        BattleResponse set = battleService.setSpeedOverride(campaignId, battleId, monsterC.getId(), 60, username);
+        assertEquals(60, monsterIn(set).getSpeedOverrideFt());
+        BattleResponse cleared = battleService.setSpeedOverride(campaignId, battleId, monsterC.getId(), null, username);
+        assertNull(monsterIn(cleared).getSpeedOverrideFt());
+    }
+
+    @Test
+    @DisplayName("GM speed override: отрицательное значение отклоняется")
+    void speedOverride_negative_rejected() {
+        assertThrows(BadRequestException.class,
+                () -> battleService.setSpeedOverride(campaignId, battleId, monsterC.getId(), -5, username));
+    }
+
     @Test
     @DisplayName("Recharge: бросок d6 ≥ порога в начале хода перезаряжает способность")
     void recharge_rollAtTurnStartRecharges() {

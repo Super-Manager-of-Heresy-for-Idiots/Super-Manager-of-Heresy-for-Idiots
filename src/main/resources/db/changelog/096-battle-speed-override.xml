@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Ручной GM-override скорости комбатанта (фаза 2.11). Когда задан, заменяет базовую скорость
+      (из листа/статблока) при расчёте бюджета перемещения — для Haste/Slow и разовых корректировок,
+      не меняя immutable-статблок. null = скорость берётся как обычно.
+    -->
+    <changeSet id="096-battle-speed-override" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="speed_override_ft" type="int"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -391,6 +391,29 @@ public class BattleController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    /**
+     * Устанавливает или снимает ручной GM-override скорости комбатанта (фаза 2.11).
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param ft          новая скорость в футах, либо не передавать для снятия override
+     * @param auth        аутентификация инициатора (нужны права GM/админа)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PatchMapping("/{battleId}/combatants/{combatantId}/speed")
+    @Operation(summary = "GM sets or clears a combatant's manual speed override (Phase 2.11)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setSpeedOverride(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @RequestParam(required = false) Integer ft, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.setSpeedOverride(campaignId, battleId, combatantId, ft, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, ft == null ? "Speed override cleared" : "Speed override set"));
+        }, controllerTaskExecutor);
+    }
+
     @PatchMapping("/{battleId}/combatants/{combatantId}/identity")
     @Operation(summary = "GM hides or reveals a monster's identity in the tracker (players see a generic label)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setIdentityHidden(

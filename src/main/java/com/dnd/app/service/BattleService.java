@@ -2209,6 +2209,42 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /**
+     * Устанавливает или снимает ручной GM-override скорости комбатанта (фаза 2.11). При заданном
+     * значении оно используется как базовая скорость в бюджете перемещения (для Haste/Slow и правок),
+     * не затрагивая immutable-статблок; {@code null} возвращает обычный расчёт скорости. Только GM/админ.
+     *
+     * @param campaignId  идентификатор кампании, к которой относится бой
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта, чью скорость меняем
+     * @param ft          новая скорость в футах (&ge; 0), либо {@code null} чтобы снять override
+     * @param username    имя пользователя-инициатора (проверяется на права GM/админа)
+     * @return актуальное состояние боя после изменения
+     */
+    @Transactional
+    public BattleResponse setSpeedOverride(UUID campaignId, UUID battleId, UUID combatantId,
+                                           Integer ft, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        if (ft != null && ft < 0) {
+            throw new BadRequestException("Speed override cannot be negative");
+        }
+        combatant.setSpeedOverrideFt(ft);
+        combatantRepository.save(combatant);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Speed override {} for combatant: battleId={}, combatantId={}, by={}",
+                ft == null ? "cleared" : ft + "ft", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
     private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
         switch (slot) {
@@ -3353,6 +3389,7 @@ public class BattleService {
                 .identityHidden(Boolean.TRUE.equals(c.getIdentityHidden()))
                 .publicName(Boolean.TRUE.equals(c.getIdentityHidden())
                         ? "Неизвестное существо #" + nz(c.getInstanceIndex()) : null)
+                .speedOverrideFt(c.getSpeedOverrideFt())
                 .build();
     }
 
@@ -3487,8 +3524,18 @@ public class BattleService {
         return Boolean.TRUE.equals(combatant.getDashing()) ? base * 2 : base;
     }
 
-    /** The combatant's base walking speed in feet, ignoring Dash. */
+    /**
+     * Базовая скорость перемещения комбатанта в футах, без учёта Dash. Приоритет — ручной GM-override
+     * (фаза 2.11): если он задан, возвращается он; иначе скорость персонажа с листа или скорость ходьбы
+     * монстра из статблока (по умолчанию {@link #DEFAULT_SPEED_FT}).
+     *
+     * @param combatant комбатант, чью базовую скорость нужно определить
+     * @return базовая скорость в футах (неотрицательная)
+     */
     private int baseSpeedFt(BattleCombatant combatant) {
+        if (combatant.getSpeedOverrideFt() != null && combatant.getSpeedOverrideFt() >= 0) {
+            return combatant.getSpeedOverrideFt();
+        }
         if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
             Integer speed = combatant.getCharacter().getSpeed();
             return speed != null && speed > 0 ? speed : DEFAULT_SPEED_FT;

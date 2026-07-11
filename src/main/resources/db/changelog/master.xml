@@ -144,5 +144,6 @@
     <include file="db/changelog/093-trusted-device-accounts.xml"/>
     <include file="db/changelog/094-battle-monster-runtime.xml"/>
     <include file="db/changelog/095-battle-hidden-identity.xml"/>
+    <include file="db/changelog/096-battle-speed-override.xml"/>
 
 </databaseChangeLog>
