@@ -401,6 +401,17 @@ class BattleServiceStandardActionTest {
         assertNull(monsterIn(shown).getPublicName());
     }
 
+    // ---- Flight (Phase 2.13) ---------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Полёт: поднимается и приземляется (устойчивое состояние)")
+    void flying_toggles() {
+        BattleResponse up = battleService.setFlying(campaignId, battleId, monsterC.getId(), true, username);
+        assertTrue(monsterIn(up).isFlying());
+        BattleResponse down = battleService.setFlying(campaignId, battleId, monsterC.getId(), false, username);
+        assertFalse(monsterIn(down).isFlying());
+    }
+
     // ---- Forced movement / teleport (Phase 2.12) -------------------------------------------------
 
     @Test

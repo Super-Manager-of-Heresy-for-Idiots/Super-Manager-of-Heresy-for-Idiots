@@ -85,4 +85,10 @@ public class BattleCombatantResponse {
 
     /** Manual GM speed override in feet (Phase 2.11); null when the sheet/statblock speed applies. */
     private Integer speedOverrideFt;
+
+    // ---- Flight (Phase 2.13) -------------------------------------------------------------------
+    /** Persistent flying state: the creature is aloft (stays flying between turns). */
+    private boolean flying;
+    /** True when the creature can hover (from the monster statblock) — it does not fall at 0 fly speed. */
+    private boolean hover;
 }

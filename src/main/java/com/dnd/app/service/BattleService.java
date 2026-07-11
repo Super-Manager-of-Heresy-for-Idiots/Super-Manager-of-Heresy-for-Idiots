@@ -2382,6 +2382,55 @@ public class BattleService {
         return toResponse(battle, orderedCombatants(battleId));
     }
 
+    /**
+     * Может ли комбатант зависать в воздухе (hover, фаза 2.13): для монстра — есть ли в статблоке
+     * скорость с флагом hover. Персонажи hover не имеют.
+     *
+     * @param combatant комбатант для проверки
+     * @return {@code true}, если существо умеет зависать
+     */
+    private static boolean canHover(BattleCombatant combatant) {
+        if (combatant.getType() != CombatantType.MONSTER || combatant.getMonster() == null
+                || combatant.getMonster().getSpeeds() == null) {
+            return false;
+        }
+        return combatant.getMonster().getSpeeds().stream()
+                .anyMatch(ms -> Boolean.TRUE.equals(ms.getHover()));
+    }
+
+    /**
+     * Устанавливает или снимает устойчивое состояние полёта комбатанта (фаза 2.13). В отличие от
+     * ходовых состояний, полёт сохраняется между ходами. Инициатор — владелец комбатанта или GM.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param flying      {@code true} — поднять в воздух, {@code false} — приземлить
+     * @param username    инициатор (владелец комбатанта или GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse setFlying(UUID campaignId, UUID battleId, UUID combatantId,
+                                    boolean flying, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+        combatant.setFlying(flying);
+        combatantRepository.save(combatant);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Flying {} for combatant: battleId={}, combatantId={}, by={}",
+                flying ? "on" : "off", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
     private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
         switch (slot) {
@@ -2746,7 +2795,13 @@ public class BattleService {
         if (ac == null || ar == null || tc == null || tr == null) {
             return new RangeEvaluation(false, null, false, false, null);
         }
-        int distFt = Math.max(Math.abs(ac - tc), Math.abs(ar - tr)) * 5;
+        // 3D-дистанция (фаза 2.13): при заданных высотах разница высот входит в Chebyshev (клетки высоты),
+        // чтобы летающие цели считались дальше. Без высот — обычная 2D-дистанция.
+        int elevCells = 0;
+        if (req.getAttackerElevationFt() != null && req.getTargetElevationFt() != null) {
+            elevCells = Math.round(Math.abs(req.getAttackerElevationFt() - req.getTargetElevationFt()) / 5.0f);
+        }
+        int distFt = Math.max(Math.max(Math.abs(ac - tc), Math.abs(ar - tr)), elevCells) * 5;
         if (!attack.ranged()) {
             int reach = attack.reachFt() != null ? attack.reachFt() : 5;
             boolean out = distFt > reach;
@@ -3527,6 +3582,8 @@ public class BattleService {
                 .publicName(Boolean.TRUE.equals(c.getIdentityHidden())
                         ? "Неизвестное существо #" + nz(c.getInstanceIndex()) : null)
                 .speedOverrideFt(c.getSpeedOverrideFt())
+                .flying(Boolean.TRUE.equals(c.getFlying()))
+                .hover(canHover(c))
                 .build();
     }
 

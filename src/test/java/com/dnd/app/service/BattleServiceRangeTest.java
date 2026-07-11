@@ -215,6 +215,16 @@ class BattleServiceRangeTest {
     }
 
     @Test
+    @DisplayName("3D-дистанция (фаза 2.13): соседняя, но летящая на 30 фт цель вне досягаемости ближней атаки")
+    void elevation3d_flyingTargetOutOfMeleeReach() {
+        // Укус reach 5; атакующий (0,0) h0, цель (1,0) h30 → 3D-дистанция max(1,1,6)*5 = 30 фт > 5 → отказ.
+        BattleAttackRequest req = melee().d20(15)
+                .attackerCol(0).attackerRow(0).targetCol(1).targetRow(0)
+                .attackerElevationFt(0).targetElevationFt(30).build();
+        assertThrows(BadRequestException.class, () -> attack(req));
+    }
+
+    @Test
     @DisplayName("Без координат гейт пропускается (обратная совместимость)")
     void noCoords_gateSkipped() {
         BattleActionResultResponse r = attack(melee().d20(15).build());

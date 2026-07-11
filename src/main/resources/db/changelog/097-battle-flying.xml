@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Устойчивое состояние полёта комбатанта (фаза 2.13). В отличие от ходовых состояний 2.7, полёт
+      НЕ сбрасывается в начале хода — существо остаётся в воздухе между ходами (и с hover не падает при
+      скорости полёта 0). Индикатор + анимация полёта — на фронте.
+    -->
+    <changeSet id="097-battle-flying" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="flying" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

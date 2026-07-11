@@ -416,6 +416,29 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Поднимает комбатанта в воздух или приземляет (устойчивый полёт, фаза 2.13).
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param on          {@code true} — в полёт, {@code false} — на землю
+     * @param auth        аутентификация инициатора (владелец или GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PatchMapping("/{battleId}/combatants/{combatantId}/flying")
+    @Operation(summary = "Set a combatant's persistent flying state (Phase 2.13)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setFlying(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @RequestParam boolean on, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.setFlying(campaignId, battleId, combatantId, on, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, on ? "Airborne" : "Landed"));
+        }, controllerTaskExecutor);
+    }
+
     @PatchMapping("/{battleId}/combatants/{combatantId}/identity")
     @Operation(summary = "GM hides or reveals a monster's identity in the tracker (players see a generic label)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setIdentityHidden(

@@ -145,5 +145,6 @@
     <include file="db/changelog/094-battle-monster-runtime.xml"/>
     <include file="db/changelog/095-battle-hidden-identity.xml"/>
     <include file="db/changelog/096-battle-speed-override.xml"/>
+    <include file="db/changelog/097-battle-flying.xml"/>
 
 </databaseChangeLog>

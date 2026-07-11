@@ -90,6 +90,13 @@ public class BattleAttackRequest {
     /** FE hint: an enemy is within melee reach of this (ranged) attacker → ranged-in-melee disadvantage. */
     private Boolean attackerInMeleeThreat;
 
+    /**
+     * Высоты токенов в футах для 3D-дистанции (фаза 2.13). Когда обе заданы, дальность считается с учётом
+     * разницы высот (Chebyshev по X/Y/высоте) — важно для летающих целей. Null → 2D-дистанция как раньше.
+     */
+    private Integer attackerElevationFt;
+    private Integer targetElevationFt;
+
     /** GM bypass of the range gate and any range-derived disadvantage (recorded in the log). */
     private Boolean gmOverrideRange;
 
