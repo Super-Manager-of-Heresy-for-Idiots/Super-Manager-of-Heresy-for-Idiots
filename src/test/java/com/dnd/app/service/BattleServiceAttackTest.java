@@ -135,11 +135,14 @@ class BattleServiceAttackTest {
         assertEquals(13, character.getCurrentHp(), "урон должен записаться в лист персонажа");
         assertEquals(13, characterC.getCurrentHp(), "и в строку трекера");
         verify(characterRepository).save(character);
-        // Combat log (1.2): the attack records an ATTACK entry and the HP primitive a DAMAGE entry.
+        // Combat log (1.2): the attack records an ATTACK entry (8-arg overload) and the HP primitive
+        // a DAMAGE entry. The DAMAGE entry is written via the 9-arg overload carrying the undo delta
+        // ({kind:HP, combatantId, delta}) added by the battle-log-undo feature (migration 098), so the
+        // verify must match that overload with a trailing undoPayload matcher.
         verify(battleLogService).append(eq(battleId), eq(campaignId), eq(BattleLogType.ATTACK),
                 eq(monsterC.getId()), eq(characterC.getId()), anyMap(), eq(BattleLogVisibility.PUBLIC), any());
         verify(battleLogService).append(eq(battleId), eq(campaignId), eq(BattleLogType.DAMAGE),
-                isNull(), eq(characterC.getId()), anyMap(), eq(BattleLogVisibility.PUBLIC), any());
+                isNull(), eq(characterC.getId()), anyMap(), eq(BattleLogVisibility.PUBLIC), any(), anyMap());
     }
 
     @Test
