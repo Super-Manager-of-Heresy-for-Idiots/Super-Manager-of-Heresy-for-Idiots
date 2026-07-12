@@ -72,9 +72,11 @@ class BattleServiceStandardActionTest {
     private BattleCombatant monsterC;
     private BattleCombatant characterC;
     private MonsterFeature breathFeature;
+    private BattleLogService battleLogService; // мок, застабленный для undo-тестов (фаза 3.5)
 
     @BeforeEach
     void setUp() {
+        battleLogService = org.mockito.Mockito.mock(BattleLogService.class);
         battleService = new BattleService(battleRepository, combatantRepository, characterRepository,
                 userRepository, campaignService, monsterService, characterService,
                 characterResourceService, characterEffectService, webSocketEventService,
@@ -85,7 +87,7 @@ class BattleServiceStandardActionTest {
                 modifierAggregator, effectExpirationService,
                 new DamageMitigationService(modifierAggregator),
                 org.mockito.Mockito.mock(ConditionService.class),
-                org.mockito.Mockito.mock(BattleLogService.class),
+                battleLogService,
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
@@ -449,6 +451,30 @@ class BattleServiceStandardActionTest {
                 .combatantId(monsterC.getId()).heightFt(20).manualTotal(3).build();
         BattleResponse r = battleService.fall(campaignId, battleId, req, username);
         assertFalse(monsterIn(r).isFlying());
+    }
+
+    // ---- Undo (Phase 3.5) ------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Undo HP: обратная дельта восстанавливает HP и помечает запись откатанной")
+    void undo_hp_restoresAndMarks() {
+        monsterC.setCurrentHp(2); // как будто получил 5 урона (7 → 2)
+        com.dnd.app.domain.BattleLog entry = com.dnd.app.domain.BattleLog.builder()
+                .battleId(battleId).seq(5).type(com.dnd.app.domain.enums.BattleLogType.DAMAGE)
+                .undoPayload("{\"kind\":\"HP\",\"combatantId\":\"" + monsterC.getId() + "\",\"delta\":-5}")
+                .undone(false).build();
+        when(battleLogService.findLastUndoable(battleId)).thenReturn(java.util.Optional.of(entry));
+
+        BattleResponse r = battleService.undo(campaignId, battleId, username);
+        assertEquals(7, monsterIn(r).getCurrentHp()); // 2 + 5 (обратно к полному)
+        verify(battleLogService).markUndone(entry);
+    }
+
+    @Test
+    @DisplayName("Undo: откатывать нечего — ошибка")
+    void undo_nothing_rejected() {
+        when(battleLogService.findLastUndoable(battleId)).thenReturn(java.util.Optional.empty());
+        assertThrows(BadRequestException.class, () -> battleService.undo(campaignId, battleId, username));
     }
 
     // ---- Realtime reliability (Phase 2.14) -------------------------------------------------------

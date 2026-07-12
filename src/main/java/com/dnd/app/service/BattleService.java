@@ -49,6 +49,7 @@ import com.dnd.app.service.combat.ClassAbilityCombatService;
 import com.dnd.app.service.combat.CombatCalculator;
 import com.dnd.app.service.combat.DiceRoller;
 import com.dnd.app.service.combat.WeaponAttackService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -260,8 +261,13 @@ public class BattleService {
         if (request.getRemainingRounds() != null) {
             condLog.put("rounds", request.getRemainingRounds());
         }
+        // Обратимость (фаза 3.5): откат снимет это состояние с комбатанта.
+        Map<String, Object> undo = new HashMap<>();
+        undo.put("kind", "CONDITION_ADD");
+        undo.put("combatantId", combatant.getId().toString());
+        undo.put("conditionId", request.getConditionId().toString());
         battleLogService.append(battleId, campaignId, BattleLogType.CONDITION, null, combatant.getId(),
-                condLog, BattleLogVisibility.PUBLIC, user.getId());
+                condLog, BattleLogVisibility.PUBLIC, user.getId(), undo);
         return result;
     }
 
@@ -2343,8 +2349,11 @@ public class BattleService {
         if (distFt != null) {
             logData.put("distanceFt", distFt);
         }
+        // Обратимость (фаза 3.5): откат вернёт токен в исходную клетку (если она известна).
+        Map<String, Object> undo = positionUndo(List.of(
+                positionMove(target.getId(), request.getFromCol(), request.getFromRow())));
         battleLogService.append(battleId, campaignId, BattleLogType.FORCED_MOVE, null, target.getId(),
-                logData, BattleLogVisibility.PUBLIC, user.getId());
+                logData, BattleLogVisibility.PUBLIC, user.getId(), undo);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
                 Map.of("battleId", battleId), user.getId());
         log.info("Forced movement: battleId={}, type={}, target={}, by={}",
@@ -2387,6 +2396,8 @@ public class BattleService {
 
         List<MapTokenMover.TokenMove> moves = new ArrayList<>();
         moves.add(new MapTokenMover.TokenMove(caster.getId(), request.getToCol(), request.getToRow()));
+        List<Map<String, Object>> backMoves = new ArrayList<>();
+        backMoves.add(positionMove(caster.getId(), request.getFromCol(), request.getFromRow()));
         int allyCount = 0;
         if (request.getAllies() != null) {
             for (TeleportRequest.Ally ally : request.getAllies()) {
@@ -2409,6 +2420,7 @@ public class BattleService {
                     throw new BadRequestException("Ally destination is beyond range (" + request.getRangeFt() + " ft)");
                 }
                 moves.add(new MapTokenMover.TokenMove(allyC.getId(), ally.getToCol(), ally.getToRow()));
+                backMoves.add(positionMove(allyC.getId(), ally.getFromCol(), ally.getFromRow()));
                 allyCount++;
             }
         }
@@ -2418,8 +2430,10 @@ public class BattleService {
         Map<String, Object> logData = new HashMap<>();
         logData.put("combatant", caster.getDisplayName());
         logData.put("allies", allyCount);
+        // Обратимость (фаза 3.5): откат вернёт всех телепортированных в исходные клетки.
+        Map<String, Object> undo = positionUndo(backMoves);
         battleLogService.append(battleId, campaignId, BattleLogType.TELEPORT, caster.getId(), null,
-                logData, BattleLogVisibility.PUBLIC, user.getId());
+                logData, BattleLogVisibility.PUBLIC, user.getId(), undo);
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
                 Map.of("battleId", battleId), user.getId());
         log.info("Teleport: battleId={}, combatant={}, allies={}, by={}",
@@ -2616,6 +2630,123 @@ public class BattleService {
         log.info("Fall: battleId={}, combatant={}, heightFt={}, damage={}, by={}",
                 battleId, combatant.getDisplayName(), heightFt, total, username);
         return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Откат последней обратимой операции боя (фаза 3.5). Находит самую свежую запись журнала с «обратной
+     * дельтой» (HP / условие / позиция), применяет обратное действие, помечает запись откатанной (повтор
+     * запрещён) и пишет запись {@code UNDO}. Только GM/админ (инструмент коррекции мастера).
+     *
+     * <ul>
+     *   <li>HP — применяет обратную дельту к комбатанту (тихо, без новой обратимой записи);</li>
+     *   <li>условие — снимает добавленное состояние с комбатанта;</li>
+     *   <li>позиция — возвращает токен(ы) в исходные клетки через map (реюз {@code MapTokenMover}).</li>
+     * </ul>
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param username   инициатор (GM/админ)
+     * @return актуальное состояние боя после отката
+     */
+    @Transactional
+    public BattleResponse undo(UUID campaignId, UUID battleId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+
+        BattleLog entry = battleLogService.findLastUndoable(battleId)
+                .orElseThrow(() -> new BadRequestException("Nothing to undo"));
+        Map<String, Object> undo = parseUndoPayload(entry.getUndoPayload());
+        String kind = undo == null ? null : String.valueOf(undo.get("kind"));
+        if (kind == null) {
+            throw new BadRequestException("Nothing to undo");
+        }
+
+        Map<String, Object> undoLog = new HashMap<>();
+        undoLog.put("undoneSeq", entry.getSeq());
+        undoLog.put("kind", kind);
+        switch (kind) {
+            case "HP" -> {
+                BattleCombatant c = combatantRepository.findByIdForUpdate(UUID.fromString((String) undo.get("combatantId")))
+                        .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+                int delta = ((Number) undo.get("delta")).intValue();
+                applyDamageOrHeal(c, -delta, user, campaignId, true); // тихо: откат не создаёт новую обратимую запись
+                undoLog.put("target", c.getDisplayName());
+                undoLog.put("restoredDelta", -delta);
+            }
+            case "CONDITION_ADD" -> {
+                UUID combatantId = UUID.fromString((String) undo.get("combatantId"));
+                UUID conditionId = UUID.fromString((String) undo.get("conditionId"));
+                conditionService.remove(campaignId, combatantId, conditionId, user.getId());
+                undoLog.put("condition", conditionId.toString());
+            }
+            case "POSITION" -> {
+                List<MapTokenMover.TokenMove> back = new ArrayList<>();
+                Object rawMoves = undo.get("moves");
+                if (rawMoves instanceof List<?> list) {
+                    for (Object o : list) {
+                        if (o instanceof Map<?, ?> m) {
+                            back.add(new MapTokenMover.TokenMove(
+                                    UUID.fromString(String.valueOf(m.get("combatantId"))),
+                                    ((Number) m.get("x")).intValue(),
+                                    ((Number) m.get("y")).intValue()));
+                        }
+                    }
+                }
+                if (back.isEmpty()) {
+                    throw new BadRequestException("This move cannot be undone (origin unknown)");
+                }
+                mapTokenMover.forcedMove(battleId, new MapTokenMover.ForcedMoveSpec("TELEPORT", back));
+                undoLog.put("tokens", back.size());
+            }
+            default -> throw new BadRequestException("Unsupported undo kind: " + kind);
+        }
+
+        battleLogService.markUndone(entry);
+        battleLogService.append(battleId, campaignId, BattleLogType.UNDO, null, null,
+                undoLog, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Undo: battleId={}, kind={}, undoneSeq={}, by={}", battleId, kind, entry.getSeq(), username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /** Разбирает JSON «обратной дельты» записи журнала в Map (фаза 3.5); null при пустом/битом JSON. */
+    private Map<String, Object> parseUndoPayload(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException ex) {
+            log.warn("Failed to parse undo payload: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    /** Одно «обратное» перемещение {combatantId, x, y} для позиционного отката (фаза 3.5); null если клетка неизвестна. */
+    private static Map<String, Object> positionMove(UUID combatantId, Integer x, Integer y) {
+        if (x == null || y == null) {
+            return null;
+        }
+        Map<String, Object> m = new HashMap<>();
+        m.put("combatantId", combatantId.toString());
+        m.put("x", x);
+        m.put("y", y);
+        return m;
+    }
+
+    /** Собирает undo_payload позиционного отката из «обратных» перемещений (фаза 3.5); null если возвращать некуда. */
+    private static Map<String, Object> positionUndo(List<Map<String, Object>> moves) {
+        List<Map<String, Object>> valid = moves.stream().filter(java.util.Objects::nonNull).toList();
+        if (valid.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> undo = new HashMap<>();
+        undo.put("kind", "POSITION");
+        undo.put("moves", valid);
+        return undo;
     }
 
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
@@ -3284,6 +3415,22 @@ public class BattleService {
      * result. Monsters are tracked solely on the combatant row.
      */
     private void applyDamageOrHeal(BattleCombatant combatant, int delta, User actor, UUID campaignId) {
+        applyDamageOrHeal(combatant, delta, actor, campaignId, false);
+    }
+
+    /**
+     * Применяет знаковую дельту HP к комбатанту (фаза 3.5 — с флагом {@code silent}). При {@code
+     * silent=false} изменение логируется как DAMAGE/HEAL с «обратной дельтой» (undo_payload) — такую
+     * запись можно откатить через {@code POST /undo}. При {@code silent=true} HP меняется без записи в
+     * журнал (используется самим откатом, чтобы не создавать новую обратимую запись).
+     *
+     * @param combatant комбатант, чьё HP меняется
+     * @param delta     знаковая дельта (отрицательная — урон, положительная — лечение)
+     * @param actor     инициатор изменения
+     * @param campaignId идентификатор кампании (для событий/лога)
+     * @param silent    подавить запись в журнал (режим отката)
+     */
+    private void applyDamageOrHeal(BattleCombatant combatant, int delta, User actor, UUID campaignId, boolean silent) {
         if (combatant.getType() == CombatantType.CHARACTER && combatant.getCharacter() != null) {
             // Character HP goes through the single shared primitive (pessimistic lock, temp-HP
             // absorption, tracker mirroring and HP_CHANGED all live there). Mirror the authoritative
@@ -3296,7 +3443,7 @@ public class BattleService {
                 combatant.setMaxHp(result.maxHp());
             }
             combatantRepository.save(combatant);
-            logHpChange(combatant, delta, campaignId, actor.getId());
+            logHpChange(combatant, delta, campaignId, actor.getId(), silent);
             handleDeathSaveTransitions(combatant, before, result.currentHp(), delta, actor, campaignId);
             checkConcentrationOnDamage(combatant, delta, result.currentHp(), actor, campaignId);
         } else {
@@ -3309,13 +3456,17 @@ public class BattleService {
             }
             combatant.setCurrentHp(currentHp);
             combatantRepository.save(combatant);
-            logHpChange(combatant, delta, campaignId, actor.getId());
+            logHpChange(combatant, delta, campaignId, actor.getId(), silent);
         }
     }
 
-    /** Combat-log a HP delta as DAMAGE (delta&lt;0) or HEAL (delta&gt;0); no-op for a 0 delta. */
-    private void logHpChange(BattleCombatant combatant, int delta, UUID campaignId, UUID actorUserId) {
-        if (delta == 0 || combatant.getBattle() == null) {
+    /**
+     * Combat-log a HP delta as DAMAGE (delta&lt;0) or HEAL (delta&gt;0); no-op for a 0 delta or when
+     * {@code silent}. Записывает «обратную дельту» (undo_payload {@code {kind:HP, combatantId, delta}}),
+     * поэтому любое изменение HP становится обратимым через {@code POST /undo} (фаза 3.5).
+     */
+    private void logHpChange(BattleCombatant combatant, int delta, UUID campaignId, UUID actorUserId, boolean silent) {
+        if (silent || delta == 0 || combatant.getBattle() == null) {
             return;
         }
         Map<String, Object> hpLog = new HashMap<>();
@@ -3325,9 +3476,13 @@ public class BattleService {
         if (combatant.getMaxHp() != null) {
             hpLog.put("maxHp", combatant.getMaxHp());
         }
+        Map<String, Object> undo = new HashMap<>();
+        undo.put("kind", "HP");
+        undo.put("combatantId", combatant.getId().toString());
+        undo.put("delta", delta);
         battleLogService.append(combatant.getBattle().getId(), campaignId,
                 delta < 0 ? BattleLogType.DAMAGE : BattleLogType.HEAL,
-                null, combatant.getId(), hpLog, BattleLogVisibility.PUBLIC, actorUserId);
+                null, combatant.getId(), hpLog, BattleLogVisibility.PUBLIC, actorUserId, undo);
     }
 
     /**

@@ -25,4 +25,11 @@ public interface BattleLogRepository extends JpaRepository<BattleLog, UUID> {
     /** Same window, but excluding a visibility class — used to hide GM_ONLY entries from players. */
     List<BattleLog> findByBattleIdAndSeqGreaterThanAndVisibilityNotOrderBySeqAsc(
             UUID battleId, long afterSeq, com.dnd.app.domain.enums.BattleLogVisibility excluded, Pageable pageable);
+
+    /**
+     * Последняя ещё не откатанная обратимая операция боя (фаза 3.5): самая свежая запись с непустым
+     * {@code undo_payload} и {@code undone = false}. Используется эндпоинтом отмены.
+     */
+    java.util.Optional<BattleLog> findFirstByBattleIdAndUndoneFalseAndUndoPayloadIsNotNullOrderBySeqDesc(
+            UUID battleId);
 }

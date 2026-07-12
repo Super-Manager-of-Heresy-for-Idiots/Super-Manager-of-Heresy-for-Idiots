@@ -556,6 +556,25 @@ public class BattleController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Откат последней обратимой операции боя (фаза 3.5): HP / условие / позиция. Только GM.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param auth       аутентификация инициатора (GM)
+     * @return обёрнутое актуальное состояние боя после отката
+     */
+    @PostMapping("/{battleId}/undo")
+    @Operation(summary = "Undo the last reversible battle operation — HP/condition/position (GM, Phase 3.5)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> undo(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.undo(campaignId, battleId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Undone"));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/{battleId}/teleport")
     @Operation(summary = "Teleport a combatant, optionally bringing nearby allies (Phase 2.12)")
     public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> teleport(

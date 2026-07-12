@@ -50,6 +50,31 @@ public class BattleLogService {
     public BattleLog append(UUID battleId, UUID campaignId, BattleLogType type,
                             UUID actorCombatantId, UUID targetCombatantId,
                             Map<String, Object> payload, BattleLogVisibility visibility, UUID actorUserId) {
+        return append(battleId, campaignId, type, actorCombatantId, targetCombatantId,
+                payload, visibility, actorUserId, null);
+    }
+
+    /**
+     * Добавляет запись в журнал боя с опциональной «обратной дельтой» (фаза 3.5). Если {@code undoPayload}
+     * не пуст, запись становится обратимой — её сможет откатить {@code POST /undo} (например, {@code
+     * {kind:HP, combatantId, delta}}). Записи без него необратимы. Прочие параметры — как в базовом append.
+     *
+     * @param battleId          идентификатор боя
+     * @param campaignId        идентификатор кампании (для рассылки события; может быть null)
+     * @param type              тип записи журнала
+     * @param actorCombatantId  комбатант-инициатор (nullable)
+     * @param targetCombatantId комбатант-цель (nullable)
+     * @param payload           отображаемая нагрузка записи
+     * @param visibility        видимость записи (PUBLIC по умолчанию)
+     * @param actorUserId       пользователь-инициатор (для WS-события)
+     * @param undoPayload       «обратная дельта» для отката (nullable — тогда запись необратима)
+     * @return сохранённая запись журнала
+     */
+    @Transactional
+    public BattleLog append(UUID battleId, UUID campaignId, BattleLogType type,
+                            UUID actorCombatantId, UUID targetCombatantId,
+                            Map<String, Object> payload, BattleLogVisibility visibility, UUID actorUserId,
+                            Map<String, Object> undoPayload) {
         Long max = logRepository.findMaxSeq(battleId);
         long seq = (max == null ? 0L : max) + 1;
         BattleLog entry = BattleLog.builder()
@@ -59,6 +84,7 @@ public class BattleLogService {
                 .actorCombatantId(actorCombatantId)
                 .targetCombatantId(targetCombatantId)
                 .payload(writeJson(payload))
+                .undoPayload(writeJson(undoPayload))
                 .visibility(visibility == null ? BattleLogVisibility.PUBLIC : visibility)
                 .build();
         entry = logRepository.saveAndFlush(entry);
@@ -68,6 +94,29 @@ public class BattleLogService {
                     toDto(entry), actorUserId);
         }
         return entry;
+    }
+
+    /**
+     * Последняя ещё не откатанная обратимая операция боя (фаза 3.5) — или {@code Optional.empty()}, если
+     * откатывать нечего.
+     *
+     * @param battleId идентификатор боя
+     * @return самая свежая обратимая запись журнала
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<BattleLog> findLastUndoable(UUID battleId) {
+        return logRepository.findFirstByBattleIdAndUndoneFalseAndUndoPayloadIsNotNullOrderBySeqDesc(battleId);
+    }
+
+    /**
+     * Помечает запись журнала как откатанную (фаза 3.5), чтобы её нельзя было откатить повторно.
+     *
+     * @param entry запись журнала для пометки
+     */
+    @Transactional
+    public void markUndone(BattleLog entry) {
+        entry.setUndone(true);
+        logRepository.saveAndFlush(entry);
     }
 
     /**

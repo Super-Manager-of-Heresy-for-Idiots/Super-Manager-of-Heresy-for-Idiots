@@ -47,6 +47,17 @@ public class BattleLog {
     @Column(name = "payload")
     private String payload;
 
+    /**
+     * JSON-текст «обратной дельты» (фаза 3.5, nullable): описывает, как откатить эту операцию
+     * (например {@code {kind:HP, combatantId, delta}}). Записи без него необратимы.
+     */
+    @Column(name = "undo_payload")
+    private String undoPayload;
+
+    /** Была ли операция уже откатана (фаза 3.5) — повторный откат запрещён. */
+    @Column(name = "undone", nullable = false)
+    private boolean undone;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "visibility", nullable = false, length = 16)
     private BattleLogVisibility visibility;

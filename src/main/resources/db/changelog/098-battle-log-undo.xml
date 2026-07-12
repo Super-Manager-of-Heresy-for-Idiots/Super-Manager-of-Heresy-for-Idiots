@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Журнал обратимых операций (фаза 3.5). Некоторые записи battle_log несут «обратную дельту»
+      (undo_payload, JSON): при откате она применяется, чтобы вернуть состояние (HP/условие/позиция).
+      Флаг undone помечает уже откатанную запись, чтобы её нельзя было откатить повторно. Записи без
+      undo_payload необратимы. POST /battles/{id}/undo откатывает последнюю обратимую операцию боя.
+    -->
+    <changeSet id="098-battle-log-undo" author="claude">
+        <addColumn tableName="battle_log">
+            <column name="undo_payload" type="text"/>
+            <column name="undone" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
