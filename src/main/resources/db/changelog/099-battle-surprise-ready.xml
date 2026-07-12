@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      Внезапность и подготовленные действия (фаза 3.7). surprised: комбатант застигнут врасплох —
+      в первом раунде не может действовать/реагировать; флаг снимается по окончании его первого хода.
+      readied_action: текст подготовленного действия (Ready) — срабатывает по триггеру, тратя реакцию;
+      неиспользованное снимается в начале следующего хода комбатанта.
+    -->
+    <changeSet id="099-battle-surprise-ready" author="claude">
+        <addColumn tableName="battle_combatants">
+            <column name="surprised" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="readied_action" type="text"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

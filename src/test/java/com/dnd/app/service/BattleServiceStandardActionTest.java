@@ -477,6 +477,51 @@ class BattleServiceStandardActionTest {
         assertThrows(BadRequestException.class, () -> battleService.undo(campaignId, battleId, username));
     }
 
+    // ---- Surprise & Ready (Phase 3.7) ------------------------------------------------------------
+
+    @Test
+    @DisplayName("Surprise: GM отмечает внезапность, застигнутый не может действовать")
+    void surprise_setAndBlocksAction() {
+        BattleResponse set = battleService.setSurprised(campaignId, battleId, monsterC.getId(), true, username);
+        assertTrue(monsterIn(set).isSurprised());
+        monsterC.setActionSpent(0);
+        var req = com.dnd.app.dto.request.StandardActionRequest.builder()
+                .type(com.dnd.app.domain.enums.StandardActionType.DODGE).build();
+        assertThrows(BadRequestException.class,
+                () -> battleService.standardAction(campaignId, battleId, monsterC.getId(), req, username));
+    }
+
+    @Test
+    @DisplayName("Surprise: снимается по окончании первого хода застигнутого")
+    void surprise_clearsAfterFirstTurn() {
+        monsterC.setSurprised(true);
+        BattleResponse r = battleService.endTurn(campaignId, battleId, 0, 1, null, username); // ход monsterC (index 0) завершается
+        assertFalse(monsterIn(r).isSurprised());
+    }
+
+    @Test
+    @DisplayName("Ready: подготовка тратит действие, срабатывание тратит реакцию и очищает")
+    void ready_declareAndTrigger() {
+        monsterC.setActionSpent(0);
+        monsterC.setReactionUsed(false);
+        var req = com.dnd.app.dto.request.ReadyActionRequest.builder()
+                .description("Атакую, когда враг войдёт в дверь").build();
+        BattleResponse r1 = battleService.readyAction(campaignId, battleId, monsterC.getId(), req, username);
+        assertEquals("Атакую, когда враг войдёт в дверь", monsterIn(r1).getReadiedAction());
+
+        BattleResponse r2 = battleService.triggerReady(campaignId, battleId, monsterC.getId(), username);
+        assertNull(monsterIn(r2).getReadiedAction());
+        assertTrue(monsterIn(r2).isReactionUsed());
+    }
+
+    @Test
+    @DisplayName("Ready: срабатывать нечего — ошибка")
+    void ready_triggerNone_rejected() {
+        monsterC.setReadiedAction(null);
+        assertThrows(BadRequestException.class,
+                () -> battleService.triggerReady(campaignId, battleId, monsterC.getId(), username));
+    }
+
     // ---- Realtime reliability (Phase 2.14) -------------------------------------------------------
 
     @Test

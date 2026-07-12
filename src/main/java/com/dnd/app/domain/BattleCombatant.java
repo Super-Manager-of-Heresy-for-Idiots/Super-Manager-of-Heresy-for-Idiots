@@ -189,6 +189,22 @@ public class BattleCombatant {
     @Column(name = "speed_override_ft")
     private Integer speedOverrideFt;
 
+    /**
+     * Внезапность (фаза 3.7): существо застигнуто врасплох — в первом раунде не может действовать и
+     * реагировать. Флаг снимается по окончании его первого хода (см. endTurn).
+     */
+    @Column(name = "surprised", nullable = false)
+    @Builder.Default
+    private Boolean surprised = false;
+
+    /**
+     * Подготовленное действие (Ready, фаза 3.7): текстовое описание отложенного действия с триггером.
+     * Срабатывает по триггеру, тратя реакцию; неиспользованное снимается в начале следующего хода
+     * комбатанта (resetActionEconomy). null — подготовленного действия нет.
+     */
+    @Column(name = "readied_action", columnDefinition = "text")
+    private String readiedAction;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "added_by")
     private User addedBy;

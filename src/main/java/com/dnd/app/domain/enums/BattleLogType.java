@@ -25,5 +25,7 @@ public enum BattleLogType {
     TELEPORT,
     TRAP,
     FALL,
-    UNDO
+    UNDO,
+    SURPRISE,
+    READY
 }

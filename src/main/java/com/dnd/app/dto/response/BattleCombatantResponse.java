@@ -91,4 +91,8 @@ public class BattleCombatantResponse {
     private boolean flying;
     /** True when the creature can hover (from the monster statblock) — it does not fall at 0 fly speed. */
     private boolean hover;
+    /** Внезапность (фаза 3.7): застигнут врасплох — в первом раунде не может действовать/реагировать. */
+    private boolean surprised;
+    /** Подготовленное действие (Ready, фаза 3.7): текст отложенного действия; null — нет. */
+    private String readiedAction;
 }

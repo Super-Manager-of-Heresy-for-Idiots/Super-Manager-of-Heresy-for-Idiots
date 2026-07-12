@@ -21,6 +21,7 @@ import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.TeleportRequest;
 import com.dnd.app.dto.request.FallRequest;
+import com.dnd.app.dto.request.ReadyActionRequest;
 import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
@@ -469,6 +470,63 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.setIdentityHidden(campaignId, battleId, combatantId, hidden, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, hidden ? "Identity hidden" : "Identity revealed"));
+        }, controllerTaskExecutor);
+    }
+
+    @PatchMapping("/{battleId}/combatants/{combatantId}/surprised")
+    @Operation(summary = "GM marks a combatant surprised — can't act on round 1 (Phase 3.7)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> setSurprised(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @RequestParam boolean surprised, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.setSurprised(campaignId, battleId, combatantId, surprised, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, surprised ? "Surprised" : "No longer surprised"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Подготовка действия (Ready, фаза 3.7): комбатант тратит действие, чтобы отложить его до триггера.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param request     описание подготовленного действия и триггера
+     * @param auth        аутентификация инициатора (контролёр комбатанта или GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/combatants/{combatantId}/ready")
+    @Operation(summary = "Ready an action with a trigger (Phase 3.7)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> readyAction(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @Valid @RequestBody ReadyActionRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.readyAction(campaignId, battleId, combatantId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Action readied"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Срабатывание подготовленного действия (Ready, фаза 3.7) по триггеру — тратит реакцию.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param auth        аутентификация инициатора (контролёр комбатанта или GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/combatants/{combatantId}/ready/trigger")
+    @Operation(summary = "Trigger a readied action — spends the reaction (Phase 3.7)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> triggerReady(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.triggerReady(campaignId, battleId, combatantId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Readied action triggered"));
         }, controllerTaskExecutor);
     }
 

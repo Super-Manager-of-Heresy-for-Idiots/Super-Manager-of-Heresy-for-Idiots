@@ -28,6 +28,7 @@ import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.FallRequest;
 import com.dnd.app.dto.request.ForcedMoveRequest;
+import com.dnd.app.dto.request.ReadyActionRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.TeleportRequest;
@@ -1246,6 +1247,12 @@ public class BattleService {
         int currentIndex = clampIndex(battle.getCurrentTurnIndex(), combatants.size());
         BattleCombatant current = combatants.get(currentIndex);
         enforceCanEndTurn(campaignId, user, current);
+
+        // Внезапность (3.7) заканчивается по окончании первого хода застигнутого существа.
+        if (Boolean.TRUE.equals(current.getSurprised())) {
+            current.setSurprised(false);
+            combatantRepository.save(current);
+        }
 
         int nextIndex = currentIndex + 1;
         if (nextIndex >= combatants.size()) {
@@ -2491,6 +2498,123 @@ public class BattleService {
     }
 
     /**
+     * Отмечает/снимает внезапность комбатанта (фаза 3.7). Застигнутое врасплох существо в первом раунде
+     * не может действовать/реагировать (гвард в spendSlot); флаг автоматически снимается по окончании его
+     * первого хода (см. endTurn). GM задаёт внезапных существ в начале боя. Только GM/админ.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта
+     * @param surprised   {@code true} — застигнут врасплох, {@code false} — снять
+     * @param username    инициатор (GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse setSurprised(UUID campaignId, UUID battleId, UUID combatantId,
+                                       boolean surprised, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceGmOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        combatant.setSurprised(surprised);
+        combatantRepository.save(combatant);
+        battleLogService.append(battleId, campaignId, BattleLogType.SURPRISE, null, combatant.getId(),
+                Map.of("combatantName", combatant.getDisplayName(), "surprised", surprised),
+                BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Surprise {} for combatant: battleId={}, combatantId={}, by={}",
+                surprised ? "set" : "cleared", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Подготавливает действие (Ready, фаза 3.7): комбатант тратит своё действие, чтобы отложить его до
+     * триггера (описание — свободный текст). Реюзает экономию действий (spendSlot ACTION), поэтому
+     * застигнутый/уже потративший действие получит отказ. Инициатор — контролёр комбатанта или GM.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта, который готовит действие
+     * @param request     описание подготовленного действия и его триггера
+     * @param username    инициатор (контролёр комбатанта или GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse readyAction(UUID campaignId, UUID battleId, UUID combatantId,
+                                      ReadyActionRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Actions can only be readied in an active battle");
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+
+        spendSlot(combatant, SpendActionRequest.Slot.ACTION); // подготовка тратит действие
+        combatant.setReadiedAction(request.getDescription());
+        combatantRepository.save(combatant);
+        battleLogService.append(battleId, campaignId, BattleLogType.READY, combatant.getId(), null,
+                Map.of("combatantName", combatant.getDisplayName(), "action", "DECLARED",
+                        "description", request.getDescription()),
+                BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Ready declared: battleId={}, combatantId={}, by={}", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Срабатывание подготовленного действия (Ready, фаза 3.7) по триггеру: тратит реакцию комбатанта
+     * (реюз слота REACTION 2.8), очищает подготовленное действие и логирует срабатывание. Требует, чтобы
+     * действие было подготовлено и реакция ещё не потрачена. Инициатор — контролёр комбатанта или GM.
+     *
+     * @param campaignId  идентификатор кампании
+     * @param battleId    идентификатор боя
+     * @param combatantId идентификатор комбатанта, чьё подготовленное действие срабатывает
+     * @param username    инициатор (контролёр комбатанта или GM/админ)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse triggerReady(UUID campaignId, UUID battleId, UUID combatantId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+        if (combatant.getReadiedAction() == null) {
+            throw new BadRequestException("No readied action to trigger");
+        }
+
+        spendSlot(combatant, SpendActionRequest.Slot.REACTION); // срабатывание тратит реакцию
+        String description = combatant.getReadiedAction();
+        combatant.setReadiedAction(null);
+        combatantRepository.save(combatant);
+        battleLogService.append(battleId, campaignId, BattleLogType.READY, combatant.getId(), null,
+                Map.of("combatantName", combatant.getDisplayName(), "action", "TRIGGERED",
+                        "description", description),
+                BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Ready triggered: battleId={}, combatantId={}, by={}", battleId, combatantId, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
      * Срабатывание ловушки по цели (фаза 3.2): переиспользует примитивы сейва/митигации/HP (как bulkAction)
      * — цель кидает спасбросок (ручной d20 или AUTO) против DC ловушки, урон полный/половинный/0, применяется
      * сопротивление, пишется лог {@code TRAP}. Параметры ловушки приходят с карты через фронт (A1). Только GM.
@@ -2751,6 +2875,10 @@ public class BattleService {
 
     /** Spends one action-economy slot on the combatant, rejecting if that slot is already used this turn. */
     private void spendSlot(BattleCombatant combatant, SpendActionRequest.Slot slot) {
+        // Внезапность (3.7): застигнутое существо не может тратить слоты действий/реакций.
+        if (Boolean.TRUE.equals(combatant.getSurprised())) {
+            throw new BadRequestException("The combatant is surprised and cannot act this round");
+        }
         switch (slot) {
             case ACTION -> {
                 if (combatant.getActionSpent() >= combatant.getActionMax()) {
@@ -3926,6 +4054,8 @@ public class BattleService {
                 .speedOverrideFt(c.getSpeedOverrideFt())
                 .flying(Boolean.TRUE.equals(c.getFlying()))
                 .hover(canHover(c))
+                .surprised(Boolean.TRUE.equals(c.getSurprised()))
+                .readiedAction(c.getReadiedAction())
                 .build();
     }
 
@@ -3947,6 +4077,8 @@ public class BattleService {
         combatant.setDodging(false);
         combatant.setDisengaged(false);
         combatant.setHelpAdvantage(false);
+        // Неиспользованное подготовленное действие (Ready, 3.7) истекает в начале следующего хода.
+        combatant.setReadiedAction(null);
         // Multiattack budget for the turn (Phase 2.9): a monster with Multiattack may make N attacks
         // with its Attack action; others keep the single-attack (action-based) guard (null budget).
         if (combatant.getType() == CombatantType.MONSTER && combatant.getMonster() != null) {
