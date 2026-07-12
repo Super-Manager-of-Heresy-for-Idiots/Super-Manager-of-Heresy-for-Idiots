@@ -36,6 +36,10 @@ public class SpeciesDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    // Маркер происхождения (P0-4): GLOBAL — ванильный контент, HOMEBREW — homebrew.
+    private String source;
+    private String homebrewTitle;
+
     @Schema(description = "Creature type (humanoid, fey, ...)")
     private ContentLabelDto creatureType;
 

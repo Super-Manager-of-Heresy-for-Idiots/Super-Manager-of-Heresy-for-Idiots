@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Класс CampaignContentService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
@@ -39,6 +41,7 @@ public class CampaignContentService {
     private final FeatRepository featRepository;
     private final UserRepository userRepository;
     private final CampaignService campaignService;
+    private final PlayerCharacterRepository playerCharacterRepository;
 
     /**
      * Выполняет операции "activate homebrew" в рамках бизнес-логики домена.
@@ -82,7 +85,7 @@ public class CampaignContentService {
      * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
      */
     @Transactional
-    public void deactivateHomebrew(UUID campaignId, UUID packageId, String username) {
+    public void deactivateHomebrew(UUID campaignId, UUID packageId, String username, boolean force) {
         Campaign campaign = campaignService.findCampaign(campaignId);
         User user = getUser(username);
         campaignService.enforceGmOrAdmin(campaign, user);
@@ -91,8 +94,49 @@ public class CampaignContentService {
             throw new ResourceNotFoundException("Активация пакета не найдена для этой кампании");
         }
 
+        // P1-2: не отвязываем пакет, если его контент ещё используется персонажами кампании —
+        // иначе их листы получат осиротевшие ссылки на класс/вид/предысторию. При force=true
+        // отвязываем принудительно (такие персонажи потеряют доступ к контенту пакета).
+        if (!force) {
+            Map<ContentType, Set<UUID>> byType = contentItemRepository.findAllByHomebrewPackageId(packageId).stream()
+                    .collect(Collectors.groupingBy(HomebrewContentItem::getContentType,
+                            Collectors.mapping(HomebrewContentItem::getContentId, Collectors.toSet())));
+
+            long classDeps = countDeps(byType, ContentType.CHARACTER_CLASS,
+                    ids -> playerCharacterRepository.countInCampaignUsingClasses(campaignId, ids));
+            long speciesDeps = countDeps(byType, ContentType.SPECIES,
+                    ids -> playerCharacterRepository.countByCampaignIdAndRaceIdIn(campaignId, ids));
+            long backgroundDeps = countDeps(byType, ContentType.BACKGROUND,
+                    ids -> playerCharacterRepository.countByCampaignIdAndBackgroundIdIn(campaignId, ids));
+
+            long total = classDeps + speciesDeps + backgroundDeps;
+            if (total > 0) {
+                throw new DuplicateResourceException(String.format(
+                        "Нельзя отвязать пакет: в кампании есть персонажи, использующие его контент " +
+                        "(классы: %d, виды: %d, предыстории: %d). Повторите с force=true, чтобы отвязать " +
+                        "принудительно — такие персонажи потеряют доступ к контенту пакета.",
+                        classDeps, speciesDeps, backgroundDeps));
+            }
+        }
+
         campaignHomebrewRepository.deleteByCampaignIdAndPackageId(campaignId, packageId);
-        log.info("Homebrew deactivated: packageId={}, campaignId={}, by user={}", packageId, campaignId, username);
+        log.info("Homebrew deactivated: packageId={}, campaignId={}, force={}, by user={}",
+                packageId, campaignId, force, username);
+    }
+
+    /**
+     * Считает зависимости персонажей по типу контента, если у пакета есть контент этого типа.
+     * @param byType контент пакета, сгруппированный по типу
+     * @param type проверяемый тип контента
+     * @param counter функция подсчёта по набору id
+     * @return количество зависимых персонажей (0, если контента этого типа нет)
+     */
+    private long countDeps(Map<ContentType, Set<UUID>> byType, ContentType type, Function<Set<UUID>, Long> counter) {
+        Set<UUID> ids = byType.get(type);
+        if (ids == null || ids.isEmpty()) {
+            return 0L;
+        }
+        return counter.apply(ids);
     }
 
     /**

@@ -90,7 +90,9 @@ public class ContentClassMapper {
                 .nameEn(c.getNameEn())
                 .subtitle(c.getSubtitle())
                 // description is not modeled on the class entity in the new schema
-                .packageId(c.getHomebrew() != null ? c.getHomebrew().getId() : null)
+                .packageId(com.dnd.app.util.HomebrewOrigin.id(c.getHomebrew()))
+                .source(com.dnd.app.util.HomebrewOrigin.source(c.getHomebrew()))
+                .homebrewTitle(com.dnd.app.util.HomebrewOrigin.title(c.getHomebrew()))
                 .hitDie(c.getHitDie())
                 .primaryAbilities(c.getPrimaryAbilities().stream()
                         .map(s -> abilityLabel(s, lang))

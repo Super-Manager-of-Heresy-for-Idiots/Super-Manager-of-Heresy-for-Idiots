@@ -149,4 +149,8 @@
     <include file="db/changelog/098-battle-log-undo.xml"/>
     <include file="db/changelog/099-battle-surprise-ready.xml"/>
 
+    <!-- P0-5 / DB-1: partial unique vanilla-slug indexes (homebrew_id IS NULL) for the 6 tables
+         that only had *_hb_slug, protecting the system slug namespace from duplicates. -->
+    <include file="db/changelog/100-homebrew-vanilla-slug-indexes.xml"/>
+
 </databaseChangeLog>

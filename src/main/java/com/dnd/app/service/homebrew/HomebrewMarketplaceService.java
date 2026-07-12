@@ -72,7 +72,30 @@ public class HomebrewMarketplaceService {
             packages = packageRepository.findPublishedAndNotDeleted(pageable);
         }
 
-        return packages.map(authoringService::toPackageResponse);
+        Page<HomebrewPackageResponse> mapped = packages.map(authoringService::toPackageResponse);
+        applyRatings(mapped.getContent());
+        return mapped;
+    }
+
+    /**
+     * Наполняет ответы витрины агрегатами рейтинга (лайки/дизлайки/нетто) одним batch-запросом.
+     * @param responses список ответов пакетов
+     */
+    private void applyRatings(List<HomebrewPackageResponse> responses) {
+        if (responses.isEmpty()) {
+            return;
+        }
+        List<UUID> ids = responses.stream().map(HomebrewPackageResponse::getId).toList();
+        Map<UUID, long[]> byId = new HashMap<>();
+        for (HomebrewRatingRepository.RatingAggregate agg : ratingRepository.aggregateByPackageIds(ids)) {
+            byId.put(agg.getPackageId(), new long[]{agg.getLikes(), agg.getDislikes()});
+        }
+        for (HomebrewPackageResponse r : responses) {
+            long[] counts = byId.getOrDefault(r.getId(), new long[]{0L, 0L});
+            r.setLikes(counts[0]);
+            r.setDislikes(counts[1]);
+            r.setNetRating(counts[0] - counts[1]);
+        }
     }
 
     /**
@@ -83,10 +106,16 @@ public class HomebrewMarketplaceService {
      */
     @Transactional(readOnly = true)
     public HomebrewDetailResponse getMarketplacePackage(UUID id, String username) {
-        getGameMaster(username);
+        User gm = getGameMaster(username);
         HomebrewPackage pkg = packageRepository.findPublishedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
-        return authoringService.toDetailResponse(pkg);
+        HomebrewDetailResponse response = authoringService.toDetailResponse(pkg);
+        HomebrewRatingResponse rating = buildRatingResponse(id, gm.getId());
+        response.setLikes(rating.getLikes());
+        response.setDislikes(rating.getDislikes());
+        response.setNetRating(rating.getNetRating());
+        response.setUserRating(rating.getUserRating());
+        return response;
     }
 
     /**

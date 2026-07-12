@@ -39,6 +39,10 @@ public class EquipmentItemDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    // Маркер происхождения (P0-4): GLOBAL — ванильный контент, HOMEBREW — homebrew.
+    private String source;
+    private String homebrewTitle;
+
     @Schema(description = "Present only for weapons")
     private WeaponStatDto weaponStat;
 

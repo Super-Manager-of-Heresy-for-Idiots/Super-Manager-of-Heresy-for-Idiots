@@ -35,4 +35,10 @@ public class HomebrewDetailResponse {
     private Instant publishedAt;
     private Instant createdAt;
     private Boolean isDeleted;
+
+    // Агрегаты рейтинга витрины (FE-2 / P0-6).
+    private Long likes;
+    private Long dislikes;
+    private Long netRating;
+    private Integer userRating;
 }

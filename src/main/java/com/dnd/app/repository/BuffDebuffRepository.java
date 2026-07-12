@@ -19,4 +19,16 @@ public interface BuffDebuffRepository extends JpaRepository<BuffDebuff, UUID> {
     List<BuffDebuff> findAllByEffectType(String effectType);
 
     List<BuffDebuff> findAllByIsBuffAndEffectType(Boolean isBuff, String effectType);
+
+    // --- Origin-scoped finders (SEC-2 / P0-2) ---
+    // Общие пикеры (редактор спеллов, зачарований и т.п.) должны видеть только ванильные бафы,
+    // иначе приватные homebrew-бафы всех авторов утекают в общий список. homebrew_id IS NULL = ваниль.
+
+    List<BuffDebuff> findAllByHomebrewIsNull();
+
+    List<BuffDebuff> findAllByIsBuffAndHomebrewIsNull(Boolean isBuff);
+
+    List<BuffDebuff> findAllByEffectTypeAndHomebrewIsNull(String effectType);
+
+    List<BuffDebuff> findAllByIsBuffAndEffectTypeAndHomebrewIsNull(Boolean isBuff, String effectType);
 }

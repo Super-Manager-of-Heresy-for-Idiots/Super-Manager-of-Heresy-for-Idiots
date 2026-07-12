@@ -49,9 +49,9 @@ public class HomebrewBestiaryController {
     @Operation(summary = "List homebrew dictionary entries")
     public CompletableFuture<ResponseEntity<ApiResponse<List<DictionaryEntryResponse>>>> listDictionary(
             @PathVariable UUID packageId,
-            @PathVariable String kind) {
+            @PathVariable String kind, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            List<DictionaryEntryResponse> data = dictionaryService.listForHomebrew(DictionaryKind.fromSlug(kind), packageId);
+            List<DictionaryEntryResponse> data = dictionaryService.listForHomebrew(DictionaryKind.fromSlug(kind), packageId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }

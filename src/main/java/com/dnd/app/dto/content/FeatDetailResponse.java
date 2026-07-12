@@ -31,6 +31,10 @@ public class FeatDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    // Маркер происхождения (P0-4): GLOBAL — ванильный контент, HOMEBREW — homebrew.
+    private String source;
+    private String homebrewTitle;
+
     @Schema(description = "Feat category (origin, general, fighting-style, ...)")
     private ContentLabelDto category;
 

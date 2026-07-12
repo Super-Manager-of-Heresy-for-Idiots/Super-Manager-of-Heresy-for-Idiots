@@ -162,8 +162,16 @@ public class HomebrewAuthoringService {
 
         validatorRegistry.validate(contentTypeStr, request.getContentId());
 
+        // Fail-closed (P0-3): владельца обязаны подтвердить. null означает либо ванильный контент,
+        // либо тип без поддержки проверки владения — в обоих случаях прицеплять его к пакету нельзя,
+        // иначе можно присвоить чужой/системный контент в свой homebrew-пакет.
         UUID ownerId = validatorRegistry.getOwnerId(contentTypeStr, request.getContentId());
-        if (ownerId != null && !ownerId.equals(gm.getId())) {
+        if (ownerId == null) {
+            throw new BadRequestException(
+                    "Нельзя добавить этот контент: у него нет проверяемого homebrew-владельца " +
+                    "(ванильный контент или тип без поддержки проверки владения)");
+        }
+        if (!ownerId.equals(gm.getId())) {
             throw new AccessDeniedException("Этот контент вам не принадлежит");
         }
 

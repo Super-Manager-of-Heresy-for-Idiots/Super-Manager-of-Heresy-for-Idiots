@@ -55,6 +55,7 @@ public class MonsterService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
+    private final com.dnd.app.service.homebrew.HomebrewAccessService homebrewAccessService;
 
     // =================================== Reads ===================================
 
@@ -103,7 +104,10 @@ public class MonsterService {
      */
     @Transactional(readOnly = true)
     public List<MonsterSummaryResponse> listHomebrewMonsters(UUID packageId, String username, String lang) {
-        getUser(username);
+        // SEC-1 / P0-1: раньше проверялось только существование пользователя, из-за чего любой
+        // аутентифицированный пользователь мог прочитать бестиарий (включая черновики) чужого пакета.
+        // Теперь доступ к пакету проходит через единый guard: чужой пакет виден только если PUBLISHED.
+        homebrewAccessService.enforceReadable(packageId, getUser(username));
         return monsterRepository.findAllByHomebrewId(packageId).stream().map(m -> toSummary(m, lang)).toList();
     }
 
@@ -1046,8 +1050,14 @@ public class MonsterService {
             if (!gm && !Boolean.TRUE.equals(monster.getIsVisibleToPlayers())) {
                 throw new ResourceNotFoundException("Monster not found");
             }
+            return;
         }
-        // SYSTEM and HOMEBREW monsters are readable by any authenticated user.
+        // SEC-1 / P0-1: homebrew-монстр читаем только через guard пакета (чужой — только если PUBLISHED).
+        if (monster.getHomebrew() != null) {
+            homebrewAccessService.enforceReadable(monster.getHomebrew().getId(), user);
+            return;
+        }
+        // SYSTEM monsters are readable by any authenticated user.
     }
 
     private void enforceCanUseAsCampaignSource(Monster source, Campaign campaign, User user) {

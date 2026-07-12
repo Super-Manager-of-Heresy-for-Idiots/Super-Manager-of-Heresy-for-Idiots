@@ -65,6 +65,12 @@ public class SpellDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    @Schema(description = "Origin marker: GLOBAL for core/vanilla content, HOMEBREW for homebrew content (P0-4)")
+    private String source;
+
+    @Schema(description = "Homebrew package title; null for core content")
+    private String homebrewTitle;
+
     @Schema(description = "True when the spell's auto-derived resolution was flagged for manual admin review")
     private Boolean warning;
 

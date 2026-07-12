@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P0-5 / DB-1: защита ванильного (системного) неймспейса slug-ов.
+
+      У таблиц ability_score, character_size, currency, damage_type, equipment_category,
+      magic_item_rarity, magic_item_type, skill уже есть ПАРА индексов:
+        uq_*_hb_slug      — UNIQUE(homebrew_id, slug) WHERE homebrew_id IS NOT NULL (внутри пакета)
+        uq_*_vanilla_slug — UNIQUE(slug)              WHERE homebrew_id IS NULL     (системный неймспейс)
+
+      А у equipment_item, feat, magic_item, species, spell, subclass есть только *_hb_slug —
+      второй (vanilla) индекс отсутствовал, из-за чего два системных (homebrew_id IS NULL) элемента
+      могли получить одинаковый slug. Существующие ограничения UNIQUE(mod_id, slug) это НЕ закрывают:
+      у ванильных строк mod_id = NULL, а Postgres считает NULL-ы различными, поэтому уникальность
+      среди системных строк не обеспечивается.
+
+      Исключение по факту кода: subclass уже имеет полный UNIQUE(class_id, slug) поверх ВСЕХ строк,
+      поэтому ванильный неймспейс там формально защищён; индекс ниже добавляем для явной симметрии
+      vanilla/homebrew и делаем его scoped по class_id (slug уникален в рамках класса).
+
+      ВНИМАНИЕ: если в данных уже есть дубли системных slug-ов, создание UNIQUE-индекса упадёт —
+      это намеренно (fail loud). Перед накатом на среду с данными нужно устранить дубли.
+    -->
+    <changeSet id="100-homebrew-vanilla-slug-indexes" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_equipment_item_vanilla_slug
+                ON public.equipment_item USING btree (slug) WHERE (homebrew_id IS NULL);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_feat_vanilla_slug
+                ON public.feat USING btree (slug) WHERE (homebrew_id IS NULL);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_magic_item_vanilla_slug
+                ON public.magic_item USING btree (slug) WHERE (homebrew_id IS NULL);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_species_vanilla_slug
+                ON public.species USING btree (slug) WHERE (homebrew_id IS NULL);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_spell_vanilla_slug
+                ON public.spell USING btree (slug) WHERE (homebrew_id IS NULL);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_subclass_vanilla_slug
+                ON public.subclass USING btree (class_id, slug) WHERE (homebrew_id IS NULL);
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                DROP INDEX IF EXISTS uq_equipment_item_vanilla_slug;
+                DROP INDEX IF EXISTS uq_feat_vanilla_slug;
+                DROP INDEX IF EXISTS uq_magic_item_vanilla_slug;
+                DROP INDEX IF EXISTS uq_species_vanilla_slug;
+                DROP INDEX IF EXISTS uq_spell_vanilla_slug;
+                DROP INDEX IF EXISTS uq_subclass_vanilla_slug;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -48,6 +48,7 @@ public class BestiaryDictionaryService {
     private final EquipmentSlotRepository equipmentSlotRepository;
     private final UserRepository userRepository;
     private final HomebrewPackageRepository homebrewPackageRepository;
+    private final com.dnd.app.service.homebrew.HomebrewAccessService homebrewAccessService;
 
     private record Handler<T extends DictionaryEntry>(DictionaryRepository<T> repo, Supplier<T> factory) {}
 
@@ -90,7 +91,10 @@ public class BestiaryDictionaryService {
      * @return результат выполнения бизнес-операции
      */
     @Transactional(readOnly = true)
-    public List<DictionaryEntryResponse> listForHomebrew(DictionaryKind kind, UUID packageId) {
+    public List<DictionaryEntryResponse> listForHomebrew(DictionaryKind kind, UUID packageId, String username) {
+        // SEC-1 / P0-1: словари пакета читаемы только через guard (чужой пакет — только если PUBLISHED),
+        // иначе словари черновиков утекали любому аутентифицированному пользователю.
+        homebrewAccessService.enforceReadable(packageId, username);
         return handler(kind).repo().findAllByHomebrewId(packageId).stream().map(this::toResponse).toList();
     }
 

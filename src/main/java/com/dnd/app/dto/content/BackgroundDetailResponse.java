@@ -32,6 +32,10 @@ public class BackgroundDetailResponse {
     @Schema(description = "Homebrew package id; null for core content")
     private UUID packageId;
 
+    // Маркер происхождения (P0-4): GLOBAL — ванильный контент, HOMEBREW — homebrew.
+    private String source;
+    private String homebrewTitle;
+
     @Schema(description = "Feat granted by this background (2024 origin feat)")
     private ContentLabelDto grantedFeat;
 

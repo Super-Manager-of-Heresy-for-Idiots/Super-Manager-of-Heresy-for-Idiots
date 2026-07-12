@@ -33,4 +33,9 @@ public class HomebrewPackageResponse {
     private Instant publishedAt;
     private Instant createdAt;
     private Boolean isDeleted;
+
+    // Агрегаты рейтинга витрины (FE-2 / P0-6): раньше FE показывал downloadCount как лайки.
+    private Long likes;
+    private Long dislikes;
+    private Long netRating;
 }

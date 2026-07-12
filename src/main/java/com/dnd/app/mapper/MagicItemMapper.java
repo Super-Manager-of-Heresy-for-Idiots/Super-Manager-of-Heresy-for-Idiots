@@ -47,7 +47,9 @@ public class MagicItemMapper {
                 .description(m.getDescription())
                 .embeddedTablesDetected(m.getEmbeddedTablesDetected())
                 .url(m.getUrl())
-                .packageId(m.getHomebrew() != null ? m.getHomebrew().getId() : null)
+                .packageId(com.dnd.app.util.HomebrewOrigin.id(m.getHomebrew()))
+                .source(com.dnd.app.util.HomebrewOrigin.source(m.getHomebrew()))
+                .homebrewTitle(com.dnd.app.util.HomebrewOrigin.title(m.getHomebrew()))
                 .allowedEquipment(m.getAllowedEquipment().stream().map(a -> mapAllowed(a, lang)).toList())
                 .build();
     }

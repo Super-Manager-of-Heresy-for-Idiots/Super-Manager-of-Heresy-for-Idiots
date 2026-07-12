@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +34,20 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
     List<PlayerCharacter> findByCampaignIdAndOwnerId(UUID campaignId, UUID ownerId);
 
     long countByRaceId(UUID raceId);
+
+    // --- P1-2: orphaned-reference detection at homebrew detach ---
+
+    /** Кол-во персонажей кампании, чей вид (race) принадлежит набору (обычно homebrew-пакету). */
+    long countByCampaignIdAndRaceIdIn(UUID campaignId, Collection<UUID> raceIds);
+
+    /** Кол-во персонажей кампании, чья предыстория (background) принадлежит набору. */
+    long countByCampaignIdAndBackgroundIdIn(UUID campaignId, Collection<UUID> backgroundIds);
+
+    /** Кол-во персонажей кампании, у которых есть уровень класса из набора classIds. */
+    @Query("SELECT COUNT(DISTINCT pc.id) FROM PlayerCharacter pc " +
+           "JOIN CharacterClassLevel ccl ON ccl.characterId = pc.id " +
+           "WHERE pc.campaign.id = :campaignId AND ccl.classId IN :classIds")
+    long countInCampaignUsingClasses(@Param("campaignId") UUID campaignId, @Param("classIds") Collection<UUID> classIds);
 
     List<PlayerCharacter> findByOwnerIdAndCampaignIsNull(UUID ownerId);
 

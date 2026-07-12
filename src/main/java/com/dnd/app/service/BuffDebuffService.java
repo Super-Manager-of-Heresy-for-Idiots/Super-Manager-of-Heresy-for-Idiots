@@ -42,16 +42,18 @@ public class BuffDebuffService {
      */
     @Transactional(readOnly = true)
     public List<BuffDebuffResponse> findAll(Boolean isBuff, String effectType) {
+        // SEC-2 / P0-2: возвращаем только ванильные бафы (homebrew_id IS NULL). Приватные homebrew-бафы
+        // резолвятся отдельно, в контексте кампании, и не должны утекать в общий admin/пикер-список.
         List<BuffDebuff> results;
 
         if (isBuff != null && effectType != null) {
-            results = buffDebuffRepository.findAllByIsBuffAndEffectType(isBuff, effectType);
+            results = buffDebuffRepository.findAllByIsBuffAndEffectTypeAndHomebrewIsNull(isBuff, effectType);
         } else if (isBuff != null) {
-            results = buffDebuffRepository.findAllByIsBuff(isBuff);
+            results = buffDebuffRepository.findAllByIsBuffAndHomebrewIsNull(isBuff);
         } else if (effectType != null) {
-            results = buffDebuffRepository.findAllByEffectType(effectType);
+            results = buffDebuffRepository.findAllByEffectTypeAndHomebrewIsNull(effectType);
         } else {
-            results = buffDebuffRepository.findAll();
+            results = buffDebuffRepository.findAllByHomebrewIsNull();
         }
 
         return results.stream()

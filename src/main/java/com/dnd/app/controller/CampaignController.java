@@ -269,11 +269,13 @@ public class CampaignController {
      * @return результат выполнения бизнес-операции
      */
     @DeleteMapping("/{id}/homebrew/{packageId}")
-    @Operation(summary = "Detach homebrew package from campaign (GM only)")
+    @Operation(summary = "Detach homebrew package from campaign (GM only). "
+            + "Returns 409 with dependent-character counts if the package is still in use, unless force=true.")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deactivateHomebrew(
-            @PathVariable UUID id, @PathVariable UUID packageId, Authentication auth) {
+            @PathVariable UUID id, @PathVariable UUID packageId,
+            @RequestParam(defaultValue = "false") boolean force, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
-            campaignContentService.deactivateHomebrew(id, packageId, auth.getName());
+            campaignContentService.deactivateHomebrew(id, packageId, auth.getName(), force);
             return ResponseEntity.ok(ApiResponse.ok(null, "Хомбрю-пакет деактивирован для кампании"));
         }, controllerTaskExecutor);
     }

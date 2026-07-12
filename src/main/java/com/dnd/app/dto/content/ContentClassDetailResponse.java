@@ -39,6 +39,10 @@ public class ContentClassDetailResponse {
     @Schema(description = "Homebrew package id; null for admin/core content")
     private UUID packageId;
 
+    // Маркер происхождения (P0-4): GLOBAL — ванильный контент, HOMEBREW — homebrew.
+    private String source;
+    private String homebrewTitle;
+
     // core mechanics
     @Schema(description = "Hit die (6/8/10/12)", example = "8")
     private Integer hitDie;
