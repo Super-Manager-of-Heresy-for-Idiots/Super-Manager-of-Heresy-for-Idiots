@@ -20,6 +20,7 @@ import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.ContestRequest;
 import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.TeleportRequest;
+import com.dnd.app.dto.request.FallRequest;
 import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.response.ApiResponse;
@@ -531,6 +532,27 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.triggerTrap(campaignId, battleId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Trap triggered"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Падение комбатанта с высоты (фаза 3.4): урон 1к6/10фт (кап 20к6) + prone, реюзом HP/condition-примитивов.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    падающий комбатант, высота, готовый урон и флаг prone
+     * @param auth       аутентификация инициатора (контролёр комбатанта или GM)
+     * @return обёрнутое актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/fall")
+    @Operation(summary = "Apply fall damage + prone to a combatant (Phase 3.4)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> fall(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody FallRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.fall(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Fall applied"));
         }, controllerTaskExecutor);
     }
 

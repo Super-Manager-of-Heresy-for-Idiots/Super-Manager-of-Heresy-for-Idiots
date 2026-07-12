@@ -421,6 +421,36 @@ class BattleServiceStandardActionTest {
         assertEquals(7, monsterIn(r).getCurrentHp());
     }
 
+    // ---- Falling (Phase 3.4) ---------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Падение с высоты: готовый урон применяется к цели")
+    void fall_appliesDamage() {
+        var req = com.dnd.app.dto.request.FallRequest.builder()
+                .combatantId(monsterC.getId()).heightFt(30).manualTotal(5).build();
+        BattleResponse r = battleService.fall(campaignId, battleId, req, username);
+        assertEquals(2, monsterIn(r).getCurrentHp()); // 7 - 5
+    }
+
+    @Test
+    @DisplayName("Падение <10 футов: урона нет, HP не меняется")
+    void fall_lowHeight_noDamage() {
+        var req = com.dnd.app.dto.request.FallRequest.builder()
+                .combatantId(monsterC.getId()).heightFt(5).build();
+        BattleResponse r = battleService.fall(campaignId, battleId, req, username);
+        assertEquals(7, monsterIn(r).getCurrentHp());
+    }
+
+    @Test
+    @DisplayName("Падение сбрасывает флаг полёта")
+    void fall_clearsFlying() {
+        battleService.setFlying(campaignId, battleId, monsterC.getId(), true, username);
+        var req = com.dnd.app.dto.request.FallRequest.builder()
+                .combatantId(monsterC.getId()).heightFt(20).manualTotal(3).build();
+        BattleResponse r = battleService.fall(campaignId, battleId, req, username);
+        assertFalse(monsterIn(r).isFlying());
+    }
+
     // ---- Realtime reliability (Phase 2.14) -------------------------------------------------------
 
     @Test

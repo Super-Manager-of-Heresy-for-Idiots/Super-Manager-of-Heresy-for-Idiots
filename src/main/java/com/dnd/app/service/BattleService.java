@@ -26,6 +26,7 @@ import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.request.MovementRequest;
 import com.dnd.app.dto.request.ContestRequest;
+import com.dnd.app.dto.request.FallRequest;
 import com.dnd.app.dto.request.ForcedMoveRequest;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
@@ -2543,6 +2544,77 @@ public class BattleService {
                 Map.of("battleId", battleId), user.getId());
         log.info("Trap triggered: battleId={}, target={}, damage={}, by={}",
                 battleId, target.getDisplayName(), dmg, username);
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /**
+     * Падение комбатанта с высоты (фаза 3.4). Урон — 1к6 за каждые 10 футов (кап 20к6); при приземлении
+     * цель обычно валится ничком (prone). Реюзает {@code applyDamageOrHeal} и
+     * {@code ConditionService.applyByCode("prone")}, пишет лог {@code FALL}. Если комбатант летел — падение
+     * сбрасывает флаг полёта (2.13). Урон берётся из {@code manualTotal} (GM/фронт уже бросил) либо
+     * бросается сервером (к6 по высоте). Права — контроль над комбатантом или GM (как у {@code setFlying}).
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId   идентификатор боя
+     * @param request    падающий комбатант, высота, готовый урон и флаг prone
+     * @param username   инициатор (контролёр комбатанта или GM/админ)
+     * @return актуальное состояние боя после падения
+     */
+    @Transactional
+    public BattleResponse fall(UUID campaignId, UUID battleId, FallRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(request.getCombatantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found"));
+        if (!combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+
+        int heightFt = Math.max(0, nz(request.getHeightFt()));
+        int dice = Math.min(20, heightFt / 10); // 1к6 за каждые 10 футов, кап 20к6
+        int total;
+        if (request.getManualTotal() != null) {
+            total = Math.max(0, request.getManualTotal());
+        } else {
+            int sum = 0;
+            for (int i = 0; i < dice; i++) {
+                sum += diceRoller.rollDie(6);
+            }
+            total = sum;
+        }
+
+        // Падение прекращает полёт (2.13).
+        if (Boolean.TRUE.equals(combatant.getFlying())) {
+            combatant.setFlying(false);
+        }
+        if (total > 0) {
+            applyDamageOrHeal(combatant, -total, user, campaignId); // сохраняет комбатанта (в т.ч. сброс полёта)
+        } else {
+            combatantRepository.save(combatant); // урона нет — сохраняем хотя бы сброс полёта
+        }
+
+        boolean prone = !Boolean.FALSE.equals(request.getApplyProne()) && heightFt >= 10;
+        if (prone) {
+            conditionService.applyByCode(campaignId, combatant, "prone", user.getId(), battle.getRoundNumber());
+        }
+
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("target", combatant.getDisplayName());
+        logData.put("heightFt", heightFt);
+        logData.put("dice", dice);
+        logData.put("damage", total);
+        if (prone) {
+            logData.put("condition", "prone");
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.FALL, null, combatant.getId(),
+                logData, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        log.info("Fall: battleId={}, combatant={}, heightFt={}, damage={}, by={}",
+                battleId, combatant.getDisplayName(), heightFt, total, username);
         return toResponse(battle, orderedCombatants(battleId));
     }
 
