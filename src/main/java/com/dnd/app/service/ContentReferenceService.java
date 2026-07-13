@@ -135,7 +135,10 @@ public class ContentReferenceService {
         if (!pkgIds.isEmpty()) {
             species.addAll(speciesRepository.findAllByHomebrewIdIn(pkgIds));
         }
-        return species.stream().map(s -> speciesMapper.toDetail(s, resolvedLang)).toList();
+        // SP-1: выключенный (active=false) homebrew-вид скрыт из выбора. Ваниль всегда active=true.
+        return species.stream()
+                .filter(s -> s.getHomebrew() == null || Boolean.TRUE.equals(s.getActive()))
+                .map(s -> speciesMapper.toDetail(s, resolvedLang)).toList();
     }
 
     /**

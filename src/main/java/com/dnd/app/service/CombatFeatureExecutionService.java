@@ -70,6 +70,9 @@ public class CombatFeatureExecutionService {
         ClassFeature feature = classFeatureRepository.findById(featureId)
                 .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено: " + featureId));
         List<FeatureRule> rules = resolver.approvedEnabledRules(List.of(featureId));
+        if (rules.isEmpty() && flags.isRuntimeEnabled()) {
+            return manualPlan(featureId, feature.getTitle());
+        }
         return planForRules(actor, featureId, feature.getTitle(), rules, null);
     }
 
@@ -153,6 +156,18 @@ public class CombatFeatureExecutionService {
 
         return plan.requiresManualAdjudication(manual)
                 .damages(damages).healings(healings).resolutions(resolutions).attacks(attacks)
+                .build();
+    }
+
+    private FeatureExecutionPlan manualPlan(UUID featureId, String displayName) {
+        return FeatureExecutionPlan.builder()
+                .featureId(featureId)
+                .featureName(displayName)
+                .damages(List.of())
+                .healings(List.of())
+                .resolutions(List.of())
+                .attacks(List.of())
+                .requiresManualAdjudication(true)
                 .build();
     }
 

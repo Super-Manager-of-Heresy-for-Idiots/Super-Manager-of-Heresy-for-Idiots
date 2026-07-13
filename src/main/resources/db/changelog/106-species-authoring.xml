@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P0.5 / SP-1: авторинг видов (species). Таблица species была read-only с 10 колонками; добавляем:
+      - active            — включён/выключен вид (enable/disable), фильтр видимости;
+      - authoring_json    — канонический payload авторинга (богатый FE-контракт RaceRequest), хранится лоссово
+                            для round-trip в RaceEditor; реляционный граф (creature_type/size_options/speeds/
+                            traits) строится как проекция для визарда/чтения (см. SpeciesAuthoringService);
+      - created_by/updated_by — авторство по образцу P1-4 (FK → users, ON DELETE SET NULL).
+      Механика трейтов (резисты/darkvision через движок) — отдельно, SP-4 после P1-3; сейчас как у vanilla-видов
+      всё живёт на снапшоте/проекции.
+    -->
+    <changeSet id="106-species-authoring" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.species ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true;
+            ALTER TABLE public.species ADD COLUMN IF NOT EXISTS authoring_json jsonb;
+            ALTER TABLE public.species ADD COLUMN IF NOT EXISTS created_by uuid;
+            ALTER TABLE public.species ADD COLUMN IF NOT EXISTS updated_by uuid;
+
+            ALTER TABLE public.species ADD CONSTRAINT fk_species_created_by FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.species ADD CONSTRAINT fk_species_updated_by FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+            UPDATE public.species s SET created_by = hp.author_id, updated_by = hp.author_id
+                FROM public.homebrew_packages hp WHERE s.homebrew_id = hp.id AND s.created_by IS NULL;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.species DROP CONSTRAINT IF EXISTS fk_species_created_by, DROP CONSTRAINT IF EXISTS fk_species_updated_by;
+                ALTER TABLE public.species DROP COLUMN IF EXISTS active, DROP COLUMN IF EXISTS authoring_json, DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -17,6 +17,7 @@ import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.dto.featurerule.BattleUseAbilityResult;
+import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.ContestRequest;
@@ -853,6 +854,28 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             SpellCastResult data = battleService.castSpell(campaignId, battleId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Spell cast"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает preview плана классового умения активного персонажа в бою.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId идентификатор боя
+     * @param featureId идентификатор классового умения
+     * @param auth аутентификация инициатора
+     * @return структурированный план исполнения умения
+     */
+    @GetMapping("/{battleId}/abilities/{featureId}/plan")
+    @Operation(summary = "Preview an active battle ability execution plan")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureExecutionPlan>>> planAbility(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID featureId,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            FeatureExecutionPlan data = battleService.planAbility(campaignId, battleId, featureId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
 

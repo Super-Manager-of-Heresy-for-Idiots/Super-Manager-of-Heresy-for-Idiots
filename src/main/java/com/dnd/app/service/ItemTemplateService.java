@@ -39,8 +39,11 @@ public class ItemTemplateService {
     @Transactional
     public ItemTemplateResponse createTemplate(CreateItemTemplateRequest request, String username) {
         User user = getUser(username);
-        if (user.getRole() != Role.ADMIN && user.getRole() != Role.GAME_MASTER) {
-            throw new AccessDeniedException("Only ADMIN or GM can create item templates");
+        // SEC-5 / P0-7: createTemplate сохраняет шаблон БЕЗ homebrew (ванильный неймспейс). Раньше это мог
+        // делать любой GM, засоряя ваниль. До появления package-scoped авторинга предметов (IT-1) ванильные
+        // шаблоны создаёт только ADMIN. Homebrew-предметы будут создаваться отдельным package-scoped путём.
+        if (user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Только ADMIN может создавать ванильные шаблоны предметов");
         }
 
         Rarity rarity = contentDictionaryResolver.resolveRarity(request.getRarity(), null);

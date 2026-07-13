@@ -21,4 +21,12 @@ public interface SpeciesRepository extends JpaRepository<Species, UUID> {
     List<Species> findAllByHomebrewIsNull();
 
     List<Species> findAllByHomebrewIdIn(Set<UUID> homebrewIds);
+
+    // --- SP-1: авторинг видов в пакете ---
+
+    Optional<Species> findByIdAndHomebrew_Id(UUID id, UUID homebrewId);
+
+    boolean existsBySlugAndHomebrew_Id(String slug, UUID homebrewId);
+
+    List<Species> findAllByHomebrew_Id(UUID homebrewId);
 }

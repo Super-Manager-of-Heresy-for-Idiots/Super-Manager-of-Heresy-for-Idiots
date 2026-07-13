@@ -41,7 +41,7 @@ public class SpeciesTrait {
     @Column(columnDefinition = "text")
     private String description;
 
-    @OneToMany(mappedBy = "trait", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "trait", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SpeciesTraitEffect> effects = new ArrayList<>();
 }

@@ -9,6 +9,7 @@ import com.dnd.app.domain.enums.BattleLogType;
 import com.dnd.app.domain.enums.BattleStatus;
 import com.dnd.app.domain.enums.CombatantType;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.dto.featurerule.AvailableFeatureAction;
 import com.dnd.app.dto.featurerule.BattleUseAbilityResult;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.FeatureUseResult;
@@ -27,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,6 +76,7 @@ class BattleServiceUseAbilityTest {
     @Mock private FeatureUseService featureUseService;
     @Mock private ItemAbilityUseService itemAbilityUseService;
     @Mock private CombatFeatureExecutionService combatFeatureExecutionService;
+    @Mock private FeatureActionService featureActionService;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private FeatureEffectService featureEffectService;
     @Mock private com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
@@ -82,6 +85,12 @@ class BattleServiceUseAbilityTest {
 
     @InjectMocks
     private BattleService battleService;
+
+    @BeforeEach
+    void injectFieldServices() {
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                battleService, "featureActionService", featureActionService);
+    }
 
     @Test
     @DisplayName("uses active character ability through feature runtime and writes FEATURE_USE log")
@@ -207,6 +216,177 @@ class BattleServiceUseAbilityTest {
         assertEquals(2, result.getResourceRemaining());
 
         verify(itemAbilityUseService).use(eq(character), eq(itemInstanceId), eq(ruleId), any());
+        verify(featureUseService, never()).use(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("manual-required ability does not spend feature runtime")
+    void useAbility_manualRequiredDoesNotSpend() {
+        UUID campaignId = UUID.randomUUID();
+        UUID battleId = UUID.randomUUID();
+        UUID characterId = UUID.randomUUID();
+        UUID combatantId = UUID.randomUUID();
+        UUID featureId = UUID.randomUUID();
+        User gm = User.builder().id(UUID.randomUUID()).username("gm").role(Role.ADMIN).build();
+        Campaign campaign = Campaign.builder().id(campaignId).build();
+        PlayerCharacter character = PlayerCharacter.builder().id(characterId).owner(gm).build();
+        Battle battle = Battle.builder()
+                .id(battleId)
+                .campaign(campaign)
+                .status(BattleStatus.ACTIVE)
+                .currentTurnIndex(0)
+                .roundNumber(1)
+                .build();
+        BattleCombatant actor = BattleCombatant.builder()
+                .id(combatantId)
+                .battle(battle)
+                .type(CombatantType.CHARACTER)
+                .character(character)
+                .displayName("Aldar")
+                .turnOrder(0)
+                .build();
+        FeatureExecutionPlan plan = FeatureExecutionPlan.builder()
+                .featureId(featureId)
+                .featureName("Indomitable")
+                .damages(List.of())
+                .healings(List.of())
+                .resolutions(List.of())
+                .attacks(List.of())
+                .requiresManualAdjudication(true)
+                .build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(List.of(actor));
+        when(combatFeatureExecutionService.plan(character, featureId)).thenReturn(plan);
+
+        BattleUseAbilityResult result = battleService.useAbility(campaignId, battleId,
+                BattleUseAbilityRequest.builder().featureId(featureId).build(), "gm");
+
+        assertEquals("MANUAL_REQUIRED", result.getOutcome());
+        verify(featureUseService, never()).use(any(), any(), any());
+        verify(itemAbilityUseService, never()).use(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("off-turn class ability is allowed only through reaction action cost")
+    void useAbility_allowsOffTurnReactionAbility() {
+        UUID campaignId = UUID.randomUUID();
+        UUID battleId = UUID.randomUUID();
+        UUID activeCharacterId = UUID.randomUUID();
+        UUID reactorCharacterId = UUID.randomUUID();
+        UUID activeCombatantId = UUID.randomUUID();
+        UUID reactorCombatantId = UUID.randomUUID();
+        UUID featureId = UUID.randomUUID();
+        User gm = User.builder().id(UUID.randomUUID()).username("gm").role(Role.ADMIN).build();
+        Campaign campaign = Campaign.builder().id(campaignId).build();
+        PlayerCharacter activeCharacter = PlayerCharacter.builder().id(activeCharacterId).owner(gm).build();
+        PlayerCharacter reactorCharacter = PlayerCharacter.builder().id(reactorCharacterId).owner(gm).build();
+        Battle battle = Battle.builder()
+                .id(battleId)
+                .campaign(campaign)
+                .status(BattleStatus.ACTIVE)
+                .currentTurnIndex(0)
+                .roundNumber(1)
+                .build();
+        BattleCombatant active = BattleCombatant.builder()
+                .id(activeCombatantId)
+                .battle(battle)
+                .type(CombatantType.CHARACTER)
+                .character(activeCharacter)
+                .displayName("Active")
+                .turnOrder(0)
+                .build();
+        BattleCombatant reactor = BattleCombatant.builder()
+                .id(reactorCombatantId)
+                .battle(battle)
+                .type(CombatantType.CHARACTER)
+                .character(reactorCharacter)
+                .displayName("Reactor")
+                .turnOrder(1)
+                .build();
+        FeatureExecutionPlan plan = FeatureExecutionPlan.builder()
+                .featureId(featureId)
+                .featureName("Cutting Words")
+                .damages(List.of())
+                .healings(List.of())
+                .resolutions(List.of())
+                .attacks(List.of())
+                .requiresManualAdjudication(false)
+                .build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(List.of(active, reactor));
+        when(featureActionService.listAvailableActions(reactorCharacter, battleId)).thenReturn(List.of(
+                AvailableFeatureAction.builder()
+                        .featureId(featureId)
+                        .featureName("Cutting Words")
+                        .actionType("reaction")
+                        .available(true)
+                        .hasExecutableRules(true)
+                        .manualOnly(false)
+                        .build()));
+        when(combatFeatureExecutionService.plan(reactorCharacter, featureId)).thenReturn(plan);
+        when(featureUseService.use(eq(reactorCharacter), eq(featureId), any())).thenReturn(FeatureUseResult.builder()
+                .featureId(featureId)
+                .featureName("Cutting Words")
+                .actionType("reaction")
+                .message("ok")
+                .build());
+
+        BattleUseAbilityResult result = battleService.useAbility(campaignId, battleId,
+                BattleUseAbilityRequest.builder().featureId(featureId).combatantId(reactorCombatantId).build(), "gm");
+
+        assertEquals("USED", result.getOutcome());
+        verify(featureUseService).use(eq(reactorCharacter), eq(featureId), any());
+    }
+
+    @Test
+    @DisplayName("plans current-turn character ability without spending")
+    void planAbility_returnsCurrentTurnPlan() {
+        UUID campaignId = UUID.randomUUID();
+        UUID battleId = UUID.randomUUID();
+        UUID characterId = UUID.randomUUID();
+        UUID combatantId = UUID.randomUUID();
+        UUID featureId = UUID.randomUUID();
+        User gm = User.builder().id(UUID.randomUUID()).username("gm").role(Role.ADMIN).build();
+        Campaign campaign = Campaign.builder().id(campaignId).build();
+        PlayerCharacter character = PlayerCharacter.builder().id(characterId).owner(gm).build();
+        Battle battle = Battle.builder()
+                .id(battleId)
+                .campaign(campaign)
+                .status(BattleStatus.ACTIVE)
+                .currentTurnIndex(0)
+                .roundNumber(1)
+                .build();
+        BattleCombatant actor = BattleCombatant.builder()
+                .id(combatantId)
+                .battle(battle)
+                .type(CombatantType.CHARACTER)
+                .character(character)
+                .displayName("Aldar")
+                .turnOrder(0)
+                .build();
+        FeatureExecutionPlan plan = FeatureExecutionPlan.builder()
+                .featureId(featureId)
+                .featureName("Second Wind")
+                .damages(List.of())
+                .healings(List.of())
+                .resolutions(List.of())
+                .attacks(List.of())
+                .requiresManualAdjudication(false)
+                .build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(campaignService.findCampaign(campaignId)).thenReturn(campaign);
+        when(battleRepository.findByIdAndCampaignId(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(List.of(actor));
+        when(combatFeatureExecutionService.plan(character, featureId)).thenReturn(plan);
+
+        FeatureExecutionPlan result = battleService.planAbility(campaignId, battleId, featureId, "gm");
+
+        assertEquals(featureId, result.getFeatureId());
         verify(featureUseService, never()).use(any(), any(), any());
     }
 }

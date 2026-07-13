@@ -5,6 +5,7 @@ import com.dnd.app.domain.content.ClassFeature;
 import com.dnd.app.domain.featurerule.FeatureReviewStatus;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
+import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.CharacterClassLevelRepository;
 import com.dnd.app.repository.ClassFeatureRepository;
 import com.dnd.app.repository.FeatureRuleRepository;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -31,6 +33,7 @@ public class CharacterFeatureResolver {
     private final CharacterClassLevelRepository classLevelRepository;
     private final ClassFeatureRepository classFeatureRepository;
     private final FeatureRuleRepository ruleRepository;
+    private final CampaignHomebrewRepository campaignHomebrewRepository;
 
     /**
      * Выполняет операции "known base class features" в рамках бизнес-логики домена.
@@ -73,6 +76,28 @@ public class CharacterFeatureResolver {
         return ruleRepository.findByOwnerTypeAndOwnerIdIn(ownerType.getCode(), ownerIds).stream()
                 .filter(FeatureRule::isEnabled)
                 .filter(r -> APPROVED.equals(r.getReviewStatus()) && r.getApprovedRevisionId() != null)
+                .toList();
+    }
+
+    /**
+     * P1-3: как {@link #approvedEnabledRules(FeatureRuleOwnerType, Collection)}, но homebrew-правила
+     * (с непустым {@code homebrewPackId}) применяются только если их пакет активен в кампании персонажа.
+     * Ванильные правила ({@code homebrewPackId == null}) применяются всегда. Без этого homebrew-правило
+     * продолжало бы «стрелять» даже после detach пакета от кампании.
+     * @param ownerType тип владельца правила
+     * @param ownerIds идентификаторы владельцев
+     * @param campaignId кампания персонажа (null ⇒ вне кампании: только ванильные правила)
+     * @return применимые правила с учётом активных пакетов кампании
+     */
+    @Transactional(readOnly = true)
+    public List<FeatureRule> approvedEnabledRulesForCampaign(FeatureRuleOwnerType ownerType,
+                                                             Collection<UUID> ownerIds, UUID campaignId) {
+        List<FeatureRule> rules = approvedEnabledRules(ownerType, ownerIds);
+        Set<UUID> activePackageIds = campaignId == null
+                ? Set.of()
+                : campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        return rules.stream()
+                .filter(r -> r.getHomebrewPackId() == null || activePackageIds.contains(r.getHomebrewPackId()))
                 .toList();
     }
 }

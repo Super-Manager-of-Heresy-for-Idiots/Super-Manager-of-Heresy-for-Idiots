@@ -51,6 +51,10 @@ public class SpeciesService {
         if (!packageIds.contains(species.getHomebrew().getId())) {
             throw new BadRequestException("Selected species is not available in this campaign");
         }
+        // SP-1: выключенный homebrew-вид нельзя выбрать.
+        if (!Boolean.TRUE.equals(species.getActive())) {
+            throw new BadRequestException("Selected species is disabled");
+        }
         return species;
     }
 

@@ -27,6 +27,8 @@ public class AvailableFeatureAction {
     private Integer resourceRemaining;
     private boolean available;
     private String unavailableReason;
+    private boolean hasExecutableRules;
+    private boolean manualOnly;
     private boolean requiresTarget;
     private boolean requiresConfirmation;
 }

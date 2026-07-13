@@ -53,6 +53,7 @@ public class ClassAbilityCombatService {
                         ? f.getDamageDice()
                         : AttackResolver.extractDamageExpression(f.getDescription());
                 result.add(ClassAbilityResponse.builder()
+                        .id(f.getId())
                         .name(f.getTitle())
                         .level(featureLevel)
                         .className(className)

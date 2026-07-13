@@ -9,6 +9,7 @@ import com.dnd.app.domain.featurerule.FeatureActionCost;
 import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureResourceDefinition;
 import com.dnd.app.domain.featurerule.FeatureRule;
+import com.dnd.app.domain.featurerule.FeatureRuleProfile;
 import com.dnd.app.dto.featurerule.AvailableFeatureAction;
 import com.dnd.app.repository.ActionTypeRepository;
 import com.dnd.app.repository.CharacterFeatureResourceRepository;
@@ -23,8 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,6 +50,7 @@ public class FeatureActionService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
+    private final CombatActionEconomyService economyService;
 
     /**
      * Возвращает список для операции "list available actions" в рамках бизнес-логики домена.
@@ -55,6 +59,18 @@ public class FeatureActionService {
      */
     @Transactional(readOnly = true)
     public List<AvailableFeatureAction> listAvailableActions(PlayerCharacter character) {
+        return listAvailableActions(character, null);
+    }
+
+    /**
+     * Возвращает доступные боевые действия от классовых умений с учетом ресурсов и слота действия.
+     *
+     * @param character персонаж, для которого собираются известные классовые умения
+     * @param combatId идентификатор боя; если задан, доступность учитывает action economy комбатанта
+     * @return список автоматизируемых и manual-only умений для боевой панели
+     */
+    @Transactional(readOnly = true)
+    public List<AvailableFeatureAction> listAvailableActions(PlayerCharacter character, UUID combatId) {
         if (!flags.actionsActive()) {
             return List.of();
         }
@@ -66,17 +82,15 @@ public class FeatureActionService {
                 .collect(Collectors.toMap(ClassFeature::getId, Function.identity(), (a, b) -> a));
 
         List<FeatureRule> rules = resolver.approvedEnabledRules(featureById.keySet());
-        if (rules.isEmpty()) {
-            return List.of();
-        }
+        Map<UUID, List<FeatureRule>> rulesByFeature = rules.stream()
+                .collect(Collectors.groupingBy(FeatureRule::getOwnerId));
         Map<UUID, FeatureRule> ruleById = rules.stream()
                 .collect(Collectors.toMap(FeatureRule::getId, Function.identity(), (a, b) -> a));
         List<UUID> ruleIds = List.copyOf(ruleById.keySet());
 
-        List<FeatureActionCost> costs = actionCostRepository.findByFeatureRuleIdIn(ruleIds);
-        if (costs.isEmpty()) {
-            return List.of();
-        }
+        List<FeatureActionCost> costs = ruleIds.isEmpty()
+                ? List.of()
+                : actionCostRepository.findByFeatureRuleIdIn(ruleIds);
 
         Map<UUID, ActionType> actionTypes = actionTypeRepository.findByIdIn(
                 costs.stream().map(FeatureActionCost::getActionTypeId).distinct().toList()).stream()
@@ -92,17 +106,21 @@ public class FeatureActionService {
                         Function.identity(), (a, b) -> a));
 
         FormulaContext ctx = contextFactory.build(character);
+        List<AvailableFeatureAction> result = new ArrayList<>();
 
-        return costs.stream().map(cost -> {
+        for (FeatureActionCost cost : costs) {
             FeatureRule rule = ruleById.get(cost.getFeatureRuleId());
             if (rule == null) {
-                return null;
+                continue;
             }
             ClassFeature feature = featureById.get(rule.getOwnerId());
             if (feature == null) {
-                return null;
+                continue;
             }
             ActionType at = actionTypes.get(cost.getActionTypeId());
+            List<FeatureRule> featureRules = rulesByFeature.getOrDefault(feature.getId(), List.of());
+            boolean executable = hasExecutableRules(featureRules);
+            boolean manualOnly = isManualOnly(featureRules, executable);
 
             AvailableFeatureAction.AvailableFeatureActionBuilder b = AvailableFeatureAction.builder()
                     .featureId(feature.getId())
@@ -110,9 +128,17 @@ public class FeatureActionService {
                     .featureRuleId(rule.getId())
                     .actionType(at != null ? at.getCode() : null)
                     .actionTypeLabel(at != null ? at.getDisplayName() : null)
-                    .available(true)
+                    .available(!manualOnly)
+                    .unavailableReason(manualOnly ? "Правила ещё не оцифрованы" : null)
+                    .hasExecutableRules(executable)
+                    .manualOnly(manualOnly)
                     .requiresTarget(false)
                     .requiresConfirmation(false);
+
+            if (!manualOnly && combatId != null && at != null
+                    && !economyService.canSpend(combatId, character.getId(), at.getCode())) {
+                b.available(false).unavailableReason(unavailableSlotReason(at.getCode()));
+            }
 
             FeatureResourceDefinition def = defByRule.get(rule.getId());
             if (def != null) {
@@ -125,8 +151,24 @@ public class FeatureActionService {
                     b.available(false).unavailableReason("Недостаточно ресурса");
                 }
             }
-            return b.build();
-        }).filter(a -> a != null).toList();
+            result.add(b.build());
+        }
+
+        Set<UUID> featuresWithRules = rulesByFeature.keySet();
+        featureById.values().stream()
+                .filter(feature -> !featuresWithRules.contains(feature.getId()))
+                .forEach(feature -> result.add(AvailableFeatureAction.builder()
+                        .featureId(feature.getId())
+                        .featureName(feature.getTitle())
+                        .available(false)
+                        .unavailableReason("Правила ещё не оцифрованы")
+                        .hasExecutableRules(false)
+                        .manualOnly(true)
+                        .requiresTarget(false)
+                        .requiresConfirmation(false)
+                        .build()));
+
+        return result;
     }
 
     int spendPerUse(FeatureResourceDefinition def, FormulaContext ctx) {
@@ -143,5 +185,31 @@ public class FeatureActionService {
             log.warn("Spend-per-use formula failed for definition {}: {}", def.getId(), e.getMessage());
             return 1;
         }
+    }
+
+    private boolean hasExecutableRules(List<FeatureRule> rules) {
+        return rules.stream().anyMatch(rule -> {
+            String type = rule.getRuleType();
+            return FeatureRuleProfile.DAMAGE.getCode().equals(type)
+                    || FeatureRuleProfile.HEALING.getCode().equals(type)
+                    || FeatureRuleProfile.SAVE_CHECK_ATTACK.getCode().equals(type)
+                    || FeatureRuleProfile.ACTIVE_EFFECT.getCode().equals(type);
+        });
+    }
+
+    private boolean isManualOnly(List<FeatureRule> rules, boolean executable) {
+        return rules.isEmpty()
+                || !executable
+                || rules.stream().anyMatch(rule ->
+                FeatureRuleProfile.MANUAL_ADJUDICATION.getCode().equals(rule.getRuleType()));
+    }
+
+    private String unavailableSlotReason(String actionTypeCode) {
+        return switch (actionTypeCode) {
+            case "action" -> "Действие уже потрачено";
+            case "bonus_action" -> "Бонусное действие уже потрачено";
+            case "reaction" -> "Реакция уже использована";
+            default -> "Недоступно в текущем ходу";
+        };
     }
 }

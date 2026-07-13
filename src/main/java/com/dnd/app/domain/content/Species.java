@@ -2,8 +2,11 @@ package com.dnd.app.domain.content;
 
 import com.dnd.app.domain.CreatureSize;
 import com.dnd.app.domain.HomebrewPackage;
+import com.dnd.app.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -67,12 +70,30 @@ public class Species {
     @Builder.Default
     private Set<CreatureSize> sizeOptions = new HashSet<>();
 
-    @OneToMany(mappedBy = "species", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "species", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SpeciesSpeed> speeds = new ArrayList<>();
 
-    @OneToMany(mappedBy = "species", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "species", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     @Builder.Default
     private List<SpeciesTrait> traits = new ArrayList<>();
+
+    // --- SP-1: авторинг видов ---
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
+
+    /** Канонический payload авторинга (богатый FE-контракт RaceRequest) — лоссовый round-trip для RaceEditor. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "authoring_json", columnDefinition = "jsonb")
+    private String authoringJson;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
 }

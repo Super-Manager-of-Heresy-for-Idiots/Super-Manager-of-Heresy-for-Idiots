@@ -166,4 +166,11 @@
     <!-- ABIL/ITEM_ABIL: persistent clientCommandId dedup for battle commands. -->
     <include file="db/changelog/104-battle-command-idempotency.xml"/>
 
+    <!-- P1-3 + P1-4 остаток: feature_rule scope hard FKs (homebrew_pack_id, campaign_id) + created_by;
+         created_by/updated_by on spell, custom_resource_types, item_templates, class_feature + backfill. -->
+    <include file="db/changelog/105-feature-rule-fk-and-created-by.xml"/>
+
+    <!-- P0.5 / SP-1: species authoring — active + authoring_json + created_by/updated_by. -->
+    <include file="db/changelog/106-species-authoring.xml"/>
+
 </databaseChangeLog>

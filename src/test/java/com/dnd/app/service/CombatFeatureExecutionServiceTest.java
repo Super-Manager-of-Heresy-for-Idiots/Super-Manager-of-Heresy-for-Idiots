@@ -99,6 +99,21 @@ class CombatFeatureExecutionServiceTest {
     }
 
     @Test
+    void planRequiresManualAdjudicationWhenNoApprovedRules() {
+        when(classFeatureRepository.findById(featureId))
+                .thenReturn(Optional.of(ClassFeature.builder().id(featureId).title("Indomitable").build()));
+        when(flags.isRuntimeEnabled()).thenReturn(true);
+        when(resolver.approvedEnabledRules(anyList())).thenReturn(List.of());
+
+        FeatureExecutionPlan plan = service.plan(PlayerCharacter.builder().id(UUID.randomUUID()).build(), featureId);
+
+        assertThat(plan.getFeatureId()).isEqualTo(featureId);
+        assertThat(plan.getFeatureName()).isEqualTo("Indomitable");
+        assertThat(plan.isRequiresManualAdjudication()).isTrue();
+        assertThat(plan.getDamages()).isEmpty();
+    }
+
+    @Test
     void applyToTargetRoutesDamageThroughHpService() {
         when(flags.isRuntimeEnabled()).thenReturn(true);
         when(useLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));

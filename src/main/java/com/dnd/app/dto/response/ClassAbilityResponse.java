@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 /**
  * Класс ClassAbilityResponse описывает DTO ответа, который возвращает результат бизнес-сценария клиенту.
  * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
@@ -14,6 +16,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClassAbilityResponse {
+    private UUID id;
     private String name;
     private Integer level;
     private String className;

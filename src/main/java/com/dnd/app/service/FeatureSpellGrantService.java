@@ -32,10 +32,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Класс FeatureSpellGrantService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
- * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,11 +48,6 @@ public class FeatureSpellGrantService {
     private final FeatureResourceDefinitionRepository resourceDefinitionRepository;
     private final FeatureResourceService featureResourceService;
 
-    /**
-     * Возвращает список для операции "list granted spells" в рамках бизнес-логики домена.
-     * @param character входящее значение character, используемое бизнес-сценарием
-     * @return результат выполнения бизнес-операции
-     */
     @Transactional(readOnly = true)
     public List<FeatureSpellGrantResponse> listGrantedSpells(PlayerCharacter character) {
         if (!flags.spellsActive()) {
@@ -104,12 +95,6 @@ public class FeatureSpellGrantService {
         }).filter(r -> r != null).toList();
     }
 
-    /**
-     * Применяет заклинание операции "cast via feature" в рамках бизнес-логики домена.
-     * @param character входящее значение character, используемое бизнес-сценарием
-     * @param grantId идентификатор grant, используемый для выбора нужного бизнес-объекта
-     * @return результат выполнения бизнес-операции
-     */
     @Transactional
     public FeatureSpellCastResult castViaFeature(PlayerCharacter character, UUID grantId) {
         if (!flags.spellsActive()) {
@@ -118,7 +103,6 @@ public class FeatureSpellGrantService {
         FeatureSpellGrant grant = grantRepository.findById(grantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Заклинание умения не найдено: " + grantId));
 
-        // ensure the grant belongs to a feature the character actually has
         List<UUID> featureIds = resolver.knownBaseClassFeatures(character.getId()).stream()
                 .map(ClassFeature::getId).toList();
         List<UUID> ruleIds = resolver.approvedEnabledRules(featureIds).stream()
@@ -155,8 +139,6 @@ public class FeatureSpellGrantService {
                 .message("Каст выполнен через умение")
                 .build();
     }
-
-    // ── helpers ─────────────────────────────────────────────────────────────
 
     private FeatureSpellGrantResponse.Filter buildFilter(UUID filterId, FormulaContext ctx) {
         if (filterId == null) {

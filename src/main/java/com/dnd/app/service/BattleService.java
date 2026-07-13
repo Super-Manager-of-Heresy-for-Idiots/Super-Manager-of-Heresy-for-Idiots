@@ -36,6 +36,7 @@ import com.dnd.app.dto.request.TeleportRequest;
 import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.integration.map.MapTokenMover;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
+import com.dnd.app.dto.featurerule.AvailableFeatureAction;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.BattleUseAbilityResult;
 import com.dnd.app.dto.featurerule.FeatureUseRequest;
@@ -124,6 +125,9 @@ public class BattleService {
     private final com.dnd.app.integration.map.MapTokenMover mapTokenMover;
     /** Идемпотентность боевых команд по clientCommandId — защита от дублей (фаза 2.14). */
     private final CommandDedupService commandDedupService;
+    /** Runtime-список доступных классовых умений; field injection оставляет старые unit-конструкторы совместимыми. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private FeatureActionService featureActionService;
 
     // ================================ Lifecycle ================================
 
@@ -741,7 +745,14 @@ public class BattleService {
         if (combatants.isEmpty()) {
             throw new BadRequestException("Battle has no combatants");
         }
-        BattleCombatant actor = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        BattleCombatant current = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        BattleCombatant actor = current;
+        if (request.getCombatantId() != null) {
+            actor = combatants.stream()
+                    .filter(c -> request.getCombatantId().equals(c.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Ability actor does not belong to this battle"));
+        }
         enforceControls(campaignId, user, actor);
         if (actor.getType() != CombatantType.CHARACTER || actor.getCharacter() == null) {
             throw new BadRequestException("Only characters can use abilities in battle");
@@ -770,6 +781,20 @@ public class BattleService {
         }
 
         boolean itemAbility = request.getItemInstanceId() != null;
+        if (!actor.getId().equals(current.getId())) {
+            if (itemAbility) {
+                throw new BadRequestException("Item abilities cannot be used off-turn yet");
+            }
+            AvailableFeatureAction action = findFeatureAction(actor, battleId, request.getFeatureId());
+            if (action == null || !"reaction".equals(action.getActionType())) {
+                throw new BadRequestException("Only reaction abilities can be used off-turn");
+            }
+            if (!action.isAvailable()) {
+                throw new BadRequestException(action.getUnavailableReason() != null
+                        ? action.getUnavailableReason()
+                        : "Reaction ability is not available");
+            }
+        }
         FeatureExecutionPlan plan = itemAbility
                 ? itemAbilityUseService.plan(actor.getCharacter(), request.getItemInstanceId(), request.getFeatureId())
                 : combatFeatureExecutionService.plan(actor.getCharacter(), request.getFeatureId());
@@ -862,6 +887,45 @@ public class BattleService {
                 .battle(toResponse(battle, orderedCombatants(battleId)))
                 .message(use.getMessage())
                 .build();
+    }
+
+    /**
+     * Возвращает preview плана классового умения для активного участника боя.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId идентификатор активного боя
+     * @param featureId идентификатор классового умения
+     * @param username пользователь, запрашивающий текущий ход
+     * @return структурированный план исполнения или manual-required план для неоцифрованного умения
+     */
+    @Transactional(readOnly = true)
+    public FeatureExecutionPlan planAbility(UUID campaignId, UUID battleId, UUID featureId, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        campaignService.enforceMembershipOrAdmin(campaign, user);
+        Battle battle = findBattle(battleId, campaignId);
+        if (battle.getStatus() != BattleStatus.ACTIVE) {
+            throw new BadRequestException("Battle is not active");
+        }
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant current = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        if (current.getType() != CombatantType.CHARACTER || current.getCharacter() == null) {
+            throw new BadRequestException("Only character abilities can be previewed");
+        }
+        return combatFeatureExecutionService.plan(current.getCharacter(), featureId);
+    }
+
+    private AvailableFeatureAction findFeatureAction(BattleCombatant actor, UUID battleId, UUID featureId) {
+        if (featureActionService == null || actor == null || actor.getCharacter() == null) {
+            return null;
+        }
+        return featureActionService.listAvailableActions(actor.getCharacter(), battleId).stream()
+                .filter(action -> featureId.equals(action.getFeatureId()))
+                .findFirst()
+                .orElse(null);
     }
 
     /** Total damage dealt to the spell target + the resistance modifier applied (for the cast result). */
@@ -1554,6 +1618,9 @@ public class BattleService {
                     .resources(characterResourceService.getResources(characterId, username))
                     .activeEffects(characterEffectService.getActiveEffects(characterId, username))
                     .classAbilities(classAbilityCombatService.listAbilities(current.getCharacter()))
+                    .featureActions(featureActionService != null
+                            ? featureActionService.listAvailableActions(current.getCharacter(), battle.getId())
+                            : List.of())
                     .spellSlots(hasSlots ? slots : null)
                     .tacticalActions(buildCharacterTacticalActions(characterResponse));
         } else if (current.getType() == CombatantType.MONSTER && current.getMonster() != null) {

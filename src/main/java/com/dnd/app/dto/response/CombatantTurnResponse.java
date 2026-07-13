@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.dnd.app.dto.featurerule.AvailableFeatureAction;
+
 import java.util.List;
 
 /**
@@ -25,6 +27,8 @@ public class CombatantTurnResponse {
     private List<CharacterActiveEffectResponse> activeEffects;
     /** Class features unlocked at the character's current level (progression-based actions). */
     private List<ClassAbilityResponse> classAbilities;
+    /** Server-calculated class feature actions available in this battle turn. */
+    private List<AvailableFeatureAction> featureActions;
     /** Spell slots (per level: max / expended / available). Null when the class has no slots. */
     private SpellSlotsResponse spellSlots;
 

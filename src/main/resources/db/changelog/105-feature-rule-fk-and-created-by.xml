@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P1-3 + остаток P1-4 (одной миграцией).
+
+      P1-3 (feature_rule → homebrew): hard FK homebrew_pack_id → homebrew_packages(id) и campaign_id → campaigns(id)
+      (раньше scope-маркеры без FK, «kept decoupled» из 067); колонка created_by. Перед добавлением FK обнуляем
+      висячие ссылки (данные из ранних стадий могли остаться decoupled), чтобы миграция не падала.
+
+      P1-4 остаток: created_by/updated_by (→ users, ON DELETE SET NULL) на spell, custom_resource_types,
+      item_templates (прямой homebrew_id) и class_feature (владелец через class_id → character_class.homebrew_id).
+      Бэкфилл из автора пакета-владельца; ванильные строки (homebrew_id/pack NULL) остаются NULL.
+    -->
+    <changeSet id="105-feature-rule-fk-and-created-by" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            -- === P1-3: feature_rule scope FKs + created_by ===
+            ALTER TABLE public.feature_rule ADD COLUMN IF NOT EXISTS created_by uuid;
+
+            -- Обнуляем висячие scope-ссылки перед hard FK.
+            UPDATE public.feature_rule SET homebrew_pack_id = NULL
+                WHERE homebrew_pack_id IS NOT NULL
+                  AND homebrew_pack_id NOT IN (SELECT id FROM public.homebrew_packages);
+            UPDATE public.feature_rule SET campaign_id = NULL
+                WHERE campaign_id IS NOT NULL
+                  AND campaign_id NOT IN (SELECT id FROM public.campaigns);
+
+            ALTER TABLE public.feature_rule
+                ADD CONSTRAINT fk_feature_rule_homebrew_pack FOREIGN KEY (homebrew_pack_id)
+                REFERENCES public.homebrew_packages(id) ON DELETE CASCADE;
+            ALTER TABLE public.feature_rule
+                ADD CONSTRAINT fk_feature_rule_campaign FOREIGN KEY (campaign_id)
+                REFERENCES public.campaigns(id) ON DELETE CASCADE;
+            ALTER TABLE public.feature_rule
+                ADD CONSTRAINT fk_feature_rule_created_by FOREIGN KEY (created_by)
+                REFERENCES public.users(id) ON DELETE SET NULL;
+
+            UPDATE public.feature_rule fr SET created_by = hp.author_id
+                FROM public.homebrew_packages hp
+                WHERE fr.homebrew_pack_id = hp.id AND fr.created_by IS NULL;
+
+            -- === P1-4 остаток: created_by/updated_by на контент ===
+            ALTER TABLE public.spell                 ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.custom_resource_types ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.item_templates        ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.class_feature         ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+
+            ALTER TABLE public.spell                 ADD CONSTRAINT fk_spell_created_by        FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.spell                 ADD CONSTRAINT fk_spell_updated_by        FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.custom_resource_types ADD CONSTRAINT fk_crt_created_by          FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.custom_resource_types ADD CONSTRAINT fk_crt_updated_by          FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.item_templates        ADD CONSTRAINT fk_item_templates_created_by FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.item_templates        ADD CONSTRAINT fk_item_templates_updated_by FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.class_feature         ADD CONSTRAINT fk_class_feature_created_by FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.class_feature         ADD CONSTRAINT fk_class_feature_updated_by FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+            UPDATE public.spell s        SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE s.homebrew_id  = hp.id AND s.created_by  IS NULL;
+            UPDATE public.custom_resource_types c SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE c.homebrew_id = hp.id AND c.created_by IS NULL;
+            UPDATE public.item_templates it SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE it.homebrew_id = hp.id AND it.created_by IS NULL;
+            UPDATE public.class_feature cf SET created_by = hp.author_id, updated_by = hp.author_id
+                FROM public.character_class cc JOIN public.homebrew_packages hp ON cc.homebrew_id = hp.id
+                WHERE cf.class_id = cc.class_id AND cf.created_by IS NULL;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.feature_rule DROP CONSTRAINT IF EXISTS fk_feature_rule_homebrew_pack, DROP CONSTRAINT IF EXISTS fk_feature_rule_campaign, DROP CONSTRAINT IF EXISTS fk_feature_rule_created_by;
+                ALTER TABLE public.feature_rule DROP COLUMN IF EXISTS created_by;
+                ALTER TABLE public.spell                 DROP CONSTRAINT IF EXISTS fk_spell_created_by, DROP CONSTRAINT IF EXISTS fk_spell_updated_by, DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.custom_resource_types DROP CONSTRAINT IF EXISTS fk_crt_created_by, DROP CONSTRAINT IF EXISTS fk_crt_updated_by, DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.item_templates        DROP CONSTRAINT IF EXISTS fk_item_templates_created_by, DROP CONSTRAINT IF EXISTS fk_item_templates_updated_by, DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.class_feature         DROP CONSTRAINT IF EXISTS fk_class_feature_created_by, DROP CONSTRAINT IF EXISTS fk_class_feature_updated_by, DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

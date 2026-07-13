@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
  * Запрос на использование активного умения в бою через feature-rules runtime.
  *
  * @param featureId идентификатор class feature, которым владеет активный персонаж
+ * @param combatantId актор реакции вне текущего хода; если не задан, используется активный комбатант
  * @param targetCombatantId одиночная цель умения в бою
  * @param targetCombatantIds набор целей для массового применения результата плана
  * @param originX координата X шаблона области на карте
@@ -30,6 +31,8 @@ public class BattleUseAbilityRequest {
 
     @NotNull(message = "featureId is required")
     private UUID featureId;
+
+    private UUID combatantId;
 
     private UUID itemInstanceId;
 
