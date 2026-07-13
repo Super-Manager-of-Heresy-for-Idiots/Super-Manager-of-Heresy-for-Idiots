@@ -68,6 +68,10 @@ public class ItemTemplate {
     @Column(name = "price_gold")
     private java.math.BigDecimal priceGold;
 
+    @Column(name = "attunement_required", nullable = false)
+    @Builder.Default
+    private Boolean attunementRequired = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_id")
     private Skill skill;

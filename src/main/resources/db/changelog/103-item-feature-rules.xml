@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ITEM_ABIL_PLAN Phase 1: item-owned feature-rules, attunement and item-scoped resources. -->
+
+    <changeSet id="103-item-instance-attunement" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="item_instances" columnName="attuned"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="item_instances">
+            <column name="attuned" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attuned_at" type="timestamp with time zone"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="103-item-template-attunement" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="item_templates" columnName="attunement_required"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="item_templates">
+            <column name="attunement_required" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="103-feature-item-binding" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="feature_item_binding"/>
+            </not>
+        </preConditions>
+        <createTable tableName="feature_item_binding">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="feature_rule_id" type="uuid">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_feature_item_binding_rule"/>
+            </column>
+            <column name="requires_equipped" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requires_attunement" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consume_on_use" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consume_quantity" type="integer" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allowed_slot_code" type="varchar(60)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="feature_item_binding" baseColumnNames="feature_rule_id"
+                                 referencedTableName="feature_rule" referencedColumnNames="id"
+                                 constraintName="fk_feature_item_binding_rule" onDelete="CASCADE"/>
+        <addCheckConstraint tableName="feature_item_binding"
+                            constraintName="chk_feature_item_binding_quantity_positive"
+                            checkConstraint="consume_quantity &gt; 0"/>
+    </changeSet>
+
+    <changeSet id="103-feature-resource-definition-scope" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="feature_resource_definition" columnName="scope"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="feature_resource_definition">
+            <column name="scope" type="varchar(20)" defaultValue="CHARACTER">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addCheckConstraint tableName="feature_resource_definition"
+                            constraintName="chk_feature_resource_definition_scope"
+                            checkConstraint="scope in ('CHARACTER', 'ITEM_INSTANCE')"/>
+    </changeSet>
+
+    <changeSet id="103-item-instance-feature-resource" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="item_instance_feature_resource"/>
+            </not>
+        </preConditions>
+        <createTable tableName="item_instance_feature_resource">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="item_instance_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_definition_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_value" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_value_snapshot" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="item_instance_feature_resource" baseColumnNames="item_instance_id"
+                                 referencedTableName="item_instances" referencedColumnNames="id"
+                                 constraintName="fk_item_instance_feature_resource_item" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="item_instance_feature_resource" baseColumnNames="resource_definition_id"
+                                 referencedTableName="feature_resource_definition" referencedColumnNames="id"
+                                 constraintName="fk_item_instance_feature_resource_def" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="item_instance_feature_resource"
+                             constraintName="uk_item_instance_feature_resource_def"
+                             columnNames="item_instance_id, resource_definition_id"/>
+        <createIndex tableName="item_instance_feature_resource" indexName="idx_item_instance_feature_resource_item">
+            <column name="item_instance_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="103-feature-active-effect-source-item" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="character_active_effect" columnName="source_item_instance_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="character_active_effect">
+            <column name="source_item_instance_id" type="uuid"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="character_active_effect" baseColumnNames="source_item_instance_id"
+                                 referencedTableName="item_instances" referencedColumnNames="id"
+                                 constraintName="fk_character_active_effect_source_item" onDelete="SET NULL"/>
+        <createIndex tableName="character_active_effect" indexName="idx_character_active_effect_source_item">
+            <column name="source_item_instance_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

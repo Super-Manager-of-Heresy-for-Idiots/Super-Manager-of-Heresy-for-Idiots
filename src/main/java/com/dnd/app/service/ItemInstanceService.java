@@ -6,14 +6,17 @@ import com.dnd.app.domain.content.MagicItem;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
+import com.dnd.app.dto.request.AttuneItemRequest;
 import com.dnd.app.dto.request.EquipItemRequest;
 import com.dnd.app.dto.request.GrantItemRequest;
 import com.dnd.app.dto.request.RenameItemRequest;
 import com.dnd.app.dto.request.TransferItemRequest;
+import com.dnd.app.dto.response.ItemAbilitySummary;
 import com.dnd.app.dto.response.ItemInstanceResponse;
 import com.dnd.app.mapper.ItemInstanceMapper;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
+import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +39,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ItemInstanceService {
 
+    public static final int MAX_ATTUNED_ITEMS = 3;
+
     private final ItemInstanceRepository itemInstanceRepository;
     private final ItemTemplateRepository itemTemplateRepository;
     private final EquipmentItemRepository equipmentItemRepository;
@@ -47,6 +53,8 @@ public class ItemInstanceService {
     private final CampaignMemberRepository campaignMemberRepository;
     private final WebSocketEventService webSocketEventService;
     private final ContentDictionaryResolver contentDictionaryResolver;
+    private final ItemAbilityProvisioningService itemAbilityProvisioningService;
+    private final ItemAbilityResolver itemAbilityResolver;
 
     /**
      * Выполняет операции "grant item" в рамках бизнес-логики домена.
@@ -111,6 +119,7 @@ public class ItemInstanceService {
                 log.info("Item stacked: instanceId={}, characterId={}, quantity={}",
                         instance.getId(), characterId, instance.getQuantity());
                 ItemInstanceResponse stackedResponse = toResponse(instance);
+                itemAbilityProvisioningService.ensureInstanceResources(instance);
                 webSocketEventService.sendCampaignEvent(WebSocketEventType.ITEM_GRANTED, campaignId,
                         characterId, stackedResponse, user.getId());
                 return stackedResponse;
@@ -127,6 +136,7 @@ public class ItemInstanceService {
                 .isUnique(unique)
                 .build();
         instance = itemInstanceRepository.save(instance);
+        itemAbilityProvisioningService.ensureInstanceResources(instance);
 
         log.info("Item granted: instanceId={}, itemId={}, kind={}, characterId={}, by={}",
                 instance.getId(), request.getItemId(), kind, characterId, username);
@@ -223,6 +233,7 @@ public class ItemInstanceService {
         if (instance.getTemplate() != null) {
             applyTemplateBuffs(character, instance, user);
         }
+        itemAbilityProvisioningService.ensureInstanceResources(instance);
 
         log.info("Item equipped: instanceId={}, slot={}, characterId={}", instanceId, slot.getCode(), characterId);
         return toResponse(instance);
@@ -250,6 +261,7 @@ public class ItemInstanceService {
         if (instance.getTemplate() != null) {
             removeTemplateBuffs(instance);
         }
+        itemAbilityProvisioningService.expireInstanceEffects(instance.getId());
 
         instance.setSlot(null);
         instance = itemInstanceRepository.save(instance);
@@ -285,8 +297,11 @@ public class ItemInstanceService {
             if (instance.getTemplate() != null) {
                 removeTemplateBuffs(instance);
             }
+            itemAbilityProvisioningService.expireInstanceEffects(instance.getId());
             instance.setSlot(null);
         }
+        resetAttunement(instance);
+        itemAbilityProvisioningService.expireInstanceEffects(instance.getId());
 
         if (instance.getQuantity() > 1) {
             instance.setQuantity(instance.getQuantity() - 1);
@@ -345,10 +360,84 @@ public class ItemInstanceService {
             throw new BadRequestException("Target character is not in the same campaign");
         }
 
+        resetAttunement(instance);
+        itemAbilityProvisioningService.expireInstanceEffects(instance.getId());
         instance.setOwnerCharacter(toCharacter);
         instance = itemInstanceRepository.save(instance);
+        itemAbilityProvisioningService.ensureInstanceResources(instance);
 
         log.info("Item transferred: instanceId={}, from={}, to={}", instanceId, fromCharId, request.getToCharacterId());
+        return toResponse(instance);
+    }
+
+    /**
+     * Настраивает предмет на персонажа.
+     * @param campaignId id кампании персонажа
+     * @param characterId id персонажа-владельца
+     * @param instanceId id экземпляра предмета
+     * @param request параметры настройки, включая GM override
+     * @param username пользователь, выполняющий действие
+     * @return обновлённый предмет
+     */
+    @Transactional
+    public ItemInstanceResponse attuneItem(UUID campaignId, UUID characterId, UUID instanceId,
+                                           AttuneItemRequest request, String username) {
+        User user = getUser(username);
+        Campaign campaign = campaignService.findCampaign(campaignId);
+        PlayerCharacter character = findCharacter(characterId);
+        ensureCharacterInCampaign(character, campaignId);
+        enforceOwnerOrGmOrAdmin(character, user);
+
+        ItemInstance instance = findInstance(instanceId);
+        ensureOwnedBy(instance, characterId);
+        if (!supportsAttunement(instance)) {
+            throw new DuplicateResourceException("ATTUNEMENT_NOT_SUPPORTED");
+        }
+        if (Boolean.TRUE.equals(instance.getAttuned())) {
+            return toResponse(instance);
+        }
+
+        boolean gmOverride = request != null && Boolean.TRUE.equals(request.getGmOverride());
+        if (gmOverride && user.getRole() != Role.ADMIN && !campaignService.isGmInCampaign(campaignId, user.getId())) {
+            throw new AccessDeniedException("Only GM or ADMIN can use attunement override");
+        }
+        long used = itemInstanceRepository.countByOwnerCharacterIdAndAttunedTrue(characterId);
+        if (used >= MAX_ATTUNED_ITEMS && !gmOverride) {
+            throw new DuplicateResourceException("ATTUNEMENT_LIMIT_REACHED");
+        }
+
+        instance.setAttuned(true);
+        instance.setAttunedAt(Instant.now());
+        instance = itemInstanceRepository.save(instance);
+        itemAbilityProvisioningService.ensureInstanceResources(instance);
+        log.info("Item attuned: instanceId={}, characterId={}, gmOverride={}", instanceId, characterId, gmOverride);
+        return toResponse(instance);
+    }
+
+    /**
+     * Снимает настройку предмета и истекает его feature-rules эффекты.
+     * @param campaignId id кампании персонажа
+     * @param characterId id персонажа-владельца
+     * @param instanceId id экземпляра предмета
+     * @param username пользователь, выполняющий действие
+     * @return обновлённый предмет
+     */
+    @Transactional
+    public ItemInstanceResponse unattuneItem(UUID campaignId, UUID characterId, UUID instanceId, String username) {
+        User user = getUser(username);
+        PlayerCharacter character = findCharacter(characterId);
+        ensureCharacterInCampaign(character, campaignId);
+        enforceOwnerOrGmOrAdmin(character, user);
+
+        ItemInstance instance = findInstance(instanceId);
+        ensureOwnedBy(instance, characterId);
+        if (!Boolean.TRUE.equals(instance.getAttuned())) {
+            return toResponse(instance);
+        }
+        resetAttunement(instance);
+        itemAbilityProvisioningService.expireInstanceEffects(instance.getId());
+        instance = itemInstanceRepository.save(instance);
+        log.info("Item unattuned: instanceId={}, characterId={}", instanceId, characterId);
         return toResponse(instance);
     }
 
@@ -462,7 +551,42 @@ public class ItemInstanceService {
     }
 
     private ItemInstanceResponse toResponse(ItemInstance instance) {
-        return ItemInstanceMapper.toResponse(instance);
+        ItemInstanceResponse response = ItemInstanceMapper.toResponse(instance);
+        if (instance.getOwnerCharacter() == null) {
+            response.setAbilities(List.of());
+            return response;
+        }
+        Map<UUID, List<ItemAbilitySummary>> abilities =
+                itemAbilityResolver.summariesByInstance(instance.getOwnerCharacter());
+        response.setAbilities(abilities.getOrDefault(instance.getId(), List.of()));
+        return response;
+    }
+
+    private void ensureCharacterInCampaign(PlayerCharacter character, UUID campaignId) {
+        if (character.getCampaign() == null || !character.getCampaign().getId().equals(campaignId)) {
+            throw new ResourceNotFoundException("Character not found in this campaign");
+        }
+    }
+
+    private void ensureOwnedBy(ItemInstance instance, UUID characterId) {
+        if (instance.getOwnerCharacter() == null || !instance.getOwnerCharacter().getId().equals(characterId)) {
+            throw new BadRequestException("Item does not belong to this character");
+        }
+    }
+
+    private boolean supportsAttunement(ItemInstance instance) {
+        if (instance.getMagicItem() != null) {
+            return Boolean.TRUE.equals(instance.getMagicItem().getAttunementRequired());
+        }
+        if (instance.getTemplate() != null) {
+            return Boolean.TRUE.equals(instance.getTemplate().getAttunementRequired());
+        }
+        return false;
+    }
+
+    private void resetAttunement(ItemInstance instance) {
+        instance.setAttuned(false);
+        instance.setAttunedAt(null);
     }
 
     /** Equipment is stackable unless it is a weapon or armor (gear/tools/ammo stack). */

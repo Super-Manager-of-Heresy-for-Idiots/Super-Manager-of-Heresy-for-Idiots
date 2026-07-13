@@ -1,6 +1,7 @@
 package com.dnd.app.domain.featurerule;
 
 import java.util.Arrays;
+import java.util.Set;
 import java.util.Optional;
 
 /**
@@ -12,7 +13,16 @@ public enum FeatureRuleOwnerType {
     CLASS_FEATURE("CLASS_FEATURE"),
     BACKGROUND("BACKGROUND"),
     FEAT("FEAT"),
-    SPELL("SPELL");
+    SPELL("SPELL"),
+    ITEM_TEMPLATE("ITEM_TEMPLATE"),
+    ITEM_EQUIPMENT("ITEM_EQUIPMENT"),
+    ITEM_MAGIC("ITEM_MAGIC");
+
+    public static final Set<FeatureRuleOwnerType> ITEM_FAMILY = Set.of(
+            ITEM_TEMPLATE,
+            ITEM_EQUIPMENT,
+            ITEM_MAGIC
+    );
 
     private final String code;
 
@@ -26,6 +36,23 @@ public enum FeatureRuleOwnerType {
      */
     public String getCode() {
         return code;
+    }
+
+    /**
+     * Проверяет, что владелец правила относится к семейству предметов.
+     * @return true, если правило принадлежит определению предмета, а не классовой фиче/заклинанию
+     */
+    public boolean isItemOwner() {
+        return ITEM_FAMILY.contains(this);
+    }
+
+    /**
+     * Проверяет, что владелец правила относится к семейству предметов.
+     * @param ownerType тип владельца правила
+     * @return true, если переданный тип является предметным owner-типом
+     */
+    public static boolean isItemOwner(FeatureRuleOwnerType ownerType) {
+        return ownerType != null && ownerType.isItemOwner();
     }
 
     /**

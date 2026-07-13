@@ -18,6 +18,7 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.FeatureActiveEffectRepository;
 import com.dnd.app.repository.FeatureAllowedMonsterFilterRepository;
 import com.dnd.app.repository.FeatureChoiceGroupRepository;
+import com.dnd.app.repository.ItemInstanceRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.util.AbilityScores;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class CharacterCapabilityProfileService {
     private final FeatureActionService featureActionService;
     private final FeatureCompanionService featureCompanionService;
     private final FeatureSpellGrantService featureSpellGrantService;
+    private final ItemAbilityResolver itemAbilityResolver;
     private final CharacterFormService characterFormService;
     private final PendingGameplayPromptService pendingGameplayPromptService;
 
@@ -54,6 +56,7 @@ public class CharacterCapabilityProfileService {
     private final FeatureAllowedMonsterFilterRepository allowedMonsterFilterRepository;
     private final FeatureChoiceGroupRepository choiceGroupRepository;
     private final CharacterFeatureChoiceRepository choiceRepository;
+    private final ItemInstanceRepository itemInstanceRepository;
 
     /**
      * Формирует результат операции "build" в рамках бизнес-логики домена.
@@ -132,6 +135,13 @@ public class CharacterCapabilityProfileService {
         }
         if (featureRules.spellsActive()) {
             out.hasFeatureSpellGrants(!featureSpellGrantService.listGrantedSpells(character).isEmpty());
+        }
+        out.attunement(CapabilityProfileResponse.AttunementCapability.builder()
+                .used((int) itemInstanceRepository.countByOwnerCharacterIdAndAttunedTrue(characterId))
+                .max(ItemInstanceService.MAX_ATTUNED_ITEMS)
+                .build());
+        if (featureRules.itemsActive()) {
+            out.hasItemAbilities(!itemAbilityResolver.resolveActiveRules(character).isEmpty());
         }
         if (featureRules.formsActive()) {
             out.hasCompanions(!featureCompanionService.listCompanions(character).isEmpty());

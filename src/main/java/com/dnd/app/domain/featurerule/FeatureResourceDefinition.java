@@ -53,4 +53,9 @@ public class FeatureResourceDefinition {
     /** When set, resources sharing this key resolve to one pool per character (e.g. Channel Divinity). */
     @Column(name = "shared_pool_key", length = 64)
     private String sharedPoolKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private FeatureResourceScope scope = FeatureResourceScope.CHARACTER;
 }

@@ -21,6 +21,8 @@ public interface ItemInstanceRepository extends JpaRepository<ItemInstance, UUID
 
     List<ItemInstance> findByOwnerCharacterId(UUID characterId);
 
+    long countByOwnerCharacterIdAndAttunedTrue(UUID characterId);
+
     /**
      * Row-locking load for the in-combat use-item flow, so the quantity decrement / stack delete
      * cannot race with another consumer of the same stack (avoids lost updates / double-spend).

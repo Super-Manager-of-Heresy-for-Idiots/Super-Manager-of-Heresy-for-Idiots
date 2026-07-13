@@ -13,7 +13,9 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.FeatureActiveEffectRepository;
 import com.dnd.app.repository.FeatureAllowedMonsterFilterRepository;
 import com.dnd.app.repository.FeatureChoiceGroupRepository;
+import com.dnd.app.repository.ItemInstanceRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class CharacterCapabilityProfileServiceTest {
@@ -40,18 +43,25 @@ class CharacterCapabilityProfileServiceTest {
     @Mock private FeatureActionService featureActionService;
     @Mock private FeatureCompanionService featureCompanionService;
     @Mock private FeatureSpellGrantService featureSpellGrantService;
+    @Mock private ItemAbilityResolver itemAbilityResolver;
     @Mock private CharacterFormService characterFormService;
     @Mock private PendingGameplayPromptService pendingGameplayPromptService;
     @Mock private FeatureActiveEffectRepository effectRepository;
     @Mock private FeatureAllowedMonsterFilterRepository allowedMonsterFilterRepository;
     @Mock private FeatureChoiceGroupRepository choiceGroupRepository;
     @Mock private CharacterFeatureChoiceRepository choiceRepository;
+    @Mock private ItemInstanceRepository itemInstanceRepository;
 
     @InjectMocks private CharacterCapabilityProfileService service;
 
     private final UUID charId = UUID.randomUUID();
     private final UUID classId = UUID.randomUUID();
     private final UUID abilityId = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(itemInstanceRepository.countByOwnerCharacterIdAndAttunedTrue(charId)).thenReturn(0L);
+    }
 
     private PlayerCharacter character(int totalLevel, int classLevel, List<CharacterStat> stats) {
         PlayerCharacter c = PlayerCharacter.builder().id(charId).totalLevel(totalLevel).build();

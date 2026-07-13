@@ -61,6 +61,18 @@ class ItemInstanceServiceTest {
     @Mock
     private WebSocketEventService webSocketEventService;
 
+    @Mock
+    private EquipmentItemRepository equipmentItemRepository;
+
+    @Mock
+    private MagicItemRepository magicItemRepository;
+
+    @Mock
+    private ItemAbilityProvisioningService itemAbilityProvisioningService;
+
+    @Mock
+    private ItemAbilityResolver itemAbilityResolver;
+
     @InjectMocks
     private ItemInstanceService itemInstanceService;
 
@@ -111,6 +123,8 @@ class ItemInstanceServiceTest {
                 .isStackable(false)
                 .rarity(Rarity.builder().slug("common").build())
                 .build();
+
+        lenient().when(itemAbilityResolver.summariesByInstance(any(PlayerCharacter.class))).thenReturn(Collections.emptyMap());
     }
 
     // ========================================================================

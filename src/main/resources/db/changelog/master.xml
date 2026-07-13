@@ -160,4 +160,7 @@
     <!-- P2-6: post-moderation — homebrew_reports table (user reports on published packages). -->
     <include file="db/changelog/102-homebrew-reports.xml"/>
 
+    <!-- ITEM_ABIL_PLAN Phase 1: item-owned feature-rules, attunement and item-scoped resources. -->
+    <include file="db/changelog/103-item-feature-rules.xml"/>
+
 </databaseChangeLog>

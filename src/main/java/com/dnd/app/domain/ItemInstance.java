@@ -69,6 +69,13 @@ public class ItemInstance {
     @JoinColumn(name = "slot_id")
     private EquipmentSlot slot;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean attuned = false;
+
+    @Column(name = "attuned_at")
+    private Instant attunedAt;
+
     @Column(columnDefinition = "text")
     private String notes;
 

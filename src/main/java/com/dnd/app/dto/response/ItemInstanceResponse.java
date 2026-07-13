@@ -33,6 +33,9 @@ public class ItemInstanceResponse {
     private String itemTypeName;
     private String damageDice;
     private String damageType;
+    private Boolean attuned;
+    private Boolean attunementRequired;
+    private List<ItemAbilitySummary> abilities;
     /** Approximate unit price in gold, resolved from the backing catalog item; null when unknown. */
     private BigDecimal priceGold;
     private List<EnchantmentResponse> enchantments;

@@ -331,6 +331,61 @@ public class CampaignCharacterController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    /**
+     * Настраивает предмет на персонажа.
+     * @param campaignId id кампании
+     * @param characterId id персонажа
+     * @param instanceId id экземпляра предмета
+     * @param request параметры настройки
+     * @param auth текущая аутентификация
+     * @return обновлённый предмет
+     */
+    @PostMapping("/{characterId}/inventory/{instanceId}/attune")
+    @Operation(summary = "Attune an item")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> attuneItem(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @PathVariable UUID instanceId,
+            @RequestBody(required = false) AttuneItemRequest request,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            ItemInstanceResponse response = itemInstanceService.attuneItem(
+                    campaignId,
+                    characterId,
+                    instanceId,
+                    request != null ? request : new AttuneItemRequest(),
+                    auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Item attuned"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Снимает настройку предмета с персонажа.
+     * @param campaignId id кампании
+     * @param characterId id персонажа
+     * @param instanceId id экземпляра предмета
+     * @param auth текущая аутентификация
+     * @return обновлённый предмет
+     */
+    @PostMapping("/{characterId}/inventory/{instanceId}/unattune")
+    @Operation(summary = "Unattune an item")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemInstanceResponse>>> unattuneItem(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @PathVariable UUID instanceId,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            characterService.enforceCharacterInCampaign(characterId, campaignId);
+            ItemInstanceResponse response = itemInstanceService.unattuneItem(
+                    campaignId,
+                    characterId,
+                    instanceId,
+                    auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Item unattuned"));
+        }, controllerTaskExecutor);
+    }
+
     @DeleteMapping("/{characterId}/inventory/{instanceId}")
     @Operation(summary = "Remove item from character (GM only)")
     public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeItem(

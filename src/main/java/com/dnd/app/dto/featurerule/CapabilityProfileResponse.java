@@ -39,6 +39,10 @@ public class CapabilityProfileResponse {
     private boolean hasActiveEffects;
     private boolean hasCompanions;
     private boolean hasFeatureSpellGrants;
+    private boolean hasItemAbilities;
+
+    @Schema(description = "Attunement usage for item feature-rules")
+    private AttunementCapability attunement;
 
     @Schema(description = "Wild-shape / known-forms capability; null when the class cannot transform")
     private WildShapeCapability wildShape;
@@ -88,6 +92,16 @@ public class CapabilityProfileResponse {
         private boolean canWildShape;
         private int knownFormCount;
         private boolean activeTransformation;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "AttunementCapability")
+    public static class AttunementCapability {
+        private int used;
+        private int max;
     }
 
     @Data

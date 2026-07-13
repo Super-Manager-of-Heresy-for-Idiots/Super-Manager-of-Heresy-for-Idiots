@@ -36,6 +36,9 @@ public class FeatureRulesProperties {
     /** Spell / feature integration (Stage 9). */
     private boolean spellsEnabled = false;
 
+    /** Item-granted feature rules: attunement, item-scoped resources and item actions. */
+    private boolean itemsEnabled = false;
+
     /**
      * Выполняет операции "resources active" в рамках бизнес-логики инфраструктуры.
      * @return результат выполнения бизнес-операции
@@ -82,5 +85,13 @@ public class FeatureRulesProperties {
      */
     public boolean spellsActive() {
         return runtimeEnabled && spellsEnabled;
+    }
+
+    /**
+     * Проверяет, активна ли подсистема правил предметов.
+     * @return true, если включён общий runtime и item-правила
+     */
+    public boolean itemsActive() {
+        return runtimeEnabled && itemsEnabled;
     }
 }

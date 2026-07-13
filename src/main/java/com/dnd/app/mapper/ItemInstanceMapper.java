@@ -30,6 +30,7 @@ public final class ItemInstanceMapper {
         String itemTypeName = null;
         String damageDice = null;
         String damageType = null;
+        boolean attunementRequired = false;
         BigDecimal priceGold = null;
 
         if (instance.getTemplate() != null) {
@@ -38,6 +39,7 @@ public final class ItemInstanceMapper {
             itemTypeName = t.getItemType() != null ? t.getItemType().getName() : null;
             damageDice = t.getDamageDice();
             damageType = t.getDamageType() != null ? t.getDamageType().getSlug() : null;
+            attunementRequired = Boolean.TRUE.equals(t.getAttunementRequired());
             priceGold = t.getPriceGold();
         } else if (instance.getEquipmentItem() != null) {
             EquipmentItem e = instance.getEquipmentItem();
@@ -57,6 +59,7 @@ public final class ItemInstanceMapper {
             itemTypeName = m.getType() != null
                     ? ruFirst(m.getType().getNameRu(), m.getType().getNameEn())
                     : null;
+            attunementRequired = Boolean.TRUE.equals(m.getAttunementRequired());
             priceGold = goldFromCost(m.getCost());
         }
 
@@ -74,6 +77,8 @@ public final class ItemInstanceMapper {
                 .itemTypeName(itemTypeName)
                 .damageDice(damageDice)
                 .damageType(damageType)
+                .attuned(Boolean.TRUE.equals(instance.getAttuned()))
+                .attunementRequired(attunementRequired)
                 .priceGold(priceGold)
                 .build();
     }

@@ -33,6 +33,9 @@ public class FeatureActiveEffect {
     @Column(name = "source_feature_id")
     private UUID sourceFeatureId;
 
+    @Column(name = "source_item_instance_id")
+    private UUID sourceItemInstanceId;
+
     @Column(name = "effect_definition_id", nullable = false)
     private UUID effectDefinitionId;
 
