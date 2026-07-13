@@ -1,15 +1,24 @@
 package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.HomebrewPackage;
+import com.dnd.app.domain.HomebrewReport;
 import com.dnd.app.domain.HomebrewTag;
+import com.dnd.app.domain.User;
+import com.dnd.app.domain.enums.HomebrewReportStatus;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.dto.response.HomebrewPackageResponse;
+import com.dnd.app.dto.response.HomebrewReportResponse;
 import com.dnd.app.dto.response.HomebrewTagResponse;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.GmHomebrewLibraryRepository;
 import com.dnd.app.repository.HomebrewPackageRepository;
+import com.dnd.app.repository.HomebrewReportRepository;
 import com.dnd.app.repository.HomebrewTagRepository;
+import com.dnd.app.repository.UserRepository;
+
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,6 +40,8 @@ public class HomebrewAdminService {
     private final HomebrewPackageRepository packageRepository;
     private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final HomebrewTagRepository tagRepository;
+    private final HomebrewReportRepository reportRepository;
+    private final UserRepository userRepository;
     private final HomebrewAuthoringService authoringService;
 
     /**
@@ -114,5 +125,125 @@ public class HomebrewAdminService {
 
         tagRepository.delete(tag);
         log.info("Admin deleted tag: id={}, name='{}'", tagId, tag.getName());
+    }
+
+    // ===================== P2-6: пост-модерация =====================
+
+    /**
+     * Очередь жалоб для админ-модерации.
+     * @param status фильтр по статусу жалобы (OPEN/RESOLVED/DISMISSED); null — все
+     * @param pageable постраничность
+     * @return страница жалоб
+     */
+    @Transactional(readOnly = true)
+    public Page<HomebrewReportResponse> listReports(String status, Pageable pageable) {
+        Page<HomebrewReport> reports;
+        if (status != null && !status.isBlank()) {
+            HomebrewReportStatus st = parseReportStatus(status);
+            reports = reportRepository.findAllByStatusOrderByCreatedAtAsc(st, pageable);
+        } else {
+            reports = reportRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        return reports.map(this::toReportResponse);
+    }
+
+    /**
+     * Отклонить пакет модератором: статус REJECTED (скрыт с витрины, недоступен для install/attach).
+     * Все открытые жалобы по пакету помечаются RESOLVED.
+     * @param id идентификатор пакета
+     * @param reason причина отклонения (для аудита; может быть null)
+     * @param adminUsername модератор
+     * @return ответ по пакету
+     */
+    @Transactional
+    public HomebrewPackageResponse rejectPackage(UUID id, String reason, String adminUsername) {
+        HomebrewPackage pkg = packageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
+        pkg.setStatus(HomebrewStatus.REJECTED);
+        packageRepository.save(pkg);
+
+        User admin = userRepository.findByUsername(adminUsername).orElse(null);
+        resolveOpenReports(id, admin);
+
+        log.info("MODERATION: package REJECTED: id={}, title='{}', by={}, reason='{}'",
+                id, pkg.getTitle(), adminUsername, reason);
+        return authoringService.toPackageResponse(pkg);
+    }
+
+    /**
+     * Восстановить отклонённый/архивный пакет обратно в PUBLISHED.
+     * @param id идентификатор пакета
+     * @param adminUsername модератор
+     * @return ответ по пакету
+     */
+    @Transactional
+    public HomebrewPackageResponse restorePackage(UUID id, String adminUsername) {
+        HomebrewPackage pkg = packageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
+        if (pkg.getStatus() != HomebrewStatus.REJECTED && pkg.getStatus() != HomebrewStatus.ARCHIVED) {
+            throw new BadRequestException("Восстановить можно только отклонённый или архивный пакет");
+        }
+        pkg.setStatus(HomebrewStatus.PUBLISHED);
+        packageRepository.save(pkg);
+        log.info("MODERATION: package RESTORED to PUBLISHED: id={}, title='{}', by={}",
+                id, pkg.getTitle(), adminUsername);
+        return authoringService.toPackageResponse(pkg);
+    }
+
+    /**
+     * Обработать жалобу без отклонения пакета: DISMISS (необоснованна) или RESOLVE (учтена).
+     * @param reportId идентификатор жалобы
+     * @param action DISMISS | RESOLVE
+     * @param adminUsername модератор
+     * @return обновлённая жалоба
+     */
+    @Transactional
+    public HomebrewReportResponse resolveReport(UUID reportId, String action, String adminUsername) {
+        HomebrewReport report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResourceNotFoundException("Жалоба не найдена"));
+        HomebrewReportStatus target = switch (action == null ? "" : action.toUpperCase()) {
+            case "DISMISS" -> HomebrewReportStatus.DISMISSED;
+            case "RESOLVE" -> HomebrewReportStatus.RESOLVED;
+            default -> throw new BadRequestException("Недопустимое действие: " + action + ". Допустимо: DISMISS, RESOLVE");
+        };
+        report.setStatus(target);
+        report.setResolvedAt(Instant.now());
+        report.setResolvedBy(userRepository.findByUsername(adminUsername).orElse(null));
+        reportRepository.save(report);
+        log.info("MODERATION: report {} -> {}, by={}", reportId, target, adminUsername);
+        return toReportResponse(report);
+    }
+
+    private void resolveOpenReports(UUID packageId, User admin) {
+        for (HomebrewReport report : reportRepository.findAllByHomebrewPackageIdAndStatus(packageId, HomebrewReportStatus.OPEN)) {
+            report.setStatus(HomebrewReportStatus.RESOLVED);
+            report.setResolvedAt(Instant.now());
+            report.setResolvedBy(admin);
+            reportRepository.save(report);
+        }
+    }
+
+    private HomebrewReportStatus parseReportStatus(String status) {
+        try {
+            return HomebrewReportStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Некорректный статус жалобы: " + status);
+        }
+    }
+
+    private HomebrewReportResponse toReportResponse(HomebrewReport r) {
+        HomebrewPackage pkg = r.getHomebrewPackage();
+        return HomebrewReportResponse.builder()
+                .id(r.getId())
+                .packageId(pkg.getId())
+                .packageTitle(pkg.getTitle())
+                .packageStatus(pkg.getStatus().name())
+                .reporterUsername(r.getReporter() != null ? r.getReporter().getUsername() : null)
+                .reason(r.getReason())
+                .status(r.getStatus().name())
+                .createdAt(r.getCreatedAt())
+                .resolvedAt(r.getResolvedAt())
+                .resolvedByUsername(r.getResolvedBy() != null ? r.getResolvedBy().getUsername() : null)
+                .build();
     }
 }

@@ -157,4 +157,7 @@
          item_types, buffs_debuffs) + backfill from the owning package author. -->
     <include file="db/changelog/101-homebrew-content-created-by.xml"/>
 
+    <!-- P2-6: post-moderation — homebrew_reports table (user reports on published packages). -->
+    <include file="db/changelog/102-homebrew-reports.xml"/>
+
 </databaseChangeLog>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P2-6: пост-модерация homebrew. Таблица жалоб на опубликованные пакеты. Статусы пакета REJECTED/UNDER_REVIEW
+      добавлены только в Java-enum — колонка homebrew_packages.status уже varchar(20), миграция для неё не нужна.
+      id генерируется приложением (Hibernate GenerationType.UUID), поэтому без DB-DEFAULT для id.
+    -->
+    <changeSet id="102-homebrew-reports" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            CREATE TABLE IF NOT EXISTS public.homebrew_reports (
+                id          uuid PRIMARY KEY,
+                package_id  uuid NOT NULL REFERENCES public.homebrew_packages(id) ON DELETE CASCADE,
+                reporter_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+                reason      text NOT NULL,
+                status      character varying(20) NOT NULL DEFAULT 'OPEN',
+                created_at  timestamp with time zone NOT NULL DEFAULT now(),
+                resolved_at timestamp with time zone,
+                resolved_by uuid REFERENCES public.users(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_homebrew_reports_package ON public.homebrew_reports (package_id);
+            CREATE INDEX IF NOT EXISTS idx_homebrew_reports_status  ON public.homebrew_reports (status);
+        ]]></sql>
+        <rollback>
+            <sql><![CDATA[ DROP TABLE IF EXISTS public.homebrew_reports; ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

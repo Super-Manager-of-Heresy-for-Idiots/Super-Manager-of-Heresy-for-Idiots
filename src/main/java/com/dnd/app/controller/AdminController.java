@@ -539,4 +539,76 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.ok(null, "Тег удален"));
         }, controllerTaskExecutor);
     }
+
+    // ===================== P2-6: пост-модерация =====================
+
+    /**
+     * Очередь жалоб на homebrew-пакеты для модерации.
+     * @param status фильтр по статусу жалобы (OPEN/RESOLVED/DISMISSED)
+     * @param pageable постраничность
+     * @return страница жалоб
+     */
+    @GetMapping("/homebrew/reports")
+    public CompletableFuture<ResponseEntity<ApiResponse<Page<HomebrewReportResponse>>>> listHomebrewReports(
+            @RequestParam(required = false) String status, Pageable pageable) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(homebrewAdminService.listReports(status, pageable))),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Отклонить пакет (скрыть с витрины) — статус REJECTED.
+     * @param id идентификатор пакета
+     * @param reason причина (для аудита, необязательно)
+     * @param auth модератор
+     * @return ответ по пакету
+     */
+    @PostMapping("/homebrew/{id}/reject")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewPackageResponse>>> rejectHomebrew(
+            @PathVariable UUID id, @RequestParam(required = false) String reason,
+            org.springframework.security.core.Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewPackageResponse result = homebrewAdminService.rejectPackage(id, reason, auth.getName());
+            org.slf4j.LoggerFactory.getLogger("AUDIT").info(
+                    "admin_action action=rejectHomebrew actor={} target={} reason={}", auth.getName(), id, reason);
+            return ResponseEntity.ok(ApiResponse.ok(result, "Пакет отклонён"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Восстановить отклонённый/архивный пакет в PUBLISHED.
+     * @param id идентификатор пакета
+     * @param auth модератор
+     * @return ответ по пакету
+     */
+    @PostMapping("/homebrew/{id}/restore")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewPackageResponse>>> restoreHomebrew(
+            @PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewPackageResponse result = homebrewAdminService.restorePackage(id, auth.getName());
+            org.slf4j.LoggerFactory.getLogger("AUDIT").info(
+                    "admin_action action=restoreHomebrew actor={} target={}", auth.getName(), id);
+            return ResponseEntity.ok(ApiResponse.ok(result, "Пакет восстановлен"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Обработать жалобу без отклонения пакета: DISMISS | RESOLVE.
+     * @param reportId идентификатор жалобы
+     * @param action действие
+     * @param auth модератор
+     * @return обновлённая жалоба
+     */
+    @PostMapping("/homebrew/reports/{reportId}/resolve")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewReportResponse>>> resolveHomebrewReport(
+            @PathVariable UUID reportId, @RequestParam String action,
+            org.springframework.security.core.Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewReportResponse result = homebrewAdminService.resolveReport(reportId, action, auth.getName());
+            org.slf4j.LoggerFactory.getLogger("AUDIT").info(
+                    "admin_action action=resolveHomebrewReport actor={} target={} decision={}",
+                    auth.getName(), reportId, action);
+            return ResponseEntity.ok(ApiResponse.ok(result, "Жалоба обработана"));
+        }, controllerTaskExecutor);
+    }
 }

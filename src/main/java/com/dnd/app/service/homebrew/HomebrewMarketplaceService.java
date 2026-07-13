@@ -3,11 +3,15 @@ package com.dnd.app.service.homebrew;
 import com.dnd.app.domain.GmHomebrewLibrary;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.HomebrewRating;
+import com.dnd.app.domain.HomebrewReport;
 import com.dnd.app.domain.User;
+import com.dnd.app.domain.enums.HomebrewReportStatus;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.request.RateHomebrewRequest;
+import com.dnd.app.dto.request.ReportHomebrewRequest;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.repository.HomebrewReportRepository;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
@@ -38,6 +42,7 @@ public class HomebrewMarketplaceService {
     private final HomebrewPackageRepository packageRepository;
     private final GmHomebrewLibraryRepository gmLibraryRepository;
     private final HomebrewRatingRepository ratingRepository;
+    private final HomebrewReportRepository reportRepository;
     private final UserRepository userRepository;
     private final HomebrewAuthoringService authoringService;
 
@@ -256,6 +261,32 @@ public class HomebrewMarketplaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Package not found"));
 
         return buildRatingResponse(packageId, user.getId());
+    }
+
+    /**
+     * Пожаловаться на опубликованный homebrew-пакет (P2-6). Жалобу может подать любой аутентифицированный
+     * пользователь; пакет должен быть опубликован и не удалён.
+     * @param packageId идентификатор пакета
+     * @param request причина жалобы
+     * @param username имя пользователя-жалобщика
+     */
+    @Transactional
+    public void reportPackage(UUID packageId, ReportHomebrewRequest request, String username) {
+        User reporter = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
+        HomebrewPackage pkg = packageRepository.findById(packageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
+        if (pkg.getStatus() != HomebrewStatus.PUBLISHED || pkg.isDeleted()) {
+            throw new ResourceNotFoundException("Пакет не найден");
+        }
+        HomebrewReport report = HomebrewReport.builder()
+                .homebrewPackage(pkg)
+                .reporter(reporter)
+                .reason(request.getReason())
+                .status(HomebrewReportStatus.OPEN)
+                .build();
+        reportRepository.save(report);
+        log.info("Homebrew package reported: packageId={}, reportId={}, by={}", packageId, report.getId(), username);
     }
 
     private HomebrewRatingResponse buildRatingResponse(UUID packageId, UUID userId) {

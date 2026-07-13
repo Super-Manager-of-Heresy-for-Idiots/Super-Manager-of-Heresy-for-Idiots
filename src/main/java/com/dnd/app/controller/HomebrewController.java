@@ -386,6 +386,24 @@ public class HomebrewController {
     }
 
     /**
+     * Пожаловаться на опубликованный homebrew-пакет (P2-6, пост-модерация).
+     * @param id идентификатор пакета
+     * @param request причина жалобы
+     * @param auth аутентификация
+     * @return подтверждение
+     */
+    @PostMapping("/marketplace/{id}/report")
+    @Operation(summary = "Report a published homebrew package for moderation")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> reportPackage(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReportHomebrewRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            marketplaceService.reportPackage(id, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(null, "Жалоба отправлена"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
      * Возвращает результат операции "get package rating" в рамках бизнес-логики API.
      * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
      * @param auth входящее значение auth, используемое бизнес-сценарием

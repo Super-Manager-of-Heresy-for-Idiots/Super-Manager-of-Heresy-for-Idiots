@@ -7,5 +7,9 @@ package com.dnd.app.domain.enums;
 public enum HomebrewStatus {
     DRAFT,
     PUBLISHED,
-    ARCHIVED
+    ARCHIVED,
+    /** На ревью (пре-модерация; задел под платный контент P3). */
+    UNDER_REVIEW,
+    /** Отклонён модератором — скрыт с витрины, недоступен для install/attach (пост-модерация P2-6). */
+    REJECTED
 }
