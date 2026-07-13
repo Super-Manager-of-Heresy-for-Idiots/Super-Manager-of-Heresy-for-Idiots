@@ -122,6 +122,24 @@ public class HomebrewController {
     }
 
     /**
+     * Возвращает браузируемый список существующего контента автора заданного типа, доступного для
+     * прикрепления к пакету (замена ручному вводу UUID в UI).
+     * @param id идентификатор целевого пакета
+     * @param type тип контента
+     * @param auth аутентификация
+     * @return список кандидатов на прикрепление
+     */
+    @GetMapping("/my/{id}/attachable")
+    @Operation(summary = "List the author's existing content of a type that can be attached to the package")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<AttachableContentResponse>>>> listAttachable(
+            @PathVariable UUID id, @RequestParam String type, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<AttachableContentResponse> data = authoringService.listAttachableContent(id, type, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    /**
      * Создает результат операции "create package item type" в рамках бизнес-логики API.
      * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
      * @param request входящие данные запроса для выполнения бизнес-сценария

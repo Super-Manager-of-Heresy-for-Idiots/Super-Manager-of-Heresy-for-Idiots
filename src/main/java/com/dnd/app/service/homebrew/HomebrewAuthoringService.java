@@ -193,6 +193,54 @@ public class HomebrewAuthoringService {
     }
 
     /**
+     * Возвращает существующий контент автора заданного типа, который можно прицепить к пакету
+     * (браузируемый пикер «существующее» вместо ручного ввода UUID). Показывается только собственный
+     * homebrew-контент автора (удовлетворяет fail-closed проверке владения в addContent), исключая уже
+     * добавленный в этот пакет; для каждого элемента даётся имя/описание и пакет-источник.
+     * @param packageId идентификатор целевого пакета
+     * @param contentTypeStr тип контента (ITEM_TYPE/SKILL/FEAT/BUFF_DEBUFF/…)
+     * @param username имя пользователя-автора
+     * @return список кандидатов на прикрепление
+     */
+    @Transactional(readOnly = true)
+    public List<AttachableContentResponse> listAttachableContent(UUID packageId, String contentTypeStr, String username) {
+        User gm = getGameMaster(username);
+        packageRepository.findByIdAndAuthorId(packageId, gm.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
+
+        if (!validatorRegistry.isKnownType(contentTypeStr)) {
+            throw new BadRequestException("Неизвестный тип контента: " + contentTypeStr);
+        }
+        ContentType type = ContentType.valueOf(contentTypeStr);
+
+        Set<UUID> alreadyInPackage = contentItemRepository.findContentIdsByPackageIdsAndType(Set.of(packageId), type);
+
+        Map<UUID, AttachableContentResponse> byContentId = new LinkedHashMap<>();
+        for (HomebrewContentItem item : contentItemRepository.findAttachableByAuthorAndType(gm.getId(), type)) {
+            UUID cid = item.getContentId();
+            if (alreadyInPackage.contains(cid) || byContentId.containsKey(cid)) {
+                continue;
+            }
+            ContentSummaryDto summary;
+            try {
+                summary = validatorRegistry.summarize(type.name(), cid);
+            } catch (RuntimeException e) {
+                // Битая ссылка (контент удалён, а элемент-связка остался) не должна ронять весь список.
+                log.warn("Skipping attachable content that failed to summarize: type={}, contentId={}", type, cid);
+                continue;
+            }
+            byContentId.put(cid, AttachableContentResponse.builder()
+                    .contentId(cid)
+                    .name(summary.getName())
+                    .description(summary.getDescription())
+                    .sourcePackageId(item.getHomebrewPackage().getId())
+                    .sourcePackageTitle(item.getHomebrewPackage().getTitle())
+                    .build());
+        }
+        return new ArrayList<>(byContentId.values());
+    }
+
+    /**
      * Создает результат операции "create package item type" в рамках бизнес-логики homebrew-контента.
      * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
      * @param request входящие данные запроса для выполнения бизнес-сценария
@@ -215,6 +263,8 @@ public class HomebrewAuthoringService {
                 .description(request.getDescription())
                 .slot(parseSlot(request.getSlot(), pkg))
                 .homebrew(pkg)
+                .createdBy(pkg.getAuthor())
+                .updatedBy(pkg.getAuthor())
                 .damageDice(request.getDamageDice())
                 .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
                 .damageType(parseDamageType(request.getDamageType(), pkg))
@@ -252,6 +302,8 @@ public class HomebrewAuthoringService {
                 .description(request.getDescription())
                 .skillType(request.getSkillType())
                 .homebrew(pkg)
+                .createdBy(pkg.getAuthor())
+                .updatedBy(pkg.getAuthor())
                 .damageDice(request.getDamageDice())
                 .damageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0)
                 .damageType(parseDamageType(request.getDamageType(), pkg))
@@ -282,6 +334,8 @@ public class HomebrewAuthoringService {
                 .nameRu(request.getName())
                 .description(request.getDescription())
                 .homebrew(pkg)
+                .createdBy(pkg.getAuthor())
+                .updatedBy(pkg.getAuthor())
                 .build();
         Feat saved = featRepository.save(feat);
         attachContentItem(pkg, ContentType.FEAT, saved.getId(), username);
@@ -511,6 +565,8 @@ public class HomebrewAuthoringService {
                 .durationRounds(request.getDurationRounds())
                 .isBuff(request.getIsBuff())
                 .homebrew(pkg)
+                .createdBy(pkg != null ? pkg.getAuthor() : null)
+                .updatedBy(pkg != null ? pkg.getAuthor() : null)
                 .build();
         if (request.getTargetStatId() != null) {
             StatType statType = statTypeRepository.findById(request.getTargetStatId())

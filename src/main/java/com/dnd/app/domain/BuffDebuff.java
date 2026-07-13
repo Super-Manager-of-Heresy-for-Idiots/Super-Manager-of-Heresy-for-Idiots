@@ -58,6 +58,15 @@ public class BuffDebuff {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    // Авторство (P1-4): кто создал/изменил homebrew-контент; null для ванильных строк.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

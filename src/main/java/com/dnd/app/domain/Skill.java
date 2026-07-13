@@ -42,6 +42,15 @@ public class Skill {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    // Авторство (P1-4): кто создал/изменил homebrew-контент; null для ванильных строк.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @Column(name = "damage_dice", length = 10)
     private String damageDice;
 

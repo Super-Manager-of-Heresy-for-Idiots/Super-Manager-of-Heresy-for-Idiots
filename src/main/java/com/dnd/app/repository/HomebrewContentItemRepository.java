@@ -34,4 +34,16 @@ public interface HomebrewContentItemRepository extends JpaRepository<HomebrewCon
     @Query("SELECT ci.contentId FROM HomebrewContentItem ci " +
             "WHERE ci.homebrewPackage.id IN :packageIds")
     Set<UUID> findContentIdsByPackageIds(@Param("packageIds") Set<UUID> packageIds);
+
+    /**
+     * Контент заданного типа, принадлежащий автору (во всех его неудалённых пакетах) — кандидаты
+     * на прикрепление к другому пакету через браузируемый пикер «существующее».
+     * @param authorId id автора-владельца
+     * @param contentType тип контента
+     * @return элементы контента вместе с их пакетом-источником
+     */
+    @Query("SELECT ci FROM HomebrewContentItem ci JOIN ci.homebrewPackage p " +
+            "WHERE p.author.id = :authorId AND ci.contentType = :contentType AND p.deletedAt IS NULL")
+    List<HomebrewContentItem> findAttachableByAuthorAndType(@Param("authorId") UUID authorId,
+                                                            @Param("contentType") ContentType contentType);
 }

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P1-4 / DB-3: авторство (created_by / updated_by) на homebrew-авторируемый контент по образцу бестиария
+      (Monster уже имеет created_by/updated_by → users). Раньше такой контент атрибутировался только транзитивно
+      через пакет (homebrew_id → homebrew_packages.author_id); прямые колонки нужны для аудита и будущего
+      маркетплейса/модерации. Колонки nullable (у ванильных строк автора нет), FK → users(id) с ON DELETE SET NULL.
+
+      Охват (авторинг идёт через HomebrewAuthoringService, где известен владелец пакета):
+        skills, feat, item_types, buffs_debuffs.
+      Прочий контент из плана (spell, class_feature, custom_resource_types, item_templates) авторируется другими
+      путями — вынесено в отдельный шаг.
+
+      Бэкфилл: created_by/updated_by = автор пакета-владельца (по homebrew_id). Ванильные строки (homebrew_id IS NULL)
+      остаются с NULL — это корректно.
+    -->
+    <changeSet id="101-homebrew-content-created-by" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.skills        ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.feat          ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.item_types    ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.buffs_debuffs ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+
+            ALTER TABLE public.skills        ADD CONSTRAINT fk_skills_created_by        FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.skills        ADD CONSTRAINT fk_skills_updated_by        FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.feat          ADD CONSTRAINT fk_feat_created_by          FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.feat          ADD CONSTRAINT fk_feat_updated_by          FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.item_types    ADD CONSTRAINT fk_item_types_created_by    FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.item_types    ADD CONSTRAINT fk_item_types_updated_by    FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.buffs_debuffs ADD CONSTRAINT fk_buffs_debuffs_created_by FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.buffs_debuffs ADD CONSTRAINT fk_buffs_debuffs_updated_by FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+            UPDATE public.skills s        SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE s.homebrew_id  = hp.id AND s.created_by  IS NULL;
+            UPDATE public.feat f          SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE f.homebrew_id  = hp.id AND f.created_by  IS NULL;
+            UPDATE public.item_types it   SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE it.homebrew_id = hp.id AND it.created_by IS NULL;
+            UPDATE public.buffs_debuffs b SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE b.homebrew_id  = hp.id AND b.created_by  IS NULL;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.skills        DROP CONSTRAINT IF EXISTS fk_skills_created_by,        DROP CONSTRAINT IF EXISTS fk_skills_updated_by;
+                ALTER TABLE public.feat          DROP CONSTRAINT IF EXISTS fk_feat_created_by,          DROP CONSTRAINT IF EXISTS fk_feat_updated_by;
+                ALTER TABLE public.item_types    DROP CONSTRAINT IF EXISTS fk_item_types_created_by,    DROP CONSTRAINT IF EXISTS fk_item_types_updated_by;
+                ALTER TABLE public.buffs_debuffs DROP CONSTRAINT IF EXISTS fk_buffs_debuffs_created_by, DROP CONSTRAINT IF EXISTS fk_buffs_debuffs_updated_by;
+                ALTER TABLE public.skills        DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.feat          DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.item_types    DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.buffs_debuffs DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

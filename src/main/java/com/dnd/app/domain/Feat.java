@@ -61,6 +61,15 @@ public class Feat {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    // Авторство (P1-4): кто создал/изменил homebrew-контент; null для ванильных строк.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @OneToMany(mappedBy = "feat", fetch = FetchType.LAZY)
     @Builder.Default
     private List<FeatPrerequisite> prerequisites = new ArrayList<>();

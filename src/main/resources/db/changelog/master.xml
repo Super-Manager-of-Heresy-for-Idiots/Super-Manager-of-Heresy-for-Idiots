@@ -153,4 +153,8 @@
          that only had *_hb_slug, protecting the system slug namespace from duplicates. -->
     <include file="db/changelog/100-homebrew-vanilla-slug-indexes.xml"/>
 
+    <!-- P1-4 / DB-3: created_by/updated_by (→ users) on homebrew-authored content (skills, feat,
+         item_types, buffs_debuffs) + backfill from the owning package author. -->
+    <include file="db/changelog/101-homebrew-content-created-by.xml"/>
+
 </databaseChangeLog>
