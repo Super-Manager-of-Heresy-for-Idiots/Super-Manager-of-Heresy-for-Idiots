@@ -78,6 +78,9 @@ class BattleServiceMovementTest {
                 org.mockito.Mockito.mock(ConditionService.class),
                 org.mockito.Mockito.mock(BattleLogService.class),
                 org.mockito.Mockito.mock(SpellCastService.class),
+                org.mockito.Mockito.mock(FeatureUseService.class),
+                org.mockito.Mockito.mock(ItemAbilityUseService.class),
+                org.mockito.Mockito.mock(CombatFeatureExecutionService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
                 org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());

@@ -103,6 +103,14 @@ public class CombatFeatureExecutionService {
         return plan;
     }
 
+    @Transactional(readOnly = true)
+    public FeatureExecutionPlan planForItemRule(PlayerCharacter actor, FeatureRule rule, String displayName) {
+        if (rule == null) {
+            throw new BadRequestException("Item ability rule is required");
+        }
+        return planForRules(actor, rule.getId(), displayName, List.of(rule), null);
+    }
+
     private FeatureExecutionPlan planForRules(PlayerCharacter actor, UUID ownerId, String displayName,
                                               List<FeatureRule> rules, Integer spellSlotLevel) {
         FeatureExecutionPlan.FeatureExecutionPlanBuilder plan = FeatureExecutionPlan.builder()

@@ -62,7 +62,18 @@ public class FeatureEffectService {
             return 0; // gate before any resolution work: disabled must stay a strict no-op
         }
         List<FeatureRule> rules = resolver.approvedEnabledRules(List.of(featureId));
-        return applyRules(character, character, featureId, rules);
+        return applyRules(character, character, featureId, null, rules);
+    }
+
+    @Transactional
+    public int applyForItemRuleUse(PlayerCharacter character, UUID itemInstanceId, FeatureRule rule) {
+        if (!flags.effectsActive()) {
+            return 0;
+        }
+        if (rule == null) {
+            return 0;
+        }
+        return applyRules(character, character, null, itemInstanceId, List.of(rule));
     }
 
     /**
@@ -85,7 +96,7 @@ public class FeatureEffectService {
         if (requiresConcentration(rules)) {
             endConcentration(caster.getId());
         }
-        return applyRules(target, caster, null, rules);
+        return applyRules(target, caster, null, null, rules);
     }
 
     /** Whether any of the rules' effect definitions require concentration. */
@@ -135,7 +146,7 @@ public class FeatureEffectService {
                 .toList();
     }
 
-    private int applyRules(PlayerCharacter target, PlayerCharacter source, UUID sourceFeatureId,
+    private int applyRules(PlayerCharacter target, PlayerCharacter source, UUID sourceFeatureId, UUID sourceItemInstanceId,
                            List<FeatureRule> rules) {
         if (rules.isEmpty()) {
             return 0;
@@ -173,6 +184,7 @@ public class FeatureEffectService {
                     .characterId(target.getId())
                     .sourceCharacterId(source.getId())
                     .sourceFeatureId(sourceFeatureId)
+                    .sourceItemInstanceId(sourceItemInstanceId)
                     .effectDefinitionId(def.getId())
                     .expiresAt(expiresAt)
                     .remainingRounds(remainingRounds)

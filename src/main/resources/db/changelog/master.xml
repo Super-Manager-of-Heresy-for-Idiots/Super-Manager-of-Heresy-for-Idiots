@@ -163,4 +163,7 @@
     <!-- ITEM_ABIL_PLAN Phase 1: item-owned feature-rules, attunement and item-scoped resources. -->
     <include file="db/changelog/103-item-feature-rules.xml"/>
 
+    <!-- ABIL/ITEM_ABIL: persistent clientCommandId dedup for battle commands. -->
+    <include file="db/changelog/104-battle-command-idempotency.xml"/>
+
 </databaseChangeLog>

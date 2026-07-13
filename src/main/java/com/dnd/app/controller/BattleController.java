@@ -8,6 +8,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
+import com.dnd.app.dto.request.BattleUseAbilityRequest;
 import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.ConcentrationCheckRequest;
 import com.dnd.app.dto.request.GroupInitiativeRequest;
@@ -15,6 +16,7 @@ import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
 import com.dnd.app.dto.request.JoinBattleRequest;
 import com.dnd.app.dto.featurerule.SpellCastResult;
+import com.dnd.app.dto.featurerule.BattleUseAbilityResult;
 import com.dnd.app.dto.request.SpendActionRequest;
 import com.dnd.app.dto.request.StandardActionRequest;
 import com.dnd.app.dto.request.ContestRequest;
@@ -851,6 +853,27 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             SpellCastResult data = battleService.castSpell(campaignId, battleId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Spell cast"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Выполняет активное умение персонажа в бою через feature-rules runtime.
+     *
+     * @param campaignId идентификатор кампании
+     * @param battleId идентификатор боя
+     * @param request параметры умения, целей и броска урона
+     * @param auth аутентификация инициатора
+     * @return результат применения умения и актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/use-ability")
+    @Operation(summary = "Use an active class ability in battle via the feature-rules runtime")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleUseAbilityResult>>> useAbility(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @Valid @RequestBody BattleUseAbilityRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleUseAbilityResult data = battleService.useAbility(campaignId, battleId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Ability used"));
         }, controllerTaskExecutor);
     }
 

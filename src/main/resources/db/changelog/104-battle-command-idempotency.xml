@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="104-battle-command-idempotency" author="codex">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="battle_command_idempotency"/>
+            </not>
+        </preConditions>
+        <createTable tableName="battle_command_idempotency">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="client_command_id" type="uuid">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_battle_command_idem_client"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="battle_command_idempotency" indexName="idx_battle_command_idem_created">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

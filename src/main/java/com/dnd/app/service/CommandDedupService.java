@@ -1,6 +1,10 @@
 package com.dnd.app.service;
 
+import com.dnd.app.domain.BattleCommandIdempotencyRecord;
+import com.dnd.app.repository.BattleCommandIdempotencyRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,18 +26,37 @@ public class CommandDedupService {
 
     private final Map<UUID, Instant> seen = new ConcurrentHashMap<>();
 
+    @Autowired(required = false)
+    private BattleCommandIdempotencyRepository repository;
+
     /**
      * Регистрирует команду как обработанную, если её ещё не видели (в пределах TTL).
      *
      * @param clientCommandId идемпотентный ключ команды; {@code null} — дедуп не применяется (возвращает true)
      * @return {@code true}, если это первое появление ключа (команду нужно выполнить); {@code false} — дубликат
      */
+    @Transactional
     public boolean firstSeen(UUID clientCommandId) {
         if (clientCommandId == null) {
             return true;
         }
+        if (repository != null) {
+            return firstSeenPersistent(clientCommandId);
+        }
         evictExpired();
         return seen.putIfAbsent(clientCommandId, Instant.now()) == null;
+    }
+
+    private boolean firstSeenPersistent(UUID clientCommandId) {
+        repository.deleteByCreatedAtBefore(Instant.now().minus(TTL));
+        if (repository.existsByClientCommandId(clientCommandId)) {
+            return false;
+        }
+        repository.save(BattleCommandIdempotencyRecord.builder()
+                .clientCommandId(clientCommandId)
+                .createdAt(Instant.now())
+                .build());
+        return true;
     }
 
     /** Удаляет из кэша записи старше TTL (ленивая очистка при каждом обращении). */

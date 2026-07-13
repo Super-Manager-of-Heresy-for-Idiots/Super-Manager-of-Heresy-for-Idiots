@@ -20,6 +20,7 @@ import com.dnd.app.dto.request.ApplyCombatantHpRequest;
 import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
+import com.dnd.app.dto.request.BattleUseAbilityRequest;
 import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.CreateBattleRequest;
 import com.dnd.app.dto.request.InitiativeOrderRequest;
@@ -36,6 +37,9 @@ import com.dnd.app.dto.request.TrapTriggerRequest;
 import com.dnd.app.integration.map.MapTokenMover;
 import com.dnd.app.dto.request.UpdateBattleXpRequest;
 import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
+import com.dnd.app.dto.featurerule.BattleUseAbilityResult;
+import com.dnd.app.dto.featurerule.FeatureUseRequest;
+import com.dnd.app.dto.featurerule.FeatureUseResult;
 import com.dnd.app.dto.featurerule.SpellCastRequest;
 import com.dnd.app.dto.featurerule.SpellCastResult;
 import com.dnd.app.domain.StatType;
@@ -110,6 +114,9 @@ public class BattleService {
     private final ConditionService conditionService;
     private final BattleLogService battleLogService;
     private final SpellCastService spellCastService;
+    private final FeatureUseService featureUseService;
+    private final ItemAbilityUseService itemAbilityUseService;
+    private final CombatFeatureExecutionService combatFeatureExecutionService;
     private final StatTypeRepository statTypeRepository;
     private final FeatureEffectService featureEffectService;
     private final com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
@@ -711,6 +718,152 @@ public class BattleService {
         return result;
     }
 
+    /**
+     * Выполняет активное умение персонажа в бою через общий feature-rules runtime.
+     *
+     * @param campaignId идентификатор кампании, в которой идет бой
+     * @param battleId идентификатор активного боя
+     * @param request параметры выбора умения, целей и режима броска урона
+     * @param username пользователь, который инициировал действие
+     * @return результат использования умения и актуальное состояние боя
+     */
+    @Transactional
+    public BattleUseAbilityResult useAbility(UUID campaignId, UUID battleId,
+            BattleUseAbilityRequest request, String username) {
+        if (request == null) {
+            throw new BadRequestException("Request body is required");
+        }
+        User user = getUser(username);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Abilities can only be used in an active battle");
+
+        List<BattleCombatant> combatants = combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId);
+        if (combatants.isEmpty()) {
+            throw new BadRequestException("Battle has no combatants");
+        }
+        BattleCombatant actor = combatants.get(clampIndex(battle.getCurrentTurnIndex(), combatants.size()));
+        enforceControls(campaignId, user, actor);
+        if (actor.getType() != CombatantType.CHARACTER || actor.getCharacter() == null) {
+            throw new BadRequestException("Only characters can use abilities in battle");
+        }
+        if (!commandDedupService.firstSeen(request.getClientCommandId())) {
+            return BattleUseAbilityResult.builder()
+                    .featureId(request.getFeatureId())
+                    .outcome("DUPLICATE")
+                    .battle(toResponse(battle, orderedCombatants(battleId)))
+                    .message("Ability command already processed")
+                    .build();
+        }
+
+        UUID primaryTargetId = request.getTargetCombatantId();
+        List<UUID> targetIds = request.getTargetCombatantIds();
+        if (targetIds != null && !targetIds.isEmpty()) {
+            for (UUID targetId : targetIds) {
+                ensureTargetInBattle(combatants, targetId, "Ability target does not belong to this battle: " + targetId);
+            }
+            primaryTargetId = targetIds.get(0);
+        } else if (primaryTargetId != null) {
+            ensureTargetInBattle(combatants, primaryTargetId, "Ability target does not belong to this battle");
+            targetIds = List.of(primaryTargetId);
+        } else {
+            targetIds = List.of();
+        }
+
+        boolean itemAbility = request.getItemInstanceId() != null;
+        FeatureExecutionPlan plan = itemAbility
+                ? itemAbilityUseService.plan(actor.getCharacter(), request.getItemInstanceId(), request.getFeatureId())
+                : combatFeatureExecutionService.plan(actor.getCharacter(), request.getFeatureId());
+        if (plan.isRequiresManualAdjudication()) {
+            Map<String, Object> manualPayload = new HashMap<>();
+            manualPayload.put("featureId", request.getFeatureId().toString());
+            manualPayload.put("outcome", "MANUAL_REQUIRED");
+            if (itemAbility) {
+                manualPayload.put("itemInstanceId", request.getItemInstanceId().toString());
+            }
+            battleLogService.append(battleId, campaignId, BattleLogType.FEATURE_USE, actor.getId(), primaryTargetId,
+                    manualPayload,
+                    BattleLogVisibility.GM_ONLY, user.getId());
+            return BattleUseAbilityResult.builder()
+                    .featureId(request.getFeatureId())
+                    .featureName(plan.getFeatureName())
+                    .outcome("MANUAL_REQUIRED")
+                    .targetCombatantId(primaryTargetId)
+                    .targetName(combatantName(combatants, primaryTargetId))
+                    .plan(plan)
+                    .battle(toResponse(battle, orderedCombatants(battleId)))
+                    .message("Ability requires manual adjudication")
+                    .build();
+        }
+
+        FeatureUseRequest useRequest = FeatureUseRequest.builder()
+                .combatId(battleId)
+                .targetIds(targetIds)
+                .build();
+        FeatureUseResult use = itemAbility
+                ? itemAbilityUseService.use(actor.getCharacter(), request.getItemInstanceId(), request.getFeatureId(), useRequest)
+                : featureUseService.use(actor.getCharacter(), request.getFeatureId(), useRequest);
+
+        int total = 0;
+        String modifier = null;
+        if (!targetIds.isEmpty()) {
+            for (UUID targetId : targetIds) {
+                SpellDamageSummary one = applyPlanOutcome(plan, targetId, actor, user, campaignId, battleId,
+                        request.getDamageRollMode(), request.getManualDamage(),
+                        BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL");
+                total += one.total();
+                if (one.modifier() != null) {
+                    modifier = one.modifier();
+                }
+            }
+        } else {
+            SpellDamageSummary one = applyPlanOutcome(plan, null, actor, user, campaignId, battleId,
+                    request.getDamageRollMode(), request.getManualDamage(),
+                    BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL");
+            if (one.applied()) {
+                total = one.total();
+                modifier = one.modifier();
+            }
+        }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("featureId", request.getFeatureId().toString());
+        payload.put("featureName", use.getFeatureName());
+        payload.put("outcome", "USED");
+        if (itemAbility) {
+            payload.put("itemInstanceId", request.getItemInstanceId().toString());
+        }
+        if (use.getActionType() != null) {
+            payload.put("actionType", use.getActionType());
+        }
+        if (primaryTargetId != null) {
+            payload.put("targetCombatantId", primaryTargetId.toString());
+        }
+        if (total > 0) {
+            payload.put("appliedDamage", total);
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.FEATURE_USE, actor.getId(), primaryTargetId,
+                payload, BattleLogVisibility.PUBLIC, user.getId());
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
+
+        return BattleUseAbilityResult.builder()
+                .featureId(use.getFeatureId())
+                .featureName(use.getFeatureName())
+                .actionType(use.getActionType())
+                .resourceKey(use.getResourceKey())
+                .resourceSpent(use.getResourceSpent())
+                .resourceRemaining(use.getResourceRemaining())
+                .logId(use.getLogId())
+                .outcome("USED")
+                .targetCombatantId(primaryTargetId)
+                .targetName(combatantName(combatants, primaryTargetId))
+                .plan(plan)
+                .appliedDamage(total > 0 ? total : null)
+                .appliedDamageModifier(modifier)
+                .battle(toResponse(battle, orderedCombatants(battleId)))
+                .message(use.getMessage())
+                .build();
+    }
+
     /** Total damage dealt to the spell target + the resistance modifier applied (for the cast result). */
     private record SpellDamageSummary(int total, String modifier) {
         boolean applied() {
@@ -719,6 +872,24 @@ public class BattleService {
         static SpellDamageSummary none() {
             return new SpellDamageSummary(0, null);
         }
+    }
+
+    private void ensureTargetInBattle(List<BattleCombatant> combatants, UUID targetId, String message) {
+        boolean inBattle = combatants.stream().anyMatch(c -> c.getId().equals(targetId));
+        if (!inBattle) {
+            throw new BadRequestException(message);
+        }
+    }
+
+    private String combatantName(List<BattleCombatant> combatants, UUID combatantId) {
+        if (combatantId == null) {
+            return null;
+        }
+        return combatants.stream()
+                .filter(c -> c.getId().equals(combatantId))
+                .map(BattleCombatant::getDisplayName)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -733,6 +904,13 @@ public class BattleService {
     private SpellDamageSummary applySpellPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
             BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId,
             String damageRollMode, Integer manualDamage) {
+        return applyPlanOutcome(plan, targetCombatantId, casterCombatant, user, campaignId, battleId,
+                damageRollMode, manualDamage, BattleLogType.SPELL, "SPELL_DAMAGE_MANUAL");
+    }
+
+    private SpellDamageSummary applyPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
+            BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId,
+            String damageRollMode, Integer manualDamage, BattleLogType manualLogType, String manualEvent) {
         if (plan == null) {
             return SpellDamageSummary.none();
         }
@@ -756,7 +934,8 @@ public class BattleService {
                 // MANUAL applies the player's rolled total to the FIRST damage line; extra lines auto-roll.
                 Integer manualForLine = manual && i == 0 ? manualDamage : null;
                 SpellDamageSummary line = applySpellDamage(
-                        damages.get(i), target, saveAbilityCode, manualForLine, user, campaignId, battleId);
+                        damages.get(i), target, saveAbilityCode, manualForLine, user, campaignId, battleId,
+                        manualLogType, manualEvent);
                 totalDamage += line.total();
                 if (line.modifier() != null && !"NONE".equals(line.modifier())) {
                     modifier = line.modifier();
@@ -782,10 +961,11 @@ public class BattleService {
      * the target's resistance/immunity/vulnerability, then deal it. Returns the final damage + modifier.
      */
     private SpellDamageSummary applySpellDamage(FeatureExecutionPlan.Damage dmg, BattleCombatant target,
-            String saveAbilityCode, Integer manualDamage, User user, UUID campaignId, UUID battleId) {
+            String saveAbilityCode, Integer manualDamage, User user, UUID campaignId, UUID battleId,
+            BattleLogType manualLogType, String manualEvent) {
         // Attack-roll spells need a spell-attack bonus the plan does not carry → GM adjudicates.
         if (dmg.isRequiresAttackHit()) {
-            logSpellManual(battleId, campaignId, target, "attack_roll", user);
+            logSpellManual(battleId, campaignId, target, "attack_roll", user, manualLogType, manualEvent);
             return SpellDamageSummary.none();
         }
         int rolled;
@@ -805,7 +985,7 @@ public class BattleService {
 
         if (dmg.isRequiresSave() && dmg.getSaveDc() != null) {
             if (saveAbilityCode == null) {
-                logSpellManual(battleId, campaignId, target, "unresolved_save", user);
+                logSpellManual(battleId, campaignId, target, "unresolved_save", user, manualLogType, manualEvent);
                 return SpellDamageSummary.none();
             }
             int d20 = diceRoller.rollD20();
@@ -835,9 +1015,10 @@ public class BattleService {
         return new SpellDamageSummary(finalDamage, mit.modifier().name());
     }
 
-    private void logSpellManual(UUID battleId, UUID campaignId, BattleCombatant target, String reason, User user) {
-        battleLogService.append(battleId, campaignId, BattleLogType.SPELL, null, target.getId(),
-                Map.of("event", "SPELL_DAMAGE_MANUAL", "reason", reason), BattleLogVisibility.GM_ONLY, user.getId());
+    private void logSpellManual(UUID battleId, UUID campaignId, BattleCombatant target, String reason, User user,
+            BattleLogType manualLogType, String manualEvent) {
+        battleLogService.append(battleId, campaignId, manualLogType, null, target.getId(),
+                Map.of("event", manualEvent, "reason", reason), BattleLogVisibility.GM_ONLY, user.getId());
     }
 
     /**

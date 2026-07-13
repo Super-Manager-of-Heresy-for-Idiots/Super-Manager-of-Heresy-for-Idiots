@@ -76,6 +76,9 @@ class BattleServiceDeathSaveTest {
                 mock(ConditionService.class),
                 mock(BattleLogService.class),
                 mock(SpellCastService.class),
+                mock(FeatureUseService.class),
+                mock(ItemAbilityUseService.class),
+                mock(CombatFeatureExecutionService.class),
                 mock(StatTypeRepository.class),
                 mock(FeatureEffectService.class),
                 mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
