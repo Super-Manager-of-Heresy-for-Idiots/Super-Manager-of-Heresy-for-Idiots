@@ -1,12 +1,9 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
-import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.dto.response.HomebrewPackageResponse;
 import com.dnd.app.exception.AccessDeniedException;
-import com.dnd.app.exception.BadRequestException;
-import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.GmHomebrewLibraryRepository;
 import com.dnd.app.repository.HomebrewPackageRepository;
@@ -47,53 +44,8 @@ public class HomebrewLibraryService {
                 .toList();
     }
 
-    /**
-     * Добавляет результат операции "add to library" в рамках бизнес-логики домена.
-     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
-     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
-     */
-    @Transactional
-    public void addToLibrary(UUID packageId, String username) {
-        User user = getUser(username);
-        enforceGmOrAdmin(user);
-
-        HomebrewPackage pkg = packageRepository.findById(packageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Homebrew package not found"));
-
-        if (pkg.getStatus() != HomebrewStatus.PUBLISHED) {
-            throw new BadRequestException("Can only add published packages to library");
-        }
-
-        if (libraryRepository.existsByGmUserIdAndPackageId(user.getId(), packageId)) {
-            throw new DuplicateResourceException("Package is already in your library");
-        }
-
-        GmHomebrewLibrary entry = GmHomebrewLibrary.builder()
-                .gmUserId(user.getId())
-                .packageId(packageId)
-                .build();
-        libraryRepository.save(entry);
-
-        log.info("Package added to GM library: packageId={}, gmUser={}", packageId, username);
-    }
-
-    /**
-     * Удаляет результат операции "remove from library" в рамках бизнес-логики домена.
-     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
-     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
-     */
-    @Transactional
-    public void removeFromLibrary(UUID packageId, String username) {
-        User user = getUser(username);
-        enforceGmOrAdmin(user);
-
-        if (!libraryRepository.existsByGmUserIdAndPackageId(user.getId(), packageId)) {
-            throw new ResourceNotFoundException("Package not found in your library");
-        }
-
-        libraryRepository.deleteByGmUserIdAndPackageId(user.getId(), packageId);
-        log.info("Package removed from GM library: packageId={}, gmUser={}", packageId, username);
-    }
+    // NB: addToLibrary/removeFromLibrary («в библиотеку без установки») удалены при аудите эндпоинтов —
+    // не имели потребителей на FE (install уже добавляет в библиотеку). См. docs/HB_EP_AUDIT.md.
 
     // --- Private helpers ---
 

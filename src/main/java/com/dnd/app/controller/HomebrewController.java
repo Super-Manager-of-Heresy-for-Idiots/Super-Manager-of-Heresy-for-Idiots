@@ -435,36 +435,6 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
-    /**
-     * Добавляет результат операции "add to library" в рамках бизнес-логики API.
-     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
-     * @param auth входящее значение auth, используемое бизнес-сценарием
-     * @return результат выполнения бизнес-операции
-     */
-    @PostMapping("/library/{packageId}")
-    @Operation(summary = "Add package to GM library")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> addToLibrary(
-            @PathVariable UUID packageId, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            libraryService.addToLibrary(packageId, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.ok(null, "Package added to library"));
-        }, controllerTaskExecutor);
-    }
-
-    /**
-     * Удаляет результат операции "remove from library" в рамках бизнес-логики API.
-     * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта
-     * @param auth входящее значение auth, используемое бизнес-сценарием
-     * @return результат выполнения бизнес-операции
-     */
-    @DeleteMapping("/library/{packageId}")
-    @Operation(summary = "Remove package from GM library")
-    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeFromLibrary(
-            @PathVariable UUID packageId, Authentication auth) {
-        return CompletableFuture.supplyAsync(() -> {
-            libraryService.removeFromLibrary(packageId, auth.getName());
-            return ResponseEntity.ok(ApiResponse.ok(null, "Package removed from library"));
-        }, controllerTaskExecutor);
-    }
+    // NB: POST/DELETE /library/{packageId} («в библиотеку без установки») удалены при аудите эндпоинтов —
+    // потребителей на FE не было (install уже добавляет в библиотеку). См. docs/HB_EP_AUDIT.md.
 }
