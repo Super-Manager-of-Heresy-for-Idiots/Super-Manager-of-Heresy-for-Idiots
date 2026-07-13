@@ -64,9 +64,11 @@
         <addForeignKeyConstraint baseTableName="feature_item_binding" baseColumnNames="feature_rule_id"
                                  referencedTableName="feature_rule" referencedColumnNames="id"
                                  constraintName="fk_feature_item_binding_rule" onDelete="CASCADE"/>
-        <addCheckConstraint tableName="feature_item_binding"
-                            constraintName="chk_feature_item_binding_quantity_positive"
-                            checkConstraint="consume_quantity &gt; 0"/>
+        <sql>
+            ALTER TABLE feature_item_binding
+                ADD CONSTRAINT chk_feature_item_binding_quantity_positive
+                CHECK (consume_quantity &gt; 0);
+        </sql>
     </changeSet>
 
     <changeSet id="103-feature-resource-definition-scope" author="codex">
@@ -80,9 +82,11 @@
                 <constraints nullable="false"/>
             </column>
         </addColumn>
-        <addCheckConstraint tableName="feature_resource_definition"
-                            constraintName="chk_feature_resource_definition_scope"
-                            checkConstraint="scope in ('CHARACTER', 'ITEM_INSTANCE')"/>
+        <sql>
+            ALTER TABLE feature_resource_definition
+                ADD CONSTRAINT chk_feature_resource_definition_scope
+                CHECK (scope in ('CHARACTER', 'ITEM_INSTANCE'));
+        </sql>
     </changeSet>
 
     <changeSet id="103-item-instance-feature-resource" author="codex">
