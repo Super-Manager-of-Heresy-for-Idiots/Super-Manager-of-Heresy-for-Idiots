@@ -51,6 +51,13 @@ public class EnchantmentType {
     @JoinColumn(name = "buff_debuff_id")
     private BuffDebuff buffDebuff;
 
+    // IT-6: колонка homebrew_id есть в БД (idx_enchtype_homebrew_id), но entity её не видела — tech debt.
+    // Кампанийный резолвинг/авторинг энчантов — после релиза (низкий спрос); пока честно vanilla-only,
+    // но происхождение теперь читается корректно.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homebrew_id")
+    private HomebrewPackage homebrew;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -21,5 +21,7 @@ public enum ContentType {
     BACKGROUND,
     SPELL,
     PROFICIENCY_SKILL,
-    MONSTER
+    MONSTER,
+    /** Единый homebrew-предмет (P1.5 / IT-2): валидатор резолвит id по equipment_item/magic_item/item_templates. */
+    ITEM
 }

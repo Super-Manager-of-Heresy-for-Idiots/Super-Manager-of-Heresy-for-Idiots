@@ -16,4 +16,9 @@ public interface MagicItemRepository extends JpaRepository<MagicItem, UUID> {
     List<MagicItem> findAllByHomebrewIsNull();
 
     List<MagicItem> findAllByHomebrewIdIn(Set<UUID> packageIds);
+
+    // --- P1.5 / IT-2: авторинг magic-item в пакете ---
+    java.util.Optional<MagicItem> findByIdAndHomebrew_Id(UUID id, UUID homebrewId);
+
+    boolean existsBySlugAndHomebrew_Id(String slug, UUID homebrewId);
 }
