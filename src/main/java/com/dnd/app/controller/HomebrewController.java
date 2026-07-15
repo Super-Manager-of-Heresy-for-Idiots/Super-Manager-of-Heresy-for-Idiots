@@ -211,6 +211,76 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
+    // === P1-6: правка/удаление сущностей контента пакета ===
+
+    @PutMapping("/my/{packageId}/content/item-types/{itemTypeId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> updatePackageItemType(
+            @PathVariable UUID packageId, @PathVariable UUID itemTypeId,
+            @Valid @RequestBody CreateItemTypeRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.updatePackageItemType(packageId, itemTypeId, request, auth.getName()),
+                "Тип предмета обновлён")), controllerTaskExecutor);
+    }
+
+    @PutMapping("/my/{packageId}/content/skills/{skillId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> updatePackageSkill(
+            @PathVariable UUID packageId, @PathVariable UUID skillId,
+            @Valid @RequestBody CreateSkillRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.updatePackageSkill(packageId, skillId, request, auth.getName()),
+                "Умение обновлено")), controllerTaskExecutor);
+    }
+
+    @PutMapping("/my/{packageId}/content/feats/{featId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> updatePackageFeat(
+            @PathVariable UUID packageId, @PathVariable UUID featId,
+            @Valid @RequestBody CreateFeatRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.updatePackageFeat(packageId, featId, request, auth.getName()),
+                "Черта обновлена")), controllerTaskExecutor);
+    }
+
+    @PutMapping("/my/{packageId}/content/buffs-debuffs/{buffDebuffId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> updatePackageBuffDebuff(
+            @PathVariable UUID packageId, @PathVariable UUID buffDebuffId,
+            @Valid @RequestBody CreateBuffDebuffRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.updatePackageBuffDebuff(packageId, buffDebuffId, request, auth.getName()),
+                "Бафф/дебафф обновлён")), controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/my/{packageId}/content/item-types/{entityId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> deletePackageItemType(
+            @PathVariable UUID packageId, @PathVariable UUID entityId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.deletePackageContentEntity(packageId, "ITEM_TYPE", entityId, auth.getName()),
+                "Тип предмета удалён")), controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/my/{packageId}/content/skills/{entityId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> deletePackageSkill(
+            @PathVariable UUID packageId, @PathVariable UUID entityId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.deletePackageContentEntity(packageId, "SKILL", entityId, auth.getName()),
+                "Умение удалено")), controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/my/{packageId}/content/feats/{entityId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> deletePackageFeat(
+            @PathVariable UUID packageId, @PathVariable UUID entityId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.deletePackageContentEntity(packageId, "FEAT", entityId, auth.getName()),
+                "Черта удалена")), controllerTaskExecutor);
+    }
+
+    @DeleteMapping("/my/{packageId}/content/buffs-debuffs/{entityId}")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> deletePackageBuffDebuff(
+            @PathVariable UUID packageId, @PathVariable UUID entityId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> ResponseEntity.ok(ApiResponse.ok(
+                authoringService.deletePackageContentEntity(packageId, "BUFF_DEBUFF", entityId, auth.getName()),
+                "Бафф/дебафф удалён")), controllerTaskExecutor);
+    }
+
     // Legacy homebrew race authoring endpoints removed in S5 — homebrew species attach to a
     // package via the reference system (SpeciesContentValidator, content type "SPECIES").
 

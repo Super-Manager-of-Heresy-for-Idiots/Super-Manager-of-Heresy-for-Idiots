@@ -360,6 +360,183 @@ public class HomebrewAuthoringService {
         return toDetailResponse(packageRepository.findById(packageId).orElseThrow());
     }
 
+    // ===================== P1-6: правка/удаление сущностей контента пакета =====================
+    // Раньше у ITEM_TYPE/SKILL/FEAT/BUFF_DEBUFF был только create (write-once) — автор не мог исправить
+    // опечатку или удалить свою сущность. removeContent лишь ОТВЯЗЫВАЕТ item от пакета, а тут — правка/удаление
+    // самой сущности. Guard: автор пакета, статус DRAFT. DELETE — 409 при использовании (перехват FK-нарушения).
+
+    /**
+     * Обновляет homebrew-тип предмета в пакете.
+     * @param packageId идентификатор пакета
+     * @param itemTypeId идентификатор типа предмета
+     * @param request новые данные
+     * @param username автор
+     * @return обновлённый пакет
+     */
+    @Transactional
+    public HomebrewDetailResponse updatePackageItemType(UUID packageId, UUID itemTypeId, CreateItemTypeRequest request, String username) {
+        HomebrewPackage pkg = getEditablePackage(packageId, getRequiredGameMaster(username));
+        ItemType itemType = itemTypeRepository.findById(itemTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
+        requireOwnedByPackage(itemType.getHomebrew(), pkg, "Тип предмета");
+        if (!itemType.getName().equals(request.getName()) && itemTypeRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Тип предмета с таким названием уже существует");
+        }
+        validateDamageFields(request.getDamageDice(), request.getDamageType(), pkg);
+        validateItemTypeSkillFields(request.getSkillId(), request.getSkillActivation());
+        itemType.setName(request.getName());
+        itemType.setDescription(request.getDescription());
+        itemType.setSlot(parseSlot(request.getSlot(), pkg));
+        itemType.setDamageDice(request.getDamageDice());
+        itemType.setDamageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0);
+        itemType.setDamageType(parseDamageType(request.getDamageType(), pkg));
+        if (request.getSkillId() != null) {
+            itemType.setSkill(getAllowedPackageSkill(request.getSkillId(), pkg));
+            itemType.setSkillActivation(parseSkillActivation(request.getSkillActivation()));
+        } else {
+            itemType.setSkill(null);
+            itemType.setSkillActivation(null);
+        }
+        itemType.setUpdatedBy(pkg.getAuthor());
+        itemTypeRepository.save(itemType);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Обновляет homebrew-умение в пакете.
+     */
+    @Transactional
+    public HomebrewDetailResponse updatePackageSkill(UUID packageId, UUID skillId, CreateSkillRequest request, String username) {
+        HomebrewPackage pkg = getEditablePackage(packageId, getRequiredGameMaster(username));
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+        requireOwnedByPackage(skill.getHomebrew(), pkg, "Умение");
+        if (!skill.getName().equals(request.getName()) && skillRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Умение с таким названием уже существует");
+        }
+        validateDamageFields(request.getDamageDice(), request.getDamageType(), pkg);
+        skill.setName(request.getName());
+        skill.setDescription(request.getDescription());
+        skill.setSkillType(request.getSkillType());
+        skill.setDamageDice(request.getDamageDice());
+        skill.setDamageBonus(request.getDamageBonus() != null ? request.getDamageBonus() : 0);
+        skill.setDamageType(parseDamageType(request.getDamageType(), pkg));
+        skill.setUpdatedBy(pkg.getAuthor());
+        skillRepository.save(skill);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Обновляет homebrew-черту в пакете.
+     */
+    @Transactional
+    public HomebrewDetailResponse updatePackageFeat(UUID packageId, UUID featId, CreateFeatRequest request, String username) {
+        HomebrewPackage pkg = getEditablePackage(packageId, getRequiredGameMaster(username));
+        Feat feat = featRepository.findById(featId)
+                .orElseThrow(() -> new ResourceNotFoundException("Черта не найдена"));
+        requireOwnedByPackage(feat.getHomebrew(), pkg, "Черта");
+        if (!request.getName().equals(feat.getNameRu()) && featRepository.existsByNameRu(request.getName())) {
+            throw new DuplicateResourceException("Черта с таким названием уже существует");
+        }
+        feat.setNameRu(request.getName());
+        feat.setDescription(request.getDescription());
+        feat.setUpdatedBy(pkg.getAuthor());
+        featRepository.save(feat);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Обновляет homebrew-бафф/дебафф в пакете.
+     */
+    @Transactional
+    public HomebrewDetailResponse updatePackageBuffDebuff(UUID packageId, UUID buffDebuffId, CreateBuffDebuffRequest request, String username) {
+        HomebrewPackage pkg = getEditablePackage(packageId, getRequiredGameMaster(username));
+        BuffDebuff buffDebuff = buffDebuffRepository.findById(buffDebuffId)
+                .orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден"));
+        requireOwnedByPackage(buffDebuff.getHomebrew(), pkg, "Бафф/дебафф");
+        if (!buffDebuff.getName().equals(request.getName()) && buffDebuffRepository.existsByName(request.getName())) {
+            throw new DuplicateResourceException("Бафф/дебафф с таким названием уже существует");
+        }
+        if ("STAT_MODIFIER".equals(request.getEffectType()) && request.getTargetStatId() == null) {
+            throw new BadRequestException("Для эффекта STAT_MODIFIER нужно указать targetStatId");
+        }
+        buffDebuff.setName(request.getName());
+        buffDebuff.setDescription(request.getDescription());
+        buffDebuff.setEffectType(request.getEffectType());
+        buffDebuff.setModifierValue(request.getModifierValue());
+        buffDebuff.setDurationRounds(request.getDurationRounds());
+        buffDebuff.setIsBuff(request.getIsBuff());
+        if (request.getTargetStatId() != null) {
+            StatType statType = statTypeRepository.findById(request.getTargetStatId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Тип характеристики не найден: " + request.getTargetStatId()));
+            requireVanillaOrSamePackage(pkg, statType.getHomebrew(), "Характеристика");
+            buffDebuff.setTargetStat(statType);
+        } else {
+            buffDebuff.setTargetStat(null);
+        }
+        buffDebuff.setUpdatedBy(pkg.getAuthor());
+        buffDebuffRepository.save(buffDebuff);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Удаляет сущность контента пакета (сам объект + его content-item). 409 при использовании.
+     * @param packageId пакет
+     * @param contentType тип
+     * @param entityId идентификатор сущности
+     * @param username автор
+     * @return обновлённый пакет
+     */
+    @Transactional
+    public HomebrewDetailResponse deletePackageContentEntity(UUID packageId, String contentType, UUID entityId, String username) {
+        HomebrewPackage pkg = getEditablePackage(packageId, getRequiredGameMaster(username));
+        if (!validatorRegistry.isKnownType(contentType)) {
+            throw new BadRequestException("Неизвестный тип контента: " + contentType);
+        }
+        ContentType type = ContentType.valueOf(contentType);
+        Runnable deleteEntity;
+        switch (type) {
+            case ITEM_TYPE -> {
+                ItemType e = itemTypeRepository.findById(entityId).orElseThrow(() -> new ResourceNotFoundException("Тип предмета не найден"));
+                requireOwnedByPackage(e.getHomebrew(), pkg, "Тип предмета");
+                deleteEntity = () -> { itemTypeRepository.delete(e); itemTypeRepository.flush(); };
+            }
+            case SKILL -> {
+                Skill e = skillRepository.findById(entityId).orElseThrow(() -> new ResourceNotFoundException("Умение не найдено"));
+                requireOwnedByPackage(e.getHomebrew(), pkg, "Умение");
+                deleteEntity = () -> { skillRepository.delete(e); skillRepository.flush(); };
+            }
+            case FEAT -> {
+                Feat e = featRepository.findById(entityId).orElseThrow(() -> new ResourceNotFoundException("Черта не найдена"));
+                requireOwnedByPackage(e.getHomebrew(), pkg, "Черта");
+                deleteEntity = () -> { featRepository.delete(e); featRepository.flush(); };
+            }
+            case BUFF_DEBUFF -> {
+                BuffDebuff e = buffDebuffRepository.findById(entityId).orElseThrow(() -> new ResourceNotFoundException("Бафф/дебафф не найден"));
+                requireOwnedByPackage(e.getHomebrew(), pkg, "Бафф/дебафф");
+                deleteEntity = () -> { buffDebuffRepository.delete(e); buffDebuffRepository.flush(); };
+            }
+            default -> throw new BadRequestException("Удаление сущности этого типа не поддерживается: " + contentType);
+        }
+        // Сначала снимаем content-item(ы), затем удаляем сущность. FK-нарушение ⇒ 409.
+        contentItemRepository.findAllByHomebrewPackageId(packageId).stream()
+                .filter(ci -> ci.getContentType() == type && ci.getContentId().equals(entityId))
+                .forEach(contentItemRepository::delete);
+        try {
+            deleteEntity.run();
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            throw new DuplicateResourceException("Контент используется и не может быть удалён");
+        }
+        log.info("Homebrew content entity deleted: packageId={}, type={}, entityId={}, by={}", packageId, type, entityId, username);
+        return toDetailResponse(packageRepository.findById(packageId).orElseThrow());
+    }
+
+    private void requireOwnedByPackage(HomebrewPackage actual, HomebrewPackage expected, String label) {
+        if (actual == null || !actual.getId().equals(expected.getId())) {
+            throw new AccessDeniedException(label + " не принадлежит этому пакету");
+        }
+    }
+
     /**
      * Удаляет результат операции "remove content" в рамках бизнес-логики homebrew-контента.
      * @param packageId идентификатор package, используемый для выбора нужного бизнес-объекта

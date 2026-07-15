@@ -11,6 +11,8 @@ import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.service.ContentDictionaryResolver;
 import com.dnd.app.dto.request.CreateItemTypeRequest;
+import com.dnd.app.dto.response.AttachableContentResponse;
+import com.dnd.app.dto.response.ContentSummaryDto;
 import com.dnd.app.dto.response.HomebrewDetailResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
@@ -26,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,6 +101,68 @@ class HomebrewAuthoringServiceTest {
         assertSame(pkg, contentItem.getHomebrewPackage());
         assertEquals(ContentType.ITEM_TYPE, contentItem.getContentType());
         assertEquals(itemTypeId, contentItem.getContentId());
+    }
+
+    @Test
+    @DisplayName("updatePackageSkill: правит умение в своём DRAFT-пакете")
+    void updateSkill_editsOwnPackageSkill() {
+        UUID gmId = UUID.randomUUID();
+        UUID packageId = UUID.randomUUID();
+        UUID skillId = UUID.randomUUID();
+        User gm = user(gmId, "gm", Role.GAME_MASTER);
+        HomebrewPackage pkg = homebrewPackage(packageId, gm, HomebrewStatus.DRAFT);
+        com.dnd.app.domain.Skill skill = com.dnd.app.domain.Skill.builder()
+                .id(skillId).name("Старое имя").description("d").homebrew(pkg).build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(packageRepository.findById(packageId)).thenReturn(Optional.of(pkg));
+        when(skillRepository.findById(skillId)).thenReturn(Optional.of(skill));
+        when(skillRepository.existsByName("Новое имя")).thenReturn(false);
+        when(skillRepository.save(any(com.dnd.app.domain.Skill.class))).thenAnswer(i -> i.getArgument(0));
+        when(contentItemRepository.countByPackageGroupedByType(packageId)).thenReturn(List.of());
+        when(contentItemRepository.findAllByHomebrewPackageId(packageId)).thenReturn(List.of());
+
+        com.dnd.app.dto.request.CreateSkillRequest req = com.dnd.app.dto.request.CreateSkillRequest.builder()
+                .name("Новое имя").description("новое").skillType("combat").build();
+
+        service.updatePackageSkill(packageId, skillId, req, "gm");
+
+        assertEquals("Новое имя", skill.getName());
+        assertEquals("combat", skill.getSkillType());
+        assertSame(gm, skill.getUpdatedBy());
+    }
+
+    @Test
+    @DisplayName("listAttachableContent: контент автора из ДРУГИХ пакетов, исключая текущий")
+    void listAttachable_returnsCrossPackageContent() {
+        UUID gmId = UUID.randomUUID();
+        UUID targetPkgId = UUID.randomUUID();
+        UUID otherPkgId = UUID.randomUUID();
+        UUID skillId = UUID.randomUUID();
+        User gm = user(gmId, "gm", Role.GAME_MASTER);
+        HomebrewPackage target = homebrewPackage(targetPkgId, gm, HomebrewStatus.DRAFT);
+        HomebrewPackage other = homebrewPackage(otherPkgId, gm, HomebrewStatus.DRAFT);
+        other.setTitle("Package A");
+
+        HomebrewContentItem item = HomebrewContentItem.builder()
+                .homebrewPackage(other).contentType(ContentType.SKILL).contentId(skillId).build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(packageRepository.findByIdAndAuthorId(targetPkgId, gmId)).thenReturn(Optional.of(target));
+        when(validatorRegistry.isKnownType("SKILL")).thenReturn(true);
+        when(contentItemRepository.findContentIdsByPackageIdsAndType(Set.of(targetPkgId), ContentType.SKILL))
+                .thenReturn(Set.of());
+        when(contentItemRepository.findAttachableByAuthorAndType(gmId, ContentType.SKILL))
+                .thenReturn(List.of(item));
+        when(validatorRegistry.summarize("SKILL", skillId))
+                .thenReturn(ContentSummaryDto.builder().id(skillId).name("Огненный шар").description("desc").build());
+
+        List<AttachableContentResponse> result = service.listAttachableContent(targetPkgId, "SKILL", "gm");
+
+        assertEquals(1, result.size());
+        assertEquals("Огненный шар", result.get(0).getName());
+        assertEquals(otherPkgId, result.get(0).getSourcePackageId());
+        assertEquals("Package A", result.get(0).getSourcePackageTitle());
     }
 
     @Test
