@@ -71,4 +71,13 @@ public class CustomResourceType {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "feat_bound_id")
     private Feat featBound;
+
+    // Авторство (P1-4): кто создал/изменил homebrew-ресурс; null для ванильных строк (колонки из миграции 105).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
 }

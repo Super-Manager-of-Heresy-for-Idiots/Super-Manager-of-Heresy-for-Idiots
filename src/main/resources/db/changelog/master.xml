@@ -176,4 +176,7 @@
     <!-- ABIL: replay body for idempotent battle commands such as use-ability. -->
     <include file="db/changelog/107-battle-command-replay.xml"/>
 
+    <!-- P1-4 хвост: created_by/updated_by на magic_item, equipment_item, background (IT-2/IT-3 + P2-3). -->
+    <include file="db/changelog/108-item-background-created-by.xml"/>
+
 </databaseChangeLog>

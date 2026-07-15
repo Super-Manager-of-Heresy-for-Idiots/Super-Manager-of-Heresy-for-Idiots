@@ -3,6 +3,7 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.content.BackgroundDetailResponse;
 import com.dnd.app.dto.content.EquipmentItemDetailResponse;
 import com.dnd.app.dto.content.FeatDetailResponse;
+import com.dnd.app.dto.content.ItemDefinitionResponse;
 import com.dnd.app.dto.content.MagicItemDetailResponse;
 import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.dto.response.ApiResponse;
@@ -421,6 +422,84 @@ public class ContentCatalogController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 contentCatalogService.getCampaignMagicItem(campaignId, magicItemId, auth.getName(), lang))),
+                controllerTaskExecutor);
+    }
+
+    // --- unified item definitions (IT-1): equipment + magic + legacy template ---
+
+    /**
+     * Возвращает единый ванильный каталог «Предметов» (IT-1): снаряжение + магические + легаси-шаблоны в одном списке.
+     * @param lang язык локализации меток
+     * @return унифицированный список определений предметов
+     */
+    @GetMapping({"/api/reference/items", "/api/reference/content/items"})
+    @Operation(summary = "Get core (vanilla) unified item definitions (equipment + magic + legacy template)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ItemDefinitionResponse>>>> getVanillaItems(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(contentCatalogService.getVanillaItems(lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает единое ванильное определение предмета по id (резолв по трём таблицам).
+     * @param itemId идентификатор предмета
+     * @param lang язык локализации меток
+     * @return унифицированное определение предмета
+     */
+    @GetMapping({"/api/reference/items/{itemId}", "/api/reference/content/items/{itemId}"})
+    @Operation(summary = "Get a single core (vanilla) unified item definition")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemDefinitionResponse>>> getVanillaItem(
+            @PathVariable UUID itemId,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(contentCatalogService.getVanillaItem(itemId, lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает единый каталог «Предметов» для кампании (IT-1): ваниль + активные homebrew-пакеты кампании.
+     * @param campaignId идентификатор кампании
+     * @param lang язык локализации меток
+     * @param auth аутентификация (проверка доступа к кампании)
+     * @return унифицированный список определений предметов, видимых в кампании
+     */
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/items",
+            "/api/campaigns/{campaignId}/reference/content/items"
+    })
+    @Operation(summary = "Get campaign-visible unified item definitions (core + active homebrew)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ItemDefinitionResponse>>>> getCampaignItems(
+            @PathVariable UUID campaignId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                contentCatalogService.getCampaignItems(campaignId, auth.getName(), lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает единое определение предмета в контексте кампании (резолв по трём таблицам + проверка видимости).
+     * @param campaignId идентификатор кампании
+     * @param itemId идентификатор предмета
+     * @param lang язык локализации меток
+     * @param auth аутентификация (проверка доступа)
+     * @return унифицированное определение предмета
+     */
+    @GetMapping({
+            "/api/campaigns/{campaignId}/reference/items/{itemId}",
+            "/api/campaigns/{campaignId}/reference/content/items/{itemId}"
+    })
+    @Operation(summary = "Get a single campaign-visible unified item definition")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemDefinitionResponse>>> getCampaignItem(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID itemId,
+            @RequestParam(defaultValue = "en") String lang,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                contentCatalogService.getCampaignItem(campaignId, itemId, auth.getName(), lang))),
                 controllerTaskExecutor);
     }
 }

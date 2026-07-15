@@ -20,4 +20,7 @@ public interface CustomResourceTypeRepository extends JpaRepository<CustomResour
 
     /** Resources bound to any of the given feats (custom_resource_types.feat_bound_id). */
     List<CustomResourceType> findByFeatBound_IdIn(Collection<UUID> featIds);
+
+    /** Проверка дубля названия ресурса в пределах пакета (авторинг P2-3). */
+    boolean existsByNameIgnoreCaseAndHomebrew_Id(String name, UUID homebrewId);
 }

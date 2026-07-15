@@ -59,6 +59,15 @@ public class Background {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    // Авторство (P1-4): кто создал/изменил homebrew-предысторию; null для ванильных строк.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "background_ability_option",

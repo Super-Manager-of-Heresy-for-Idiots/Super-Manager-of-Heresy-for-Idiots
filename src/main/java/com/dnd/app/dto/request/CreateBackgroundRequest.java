@@ -23,9 +23,13 @@ public class CreateBackgroundRequest {
     @Size(max = 100)
     private String name;
 
+    private String nameEn;
+
     private String description;
 
+    /** Названия навыков-владений (резолвятся по name_ru таблицы skill). */
     private List<String> skillProficiencyNames;
 
+    /** Свободный текст доп. владений/снаряжения (инструменты, языки и т. п.); дополняет описание. */
     private String grantedExtras;
 }

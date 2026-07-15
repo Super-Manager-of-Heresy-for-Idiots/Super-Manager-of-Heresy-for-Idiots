@@ -211,6 +211,40 @@ public class HomebrewController {
         }, controllerTaskExecutor);
     }
 
+    /**
+     * Создаёт homebrew-предысторию в пакете (P2-3).
+     * @param packageId идентификатор пакета
+     * @param request тело предыстории
+     * @param auth аутентификация автора
+     * @return обновлённая детальная модель пакета
+     */
+    @PostMapping("/my/{packageId}/content/backgrounds")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageBackground(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateBackgroundRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageBackground(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Предыстория добавлена в пакет"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Создаёт homebrew-ресурс в пакете (P2-3) — механизм Ярость/Ки (custom_resource_types).
+     * @param packageId идентификатор пакета
+     * @param request тело ресурса
+     * @param auth аутентификация автора
+     * @return обновлённая детальная модель пакета
+     */
+    @PostMapping("/my/{packageId}/content/custom-resources")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> createPackageCustomResourceType(
+            @PathVariable UUID packageId, @Valid @RequestBody CreateCustomResourceTypeRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.createPackageCustomResourceType(packageId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(data, "Ресурс добавлен в пакет"));
+        }, controllerTaskExecutor);
+    }
+
     // === P1-6: правка/удаление сущностей контента пакета ===
 
     @PutMapping("/my/{packageId}/content/item-types/{itemTypeId}")

@@ -1,6 +1,8 @@
 package com.dnd.app.service.homebrew;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.content.ContentCharacterClass;
+import com.dnd.app.domain.content.ContentSkill;
 import com.dnd.app.domain.enums.ContentType;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
@@ -44,6 +46,10 @@ public class HomebrewAuthoringService {
     private final FeatRepository featRepository;
     private final BuffDebuffRepository buffDebuffRepository;
     private final StatTypeRepository statTypeRepository;
+    private final BackgroundRepository backgroundRepository;
+    private final ContentSkillRepository contentSkillRepository;
+    private final CustomResourceTypeRepository customResourceTypeRepository;
+    private final ContentCharacterClassRepository contentCharacterClassRepository;
     private final com.dnd.app.service.ContentDictionaryResolver contentDictionaryResolver;
 
     /**
@@ -340,6 +346,124 @@ public class HomebrewAuthoringService {
         Feat saved = featRepository.save(feat);
         attachContentItem(pkg, ContentType.FEAT, saved.getId(), username);
         return toDetailResponse(pkg);
+    }
+
+    /**
+     * Создаёт homebrew-предысторию в пакете (P2-3). Навыки-владения резолвятся по русским названиям; свободный
+     * текст доп. владений {@code grantedExtras} дописывается в описание (структурные опции — follow-up).
+     * @param packageId идентификатор пакета-владельца (DRAFT)
+     * @param request тело: название, (EN), описание, названия навыков-владений, доп. текст
+     * @param username автор (GM, владелец пакета)
+     * @return обновлённая детальная модель пакета
+     */
+    @Transactional
+    public HomebrewDetailResponse createPackageBackground(UUID packageId, CreateBackgroundRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (backgroundRepository.existsByNameRu(request.getName())) {
+            throw new DuplicateResourceException("Предыстория с таким названием уже существует");
+        }
+
+        List<ContentSkill> skills = (request.getSkillProficiencyNames() == null || request.getSkillProficiencyNames().isEmpty())
+                ? new ArrayList<>()
+                : new ArrayList<>(contentSkillRepository.findByNameRuIn(request.getSkillProficiencyNames()));
+
+        String description = request.getDescription();
+        if (request.getGrantedExtras() != null && !request.getGrantedExtras().isBlank()) {
+            description = (description == null || description.isBlank())
+                    ? request.getGrantedExtras()
+                    : description + "\n\n" + request.getGrantedExtras();
+        }
+
+        Background bg = Background.builder()
+                .slug(slugify(request.getName()))
+                .nameRu(request.getName())
+                .nameEn(request.getNameEn())
+                .description(description)
+                .homebrew(pkg)
+                .createdBy(pkg.getAuthor())
+                .updatedBy(pkg.getAuthor())
+                .skillProficiencies(skills)
+                .build();
+        Background saved = backgroundRepository.save(bg);
+        attachContentItem(pkg, ContentType.BACKGROUND, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Создаёт homebrew-ресурс в пакете (P2-3) — тот же механизм, что Ярость/Ки (custom_resource_types).
+     * Максимум задаётся числом или DSL-формулой; восстановление на коротком/длинном отдыхе валидируется
+     * (none|full|formula, при formula требуется соответствующая формула). Опциональная привязка к классу.
+     * @param packageId идентификатор пакета-владельца (DRAFT)
+     * @param request тело ресурса
+     * @param username автор (GM, владелец пакета)
+     * @return обновлённая детальная модель пакета
+     */
+    @Transactional
+    public HomebrewDetailResponse createPackageCustomResourceType(UUID packageId, CreateCustomResourceTypeRequest request, String username) {
+        User gm = getRequiredGameMaster(username);
+        HomebrewPackage pkg = getEditablePackage(packageId, gm);
+
+        if (customResourceTypeRepository.existsByNameIgnoreCaseAndHomebrew_Id(request.getName(), pkg.getId())) {
+            throw new DuplicateResourceException("Ресурс с таким названием уже существует в пакете");
+        }
+
+        String shortRecovery = normalizeRecovery(request.getShortRestRecovery(), request.getShortRestFormula(), "короткого");
+        String longRecovery = normalizeRecovery(request.getLongRestRecovery(), request.getLongRestFormula(), "длинного");
+
+        ContentCharacterClass classBound = null;
+        if (request.getClassBoundId() != null) {
+            classBound = contentCharacterClassRepository.findById(request.getClassBoundId())
+                    .orElseThrow(() -> new BadRequestException("Класс для привязки не найден: " + request.getClassBoundId()));
+        }
+
+        CustomResourceType resource = CustomResourceType.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .maxValue(request.getMaxValue())
+                .maxFormula(request.getMaxFormula())
+                .resetOn("none")
+                .shortRestRecovery(shortRecovery)
+                .shortRestFormula("formula".equals(shortRecovery) ? request.getShortRestFormula() : null)
+                .longRestRecovery(longRecovery)
+                .longRestFormula("formula".equals(longRecovery) ? request.getLongRestFormula() : null)
+                .homebrew(pkg)
+                .classBound(classBound)
+                .createdBy(pkg.getAuthor())
+                .updatedBy(pkg.getAuthor())
+                .build();
+        CustomResourceType saved = customResourceTypeRepository.save(resource);
+        attachContentItem(pkg, ContentType.CUSTOM_RESOURCE, saved.getId(), username);
+        return toDetailResponse(pkg);
+    }
+
+    /**
+     * Нормализует правило восстановления ресурса: none|full|formula (по умолчанию none); при formula требует формулу.
+     * @param recovery входное правило
+     * @param formula формула (нужна при formula)
+     * @param restLabel подпись отдыха для сообщения об ошибке
+     * @return нормализованное правило
+     */
+    private String normalizeRecovery(String recovery, String formula, String restLabel) {
+        String norm = (recovery == null || recovery.isBlank()) ? "none" : recovery.toLowerCase(Locale.ROOT);
+        if (!Set.of("none", "full", "formula").contains(norm)) {
+            throw new BadRequestException("Правило восстановления должно быть none|full|formula");
+        }
+        if ("formula".equals(norm) && (formula == null || formula.isBlank())) {
+            throw new BadRequestException("Для восстановления по формуле (" + restLabel + " отдыха) нужна формула");
+        }
+        return norm;
+    }
+
+    private String slugify(String s) {
+        if (s == null || s.isBlank()) {
+            return "bg-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        String slug = s.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9а-я]+", "-")
+                .replaceAll("(^-+)|(-+$)", "");
+        return slug.isBlank() ? "bg-" + UUID.randomUUID().toString().substring(0, 8) : slug;
     }
 
     /**

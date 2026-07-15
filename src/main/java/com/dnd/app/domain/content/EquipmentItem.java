@@ -1,6 +1,7 @@
 package com.dnd.app.domain.content;
 
 import com.dnd.app.domain.HomebrewPackage;
+import com.dnd.app.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -65,6 +66,15 @@ public class EquipmentItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
+
+    // Авторство (P1-4): кто создал/изменил homebrew-снаряжение; null для ванильных строк.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
 
     @OneToOne(mappedBy = "equipmentItem", fetch = FetchType.LAZY)
     private WeaponStat weaponStat;

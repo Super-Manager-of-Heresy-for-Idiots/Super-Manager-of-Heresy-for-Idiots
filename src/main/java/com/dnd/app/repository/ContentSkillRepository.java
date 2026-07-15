@@ -21,4 +21,7 @@ public interface ContentSkillRepository extends JpaRepository<ContentSkill, UUID
     List<ContentSkill> findAllByHomebrewIdIn(Set<UUID> homebrewIds);
 
     List<ContentSkill> findAllByIdIn(Set<UUID> ids);
+
+    /** Резолвинг навыков-владений по русским названиям (авторинг предыстории, P2-3). */
+    List<ContentSkill> findByNameRuIn(List<String> nameRu);
 }

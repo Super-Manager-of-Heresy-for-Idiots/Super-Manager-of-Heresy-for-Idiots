@@ -6,10 +6,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
  * DTO HomebrewItemResponse — единый homebrew-предмет (P1.5 / IT-2), пригодный для round-trip в редакторе.
+ * Несёт как magic-поля (rarity/attunement), так и equipment-поля (вид/категория/стоимость/вес + weapon/armor секции)
+ * для лосслесс-префилла формы правки.
  */
 @Data
 @Builder
@@ -23,9 +26,32 @@ public class HomebrewItemResponse {
     private String name;
     private String nameEn;
     private String description;
+
+    // --- MAGIC ---
     private String rarity;
     private Boolean attunementRequired;
     private String attunementRequirement;
+
+    // --- EQUIPMENT: общее ---
+    private String equipmentKind;
+    private String category;
+    private BigDecimal costGold;
+    private BigDecimal weightLb;
+
+    // --- EQUIPMENT: weapon ---
+    private Integer damageDiceCount;
+    private Integer damageDieSize;
+    private Integer damageBonus;
+    private String damageType;
+    private Integer flatDamage;
+
+    // --- EQUIPMENT: armor ---
+    private Integer baseAc;
+    private Boolean dexBonusAllowed;
+    private Integer maxDexBonus;
+    private Integer strengthRequired;
+    private Boolean stealthDisadvantage;
+
     private String source;
     private UUID homebrewPackageId;
     private String homebrewPackageTitle;

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      P1-4 хвост: авторство (created_by / updated_by → users, ON DELETE SET NULL) на homebrew-авторируемый контент,
+      добавленный после миграций 101/105 — magic_item, equipment_item, background (IT-2/IT-3 предметы, P2-3 предыстории).
+      custom_resource_types уже покрыт миграцией 105. Колонки nullable (у ванильных строк автора нет).
+      Бэкфилл: created_by/updated_by = автор пакета-владельца (по homebrew_id); ванильные строки остаются NULL.
+    -->
+    <changeSet id="108-item-background-created-by" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.magic_item     ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.equipment_item ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+            ALTER TABLE public.background     ADD COLUMN IF NOT EXISTS created_by uuid, ADD COLUMN IF NOT EXISTS updated_by uuid;
+
+            ALTER TABLE public.magic_item     ADD CONSTRAINT fk_magic_item_created_by     FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.magic_item     ADD CONSTRAINT fk_magic_item_updated_by     FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.equipment_item ADD CONSTRAINT fk_equipment_item_created_by FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.equipment_item ADD CONSTRAINT fk_equipment_item_updated_by FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.background     ADD CONSTRAINT fk_background_created_by      FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+            ALTER TABLE public.background     ADD CONSTRAINT fk_background_updated_by      FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+            UPDATE public.magic_item     m SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE m.homebrew_id = hp.id AND m.created_by IS NULL;
+            UPDATE public.equipment_item e SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE e.homebrew_id = hp.id AND e.created_by IS NULL;
+            UPDATE public.background     b SET created_by = hp.author_id, updated_by = hp.author_id FROM public.homebrew_packages hp WHERE b.homebrew_id = hp.id AND b.created_by IS NULL;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.magic_item     DROP CONSTRAINT IF EXISTS fk_magic_item_created_by,     DROP CONSTRAINT IF EXISTS fk_magic_item_updated_by;
+                ALTER TABLE public.equipment_item DROP CONSTRAINT IF EXISTS fk_equipment_item_created_by, DROP CONSTRAINT IF EXISTS fk_equipment_item_updated_by;
+                ALTER TABLE public.background     DROP CONSTRAINT IF EXISTS fk_background_created_by,      DROP CONSTRAINT IF EXISTS fk_background_updated_by;
+                ALTER TABLE public.magic_item     DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.equipment_item DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+                ALTER TABLE public.background     DROP COLUMN IF EXISTS created_by, DROP COLUMN IF EXISTS updated_by;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -4,12 +4,16 @@ import com.dnd.app.domain.Background;
 import com.dnd.app.domain.Campaign;
 import com.dnd.app.domain.Feat;
 import com.dnd.app.domain.Spell;
+import com.dnd.app.domain.ItemTemplate;
+import com.dnd.app.domain.Rarity;
 import com.dnd.app.domain.User;
 import com.dnd.app.domain.content.EquipmentItem;
 import com.dnd.app.domain.content.MagicItem;
 import com.dnd.app.dto.content.BackgroundDetailResponse;
+import com.dnd.app.dto.content.ContentLabelDto;
 import com.dnd.app.dto.content.EquipmentItemDetailResponse;
 import com.dnd.app.dto.content.FeatDetailResponse;
+import com.dnd.app.dto.content.ItemDefinitionResponse;
 import com.dnd.app.dto.content.MagicItemDetailResponse;
 import com.dnd.app.dto.content.SpellDetailResponse;
 import com.dnd.app.exception.ResourceNotFoundException;
@@ -22,9 +26,11 @@ import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.EquipmentItemRepository;
 import com.dnd.app.repository.FeatRepository;
+import com.dnd.app.repository.ItemTemplateRepository;
 import com.dnd.app.repository.MagicItemRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.util.HomebrewOrigin;
 import com.dnd.app.util.Localization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +61,7 @@ public class ContentCatalogService {
     private final EquipmentItemMapper equipmentItemMapper;
     private final MagicItemRepository magicItemRepository;
     private final MagicItemMapper magicItemMapper;
+    private final ItemTemplateRepository itemTemplateRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
@@ -422,6 +429,178 @@ public class ContentCatalogService {
                 .orElseThrow(() -> new ResourceNotFoundException("Magic item not found"));
         enforceMagicItemVisibleInCampaign(campaignId, item);
         return magicItemMapper.toDetail(item, resolvedLang);
+    }
+
+    // --- unified item definitions (IT-1): equipment + magic + legacy template ---
+
+    /**
+     * Возвращает единый ванильный каталог «Предметов» (IT-1): снаряжение + магические + легаси-шаблоны,
+     * сведённые к {@link ItemDefinitionResponse} с дискриминатором kind. Только core-контент (homebrew IS NULL).
+     * @param lang язык локализации меток
+     * @return список унифицированных определений предметов
+     */
+    @Transactional(readOnly = true)
+    public List<ItemDefinitionResponse> getVanillaItems(String lang) {
+        String resolvedLang = Localization.normalize(lang);
+        List<ItemDefinitionResponse> out = new ArrayList<>();
+        equipmentItemRepository.findAllByHomebrewIsNull()
+                .forEach(e -> out.add(ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(e, resolvedLang))));
+        magicItemRepository.findAllByHomebrewIsNull()
+                .forEach(m -> out.add(ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(m, resolvedLang))));
+        itemTemplateRepository.findByHomebrewIsNull()
+                .forEach(t -> out.add(toTemplateDefinition(t, resolvedLang)));
+        return out;
+    }
+
+    /**
+     * Возвращает единое ванильное определение предмета по id, резолвя его по трём таблицам
+     * (magic_item / equipment_item / item_templates). Homebrew-строки при этом трактуются как «не найдено».
+     * @param itemId идентификатор предмета в любой из трёх таблиц
+     * @param lang язык локализации меток
+     * @return унифицированное определение предмета
+     */
+    @Transactional(readOnly = true)
+    public ItemDefinitionResponse getVanillaItem(UUID itemId, String lang) {
+        String resolvedLang = Localization.normalize(lang);
+        MagicItem magic = magicItemRepository.findById(itemId).orElse(null);
+        if (magic != null) {
+            if (magic.getHomebrew() != null) {
+                throw new ResourceNotFoundException("Item not found");
+            }
+            return ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(magic, resolvedLang));
+        }
+        EquipmentItem equip = equipmentItemRepository.findById(itemId).orElse(null);
+        if (equip != null) {
+            if (equip.getHomebrew() != null) {
+                throw new ResourceNotFoundException("Item not found");
+            }
+            return ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(equip, resolvedLang));
+        }
+        ItemTemplate template = itemTemplateRepository.findById(itemId).orElse(null);
+        if (template != null) {
+            if (template.getHomebrew() != null) {
+                throw new ResourceNotFoundException("Item not found");
+            }
+            return toTemplateDefinition(template, resolvedLang);
+        }
+        throw new ResourceNotFoundException("Item not found");
+    }
+
+    /**
+     * Возвращает единый каталог «Предметов» для кампании (IT-1): ваниль + активные homebrew-пакеты кампании,
+     * по всем трём таблицам, сведённые к {@link ItemDefinitionResponse}.
+     * @param campaignId идентификатор кампании
+     * @param username пользователь (проверка доступа к кампании)
+     * @param lang язык локализации меток
+     * @return список унифицированных определений предметов, видимых в кампании
+     */
+    @Transactional(readOnly = true)
+    public List<ItemDefinitionResponse> getCampaignItems(UUID campaignId, String username, String lang) {
+        enforceAccess(campaignId, username);
+        String resolvedLang = Localization.normalize(lang);
+        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+
+        List<ItemDefinitionResponse> out = new ArrayList<>();
+
+        List<EquipmentItem> equipment = new ArrayList<>(equipmentItemRepository.findAllByHomebrewIsNull());
+        List<MagicItem> magic = new ArrayList<>(magicItemRepository.findAllByHomebrewIsNull());
+        List<ItemTemplate> templates = new ArrayList<>(itemTemplateRepository.findByHomebrewIsNull());
+        if (!pkgIds.isEmpty()) {
+            equipment.addAll(equipmentItemRepository.findAllByHomebrewIdIn(pkgIds));
+            magic.addAll(magicItemRepository.findAllByHomebrewIdIn(pkgIds));
+            templates.addAll(itemTemplateRepository.findByHomebrewIdIn(new ArrayList<>(pkgIds)));
+        }
+        equipment.forEach(e -> out.add(ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(e, resolvedLang))));
+        magic.forEach(m -> out.add(ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(m, resolvedLang))));
+        templates.forEach(t -> out.add(toTemplateDefinition(t, resolvedLang)));
+        return out;
+    }
+
+    /**
+     * Возвращает единое определение предмета в контексте кампании: резолв по трём таблицам + проверка,
+     * что предмет видим в кампании (ваниль всегда; homebrew — только из активных пакетов кампании).
+     * @param campaignId идентификатор кампании
+     * @param itemId идентификатор предмета в любой из трёх таблиц
+     * @param username пользователь (проверка доступа)
+     * @param lang язык локализации меток
+     * @return унифицированное определение предмета
+     */
+    @Transactional(readOnly = true)
+    public ItemDefinitionResponse getCampaignItem(UUID campaignId, UUID itemId, String username, String lang) {
+        enforceAccess(campaignId, username);
+        String resolvedLang = Localization.normalize(lang);
+
+        MagicItem magic = magicItemRepository.findById(itemId).orElse(null);
+        if (magic != null) {
+            enforceMagicItemVisibleInCampaign(campaignId, magic);
+            return ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(magic, resolvedLang));
+        }
+        EquipmentItem equip = equipmentItemRepository.findById(itemId).orElse(null);
+        if (equip != null) {
+            enforceEquipmentItemVisibleInCampaign(campaignId, equip);
+            return ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(equip, resolvedLang));
+        }
+        ItemTemplate template = itemTemplateRepository.findById(itemId).orElse(null);
+        if (template != null) {
+            enforceTemplateVisibleInCampaign(campaignId, template);
+            return toTemplateDefinition(template, resolvedLang);
+        }
+        throw new ResourceNotFoundException("Item not found");
+    }
+
+    /**
+     * Маппит легаси-шаблон предмета в единый {@link ItemDefinitionResponse} (kind=TEMPLATE).
+     * Стоимость подставляется из priceGold (сырое золото), тип — из name у {@link com.dnd.app.domain.ItemType}.
+     * @param t сущность шаблона предмета
+     * @param lang язык локализации редкости
+     * @return унифицированное определение предмета вида TEMPLATE
+     */
+    private ItemDefinitionResponse toTemplateDefinition(ItemTemplate t, String lang) {
+        ContentLabelDto type = t.getItemType() == null ? null : ContentLabelDto.builder()
+                .id(t.getItemType().getId())
+                .name(t.getItemType().getName())
+                .build();
+        ContentLabelDto rarity = rarityLabel(t.getRarity(), lang);
+        ItemDefinitionResponse.CostDto cost = t.getPriceGold() == null ? null : ItemDefinitionResponse.CostDto.builder()
+                .amount(t.getPriceGold())
+                .build();
+        return ItemDefinitionResponse.builder()
+                .id(t.getId())
+                .kind("TEMPLATE")
+                .name(t.getName())
+                .description(t.getDescription())
+                .type(type)
+                .rarity(rarity)
+                .cost(cost)
+                .attunementRequired(t.getAttunementRequired())
+                .packageId(HomebrewOrigin.id(t.getHomebrew()))
+                .source(HomebrewOrigin.source(t.getHomebrew()))
+                .homebrewTitle(HomebrewOrigin.title(t.getHomebrew()))
+                .build();
+    }
+
+    private ContentLabelDto rarityLabel(Rarity r, String lang) {
+        if (r == null) {
+            return null;
+        }
+        return ContentLabelDto.builder()
+                .id(r.getId())
+                .slug(r.getSlug())
+                .name(Localization.pick(lang, r.getNameRu(), r.getNameEn(),
+                        r.getNameEn() != null ? r.getNameEn() : r.getNameRu()))
+                .nameRu(r.getNameRu())
+                .nameEn(r.getNameEn())
+                .build();
+    }
+
+    private void enforceTemplateVisibleInCampaign(UUID campaignId, ItemTemplate item) {
+        if (item.getHomebrew() == null) {
+            return; // core content always visible
+        }
+        Set<UUID> pkgIds = campaignHomebrewRepository.findPackageIdsByCampaignId(campaignId);
+        if (!pkgIds.contains(item.getHomebrew().getId())) {
+            throw new ResourceNotFoundException("Item not found");
+        }
     }
 
     // --- access helpers ---
