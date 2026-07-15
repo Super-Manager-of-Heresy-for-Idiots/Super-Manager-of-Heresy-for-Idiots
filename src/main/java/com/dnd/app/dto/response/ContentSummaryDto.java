@@ -27,6 +27,10 @@ public class ContentSummaryDto {
     private String prerequisites;
     private String effectType;
     private Boolean isBuff;
+    // Поля баффа/дебаффа для lossless-префилла при правке (P1-6).
+    private Integer modifierValue;
+    private Integer durationRounds;
+    private UUID targetStatId;
     private UUID classId;
     private String className;
 }

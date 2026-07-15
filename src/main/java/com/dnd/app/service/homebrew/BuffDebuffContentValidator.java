@@ -54,6 +54,9 @@ public class BuffDebuffContentValidator implements HomebrewContentValidator {
                 .description(buffDebuff.getDescription())
                 .effectType(buffDebuff.getEffectType())
                 .isBuff(buffDebuff.getIsBuff())
+                .modifierValue(buffDebuff.getModifierValue())
+                .durationRounds(buffDebuff.getDurationRounds())
+                .targetStatId(buffDebuff.getTargetStat() != null ? buffDebuff.getTargetStat().getId() : null)
                 .build();
     }
 
