@@ -146,6 +146,15 @@ public class Spell {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    // Авторство (P1-4): кто создал/изменил homebrew-заклинание; null для ванильных строк (колонки из миграции 105).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "spell_component", joinColumns = @JoinColumn(name = "spell_id"))
     @Builder.Default

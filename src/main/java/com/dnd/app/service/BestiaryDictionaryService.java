@@ -300,8 +300,8 @@ public class BestiaryDictionaryService {
         if (gm.getRole() != Role.ADMIN && !pkg.getAuthor().getId().equals(gm.getId())) {
             throw new AccessDeniedException("Cannot manage dictionaries in another user's homebrew package");
         }
-        if (pkg.isDeleted() || pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Homebrew dictionary content can be changed only in a DRAFT package");
+        if (pkg.isDeleted() || !pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Homebrew dictionary content can be changed only in a DRAFT or PUBLISHED package");
         }
         return pkg;
     }

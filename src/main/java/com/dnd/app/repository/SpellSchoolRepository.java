@@ -4,6 +4,7 @@ import com.dnd.app.domain.SpellSchool;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -13,4 +14,7 @@ import java.util.UUID;
 public interface SpellSchoolRepository extends JpaRepository<SpellSchool, UUID> {
 
     List<SpellSchool> findAllByOrderByNameRuAsc();
+
+    /** Школа магии по slug (резолвинг при авторинге заклинания, P2-1). */
+    Optional<SpellSchool> findBySlug(String slug);
 }

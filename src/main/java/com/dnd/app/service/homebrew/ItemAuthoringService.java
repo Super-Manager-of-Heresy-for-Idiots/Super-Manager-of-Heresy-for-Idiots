@@ -407,8 +407,8 @@ public class ItemAuthoringService {
 
     private HomebrewPackage editablePackage(UUID packageId, String username) {
         HomebrewPackage pkg = homebrewAccessService.enforceOwner(packageId, username);
-        if (pkg.isDeleted() || pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Предметы можно менять только в DRAFT-пакете");
+        if (pkg.isDeleted() || !pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Предметы можно менять только в DRAFT/PUBLISHED-пакете");
         }
         return pkg;
     }

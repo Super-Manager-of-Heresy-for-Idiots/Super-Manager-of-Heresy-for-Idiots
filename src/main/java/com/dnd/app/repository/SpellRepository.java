@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,6 +17,12 @@ import java.util.UUID;
 public interface SpellRepository extends JpaRepository<Spell, UUID> {
 
     boolean existsByNameRu(String nameRu);
+
+    /** Заклинание, принадлежащее конкретному homebrew-пакету (авторинг P2-1). */
+    Optional<Spell> findByIdAndHomebrew_Id(UUID id, UUID homebrewId);
+
+    /** Уникальность slug в пределах пакета (авторинг P2-1). */
+    boolean existsBySlugAndHomebrew_Id(String slug, UUID homebrewId);
 
     List<Spell> findAllByHomebrewIsNull();
 

@@ -192,17 +192,17 @@ class HomebrewAuthoringServiceTest {
     }
 
     @Test
-    @DisplayName("Мастер не может создавать контент в опубликованном пакете")
-    void gameMasterCannotCreateContentInPublishedPackage() {
+    @DisplayName("Мастер не может создавать контент в архивном пакете (P1-1: DRAFT/PUBLISHED — можно, ARCHIVED — нет)")
+    void gameMasterCannotCreateContentInArchivedPackage() {
         User gm = user(UUID.randomUUID(), "gm", Role.GAME_MASTER);
         UUID packageId = UUID.randomUUID();
-        HomebrewPackage pkg = homebrewPackage(packageId, gm, HomebrewStatus.PUBLISHED);
+        HomebrewPackage pkg = homebrewPackage(packageId, gm, HomebrewStatus.ARCHIVED);
 
         when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
         when(packageRepository.findById(packageId)).thenReturn(Optional.of(pkg));
 
         CreateItemTypeRequest request = CreateItemTypeRequest.builder()
-                .name("Published Sword")
+                .name("Archived Sword")
                 .slot("MAIN_HAND")
                 .build();
 

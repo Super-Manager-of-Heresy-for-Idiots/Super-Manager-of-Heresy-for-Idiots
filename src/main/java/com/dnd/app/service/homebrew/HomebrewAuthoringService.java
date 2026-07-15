@@ -124,8 +124,8 @@ public class HomebrewAuthoringService {
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(id, gm.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Пакет можно редактировать только в статусе черновика (DRAFT)");
+        if (!pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Пакет можно редактировать только в статусе DRAFT или PUBLISHED");
         }
 
         if (request.getTitle() != null) {
@@ -157,8 +157,8 @@ public class HomebrewAuthoringService {
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(packageId, gm.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Контент можно добавлять только в статусе черновика (DRAFT)");
+        if (!pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Контент можно добавлять только в статусе DRAFT или PUBLISHED");
         }
 
         String contentTypeStr = request.getContentType();
@@ -673,8 +673,8 @@ public class HomebrewAuthoringService {
         HomebrewPackage pkg = packageRepository.findByIdAndAuthorId(packageId, gm.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
 
-        if (pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Контент можно удалять только в статусе черновика (DRAFT)");
+        if (!pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Контент можно удалять только в статусе DRAFT или PUBLISHED");
         }
 
         HomebrewContentItem item = contentItemRepository.findById(contentItemId)
@@ -776,8 +776,8 @@ public class HomebrewAuthoringService {
         if (!pkg.getAuthor().getId().equals(gm.getId())) {
             throw new AccessDeniedException("Нельзя создавать контент в чужом homebrew-пакете");
         }
-        if (pkg.isDeleted() || pkg.getStatus() != HomebrewStatus.DRAFT) {
-            throw new BadRequestException("Контент можно создавать только в DRAFT-пакете");
+        if (pkg.isDeleted() || !pkg.getStatus().isEditable()) {
+            throw new BadRequestException("Контент можно создавать только в DRAFT/PUBLISHED-пакете");
         }
         return pkg;
     }
