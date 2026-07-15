@@ -13,6 +13,7 @@ import com.dnd.app.domain.content.MagicItem;
 import com.dnd.app.domain.content.MoneyValue;
 import com.dnd.app.domain.content.WeaponStat;
 import com.dnd.app.domain.enums.ContentType;
+import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.dto.request.HomebrewItemRequest;
 import com.dnd.app.dto.response.HomebrewItemResponse;
@@ -69,6 +70,7 @@ public class ItemAuthoringService {
     private final HomebrewAccessService homebrewAccessService;
     private final HomebrewContentItemRepository contentItemRepository;
     private final ContentDictionaryResolver contentDictionaryResolver;
+    private final ItemMechanicsService itemMechanicsService;
 
     /**
      * Создаёт предмет в пакете (маршрутизация по kind).
@@ -106,6 +108,7 @@ public class ItemAuthoringService {
             }
             applyMagic(magic, request, pkg);
             MagicItem saved = magicItemRepository.save(magic);
+            itemMechanicsService.sync(FeatureRuleOwnerType.ITEM_MAGIC, saved.getId(), pkg, request, username);
             log.info("Homebrew magic item updated: id={}, packageId={}, by={}", itemId, packageId, username);
             return toMagicResponse(saved);
         }
@@ -118,6 +121,7 @@ public class ItemAuthoringService {
             applyEquipmentCommon(equip, request, pkg);
             EquipmentItem saved = equipmentItemRepository.save(equip);
             WeaponStat weaponStat = upsertStats(saved, request, pkg);
+            itemMechanicsService.sync(FeatureRuleOwnerType.ITEM_EQUIPMENT, saved.getId(), pkg, request, username);
             log.info("Homebrew equipment item updated: id={}, packageId={}, by={}", itemId, packageId, username);
             return toEquipmentResponse(saved, weaponStat, armorStatRepository.findById(saved.getId()).orElse(null));
         }
@@ -160,6 +164,7 @@ public class ItemAuthoringService {
 
         MagicItem magic = magicItemRepository.findByIdAndHomebrew_Id(itemId, packageId).orElse(null);
         if (magic != null) {
+            itemMechanicsService.clear(FeatureRuleOwnerType.ITEM_MAGIC, itemId, packageId);
             unregisterContentItem(packageId, itemId);
             deleteOrConflict(() -> {
                 magicItemRepository.delete(magic);
@@ -171,6 +176,7 @@ public class ItemAuthoringService {
 
         EquipmentItem equip = equipmentItemRepository.findByIdAndHomebrew_Id(itemId, packageId).orElse(null);
         if (equip != null) {
+            itemMechanicsService.clear(FeatureRuleOwnerType.ITEM_EQUIPMENT, itemId, packageId);
             weaponStatRepository.findById(equip.getId()).ifPresent(weaponStatRepository::delete);
             armorStatRepository.findById(equip.getId()).ifPresent(armorStatRepository::delete);
             unregisterContentItem(packageId, itemId);
@@ -195,6 +201,7 @@ public class ItemAuthoringService {
         applyMagic(item, request, pkg);
         MagicItem saved = magicItemRepository.save(item);
         registerContentItem(pkg, saved.getId());
+        itemMechanicsService.sync(FeatureRuleOwnerType.ITEM_MAGIC, saved.getId(), pkg, request, username);
         log.info("Homebrew magic item created: id={}, packageId={}, by={}", saved.getId(), pkg.getId(), username);
         return toMagicResponse(saved);
     }
@@ -215,12 +222,15 @@ public class ItemAuthoringService {
     }
 
     private HomebrewItemResponse toMagicResponse(MagicItem item) {
-        return baseResponse(item.getId(), "MAGIC", item.getNameRu(), item.getNameEn(), item.getDescription(),
-                item.getHomebrew())
+        HomebrewItemResponse resp = baseResponse(item.getId(), "MAGIC", item.getNameRu(), item.getNameEn(),
+                item.getDescription(), item.getHomebrew())
                 .rarity(item.getRarity() != null ? item.getRarity().getSlug() : null)
                 .attunementRequired(item.getAttunementRequired())
                 .attunementRequirement(item.getAttunementRequirement())
                 .build();
+        itemMechanicsService.read(FeatureRuleOwnerType.ITEM_MAGIC, item.getId(),
+                item.getHomebrew() != null ? item.getHomebrew().getId() : null, resp);
+        return resp;
     }
 
     // ================= EQUIPMENT =================
@@ -234,6 +244,7 @@ public class ItemAuthoringService {
         EquipmentItem saved = equipmentItemRepository.save(item);
         WeaponStat weaponStat = upsertStats(saved, request, pkg);
         registerContentItem(pkg, saved.getId());
+        itemMechanicsService.sync(FeatureRuleOwnerType.ITEM_EQUIPMENT, saved.getId(), pkg, request, username);
         log.info("Homebrew equipment item created: id={}, packageId={}, by={}", saved.getId(), pkg.getId(), username);
         return toEquipmentResponse(saved, weaponStat, armorStatRepository.findById(saved.getId()).orElse(null));
     }
@@ -376,7 +387,10 @@ public class ItemAuthoringService {
                     .strengthRequired(armorStat.getStrengthRequired())
                     .stealthDisadvantage(armorStat.getStealthDisadvantage());
         }
-        return b.build();
+        HomebrewItemResponse resp = b.build();
+        itemMechanicsService.read(FeatureRuleOwnerType.ITEM_EQUIPMENT, item.getId(),
+                item.getHomebrew() != null ? item.getHomebrew().getId() : null, resp);
+        return resp;
     }
 
     // ================= shared helpers =================

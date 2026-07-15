@@ -12,6 +12,8 @@ import com.dnd.app.dto.featurerule.FeatureMaintenanceResult;
 import com.dnd.app.dto.featurerule.FeatureRuleBackfillResult;
 import com.dnd.app.dto.featurerule.SpellRuleBackfillResult;
 import com.dnd.app.dto.featurerule.FeatureRuleCoverageReport;
+import com.dnd.app.dto.featurerule.ItemRuleCoverageReport;
+import com.dnd.app.dto.featurerule.ItemRuleDetailResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleMetadataResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleResponse;
 import com.dnd.app.dto.featurerule.FeatureRuleRevisionResponse;
@@ -22,6 +24,8 @@ import com.dnd.app.dto.featurerule.ActionCostEditRequest;
 import com.dnd.app.dto.featurerule.ActionTypeOption;
 import com.dnd.app.dto.featurerule.DamageRuleAdminResponse;
 import com.dnd.app.dto.featurerule.DamageRuleEditRequest;
+import com.dnd.app.dto.featurerule.FeatureItemBindingEditRequest;
+import com.dnd.app.dto.featurerule.FeatureItemBindingResponse;
 import com.dnd.app.dto.featurerule.HealingRuleAdminResponse;
 import com.dnd.app.dto.featurerule.HealingRuleEditRequest;
 import com.dnd.app.dto.featurerule.ActiveEffectAdminResponse;
@@ -56,12 +60,15 @@ import com.dnd.app.dto.featurerule.FormulaVocabularyResponse;
 import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureFormulaVocabularyService;
 import com.dnd.app.service.FeatureRuleAdminService;
+import com.dnd.app.dto.featurerule.ItemRuleBackfillResult;
 import com.dnd.app.service.BackgroundProficiencyBackfillService;
 import com.dnd.app.service.FeatureRuleBackfillService;
+import com.dnd.app.service.ItemRuleBackfillService;
 import com.dnd.app.service.SpellRuleBackfillService;
 import com.dnd.app.service.FeatureRuleCoverageService;
 import com.dnd.app.service.FeatureActionCostAdminService;
 import com.dnd.app.service.FeatureDamageRuleAdminService;
+import com.dnd.app.service.FeatureItemBindingAdminService;
 import com.dnd.app.service.FeatureHealingRuleAdminService;
 import com.dnd.app.service.FeatureActiveEffectAdminService;
 import com.dnd.app.service.FeatureResolutionRuleAdminService;
@@ -113,8 +120,10 @@ public class FeatureRuleAdminController {
     private final FeatureRuleCoverageService featureRuleCoverageService;
     private final BackgroundProficiencyBackfillService backgroundProficiencyBackfillService;
     private final SpellRuleBackfillService spellRuleBackfillService;
+    private final ItemRuleBackfillService itemRuleBackfillService;
     private final FeatureResourceDefinitionAdminService featureResourceDefinitionAdminService;
     private final FeatureDamageRuleAdminService featureDamageRuleAdminService;
+    private final FeatureItemBindingAdminService featureItemBindingAdminService;
     private final FeatureActionCostAdminService featureActionCostAdminService;
     private final FeatureHealingRuleAdminService featureHealingRuleAdminService;
     private final FeatureActiveEffectAdminService featureActiveEffectAdminService;
@@ -319,6 +328,36 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(
                                 featureDamageRuleAdminService.upsert(ruleId, request), "Урон сохранён")),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Читает привязку item-правила к предмету (ITEM_ABIL Фаза 4) для правки в Workbench.
+     * @param ruleId идентификатор item-правила
+     * @return настройки привязки (гейтинг умения)
+     */
+    @GetMapping("/feature-rules/{ruleId}/item-binding")
+    @Operation(summary = "Get an ITEM rule's feature_item_binding (equipped/attunement/consume gating)")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureItemBindingResponse>>> getItemBinding(
+            @PathVariable UUID ruleId) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureItemBindingAdminService.get(ruleId))),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Создаёт/обновляет привязку item-правила к предмету (ITEM_ABIL Фаза 4).
+     * @param ruleId идентификатор item-правила
+     * @param request новые настройки гейтинга
+     * @return обновлённая привязка
+     */
+    @PutMapping("/feature-rules/{ruleId}/item-binding")
+    @Operation(summary = "Create/update an ITEM rule's feature_item_binding gating")
+    public CompletableFuture<ResponseEntity<ApiResponse<FeatureItemBindingResponse>>> upsertItemBinding(
+            @PathVariable UUID ruleId, @RequestBody FeatureItemBindingEditRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(
+                                featureItemBindingAdminService.upsert(ruleId, request), "Привязка предмета сохранена")),
                 controllerTaskExecutor);
     }
 
@@ -937,6 +976,36 @@ public class FeatureRuleAdminController {
     }
 
     /**
+     * Покрытие корпуса магических предметов правилами feature-rules (ITEM_ABIL Фаза 4).
+     * @return отчёт покрытия предметов
+     */
+    @GetMapping("/feature-rules/item-coverage")
+    @Operation(summary = "Coverage of the magic_item corpus by the feature-rules model (items)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemRuleCoverageReport>>> itemCoverage() {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureRuleCoverageService.itemReport())),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Карточка определения предмета: имя, аттюнмент и все item-правила с issues (ITEM_ABIL Фаза 4).
+     * @param ownerType код owner-типа предмета (ITEM_MAGIC / ITEM_TEMPLATE / ITEM_EQUIPMENT)
+     * @param ownerId идентификатор определения предмета
+     * @param lang язык локализации
+     * @return карточка предмета с правилами
+     */
+    @GetMapping("/feature-rules/items/{ownerType}/{ownerId}/detail")
+    @Operation(summary = "Item definition card: the item plus all its rules and issues")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemRuleDetailResponse>>> itemDetail(
+            @PathVariable String ownerType,
+            @PathVariable UUID ownerId,
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(featureRuleAdminService.getItemDetail(ownerType, ownerId, lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
      * Выполняет обратное заполнение операции "backfill" в рамках бизнес-логики API.
      * @param apply признак применения изменений вместо пробного расчета
      * @return результат выполнения бизнес-операции
@@ -978,6 +1047,21 @@ public class FeatureRuleAdminController {
         return CompletableFuture.supplyAsync(() ->
                         ResponseEntity.ok(ApiResponse.ok(spellRuleBackfillService.backfill(apply),
                                 apply ? "Бэкфилл заклинаний применён" : "Пробный прогон")),
+                controllerTaskExecutor);
+    }
+
+    /**
+     * Бэкфилл правил из корпуса magic_item (ITEM_ABIL Фаза 6; dry-run пока apply=false).
+     * @param apply признак применения изменений вместо пробного расчёта
+     * @return отчёт бэкфилла предметов
+     */
+    @PostMapping("/feature-rules/backfill-items")
+    @Operation(summary = "Backfill item rules from the magic_item corpus (dry-run unless apply=true)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ItemRuleBackfillResult>>> backfillItems(
+            @RequestParam(defaultValue = "false") boolean apply) {
+        return CompletableFuture.supplyAsync(() ->
+                        ResponseEntity.ok(ApiResponse.ok(itemRuleBackfillService.backfill(apply),
+                                apply ? "Бэкфилл предметов применён" : "Пробный прогон")),
                 controllerTaskExecutor);
     }
 

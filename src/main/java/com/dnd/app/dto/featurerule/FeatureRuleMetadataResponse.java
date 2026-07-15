@@ -21,4 +21,6 @@ public class FeatureRuleMetadataResponse {
     private List<CodeLabel> severities;
     private List<CodeLabel> issueTypes;
     private List<CodeLabel> sources;
+    /** Owner-типы правил (CLASS_FEATURE, SPELL, ITEM_MAGIC и т. д.) — для фильтра/бейджей в Workbench (ITEM_ABIL Фаза 4). */
+    private List<CodeLabel> ownerTypes;
 }

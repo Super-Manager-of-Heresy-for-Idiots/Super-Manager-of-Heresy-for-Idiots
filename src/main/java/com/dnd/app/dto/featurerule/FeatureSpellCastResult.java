@@ -23,4 +23,6 @@ public class FeatureSpellCastResult {
     private Integer resourceSpent;
     private Integer resourceRemaining;
     private String message;
+    /** Для каста из предмета — id экземпляра-источника (иначе null). */
+    private UUID sourceItemInstanceId;
 }

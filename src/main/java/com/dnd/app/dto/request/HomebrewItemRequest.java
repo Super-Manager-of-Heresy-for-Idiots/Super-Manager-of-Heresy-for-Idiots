@@ -69,4 +69,30 @@ public class HomebrewItemRequest {
     private Integer strengthRequired;
 
     private Boolean stealthDisadvantage;
+
+    // --- умение предмета (IT-4): исполняется движком через ITEM-owned feature_rules (гейт items-enabled) ---
+
+    /** Кости урона умения (напр. «2d6»); пусто — у предмета нет умения-урона. */
+    private String abilityDamageDice;
+
+    /** Slug типа урона умения. */
+    private String abilityDamageType;
+
+    /** Slug характеристики спасброска умения (напр. «dex»). */
+    private String abilitySaveAbility;
+
+    /** Половина урона при успешном спасброске. */
+    private Boolean abilityHalfOnSave;
+
+    /** Формула лечения умения (напр. «2d4 + 2»). */
+    private String abilityHealingFormula;
+
+    /** Умение доступно только если предмет экипирован. */
+    private Boolean abilityRequiresEquipped;
+
+    /** Умение доступно только при аттюнменте. */
+    private Boolean abilityRequiresAttunement;
+
+    /** Умение расходует предмет при использовании (одноразовое, напр. зелье). */
+    private Boolean abilityConsumeOnUse;
 }

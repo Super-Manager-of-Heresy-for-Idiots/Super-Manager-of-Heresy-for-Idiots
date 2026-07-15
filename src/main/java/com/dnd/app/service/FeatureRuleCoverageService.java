@@ -7,6 +7,7 @@ import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FeatureRuleIssue;
 import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.dto.featurerule.FeatureRuleCoverageReport;
+import com.dnd.app.dto.featurerule.ItemRuleCoverageReport;
 import com.dnd.app.repository.ClassFeatureRepository;
 import com.dnd.app.repository.FeatureRuleIssueRepository;
 import com.dnd.app.repository.FeatureRuleRepository;
@@ -34,9 +35,12 @@ public class FeatureRuleCoverageService {
     private static final String NEEDS_REVIEW = FeatureReviewStatus.NEEDS_REVIEW.getCode();
     private static final String ERROR = FeatureIssueSeverity.ERROR.getCode();
 
+    private static final String ITEM_MAGIC = FeatureRuleOwnerType.ITEM_MAGIC.getCode();
+
     private final ClassFeatureRepository classFeatureRepository;
     private final FeatureRuleRepository ruleRepository;
     private final FeatureRuleIssueRepository issueRepository;
+    private final com.dnd.app.repository.MagicItemRepository magicItemRepository;
 
     /**
      * Выполняет операции "report" в рамках бизнес-логики домена.
@@ -90,6 +94,49 @@ public class FeatureRuleCoverageService {
                 .rulesByType(rulesByType)
                 .rulesByStatus(rulesByStatus)
                 .coverageByClass(coverageByClass)
+                .build();
+    }
+
+    /**
+     * Покрытие корпуса магических предметов ({@code magic_item}) правилами feature-rules.
+     * Считает, у скольких предметов есть правила / approved-правила / нет правил, и агрегаты
+     * по типам и статусам (ITEM_ABIL Фаза 4, §5.1).
+     * @return отчёт покрытия предметов
+     */
+    @Transactional(readOnly = true)
+    public ItemRuleCoverageReport itemReport() {
+        Set<UUID> itemIds = magicItemRepository.findAll().stream()
+                .map(com.dnd.app.domain.content.MagicItem::getId)
+                .collect(Collectors.toSet());
+        int totalItems = itemIds.size();
+
+        List<FeatureRule> rules = ruleRepository.findByOwnerType(ITEM_MAGIC);
+        Map<UUID, List<FeatureRule>> byItem = rules.stream()
+                .filter(r -> itemIds.contains(r.getOwnerId()))
+                .collect(Collectors.groupingBy(FeatureRule::getOwnerId));
+
+        int withRules = byItem.size();
+        int withApproved = (int) byItem.values().stream()
+                .filter(list -> list.stream().anyMatch(r -> APPROVED.equals(r.getReviewStatus())))
+                .count();
+
+        Map<String, Long> rulesByType = rules.stream()
+                .collect(Collectors.groupingBy(FeatureRule::getRuleType, Collectors.counting()));
+        Map<String, Long> rulesByStatus = rules.stream()
+                .collect(Collectors.groupingBy(FeatureRule::getReviewStatus, Collectors.counting()));
+        long approved = rules.stream().filter(r -> APPROVED.equals(r.getReviewStatus())).count();
+        long needsReview = rules.stream().filter(r -> NEEDS_REVIEW.equals(r.getReviewStatus())).count();
+
+        return ItemRuleCoverageReport.builder()
+                .totalItems(totalItems)
+                .itemsWithRules(withRules)
+                .itemsWithApprovedRules(withApproved)
+                .itemsWithoutRules(totalItems - withRules)
+                .totalRules(rules.size())
+                .approvedRules(approved)
+                .needsReviewRules(needsReview)
+                .rulesByType(rulesByType)
+                .rulesByStatus(rulesByStatus)
                 .build();
     }
 

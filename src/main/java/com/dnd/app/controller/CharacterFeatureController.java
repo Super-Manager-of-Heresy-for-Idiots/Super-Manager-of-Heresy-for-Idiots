@@ -357,12 +357,13 @@ public class CharacterFeatureController {
     @PostMapping("/spell-grants/{grantId}/cast")
     @Operation(summary = "Cast a spell via a feature grant (free cast / resource spend)")
     public CompletableFuture<ResponseEntity<ApiResponse<FeatureSpellCastResult>>> castViaFeature(
-            @PathVariable UUID characterId, @PathVariable UUID grantId, Authentication authentication) {
+            @PathVariable UUID characterId, @PathVariable UUID grantId,
+            @RequestParam(required = false) UUID itemInstanceId, Authentication authentication) {
         final String username = usernameOf(authentication);
         return CompletableFuture.supplyAsync(() -> {
             PlayerCharacter character = requireCharacter(characterId, username);
             return ResponseEntity.ok(ApiResponse.ok(
-                    featureSpellGrantService.castViaFeature(character, grantId), "Каст выполнен"));
+                    featureSpellGrantService.castViaFeature(character, grantId, itemInstanceId), "Каст выполнен"));
         }, controllerTaskExecutor);
     }
 

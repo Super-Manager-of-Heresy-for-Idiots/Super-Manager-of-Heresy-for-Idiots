@@ -26,6 +26,12 @@ public class FeatureSpellGrantResponse {
     private UUID usesResourceDefinitionId;
     private UUID spellcastingAbilityOverrideId;
     private Filter filter;
+    /** Источник гранта: {@code "class"} (классовая фича) или {@code "item"} (предмет). */
+    private String source;
+    /** Для item-грантов — id экземпляра предмета, дающего заклинание (иначе null). */
+    private UUID sourceItemInstanceId;
+    /** Для item-грантов — отображаемое имя предмета (иначе null). */
+    private String sourceItemName;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class Filter {

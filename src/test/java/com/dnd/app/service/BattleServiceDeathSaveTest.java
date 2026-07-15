@@ -78,6 +78,7 @@ class BattleServiceDeathSaveTest {
                 mock(SpellCastService.class),
                 mock(FeatureUseService.class),
                 mock(ItemAbilityUseService.class),
+                mock(ItemAbilityResolver.class),
                 mock(CombatFeatureExecutionService.class),
                 mock(StatTypeRepository.class),
                 mock(FeatureEffectService.class),

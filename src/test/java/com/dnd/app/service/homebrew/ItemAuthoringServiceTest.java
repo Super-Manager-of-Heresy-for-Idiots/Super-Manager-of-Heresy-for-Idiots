@@ -58,6 +58,7 @@ class ItemAuthoringServiceTest {
     @Mock private HomebrewAccessService homebrewAccessService;
     @Mock private HomebrewContentItemRepository contentItemRepository;
     @Mock private ContentDictionaryResolver contentDictionaryResolver;
+    @Mock private ItemMechanicsService itemMechanicsService;
 
     @InjectMocks private ItemAuthoringService service;
 

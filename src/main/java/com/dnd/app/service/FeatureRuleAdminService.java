@@ -30,6 +30,9 @@ import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.ClassFeatureRepository;
 import com.dnd.app.repository.FeatureRuleIssueRepository;
 import com.dnd.app.repository.FeatureRuleRepository;
+import com.dnd.app.repository.MagicItemRepository;
+import com.dnd.app.repository.ItemTemplateRepository;
+import com.dnd.app.dto.featurerule.ItemRuleDetailResponse;
 import com.dnd.app.repository.FeatureChoiceGroupRepository;
 import com.dnd.app.repository.FeatureChoiceOptionRepository;
 import com.dnd.app.repository.FeatureLanguageGrantRepository;
@@ -69,6 +72,8 @@ public class FeatureRuleAdminService {
     private final FeatureRuleRepository ruleRepository;
     private final FeatureRuleIssueRepository issueRepository;
     private final ClassFeatureRepository classFeatureRepository;
+    private final MagicItemRepository magicItemRepository;
+    private final ItemTemplateRepository itemTemplateRepository;
     private final FeatureRuleIssueService featureRuleIssueService;
     private final FeatureRuleRevisionRepository revisionRepository;
     private final FeatureRuleRevisionService revisionService;
@@ -107,6 +112,12 @@ public class FeatureRuleAdminService {
         List<CodeLabel> issueTypes = ISSUE_TYPES.stream()
                 .map(c -> new CodeLabel(c, pretty(c)))
                 .toList();
+        // ITEM_ABIL Фаза 4: owner-типы для фильтра/бейджей в Workbench (item-правила и др.).
+        List<CodeLabel> ownerTypes = new ArrayList<>();
+        for (com.dnd.app.domain.featurerule.FeatureRuleOwnerType o
+                : com.dnd.app.domain.featurerule.FeatureRuleOwnerType.values()) {
+            ownerTypes.add(new CodeLabel(o.getCode(), pretty(o.getCode())));
+        }
 
         return FeatureRuleMetadataResponse.builder()
                 .ruleTypes(ruleTypes)
@@ -114,6 +125,7 @@ public class FeatureRuleAdminService {
                 .severities(severities)
                 .issueTypes(issueTypes)
                 .sources(sources)
+                .ownerTypes(ownerTypes)
                 .build();
     }
 
@@ -193,6 +205,68 @@ public class FeatureRuleAdminService {
                 .grants(buildGrantSummaries(ruleIds))
                 .choices(buildChoiceSummaries(ruleIds))
                 .build();
+    }
+
+    /**
+     * Карточка определения предмета: имя, требование аттюнмента и все item-правила с issues.
+     * Аналог {@link #getFeatureDetail} для семейства владельцев ITEM_* (ITEM_ABIL Фаза 4, §5.1).
+     * @param ownerType код owner-типа предмета (должен принадлежать ITEM_FAMILY)
+     * @param ownerId идентификатор ОПРЕДЕЛЕНИЯ предмета (owner_id правил)
+     * @param lang язык локализации имени предмета
+     * @return карточка предмета с его правилами
+     */
+    @Transactional(readOnly = true)
+    public ItemRuleDetailResponse getItemDetail(String ownerType, UUID ownerId, String lang) {
+        FeatureRuleOwnerType type = FeatureRuleOwnerType.fromCode(ownerType)
+                .filter(t -> t.isItemOwner())
+                .orElseThrow(() -> new BadRequestException("Owner type is not an item family: " + ownerType));
+
+        String name = null;
+        Boolean attunementRequired = null;
+        switch (type) {
+            case ITEM_MAGIC -> {
+                var mi = magicItemRepository.findById(ownerId).orElse(null);
+                if (mi != null) {
+                    name = com.dnd.app.util.Localization.pick(lang, mi.getNameRu(), mi.getNameEn(), mi.getNameRu());
+                    attunementRequired = Boolean.TRUE.equals(mi.getAttunementRequired());
+                }
+            }
+            case ITEM_TEMPLATE -> {
+                var it = itemTemplateRepository.findById(ownerId).orElse(null);
+                if (it != null) {
+                    name = it.getName();
+                    attunementRequired = Boolean.TRUE.equals(it.getAttunementRequired());
+                }
+            }
+            default -> {
+                // ITEM_EQUIPMENT: имя не резолвим здесь (equipment аттюнмент не поддерживает).
+            }
+        }
+
+        return ItemRuleDetailResponse.builder()
+                .ownerType(type.getCode())
+                .ownerId(ownerId)
+                .name(name)
+                .attunementRequired(attunementRequired)
+                .rules(getRulesForOwner(type.getCode(), ownerId))
+                .build();
+    }
+
+    /**
+     * Возвращает правила произвольного владельца (любой owner_type) вместе с их issues.
+     * Обобщение {@link #getRulesForFeature} без проверки на существование class-feature —
+     * используется для item-правил (ITEM_ABIL Фаза 4).
+     * @param ownerType код owner-типа
+     * @param ownerId идентификатор владельца
+     * @return правила владельца в виде DTO
+     */
+    @Transactional(readOnly = true)
+    public List<FeatureRuleResponse> getRulesForOwner(String ownerType, UUID ownerId) {
+        List<FeatureRule> rules =
+                ruleRepository.findByOwnerTypeAndOwnerIdOrderBySortOrderAscCreatedAtAsc(ownerType, ownerId);
+        List<FeatureRuleIssue> issues =
+                issueRepository.findByOwnerTypeAndOwnerIdOrderByResolvedAscCreatedAtDesc(ownerType, ownerId);
+        return rules.stream().map(rule -> toResponse(rule, issues)).toList();
     }
 
     private List<FeatureGrantSummary> buildGrantSummaries(List<UUID> ruleIds) {

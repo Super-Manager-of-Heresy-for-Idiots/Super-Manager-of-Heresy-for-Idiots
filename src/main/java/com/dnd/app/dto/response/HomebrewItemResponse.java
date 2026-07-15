@@ -52,6 +52,16 @@ public class HomebrewItemResponse {
     private Integer strengthRequired;
     private Boolean stealthDisadvantage;
 
+    // --- умение предмета (IT-4) — реконструируется из ITEM-owned feature_rules для round-trip ---
+    private String abilityDamageDice;
+    private String abilityDamageType;
+    private String abilitySaveAbility;
+    private Boolean abilityHalfOnSave;
+    private String abilityHealingFormula;
+    private Boolean abilityRequiresEquipped;
+    private Boolean abilityRequiresAttunement;
+    private Boolean abilityConsumeOnUse;
+
     private String source;
     private UUID homebrewPackageId;
     private String homebrewPackageTitle;

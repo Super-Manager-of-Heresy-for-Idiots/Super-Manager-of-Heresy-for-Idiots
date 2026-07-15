@@ -20,4 +20,11 @@ public class FeatureRuleValidationResponse {
     private boolean valid;
     /** Human-readable problems blocking validity (empty when valid). */
     private List<String> problems;
+    /**
+     * Незаблокирующие предупреждения (не влияют на {@code valid}) — например, требование
+     * аттюнмента у предмета, который его не поддерживает, или character-скоуп ресурса
+     * у item-правила. Отображаются в Workbench отдельно от ошибок (ITEM_ABIL Фаза 1, §2.3).
+     */
+    @lombok.Builder.Default
+    private List<String> warnings = new java.util.ArrayList<>();
 }

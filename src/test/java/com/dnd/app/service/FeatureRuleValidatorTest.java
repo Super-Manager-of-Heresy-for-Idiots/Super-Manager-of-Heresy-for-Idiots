@@ -6,10 +6,13 @@ import com.dnd.app.domain.featurerule.FeatureResourceScope;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.domain.featurerule.FeatureRuleProfile;
+import com.dnd.app.domain.content.MagicItem;
 import com.dnd.app.dto.featurerule.FeatureRuleValidationResponse;
 import com.dnd.app.repository.FeatureItemBindingRepository;
 import com.dnd.app.repository.FeatureResourceDefinitionRepository;
 import com.dnd.app.repository.FeatureRuleIssueRepository;
+import com.dnd.app.repository.ItemTemplateRepository;
+import com.dnd.app.repository.MagicItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +34,8 @@ class FeatureRuleValidatorTest {
     @Mock private FeatureRuleIssueRepository issueRepository;
     @Mock private FeatureItemBindingRepository itemBindingRepository;
     @Mock private FeatureResourceDefinitionRepository resourceDefinitionRepository;
+    @Mock private MagicItemRepository magicItemRepository;
+    @Mock private ItemTemplateRepository itemTemplateRepository;
 
     @InjectMocks private FeatureRuleValidator validator;
 
@@ -80,6 +85,46 @@ class FeatureRuleValidatorTest {
 
         assertThat(response.isValid()).isFalse();
         assertThat(response.getProblems()).contains("ITEM_INSTANCE ресурс допустим только у item-owner правила");
+    }
+
+    @Test
+    void validateWarnsOnAttunementWithoutSupport() {
+        FeatureRule rule = rule(FeatureRuleOwnerType.ITEM_MAGIC);
+        when(issueRepository.existsByFeatureRuleIdAndResolvedFalseAndSeverity(any(), anyString())).thenReturn(false);
+        when(resourceDefinitionRepository.findByFeatureRuleId(ruleId)).thenReturn(List.of());
+        when(itemBindingRepository.findByFeatureRuleId(ruleId)).thenReturn(Optional.of(FeatureItemBinding.builder()
+                .featureRuleId(ruleId)
+                .requiresAttunement(true)
+                .build()));
+        when(magicItemRepository.findById(any())).thenReturn(Optional.of(MagicItem.builder()
+                .attunementRequired(false)
+                .build()));
+
+        FeatureRuleValidationResponse response = validator.validate(rule);
+
+        assertThat(response.isValid()).isTrue();
+        assertThat(response.getWarnings())
+                .anyMatch(w -> w.contains("requires_attunement"));
+    }
+
+    @Test
+    void validateWarnsOnCharacterScopedResourceForItemRule() {
+        FeatureRule rule = rule(FeatureRuleOwnerType.ITEM_MAGIC);
+        when(issueRepository.existsByFeatureRuleIdAndResolvedFalseAndSeverity(any(), anyString())).thenReturn(false);
+        when(resourceDefinitionRepository.findByFeatureRuleId(ruleId)).thenReturn(List.of(
+                FeatureResourceDefinition.builder()
+                        .featureRuleId(ruleId)
+                        .scope(FeatureResourceScope.CHARACTER)
+                        .build()));
+        when(itemBindingRepository.findByFeatureRuleId(ruleId)).thenReturn(Optional.of(FeatureItemBinding.builder()
+                .featureRuleId(ruleId)
+                .build()));
+
+        FeatureRuleValidationResponse response = validator.validate(rule);
+
+        assertThat(response.isValid()).isTrue();
+        assertThat(response.getWarnings())
+                .anyMatch(w -> w.contains("character-скоуп"));
     }
 
     private FeatureRule rule(FeatureRuleOwnerType ownerType) {

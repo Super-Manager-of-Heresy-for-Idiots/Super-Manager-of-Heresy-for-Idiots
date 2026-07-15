@@ -83,6 +83,27 @@ public class ItemAbilityResolver {
     }
 
     /**
+     * Проверяет, есть ли у ОПРЕДЕЛЕНИЯ предмета данного экземпляра хотя бы одно
+     * approved+enabled item-правило. Используется легаси-путём {@code performUseItem},
+     * чтобы при активной item-механике не было двух путей использования одного предмета
+     * (ITEM_ABIL Фаза 3, §4.6). Binding при этом не проверяется — важно само наличие правил.
+     * @param instance экземпляр предмета, который пытаются использовать легаси-путём
+     * @return true, если по определению предмета есть approved item-правило и флаг items активен
+     */
+    @Transactional(readOnly = true)
+    public boolean hasApprovedItemRule(ItemInstance instance) {
+        if (!flags.itemsActive() || instance == null) {
+            return false;
+        }
+        FeatureRuleOwnerType ownerType = ownerType(instance);
+        UUID ownerId = instance.getReferenceId();
+        if (ownerType == null || ownerId == null) {
+            return false;
+        }
+        return !characterFeatureResolver.approvedEnabledRules(ownerType, List.of(ownerId)).isEmpty();
+    }
+
+    /**
      * Строит DTO умений предметов, сгруппированные по id экземпляра.
      * @param character персонаж-владелец инвентаря
      * @return карта instanceId -> список кратких умений

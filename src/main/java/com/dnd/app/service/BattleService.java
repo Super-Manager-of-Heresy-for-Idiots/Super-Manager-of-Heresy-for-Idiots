@@ -48,6 +48,7 @@ import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
+import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
 import com.dnd.app.service.combat.AttackResolver;
@@ -118,6 +119,7 @@ public class BattleService {
     private final SpellCastService spellCastService;
     private final FeatureUseService featureUseService;
     private final ItemAbilityUseService itemAbilityUseService;
+    private final ItemAbilityResolver itemAbilityResolver;
     private final CombatFeatureExecutionService combatFeatureExecutionService;
     private final StatTypeRepository statTypeRepository;
     private final FeatureEffectService featureEffectService;
@@ -863,6 +865,9 @@ public class BattleService {
         payload.put("outcome", "USED");
         if (itemAbility) {
             payload.put("itemInstanceId", request.getItemInstanceId().toString());
+            // Контракт WS §4.5: явные source-поля для предметного источника умения.
+            payload.put("sourceItemInstanceId", request.getItemInstanceId().toString());
+            payload.put("sourceItemName", use.getFeatureName());
         }
         if (use.getActionType() != null) {
             payload.put("actionType", use.getActionType());
@@ -2176,13 +2181,21 @@ public class BattleService {
     }
 
     /**
-     * Выполняет операции "perform use item" в рамках бизнес-логики домена.
+     * Легаси-путь использования предмета в бою (лечение из {@code damage_dice} шаблона).
+     * <p>При активной item-механике ({@code app.feature-rules.items-enabled}) и наличии у
+     * определения предмета approved item-правила возвращает 409 {@code USE_VIA_ABILITY_PATH},
+     * чтобы у одного предмета не было двух путей использования: клиент должен использовать
+     * предмет через use-ability ({@link ItemAbilityUseService}). Полный демонтаж — вне скоупа
+     * (ITEM_ABIL Фаза 3, §4.6; решение Р5).
      * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
      * @param battleId идентификатор battle, используемый для выбора нужного бизнес-объекта
      * @param request входящие данные запроса для выполнения бизнес-сценария
      * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
      * @return результат выполнения бизнес-операции
+     * @deprecated используйте use-ability ({@link ItemAbilityUseService#use}) для предметов с
+     *             feature-rules; метод сохранён для легаси-потребляемых без правил.
      */
+    @Deprecated
     @Transactional
     public BattleActionResultResponse performUseItem(UUID campaignId, UUID battleId,
                                                      BattleUseItemRequest request, String username) {
@@ -2214,6 +2227,11 @@ public class BattleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
         if (item.getOwnerCharacter() == null || !item.getOwnerCharacter().getId().equals(actor.getCharacter().getId())) {
             throw new BadRequestException("This item is not carried by the active character");
+        }
+
+        // При активной item-механике предмет с approved-правилом используется только через use-ability.
+        if (itemAbilityResolver.hasApprovedItemRule(item)) {
+            throw new DuplicateResourceException("USE_VIA_ABILITY_PATH");
         }
 
         String healExpression = consumableHealExpression(item);

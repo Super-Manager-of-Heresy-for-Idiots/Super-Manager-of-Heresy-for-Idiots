@@ -78,6 +78,7 @@ class BattleServiceRollModeTest {
                 org.mockito.Mockito.mock(SpellCastService.class),
                 org.mockito.Mockito.mock(FeatureUseService.class),
                 org.mockito.Mockito.mock(ItemAbilityUseService.class),
+                org.mockito.Mockito.mock(ItemAbilityResolver.class),
                 org.mockito.Mockito.mock(CombatFeatureExecutionService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
