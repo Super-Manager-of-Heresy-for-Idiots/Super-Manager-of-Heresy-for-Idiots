@@ -50,4 +50,24 @@ public class HomebrewSpellRequest {
 
     /** Классы, которым доступно заклинание (spell_class). */
     private List<UUID> availableToClassIds;
+
+    // --- механика (P2-1 Phase B): исполняется движком через SPELL-owned feature_rules ---
+
+    /** Кости урона (напр. «8d6»); пусто — заклинание без урона. */
+    private String damageDice;
+
+    /** Slug типа урона (напр. «fire»). */
+    private String damageType;
+
+    /** Slug характеристики спасброска (напр. «dex»); задаёт спасбросок для урона/эффекта. */
+    private String saveAbility;
+
+    /** Половина урона при успешном спасброске. */
+    private Boolean halfOnSave;
+
+    /** Урон требует попадания атакой заклинанием. */
+    private Boolean requiresAttackHit;
+
+    /** Формула лечения (напр. «2d8 + wis_mod» или «2d8»); пусто — заклинание не лечит. */
+    private String healingFormula;
 }

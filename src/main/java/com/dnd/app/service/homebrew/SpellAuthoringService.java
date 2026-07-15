@@ -43,6 +43,7 @@ public class SpellAuthoringService {
     private final ContentCharacterClassRepository classRepository;
     private final HomebrewAccessService homebrewAccessService;
     private final HomebrewContentItemRepository contentItemRepository;
+    private final SpellMechanicsService spellMechanicsService;
 
     /**
      * Создаёт заклинание в пакете.
@@ -61,6 +62,7 @@ public class SpellAuthoringService {
         apply(spell, request, pkg);
         Spell saved = spellRepository.save(spell);
         registerContentItem(pkg, saved.getId());
+        spellMechanicsService.sync(saved, pkg, request, username);
         log.info("Homebrew spell created: id={}, packageId={}, by={}", saved.getId(), packageId, username);
         return toResponse(saved);
     }
@@ -74,6 +76,7 @@ public class SpellAuthoringService {
         Spell spell = requirePackageSpell(packageId, spellId);
         apply(spell, request, pkg);
         Spell saved = spellRepository.save(spell);
+        spellMechanicsService.sync(saved, pkg, request, username);
         log.info("Homebrew spell updated: id={}, packageId={}, by={}", spellId, packageId, username);
         return toResponse(saved);
     }
@@ -168,7 +171,7 @@ public class SpellAuthoringService {
     }
 
     private HomebrewSpellResponse toResponse(Spell spell) {
-        return HomebrewSpellResponse.builder()
+        HomebrewSpellResponse resp = HomebrewSpellResponse.builder()
                 .id(spell.getId())
                 .name(spell.getNameRu())
                 .nameEn(spell.getNameEn())
@@ -186,6 +189,8 @@ public class SpellAuthoringService {
                 .homebrewPackageId(spell.getHomebrew() != null ? spell.getHomebrew().getId() : null)
                 .homebrewPackageTitle(spell.getHomebrew() != null ? spell.getHomebrew().getTitle() : null)
                 .build();
+        spellMechanicsService.read(spell, resp);
+        return resp;
     }
 
     private String uniqueSlug(String base, UUID packageId) {

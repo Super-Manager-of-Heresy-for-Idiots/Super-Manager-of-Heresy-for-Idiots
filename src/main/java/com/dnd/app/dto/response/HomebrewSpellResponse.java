@@ -32,6 +32,13 @@ public class HomebrewSpellResponse {
     private String description;
     private String higherLevels;
     private List<UUID> availableToClassIds;
+    // Механика (P2-1 Phase B) — реконструируется из SPELL-owned feature_rules для round-trip.
+    private String damageDice;
+    private String damageType;
+    private String saveAbility;
+    private Boolean halfOnSave;
+    private Boolean requiresAttackHit;
+    private String healingFormula;
     private String source;
     private UUID homebrewPackageId;
     private String homebrewPackageTitle;

@@ -41,6 +41,7 @@ class SpellAuthoringServiceTest {
     @Mock private ContentCharacterClassRepository classRepository;
     @Mock private HomebrewAccessService homebrewAccessService;
     @Mock private HomebrewContentItemRepository contentItemRepository;
+    @Mock private SpellMechanicsService spellMechanicsService;
 
     @InjectMocks private SpellAuthoringService service;
 
