@@ -34,6 +34,12 @@ public class BattleCommandIdempotencyRecord {
     @Column(name = "client_command_id", nullable = false)
     private UUID clientCommandId;
 
+    @Column(name = "command_type", length = 64)
+    private String commandType;
+
+    @Column(name = "response_body", columnDefinition = "text")
+    private String responseBody;
+
     @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

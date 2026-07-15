@@ -90,6 +90,7 @@ public class BattleService {
 
     /** Fallback speed (ft) when a character has no sheet speed or a monster has no walk speed. */
     private static final int DEFAULT_SPEED_FT = 30;
+    private static final String USE_ABILITY_COMMAND = "battle.useAbility";
 
     private final BattleRepository battleRepository;
     private final BattleCombatantRepository combatantRepository;
@@ -758,6 +759,10 @@ public class BattleService {
             throw new BadRequestException("Only characters can use abilities in battle");
         }
         if (!commandDedupService.firstSeen(request.getClientCommandId())) {
+            Optional<BattleUseAbilityResult> replay = replayUseAbilityResult(request.getClientCommandId());
+            if (replay.isPresent()) {
+                return replay.get();
+            }
             return BattleUseAbilityResult.builder()
                     .featureId(request.getFeatureId())
                     .outcome("DUPLICATE")
@@ -808,7 +813,7 @@ public class BattleService {
             battleLogService.append(battleId, campaignId, BattleLogType.FEATURE_USE, actor.getId(), primaryTargetId,
                     manualPayload,
                     BattleLogVisibility.GM_ONLY, user.getId());
-            return BattleUseAbilityResult.builder()
+            BattleUseAbilityResult result = BattleUseAbilityResult.builder()
                     .featureId(request.getFeatureId())
                     .featureName(plan.getFeatureName())
                     .outcome("MANUAL_REQUIRED")
@@ -818,6 +823,8 @@ public class BattleService {
                     .battle(toResponse(battle, orderedCombatants(battleId)))
                     .message("Ability requires manual adjudication")
                     .build();
+            storeUseAbilityReplay(request.getClientCommandId(), result);
+            return result;
         }
 
         FeatureUseRequest useRequest = FeatureUseRequest.builder()
@@ -870,7 +877,7 @@ public class BattleService {
                 payload, BattleLogVisibility.PUBLIC, user.getId());
         webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_ACTION, campaignId, payload, user.getId());
 
-        return BattleUseAbilityResult.builder()
+        BattleUseAbilityResult result = BattleUseAbilityResult.builder()
                 .featureId(use.getFeatureId())
                 .featureName(use.getFeatureName())
                 .actionType(use.getActionType())
@@ -887,6 +894,33 @@ public class BattleService {
                 .battle(toResponse(battle, orderedCombatants(battleId)))
                 .message(use.getMessage())
                 .build();
+        storeUseAbilityReplay(request.getClientCommandId(), result);
+        return result;
+    }
+
+    private Optional<BattleUseAbilityResult> replayUseAbilityResult(UUID clientCommandId) {
+        return commandDedupService.replayResponse(clientCommandId, USE_ABILITY_COMMAND)
+                .flatMap(body -> {
+                    try {
+                        return Optional.of(objectMapper.readValue(body, BattleUseAbilityResult.class));
+                    } catch (JsonProcessingException e) {
+                        log.warn("Failed to read use-ability replay for command {}: {}",
+                                clientCommandId, e.getMessage());
+                        return Optional.empty();
+                    }
+                });
+    }
+
+    private void storeUseAbilityReplay(UUID clientCommandId, BattleUseAbilityResult result) {
+        if (clientCommandId == null || result == null) {
+            return;
+        }
+        try {
+            commandDedupService.storeResponse(clientCommandId, USE_ABILITY_COMMAND,
+                    objectMapper.writeValueAsString(result));
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to store use-ability replay for command {}: {}", clientCommandId, e.getMessage());
+        }
     }
 
     /**

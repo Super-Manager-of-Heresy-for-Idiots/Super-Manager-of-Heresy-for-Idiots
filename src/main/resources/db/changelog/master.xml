@@ -173,4 +173,7 @@
     <!-- P0.5 / SP-1: species authoring — active + authoring_json + created_by/updated_by. -->
     <include file="db/changelog/106-species-authoring.xml"/>
 
+    <!-- ABIL: replay body for idempotent battle commands such as use-ability. -->
+    <include file="db/changelog/107-battle-command-replay.xml"/>
+
 </databaseChangeLog>

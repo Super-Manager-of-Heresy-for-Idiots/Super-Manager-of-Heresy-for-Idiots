@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,6 +26,7 @@ public class CommandDedupService {
     private static final Duration TTL = Duration.ofMinutes(5);
 
     private final Map<UUID, Instant> seen = new ConcurrentHashMap<>();
+    private final Map<UUID, ReplayEntry> replay = new ConcurrentHashMap<>();
 
     @Autowired(required = false)
     private BattleCommandIdempotencyRepository repository;
@@ -59,9 +61,62 @@ public class CommandDedupService {
         return true;
     }
 
+    /**
+     * Сохраняет тело успешного ответа для идемпотентного повтора команды.
+     *
+     * @param clientCommandId идемпотентный ключ команды
+     * @param commandType тип команды, чтобы не вернуть ответ другого endpoint
+     * @param responseBody сериализованный DTO ответа
+     */
+    @Transactional
+    public void storeResponse(UUID clientCommandId, String commandType, String responseBody) {
+        if (clientCommandId == null || responseBody == null) {
+            return;
+        }
+        if (repository != null) {
+            repository.findByClientCommandId(clientCommandId).ifPresent(record -> {
+                record.setCommandType(commandType);
+                record.setResponseBody(responseBody);
+                repository.save(record);
+            });
+            return;
+        }
+        replay.put(clientCommandId, new ReplayEntry(commandType, responseBody, Instant.now()));
+    }
+
+    /**
+     * Возвращает ранее сохраненный ответ команды, если ключ и тип совпадают.
+     *
+     * @param clientCommandId идемпотентный ключ команды
+     * @param commandType ожидаемый тип команды
+     * @return сериализованный DTO ответа, если он уже записан
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> replayResponse(UUID clientCommandId, String commandType) {
+        if (clientCommandId == null) {
+            return Optional.empty();
+        }
+        if (repository != null) {
+            return repository.findByClientCommandId(clientCommandId)
+                    .filter(record -> commandType == null || commandType.equals(record.getCommandType()))
+                    .map(BattleCommandIdempotencyRecord::getResponseBody)
+                    .filter(body -> body != null && !body.isBlank());
+        }
+        evictExpired();
+        ReplayEntry entry = replay.get(clientCommandId);
+        if (entry == null || (commandType != null && !commandType.equals(entry.commandType()))) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(entry.responseBody());
+    }
+
     /** Удаляет из кэша записи старше TTL (ленивая очистка при каждом обращении). */
     private void evictExpired() {
         Instant cutoff = Instant.now().minus(TTL);
         seen.entrySet().removeIf(e -> e.getValue().isBefore(cutoff));
+        replay.entrySet().removeIf(e -> e.getValue().createdAt().isBefore(cutoff));
+    }
+
+    private record ReplayEntry(String commandType, String responseBody, Instant createdAt) {
     }
 }

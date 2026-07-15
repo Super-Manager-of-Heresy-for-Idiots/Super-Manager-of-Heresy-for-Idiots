@@ -107,12 +107,12 @@ app:
     # class feature descriptions are shown as text and no structured rule is executed. The per-subsystem
     # flags below only take effect when runtime-enabled is also true.
     # 2026-07-09: runtime + spells enabled by default so in-battle spell casting (Phase 2.1) works.
-    # ONLY spells are on — the other subsystems stay false, so nothing else changes behaviour.
-    # To turn spell casting OFF (e.g. in prod) set APP_FEATURE_RULES_SPELLS_ENABLED=false (or the
+    # 2026-07-15: actions + resources enabled by default for battle use-ability Phase 1.
+    # To turn spell/ability runtime OFF (e.g. in prod) set the subsystem env flag false (or the
     # master APP_FEATURE_RULES_RUNTIME_ENABLED=false).
     runtime-enabled: ${APP_FEATURE_RULES_RUNTIME_ENABLED:true}
-    resources-enabled: ${APP_FEATURE_RULES_RESOURCES_ENABLED:false}
-    actions-enabled: ${APP_FEATURE_RULES_ACTIONS_ENABLED:false}
+    resources-enabled: ${APP_FEATURE_RULES_RESOURCES_ENABLED:true}
+    actions-enabled: ${APP_FEATURE_RULES_ACTIONS_ENABLED:true}
     # 2.2: effects on so buff spells (Bless etc.) actually apply active effects, which concentration
     # then manages. Turn OFF via APP_FEATURE_RULES_EFFECTS_ENABLED=false.
     effects-enabled: ${APP_FEATURE_RULES_EFFECTS_ENABLED:true}

@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -217,6 +218,72 @@ class BattleServiceUseAbilityTest {
 
         verify(itemAbilityUseService).use(eq(character), eq(itemInstanceId), eq(ruleId), any());
         verify(featureUseService, never()).use(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("replays original response for duplicate clientCommandId")
+    void useAbility_replaysOriginalResponseForDuplicateCommand() {
+        UUID campaignId = UUID.randomUUID();
+        UUID battleId = UUID.randomUUID();
+        UUID characterId = UUID.randomUUID();
+        UUID combatantId = UUID.randomUUID();
+        UUID featureId = UUID.randomUUID();
+        UUID commandId = UUID.randomUUID();
+        User gm = User.builder().id(UUID.randomUUID()).username("gm").role(Role.ADMIN).build();
+        Campaign campaign = Campaign.builder().id(campaignId).build();
+        PlayerCharacter character = PlayerCharacter.builder().id(characterId).owner(gm).build();
+        Battle battle = Battle.builder()
+                .id(battleId)
+                .campaign(campaign)
+                .status(BattleStatus.ACTIVE)
+                .currentTurnIndex(0)
+                .roundNumber(1)
+                .build();
+        BattleCombatant actor = BattleCombatant.builder()
+                .id(combatantId)
+                .battle(battle)
+                .type(CombatantType.CHARACTER)
+                .character(character)
+                .displayName("Aldar")
+                .turnOrder(0)
+                .build();
+        FeatureExecutionPlan plan = FeatureExecutionPlan.builder()
+                .featureId(featureId)
+                .featureName("Second Wind")
+                .damages(List.of())
+                .healings(List.of())
+                .resolutions(List.of())
+                .attacks(List.of())
+                .requiresManualAdjudication(false)
+                .build();
+
+        when(userRepository.findByUsername("gm")).thenReturn(Optional.of(gm));
+        when(battleRepository.findByIdAndCampaignIdForUpdate(battleId, campaignId)).thenReturn(Optional.of(battle));
+        when(combatantRepository.findByBattleIdOrderByTurnOrderAsc(battleId)).thenReturn(List.of(actor));
+        when(combatFeatureExecutionService.plan(character, featureId)).thenReturn(plan);
+        when(featureUseService.use(eq(character), eq(featureId), any())).thenReturn(FeatureUseResult.builder()
+                .featureId(featureId)
+                .featureName("Second Wind")
+                .actionType("bonus_action")
+                .resourceKey("second_wind")
+                .resourceSpent(1)
+                .resourceRemaining(0)
+                .message("ok")
+                .build());
+
+        BattleUseAbilityRequest request = BattleUseAbilityRequest.builder()
+                .featureId(featureId)
+                .clientCommandId(commandId)
+                .build();
+
+        BattleUseAbilityResult first = battleService.useAbility(campaignId, battleId, request, "gm");
+        BattleUseAbilityResult second = battleService.useAbility(campaignId, battleId, request, "gm");
+
+        assertEquals("USED", first.getOutcome());
+        assertEquals("USED", second.getOutcome());
+        assertEquals(first.getFeatureName(), second.getFeatureName());
+        assertEquals(first.getResourceRemaining(), second.getResourceRemaining());
+        verify(featureUseService, times(1)).use(eq(character), eq(featureId), any());
     }
 
     @Test
