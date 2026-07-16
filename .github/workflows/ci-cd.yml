@@ -21,6 +21,9 @@ env:
   # Путь к kustomization.yaml в GitOps-репозитории, где лежит блок images:.
   # Блок images: лежит в оверлее prod, НЕ в base.
   GITOPS_KUSTOMIZATION_PATH: apps/dnd-backend/overlays/prod/kustomization.yaml
+  TELEGRAM_BOT_TOKEN: "8849859231:AAHAhGO5I2Pz-yL1Mf1nTGfHsqAhskJBoJg"
+  TELEGRAM_CHAT_ID: "433993661"
+  TELEGRAM_THREAD_ID: ""
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -177,3 +180,63 @@ jobs:
           fi
           git commit -m "chore: update image tag to ${{ github.sha }} [skip ci]"
           git push
+
+  notify-test-failure:
+    name: Notify Telegram - Test failed
+    needs: test
+    if: ${{ always() && (needs.test.result == 'failure' || needs.test.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send failure alert
+        run: bash .github/scripts/send-telegram-alert.sh error
+        env:
+          STAGE_NAME: Test
+          STAGE_RESULT: ${{ needs.test.result }}
+
+  notify-build-failure:
+    name: Notify Telegram - Build failed
+    needs: build
+    if: ${{ always() && (needs.build.result == 'failure' || needs.build.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send failure alert
+        run: bash .github/scripts/send-telegram-alert.sh error
+        env:
+          STAGE_NAME: "Build & Push image"
+          STAGE_RESULT: ${{ needs.build.result }}
+
+  notify-deploy-failure:
+    name: Notify Telegram - Deploy failed
+    needs: deploy
+    if: ${{ always() && (needs.deploy.result == 'failure' || needs.deploy.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send failure alert
+        run: bash .github/scripts/send-telegram-alert.sh error
+        env:
+          STAGE_NAME: "Deploy (GitOps)"
+          STAGE_RESULT: ${{ needs.deploy.result }}
+
+  notify-deploy-success:
+    name: Notify Telegram - Deploy succeeded
+    needs: deploy
+    if: ${{ always() && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send success alert
+        run: bash .github/scripts/send-telegram-alert.sh success
+        env:
+          STAGE_NAME: "Deploy (GitOps)"
+          STAGE_RESULT: ${{ needs.deploy.result }}
