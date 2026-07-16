@@ -44,6 +44,7 @@ public class ReferenceDataService {
     private final SpellSchoolRepository spellSchoolRepository;
     private final CreatureSizeRepository creatureSizeRepository;
     private final TriggerEventTypeRepository triggerEventTypeRepository;
+    private final EquipmentCategoryRepository equipmentCategoryRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
@@ -356,6 +357,20 @@ public class ReferenceDataService {
                         .slug(t.getCode())
                         .name(t.getDisplayName())
                         .build())
+                .toList();
+    }
+
+    /**
+     * Возвращает ванильные категории снаряжения (equipment_category) для комбобокса авторинга предметов.
+     * Раньше FE предлагал захардкоженные slug'и (напр. «simple-weapon»), которых нет в БД, и бэк отбивал их
+     * ошибкой «Неизвестная категория снаряжения». Теперь список берётся из реальных данных с русскими именами.
+     * @param lang язык отображаемого имени
+     * @return метки категорий (slug + локализованное имя) по русскому названию
+     */
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getEquipmentCategories(String lang) {
+        return equipmentCategoryRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
+                .map(c -> label(lang, c.getId(), c.getSlug(), c.getNameRu(), c.getNameEn()))
                 .toList();
     }
 

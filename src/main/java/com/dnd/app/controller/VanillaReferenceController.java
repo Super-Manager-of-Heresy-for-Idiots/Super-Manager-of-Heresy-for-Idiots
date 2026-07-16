@@ -195,6 +195,20 @@ public class VanillaReferenceController {
     }
 
     /**
+     * Возвращает ванильные категории снаряжения для комбобокса авторинга предметов (slug + русское имя).
+     * @param lang язык отображаемого имени
+     * @return список категорий снаряжения
+     */
+    @GetMapping("/equipment-categories")
+    @Operation(summary = "Get equipment categories (Simple Weapon, Armor, …) for the item authoring picker")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getEquipmentCategories(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getEquipmentCategories(lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
      * Возвращает словарь событий-триггеров движка для пикера триггера реакции homebrew-заклинания (HB_UX Фаза 1).
      * @param lang входящее значение lang, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции

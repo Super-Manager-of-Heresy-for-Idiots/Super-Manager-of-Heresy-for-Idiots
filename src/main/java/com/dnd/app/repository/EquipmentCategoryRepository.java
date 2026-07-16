@@ -3,6 +3,7 @@ package com.dnd.app.repository;
 import com.dnd.app.domain.content.EquipmentCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +18,7 @@ public interface EquipmentCategoryRepository extends JpaRepository<EquipmentCate
 
     /** Категория, принадлежащая конкретному пакету, по slug. */
     Optional<EquipmentCategory> findBySlugAndHomebrew_Id(String slug, UUID homebrewId);
+
+    /** Ванильные категории для справочника FE (сортировка по русскому имени). */
+    List<EquipmentCategory> findByHomebrewIsNullOrderByNameRuAsc();
 }
