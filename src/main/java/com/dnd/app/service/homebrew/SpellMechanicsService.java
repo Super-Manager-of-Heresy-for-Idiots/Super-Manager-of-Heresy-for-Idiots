@@ -25,6 +25,7 @@ import com.dnd.app.repository.FeatureRuleRevisionRepository;
 import com.dnd.app.repository.StatTypeRepository;
 import com.dnd.app.service.FeatureFormulaService;
 import com.dnd.app.service.FeatureRuleRevisionService;
+import com.dnd.app.service.formula.DiceNotation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -94,7 +95,8 @@ public class SpellMechanicsService {
         }
 
         if (hasDamage) {
-            UUID diceFormulaId = formula("dice(\"" + request.getDamageDice().trim() + "\")", "dice", "dice");
+            UUID diceFormulaId = formula(
+                    "dice(\"" + DiceNotation.normalize(request.getDamageDice().trim()) + "\")", "dice", "dice");
             UUID damageTypeId = notBlank(request.getDamageType()) ? resolveDamageType(request.getDamageType()) : null;
             FeatureRule dmg = createRule(spell, pkg, "damage", 1,
                     "Урон " + request.getDamageDice(), username);
@@ -227,10 +229,12 @@ public class SpellMechanicsService {
     }
 
     private UUID healingFormulaId(String healing) {
-        if (PURE_DICE.matcher(healing).matches()) {
-            return formula("dice(\"" + healing.replaceAll("\\s+", "") + "\")", "dice", "dice");
+        // Нормализуем русскую дайс-нотацию («2к8») до классификации: иначе чистые кости уйдут в scalar-парсер.
+        String norm = DiceNotation.normalize(healing);
+        if (PURE_DICE.matcher(norm).matches()) {
+            return formula("dice(\"" + norm.replaceAll("\\s+", "") + "\")", "dice", "dice");
         }
-        return formula(healing, "scalar", "integer");
+        return formula(norm, "scalar", "integer");
     }
 
     private UUID resolveAbility(String slug) {

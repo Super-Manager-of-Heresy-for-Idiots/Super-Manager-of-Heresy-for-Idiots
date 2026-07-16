@@ -406,18 +406,31 @@ public class FeatureFormulaEvaluator {
         }
     }
 
+    /**
+     * Разбирает спецификацию кости вида NdM (например «8d6», «d20»). Терпима к пользовательскому вводу:
+     * принимает русский разделитель («8к6», «8д6») и пробелы внутри записи («8 d 6»). Количество костей
+     * и число граней обязаны быть положительными.
+     * @param spec строка-спецификация из dice("...")
+     * @return разобранное значение кости
+     * @throws FormulaException если строка не соответствует формату NdM (с подсказкой ожидаемого формата)
+     */
     private DiceValue parseDiceSpec(String spec) {
-        String s = spec.trim().toLowerCase();
+        String s = spec.trim().toLowerCase().replaceAll("\\s+", "").replace('к', 'd').replace('д', 'd');
         int d = s.indexOf('d');
-        if (d < 0) throw new FormulaException("Некорректная кость: " + spec);
+        if (d < 0 || s.indexOf('d', d + 1) >= 0) throw invalidDice(spec);
         try {
             int count = d == 0 ? 1 : Integer.parseInt(s.substring(0, d));
             int sides = Integer.parseInt(s.substring(d + 1));
-            if (count <= 0 || sides <= 0) throw new FormulaException("Некорректная кость: " + spec);
+            if (count <= 0 || sides <= 0) throw invalidDice(spec);
             return new DiceValue(count, sides);
         } catch (NumberFormatException e) {
-            throw new FormulaException("Некорректная кость: " + spec);
+            throw invalidDice(spec);
         }
+    }
+
+    private FormulaException invalidDice(String spec) {
+        return new FormulaException("Некорректная кость «" + spec
+                + "»: ожидается запись NdM (количество, буква d/к, грани), например 8d6 или 8к6");
     }
 
     // ── Static analysis (required context) ──────────────────────────────────

@@ -117,6 +117,33 @@ class FeatureFormulaEngineTest {
         assertThat(evaluator.evaluate("dice(\"d20\")", ctx())).isEqualTo(new DiceValue(1, 20));
     }
 
+    @Test
+    void diceSpecAcceptsRussianNotationAndInnerSpaces() {
+        // Русская нотация «8к6»/«8д6» и пробелы внутри записи — легитимный пользовательский ввод.
+        assertThat(evaluator.evaluate("dice(\"8к6\")", ctx())).isEqualTo(new DiceValue(8, 6));
+        assertThat(evaluator.evaluate("dice(\"8Д6\")", ctx())).isEqualTo(new DiceValue(8, 6));
+        assertThat(evaluator.evaluate("dice(\"8 d 6\")", ctx())).isEqualTo(new DiceValue(8, 6));
+    }
+
+    @Test
+    void diceSpecRejectsMalformedWithFormatHint() {
+        // Кириллическая «т» («1000т1000») — опечатка, не нотация: ошибка обязана подсказывать формат.
+        assertThatThrownBy(() -> evaluator.evaluate("dice(\"1000т1000\")", ctx()))
+                .isInstanceOf(FormulaException.class)
+                .hasMessageContaining("ожидается запись NdM");
+        assertThatThrownBy(() -> evaluator.evaluate("dice(\"0d6\")", ctx()))
+                .isInstanceOf(FormulaException.class)
+                .hasMessageContaining("ожидается запись NdM");
+    }
+
+    @Test
+    void diceNotationNormalizeIsSafeForFullFormulas() {
+        assertThat(DiceNotation.normalize("2к8 + wis_mod")).isEqualTo("2d8 + wis_mod");
+        assertThat(DiceNotation.normalize("8 Д 6")).isEqualTo("8d6");
+        assertThat(DiceNotation.normalize("dex_mod + 1")).isEqualTo("dex_mod + 1");
+        assertThat(DiceNotation.normalize(null)).isNull();
+    }
+
     // ── Boolean predicates ───────────────────────────────────────────────────
 
     @Test
