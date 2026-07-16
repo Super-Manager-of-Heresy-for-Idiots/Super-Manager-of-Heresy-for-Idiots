@@ -29,6 +29,9 @@ public interface FeatureActiveEffectRepository extends JpaRepository<FeatureActi
     /** Effects that are still active but whose wall-clock expiry has passed (cleanup / expiration sweep). */
     List<FeatureActiveEffect> findByStatusAndExpiresAtIsNotNullAndExpiresAtBefore(String status, Instant cutoff);
 
+    /** ABIL §3.1: сколько ДРУГИХ активных эффектов держат тот же инстанс состояния (общая строка condition). */
+    long countByAppliedConditionInstanceIdAndStatusAndIdNot(UUID appliedConditionInstanceId, String status, UUID id);
+
     @Modifying
     @Query("update FeatureActiveEffect e set e.status = :expiredStatus where e.sourceItemInstanceId = :itemInstanceId and e.status = :activeStatus")
     int expireActiveBySourceItemInstanceId(@Param("itemInstanceId") UUID itemInstanceId,

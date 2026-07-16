@@ -31,6 +31,7 @@ public class EffectExpirationService {
     private final FeatureActiveEffectRepository activeRepository;
     private final FeatureEffectEndConditionRepository endConditionRepository;
     private final RestTypeRepository restTypeRepository;
+    private final ActiveEffectConditionLinker conditionLinker;
 
     /**
      * Выполняет операции "expire due" в рамках бизнес-логики домена.
@@ -41,6 +42,7 @@ public class EffectExpirationService {
         List<FeatureActiveEffect> due =
                 activeRepository.findByStatusAndExpiresAtIsNotNullAndExpiresAtBefore(ACTIVE, Instant.now());
         due.forEach(e -> {
+            conditionLinker.clear(e);
             e.setStatus(EXPIRED);
             activeRepository.save(e);
         });
@@ -65,6 +67,7 @@ public class EffectExpirationService {
                     endConditionRepository.findByEffectDefinitionId(effect.getEffectDefinitionId());
             boolean endsOnRest = ends.stream().anyMatch(c -> restType.getId().equals(c.getRestTypeId()));
             if (endsOnRest) {
+                conditionLinker.clear(effect);
                 effect.setStatus(ENDED);
                 activeRepository.save(effect);
                 ended++;
@@ -85,6 +88,7 @@ public class EffectExpirationService {
             }
             int left = effect.getRemainingRounds() - 1;
             if (left <= 0) {
+                conditionLinker.clear(effect);
                 effect.setRemainingRounds(0);
                 effect.setStatus(EXPIRED);
             } else {
@@ -101,6 +105,7 @@ public class EffectExpirationService {
     @Transactional
     public void gmEnd(UUID effectId) {
         activeRepository.findById(effectId).ifPresent(e -> {
+            conditionLinker.clear(e);
             e.setStatus(ENDED);
             activeRepository.save(e);
         });
@@ -115,6 +120,7 @@ public class EffectExpirationService {
     public void gmSetRounds(UUID effectId, int rounds) {
         activeRepository.findById(effectId).ifPresent(e -> {
             if (rounds <= 0) {
+                conditionLinker.clear(e);
                 e.setRemainingRounds(0);
                 e.setStatus(EXPIRED);
             } else {

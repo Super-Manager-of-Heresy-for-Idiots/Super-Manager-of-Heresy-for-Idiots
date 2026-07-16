@@ -59,6 +59,42 @@ public class ConditionService {
     }
 
     /**
+     * ABIL §3.1: накладывает состояние от эффекта и возвращает id инстанса (battle_combatant_condition)
+     * для честной связи эффект→состояние. Идемпотентно по (комбатант, состояние).
+     * @param campaignId кампания (для WS-события)
+     * @param combatant цель
+     * @param conditionId состояние
+     * @param remainingRounds длительность в раундах (null — бессрочно/до снятия)
+     * @param actorId источник (кастующий)
+     * @param currentRound текущий раунд
+     * @return id инстанса наложенного состояния либо {@code null}
+     */
+    @Transactional
+    public UUID applyForEffect(UUID campaignId, BattleCombatant combatant, UUID conditionId,
+                              Integer remainingRounds, UUID actorId, int currentRound) {
+        apply(campaignId, combatant, conditionId, "effect", remainingRounds, actorId, currentRound);
+        return conditionRepository.findByCombatantIdAndConditionId(combatant.getId(), conditionId)
+                .map(BattleCombatantCondition::getId).orElse(null);
+    }
+
+    /**
+     * ABIL §3.1: снимает состояние по id инстанса (при завершении наложившего эффекта). Кампанию/комбатанта
+     * выводит из самого инстанса; если инстанс уже удалён (GM снял руками) — no-op.
+     * @param instanceId id инстанса состояния
+     * @param actorId источник действия (для WS-события)
+     */
+    @Transactional
+    public void removeByInstanceId(UUID instanceId, UUID actorId) {
+        conditionRepository.findById(instanceId).ifPresent(c -> {
+            BattleCombatant combatant = c.getCombatant();
+            UUID campaignId = combatant.getBattle().getCampaign().getId();
+            UUID combatantId = combatant.getId();
+            conditionRepository.delete(c);
+            publish(campaignId, combatantId, actorId);
+        });
+    }
+
+    /**
      * Выполняет операции "apply by code" в рамках бизнес-логики домена.
      * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
      * @param combatant входящее значение combatant, используемое бизнес-сценарием

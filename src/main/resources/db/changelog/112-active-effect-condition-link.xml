@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      ABIL §3.1: честная связь эффект → состояние. Когда эффект умения/заклинания с
+      feature_effect_modifier.condition_id накладывается на комбатанта активного боя, движок вешает
+      состояние (battle_combatant_condition) и запоминает id инстанса здесь. При снятии эффекта
+      (истёк/отдых/GM/смена концентрации) это же состояние снимается — но только оно (эвристика «по коду»
+      заменена явной связью). Ручное снятие состояния GM-ом эффект не роняет (связь становится битой → no-op).
+      Nullable: у большинства эффектов состояния нет.
+    -->
+    <changeSet id="112-active-effect-condition-link" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.character_active_effect
+                ADD COLUMN IF NOT EXISTS applied_condition_instance_id uuid;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.character_active_effect DROP COLUMN IF EXISTS applied_condition_instance_id;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -52,6 +52,13 @@ public class FeatureActiveEffect {
     @Column(name = "state_json", columnDefinition = "text")
     private String stateJson;
 
+    /**
+     * ABIL §3.1: id инстанса состояния (battle_combatant_condition), наложенного этим эффектом; null — эффект
+     * состояние не вешал (нет condition-модификатора либо цель не в активном бою). Честная связь для снятия.
+     */
+    @Column(name = "applied_condition_instance_id")
+    private UUID appliedConditionInstanceId;
+
     /** {@link ActiveEffectStatus} code. */
     @Column(nullable = false, length = 16)
     @Builder.Default

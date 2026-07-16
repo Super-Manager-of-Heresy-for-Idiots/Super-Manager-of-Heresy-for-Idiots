@@ -188,4 +188,7 @@
     <!-- HB_UX Фаза 6: бэкфилл легаси homebrew-заклинаний (range_type/duration_raw → структурные колонки). -->
     <include file="db/changelog/111-homebrew-spell-structural-backfill.xml"/>
 
+    <!-- ABIL §3.1: честная связь эффект → состояние (applied_condition_instance_id на character_active_effect). -->
+    <include file="db/changelog/112-active-effect-condition-link.xml"/>
+
 </databaseChangeLog>

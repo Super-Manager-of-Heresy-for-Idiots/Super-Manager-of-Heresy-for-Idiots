@@ -49,6 +49,7 @@ public class FeatureEffectService {
     private final FeatureFormulaService formulaService;
     private final DurationUnitRepository durationUnitRepository;
     private final CharacterFormulaContextFactory contextFactory;
+    private final ActiveEffectConditionLinker conditionLinker;
 
     /**
      * Выполняет операции "apply for feature use" в рамках бизнес-логики домена.
@@ -128,6 +129,7 @@ public class FeatureEffectService {
     public int endConcentration(UUID casterId) {
         List<FeatureActiveEffect> concentration = concentrationEffects(casterId);
         for (FeatureActiveEffect effect : concentration) {
+            conditionLinker.clear(effect);
             effect.setStatus(ENDED);
             activeRepository.save(effect);
         }
@@ -180,6 +182,9 @@ public class FeatureEffectService {
                 }
             }
 
+            // ABIL §3.1: если у эффекта есть состояние и цель в бою — вешаем его и запоминаем честную связь.
+            UUID conditionInstanceId = conditionLinker.materialize(def, target.getId(), source.getId(), remainingRounds);
+
             activeRepository.save(FeatureActiveEffect.builder()
                     .characterId(target.getId())
                     .sourceCharacterId(source.getId())
@@ -188,6 +193,7 @@ public class FeatureEffectService {
                     .effectDefinitionId(def.getId())
                     .expiresAt(expiresAt)
                     .remainingRounds(remainingRounds)
+                    .appliedConditionInstanceId(conditionInstanceId)
                     .status(ACTIVE)
                     .build());
             created++;
@@ -202,6 +208,7 @@ public class FeatureEffectService {
     @Transactional
     public void endEffect(UUID activeEffectId) {
         activeRepository.findById(activeEffectId).ifPresent(effect -> {
+            conditionLinker.clear(effect);
             effect.setStatus(ENDED);
             activeRepository.save(effect);
         });
@@ -222,6 +229,7 @@ public class FeatureEffectService {
     private void endActiveOfDefinition(UUID characterId, UUID definitionId) {
         activeRepository.findByCharacterIdAndEffectDefinitionIdAndStatus(characterId, definitionId, ACTIVE)
                 .forEach(effect -> {
+                    conditionLinker.clear(effect);
                     effect.setStatus(ENDED);
                     activeRepository.save(effect);
                 });
@@ -238,6 +246,7 @@ public class FeatureEffectService {
         activeRepository.findByCharacterIdAndStatus(characterId, ACTIVE).stream()
                 .filter(e -> defIdsInGroup.contains(e.getEffectDefinitionId()))
                 .forEach(e -> {
+                    conditionLinker.clear(e);
                     e.setStatus(ENDED);
                     activeRepository.save(e);
                 });
