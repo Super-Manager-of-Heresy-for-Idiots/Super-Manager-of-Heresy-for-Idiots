@@ -54,6 +54,9 @@ public class HomebrewSpellResponse {
     private Boolean halfOnSave;
     private Boolean requiresAttackHit;
     private String healingFormula;
+    // Состояния (HB_UX Фаза 4) — реконструируются из SPELL-owned active_effect-правила для round-trip.
+    private List<String> conditionSlugs;
+    private Integer conditionDurationRounds;
     private String source;
     private UUID homebrewPackageId;
     private String homebrewPackageTitle;

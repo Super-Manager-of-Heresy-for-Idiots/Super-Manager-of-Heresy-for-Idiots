@@ -1,10 +1,15 @@
 package com.dnd.app.service.homebrew;
 
+import com.dnd.app.domain.BestiaryCondition;
 import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
+import com.dnd.app.domain.featurerule.DurationUnit;
+import com.dnd.app.domain.featurerule.EffectStackingPolicy;
 import com.dnd.app.domain.featurerule.FeatureDamageRule;
+import com.dnd.app.domain.featurerule.FeatureEffectDefinition;
+import com.dnd.app.domain.featurerule.FeatureEffectModifier;
 import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureHealingRule;
 import com.dnd.app.domain.featurerule.FeatureResolutionRule;
@@ -15,8 +20,12 @@ import com.dnd.app.domain.featurerule.FeatureRuleSource;
 import com.dnd.app.dto.request.HomebrewSpellRequest;
 import com.dnd.app.dto.response.HomebrewSpellResponse;
 import com.dnd.app.exception.BadRequestException;
+import com.dnd.app.repository.BestiaryConditionRepository;
 import com.dnd.app.repository.DamageTypeRepository;
+import com.dnd.app.repository.DurationUnitRepository;
 import com.dnd.app.repository.FeatureDamageRuleRepository;
+import com.dnd.app.repository.FeatureEffectDefinitionRepository;
+import com.dnd.app.repository.FeatureEffectModifierRepository;
 import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.FeatureHealingRuleRepository;
 import com.dnd.app.repository.FeatureResolutionRuleRepository;
@@ -30,10 +39,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -51,6 +63,10 @@ public class SpellMechanicsService {
     /** Формула DC спасброска заклинания (как у ванильного бэкфилла). */
     private static final String SPELL_DC_EXPRESSION = "8 + proficiency_bonus + spellcasting_ability_mod";
     private static final String OWNER_SPELL = FeatureRuleOwnerType.SPELL.getCode();
+    /** Тип SPELL-owned правила, несущего накладываемые состояния (одна строка на заклинание). */
+    private static final String RULE_ACTIVE_EFFECT = "active_effect";
+    /** Тип модификатора эффекта, несущего состояние (condition_id). */
+    private static final String MODIFIER_CONDITION = "condition";
     private static final Pattern PURE_DICE = Pattern.compile("(?i)\\s*\\d+\\s*d\\s*\\d+\\s*");
     private static final Pattern DICE_WRAP = Pattern.compile("(?i)dice\\(\"(.+)\"\\)");
 
@@ -64,6 +80,10 @@ public class SpellMechanicsService {
     private final FeatureRuleRevisionService revisionService;
     private final DamageTypeRepository damageTypeRepository;
     private final StatTypeRepository statTypeRepository;
+    private final BestiaryConditionRepository bestiaryConditionRepository;
+    private final FeatureEffectDefinitionRepository effectDefinitionRepository;
+    private final FeatureEffectModifierRepository effectModifierRepository;
+    private final DurationUnitRepository durationUnitRepository;
 
     /**
      * Пересобирает механику заклинания из запроса: удаляет прежние homebrew-правила этого заклинания и создаёт
@@ -79,6 +99,8 @@ public class SpellMechanicsService {
         boolean hasDamage = notBlank(request.getDamageDice());
         boolean hasSave = notBlank(request.getSaveAbility());
         boolean hasHealing = notBlank(request.getHealingFormula());
+        List<String> conditionSlugs = distinctConditionSlugs(request.getConditionSlugs());
+        boolean hasConditions = !conditionSlugs.isEmpty();
 
         UUID saveRuleId = null;
         if (hasSave) {
@@ -127,8 +149,59 @@ public class SpellMechanicsService {
             healingRuleRepository.save(hr);
             approve(heal, username);
         }
-        log.info("Homebrew spell mechanics synced: spellId={}, damage={}, save={}, healing={}",
-                spell.getId(), hasDamage, hasSave, hasHealing);
+
+        if (hasConditions) {
+            syncConditions(spell, pkg, request, conditionSlugs, username);
+        }
+        log.info("Homebrew spell mechanics synced: spellId={}, damage={}, save={}, healing={}, conditions={}",
+                spell.getId(), hasDamage, hasSave, hasHealing, conditionSlugs.size());
+    }
+
+    /**
+     * Создаёт SPELL-owned {@code active_effect}-правило с одним {@link FeatureEffectDefinition} на каждое состояние
+     * (по одному condition-модификатору), чтобы движок при касте наложил каждое через {@code ActiveEffectConditionLinker}
+     * (ABIL §3.1). Одно определение = одно состояние: {@code materialize} берёт первый condition-модификатор определения.
+     * @param spell заклинание-владелец
+     * @param pkg пакет-владелец
+     * @param request тело (нужна длительность/концентрация)
+     * @param conditionSlugs уже нормализованные уникальные слаги состояний
+     * @param username автор
+     */
+    private void syncConditions(Spell spell, HomebrewPackage pkg, HomebrewSpellRequest request,
+                                List<String> conditionSlugs, String username) {
+        Integer durationRounds = request.getConditionDurationRounds();
+        UUID roundUnitId = durationRounds != null
+                ? durationUnitRepository.findByCode("round").map(DurationUnit::getId).orElse(null)
+                : null;
+        boolean concentration = Boolean.TRUE.equals(request.getConcentration());
+
+        List<String> displayNames = new ArrayList<>();
+        FeatureRule effectRule = createRule(spell, pkg, RULE_ACTIVE_EFFECT, 3, "Состояния заклинания", username);
+        for (String slug : conditionSlugs) {
+            BestiaryCondition condition = resolveCondition(slug);
+            displayNames.add(condition.getNameRusloc());
+            // Длительность в раундах общая для всех состояний: своя формула на каждое определение (формулы одноразовые).
+            UUID durationFormulaId = durationRounds != null
+                    ? formula(String.valueOf(durationRounds), "scalar", "integer") : null;
+            FeatureEffectDefinition def = effectDefinitionRepository.save(FeatureEffectDefinition.builder()
+                    .featureRuleId(effectRule.getId())
+                    .effectKey(effectKey(condition.getCode()))
+                    .displayName(truncate(condition.getNameRusloc(), 120))
+                    .durationFormulaId(durationFormulaId)
+                    .durationUnitId(durationFormulaId != null ? roundUnitId : null)
+                    .concentrationRequired(concentration)
+                    .stackingPolicy(EffectStackingPolicy.REPLACE_SAME_FEATURE.getCode())
+                    .build());
+            effectModifierRepository.save(FeatureEffectModifier.builder()
+                    .effectDefinitionId(def.getId())
+                    .modifierType(MODIFIER_CONDITION)
+                    .conditionId(condition.getId())
+                    .build());
+        }
+        // Заметку правила делаем говорящей: перечень состояний для ревью в Workbench.
+        effectRule.setNotes("Состояния: " + String.join(", ", displayNames));
+        ruleRepository.save(effectRule);
+        approve(effectRule, username);
     }
 
     /**
@@ -165,7 +238,34 @@ public class SpellMechanicsService {
                 resolutionRuleRepository.findByFeatureRuleId(rule.getId()).stream()
                         .filter(r -> "saving_throw".equals(r.getResolutionType())).findFirst()
                         .ifPresent(res -> resp.setSaveAbility(slugOfAbility(res.getAbilityId())));
+            } else if (RULE_ACTIVE_EFFECT.equals(rule.getRuleType())) {
+                readConditions(rule, resp);
             }
+        }
+    }
+
+    /**
+     * Реконструирует состояния и их длительность из active_effect-правила заклинания в DTO ответа (round-trip формы).
+     * Каждое определение = одно состояние (первый condition-модификатор); длительность берём из первой формулы раундов.
+     * @param rule active_effect-правило заклинания
+     * @param resp билдер ответа (мутируется)
+     */
+    private void readConditions(FeatureRule rule, HomebrewSpellResponse resp) {
+        List<String> slugs = new ArrayList<>();
+        for (FeatureEffectDefinition def : effectDefinitionRepository.findByFeatureRuleId(rule.getId())) {
+            effectModifierRepository.findByEffectDefinitionId(def.getId()).stream()
+                    .map(FeatureEffectModifier::getConditionId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .flatMap(bestiaryConditionRepository::findById)
+                    .map(BestiaryCondition::getCode)
+                    .ifPresent(slugs::add);
+            if (resp.getConditionDurationRounds() == null && def.getDurationFormulaId() != null) {
+                resp.setConditionDurationRounds(intExpression(def.getDurationFormulaId()));
+            }
+        }
+        if (!slugs.isEmpty()) {
+            resp.setConditionSlugs(slugs);
         }
     }
 
@@ -186,6 +286,12 @@ public class SpellMechanicsService {
             damageRuleRepository.deleteAll(damageRuleRepository.findByFeatureRuleId(rule.getId()));
             healingRuleRepository.deleteAll(healingRuleRepository.findByFeatureRuleId(rule.getId()));
             resolutionRuleRepository.deleteAll(resolutionRuleRepository.findByFeatureRuleId(rule.getId()));
+            // ABIL §3.1: состояния — сносим модификаторы и определения эффектов active_effect-правила.
+            List<FeatureEffectDefinition> defs = effectDefinitionRepository.findByFeatureRuleId(rule.getId());
+            for (FeatureEffectDefinition def : defs) {
+                effectModifierRepository.deleteAll(effectModifierRepository.findByEffectDefinitionId(def.getId()));
+            }
+            effectDefinitionRepository.deleteAll(defs);
             revisionRepository.deleteAll(revisionRepository.findByFeatureRuleIdOrderByRevisionNumberDesc(rule.getId()));
             ruleRepository.delete(rule);
         }
@@ -253,6 +359,38 @@ public class SpellMechanicsService {
                 .orElseThrow(() -> new BadRequestException("Неизвестный тип урона: " + slug));
     }
 
+    /** Резолвит слаг состояния (bestiary_conditions.code) в ванильную сущность; homebrew-состояния пока не поддержаны. */
+    private BestiaryCondition resolveCondition(String slug) {
+        return bestiaryConditionRepository.findByCodeAndHomebrewIsNull(slug.toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new BadRequestException("Неизвестное состояние: " + slug));
+    }
+
+    /** Нормализует и дедуплицирует слаги состояний (порядок сохраняется, пустые/повторы отбрасываются). */
+    private static List<String> distinctConditionSlugs(List<String> slugs) {
+        if (slugs == null || slugs.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> distinct = new LinkedHashSet<>();
+        for (String s : slugs) {
+            if (notBlank(s)) {
+                distinct.add(s.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        return new ArrayList<>(distinct);
+    }
+
+    /** Ключ эффекта состояния (≤64 симв., ограничение колонки effect_key). */
+    private static String effectKey(String conditionCode) {
+        return truncate("condition:" + conditionCode, 64);
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) {
+            return null;
+        }
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
     // ================= read helpers =================
 
     private String expressionOf(UUID formulaId) {
@@ -260,6 +398,19 @@ public class SpellMechanicsService {
             return null;
         }
         return formulaRepository.findById(formulaId).map(FeatureFormula::getExpression).orElse(null);
+    }
+
+    /** Читает целочисленное выражение формулы длительности («N» → N); нечисловое/отсутствующее → null. */
+    private Integer intExpression(UUID formulaId) {
+        String expr = expressionOf(formulaId);
+        if (expr == null) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(expr.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String unwrapDice(String expression) {

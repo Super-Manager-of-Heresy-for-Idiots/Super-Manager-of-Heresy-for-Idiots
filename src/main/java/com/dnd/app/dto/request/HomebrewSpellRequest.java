@@ -118,4 +118,17 @@ public class HomebrewSpellRequest {
 
     /** Формула лечения (напр. «2d8 + wis_mod» или «2d8»); пусто — заклинание не лечит. */
     private String healingFormula;
+
+    // --- Состояния (HB_UX Фаза 4): мультипикер + длительность в раундах ---
+
+    /**
+     * Слаги состояний (bestiary_conditions.code), накладываемых заклинанием на цель. Пусто/null — заклинание
+     * состояний не накладывает. Резолвятся в id и материализуются движком через SPELL-owned active_effect-правило
+     * (feature_effect_modifier.condition_id) при касте в активном бою.
+     */
+    private List<String> conditionSlugs;
+
+    /** Длительность накладываемых состояний в раундах (1 раунд = 6 с); null — до снятия/конца эффекта. */
+    @Min(1) @Max(1000)
+    private Integer conditionDurationRounds;
 }

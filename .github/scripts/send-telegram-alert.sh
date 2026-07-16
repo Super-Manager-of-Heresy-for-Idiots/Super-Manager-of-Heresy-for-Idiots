@@ -14,26 +14,47 @@ fi
 short_sha="${GITHUB_SHA::7}"
 run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
+html_escape() {
+  local value="$1"
+  value="${value//&/&amp;}"
+  value="${value//</&lt;}"
+  value="${value//>/&gt;}"
+  value="${value//\"/&quot;}"
+  printf '%s' "${value}"
+}
+
+repo="$(html_escape "${GITHUB_REPOSITORY}")"
+stage="$(html_escape "${stage_name}")"
+branch="$(html_escape "${GITHUB_REF_NAME}")"
+actor="$(html_escape "${GITHUB_ACTOR}")"
+result="$(html_escape "${stage_result}")"
+
 if [ "${alert_status}" = "success" ]; then
   message="$(cat <<EOF
-Успешно
-Repository: ${GITHUB_REPOSITORY}
-Stage: ${stage_name}
-Branch: ${GITHUB_REF_NAME}
-Commit: ${short_sha}
-Actor: ${GITHUB_ACTOR}
-Run: ${run_url}
+✅ <b>Успешно</b>
+
+<b>Repository:</b> <code>${repo}</code>
+<b>Stage:</b> <code>${stage}</code>
+<b>Branch:</b> <code>${branch}</code>
+<b>Commit:</b> <code>${short_sha}</code>
+<b>Actor:</b> <code>${actor}</code>
+
+<a href="${run_url}">GitHub Actions log</a>
 EOF
 )"
 else
   message="$(cat <<EOF
-Ошибка
-Repository: ${GITHUB_REPOSITORY}
-Stage: ${stage_name}
-Branch: ${GITHUB_REF_NAME}
-Commit: ${short_sha}
-Actor: ${GITHUB_ACTOR}
-Error: stage ${stage_name} finished with ${stage_result}. Logs: ${run_url}
+❌ <b>Ошибка</b>
+
+<b>Repository:</b> <code>${repo}</code>
+<b>Stage:</b> <code>${stage}</code>
+<b>Branch:</b> <code>${branch}</code>
+<b>Commit:</b> <code>${short_sha}</code>
+<b>Actor:</b> <code>${actor}</code>
+<b>Status:</b> <code>${result}</code>
+
+<b>Error:</b> stage <code>${stage}</code> finished with <code>${result}</code>
+<a href="${run_url}">GitHub Actions log</a>
 EOF
 )"
 fi
@@ -48,6 +69,7 @@ curl_args=(
   "${api_url}"
   --data "chat_id=${TELEGRAM_CHAT_ID}"
   --data-urlencode "text=${message}"
+  --data "parse_mode=HTML"
   --data "disable_web_page_preview=true"
 )
 

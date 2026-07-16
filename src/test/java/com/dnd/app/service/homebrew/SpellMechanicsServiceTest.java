@@ -1,17 +1,25 @@
 package com.dnd.app.service.homebrew;
 
+import com.dnd.app.domain.BestiaryCondition;
 import com.dnd.app.domain.DamageType;
 import com.dnd.app.domain.HomebrewPackage;
 import com.dnd.app.domain.Spell;
 import com.dnd.app.domain.StatType;
+import com.dnd.app.domain.featurerule.DurationUnit;
 import com.dnd.app.domain.featurerule.FeatureDamageRule;
+import com.dnd.app.domain.featurerule.FeatureEffectDefinition;
+import com.dnd.app.domain.featurerule.FeatureEffectModifier;
 import com.dnd.app.domain.featurerule.FeatureFormula;
 import com.dnd.app.domain.featurerule.FeatureHealingRule;
 import com.dnd.app.domain.featurerule.FeatureResolutionRule;
 import com.dnd.app.domain.featurerule.FeatureRule;
 import com.dnd.app.dto.request.HomebrewSpellRequest;
+import com.dnd.app.repository.BestiaryConditionRepository;
 import com.dnd.app.repository.DamageTypeRepository;
+import com.dnd.app.repository.DurationUnitRepository;
 import com.dnd.app.repository.FeatureDamageRuleRepository;
+import com.dnd.app.repository.FeatureEffectDefinitionRepository;
+import com.dnd.app.repository.FeatureEffectModifierRepository;
 import com.dnd.app.repository.FeatureFormulaRepository;
 import com.dnd.app.repository.FeatureHealingRuleRepository;
 import com.dnd.app.repository.FeatureResolutionRuleRepository;
@@ -54,6 +62,10 @@ class SpellMechanicsServiceTest {
     @Mock private FeatureRuleRevisionService revisionService;
     @Mock private DamageTypeRepository damageTypeRepository;
     @Mock private StatTypeRepository statTypeRepository;
+    @Mock private BestiaryConditionRepository bestiaryConditionRepository;
+    @Mock private FeatureEffectDefinitionRepository effectDefinitionRepository;
+    @Mock private FeatureEffectModifierRepository effectModifierRepository;
+    @Mock private DurationUnitRepository durationUnitRepository;
 
     @InjectMocks private SpellMechanicsService service;
 
@@ -138,6 +150,78 @@ class SpellMechanicsServiceTest {
         assertEquals(dex.getId(), resCaptor.getValue().getAbilityId());
 
         verify(healingRuleRepository).save(any(FeatureHealingRule.class));
+    }
+
+    @Test
+    @DisplayName("sync: состояния blinded (10 раундов, концентрация) → approved active_effect-правило с condition-модификатором")
+    void sync_conditions_buildsActiveEffectRuleWithConditionModifier() {
+        UUID spellId = UUID.randomUUID();
+        Spell spell = new Spell();
+        spell.setId(spellId);
+        HomebrewPackage pkg = HomebrewPackage.builder().title("Pkg").build();
+        pkg.setId(UUID.randomUUID());
+        spell.setHomebrew(pkg);
+
+        UUID conditionId = UUID.randomUUID();
+        BestiaryCondition blinded = new BestiaryCondition();
+        blinded.setId(conditionId);
+        blinded.setCode("blinded");
+        blinded.setNameRusloc("Ослепление");
+        UUID roundUnitId = UUID.randomUUID();
+        DurationUnit round = mock(DurationUnit.class);
+        when(round.getId()).thenReturn(roundUnitId);
+
+        when(ruleRepository.findByOwnerTypeAndOwnerIdOrderBySortOrderAscCreatedAtAsc(eq("SPELL"), eq(spellId)))
+                .thenReturn(List.of());
+        when(ruleRepository.save(any(FeatureRule.class))).thenAnswer(inv -> {
+            FeatureRule r = inv.getArgument(0);
+            if (r.getId() == null) r.setId(UUID.randomUUID());
+            return r;
+        });
+        when(formulaService.validateAndStamp(any(FeatureFormula.class))).thenAnswer(inv -> {
+            FeatureFormula f = inv.getArgument(0);
+            f.setValidationStatus("valid");
+            return f;
+        });
+        when(formulaRepository.save(any(FeatureFormula.class))).thenAnswer(inv -> {
+            FeatureFormula f = inv.getArgument(0);
+            if (f.getId() == null) f.setId(UUID.randomUUID());
+            return f;
+        });
+        when(bestiaryConditionRepository.findByCodeAndHomebrewIsNull("blinded")).thenReturn(Optional.of(blinded));
+        when(durationUnitRepository.findByCode("round")).thenReturn(Optional.of(round));
+        when(effectDefinitionRepository.save(any(FeatureEffectDefinition.class))).thenAnswer(inv -> {
+            FeatureEffectDefinition d = inv.getArgument(0);
+            if (d.getId() == null) d.setId(UUID.randomUUID());
+            return d;
+        });
+
+        HomebrewSpellRequest req = new HomebrewSpellRequest();
+        req.setConditionSlugs(List.of("blinded"));
+        req.setConditionDurationRounds(10);
+        req.setConcentration(true);
+
+        service.sync(spell, pkg, req, "gm");
+
+        // одно active_effect-правило, approved
+        ArgumentCaptor<FeatureRule> ruleCaptor = ArgumentCaptor.forClass(FeatureRule.class);
+        verify(ruleRepository, atLeastOnce()).save(ruleCaptor.capture());
+        assertTrue(ruleCaptor.getAllValues().stream().anyMatch(r -> "active_effect".equals(r.getRuleType())));
+        verify(revisionService).approveCurrent(any(), any(), eq("gm"));
+
+        // определение эффекта: длительность в раундах + концентрация
+        ArgumentCaptor<FeatureEffectDefinition> defCaptor = ArgumentCaptor.forClass(FeatureEffectDefinition.class);
+        verify(effectDefinitionRepository).save(defCaptor.capture());
+        FeatureEffectDefinition def = defCaptor.getValue();
+        assertEquals(roundUnitId, def.getDurationUnitId());
+        assertNotNull(def.getDurationFormulaId());
+        assertTrue(def.isConcentrationRequired());
+
+        // модификатор несёт condition_id
+        ArgumentCaptor<FeatureEffectModifier> modCaptor = ArgumentCaptor.forClass(FeatureEffectModifier.class);
+        verify(effectModifierRepository).save(modCaptor.capture());
+        assertEquals(conditionId, modCaptor.getValue().getConditionId());
+        assertEquals("condition", modCaptor.getValue().getModifierType());
     }
 
     @Test

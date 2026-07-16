@@ -90,7 +90,8 @@ class ActiveEffectConditionLinkerTest {
 
     @Test
     void materializeReturnsNullWhenTargetNotInActiveBattle() {
-        when(modifierRepository.findByEffectDefinitionId(defId)).thenReturn(List.of(conditionModifier()));
+        FeatureEffectModifier modifier = conditionModifier();
+        when(modifierRepository.findByEffectDefinitionId(defId)).thenReturn(List.of(modifier));
         when(battleCombatantRepository.findByCharacter_IdAndBattle_Status(targetId, BattleStatus.ACTIVE))
                 .thenReturn(List.of());
         UUID result = linker.materialize(def(), targetId, sourceId, 10);
@@ -101,7 +102,8 @@ class ActiveEffectConditionLinkerTest {
     @Test
     void materializeAppliesConditionAndReturnsInstanceId() {
         BattleCombatant combatant = combatantInActiveBattle();
-        when(modifierRepository.findByEffectDefinitionId(defId)).thenReturn(List.of(conditionModifier()));
+        FeatureEffectModifier modifier = conditionModifier();
+        when(modifierRepository.findByEffectDefinitionId(defId)).thenReturn(List.of(modifier));
         when(battleCombatantRepository.findByCharacter_IdAndBattle_Status(targetId, BattleStatus.ACTIVE))
                 .thenReturn(List.of(combatant));
         when(conditionService.applyForEffect(campaignId, combatant, conditionId, 10, sourceId, 3))
