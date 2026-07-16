@@ -57,6 +57,10 @@ public class BattleCombatantResponse {
     /** DC of a pending concentration save the player must roll (Phase 2.2); null when none pending. */
     private Integer pendingConcentrationDc;
 
+    /** Отложенные исходы заклинаний, ждущие решения ответственного за цель (SAVE_PROMPT); пусто — нет. */
+    @Builder.Default
+    private java.util.List<PendingResolutionResponse> pendingResolutions = new java.util.ArrayList<>();
+
     // ---- Standard-action turn state (Phase 2.7) ------------------------------------------------
     /** Dash taken: movement budget doubled this turn. */
     private boolean dashing;

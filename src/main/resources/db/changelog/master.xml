@@ -191,4 +191,7 @@
     <!-- ABIL §3.1: честная связь эффект → состояние (applied_condition_instance_id на character_active_effect). -->
     <include file="db/changelog/112-active-effect-condition-link.xml"/>
 
+    <!-- SAVE_PROMPT: отложенный исход заклинания у цели (окно «принять урон?» вместо авто-решения движка). -->
+    <include file="db/changelog/113-battle-pending-resolution.xml"/>
+
 </databaseChangeLog>

@@ -15,7 +15,9 @@ import com.dnd.app.dto.featurerule.FeatureExecutionPlan;
 import com.dnd.app.dto.featurerule.FeatureUseResult;
 import com.dnd.app.dto.request.BattleUseAbilityRequest;
 import com.dnd.app.repository.BattleCombatantRepository;
+import com.dnd.app.repository.BattlePendingResolutionRepository;
 import com.dnd.app.repository.BattleRepository;
+import com.dnd.app.repository.DamageTypeRepository;
 import com.dnd.app.repository.ItemInstanceRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.SpellRepository;
@@ -80,6 +82,8 @@ class BattleServiceUseAbilityTest {
     @Mock private FeatureActionService featureActionService;
     @Mock private StatTypeRepository statTypeRepository;
     @Mock private FeatureEffectService featureEffectService;
+    @Mock private BattlePendingResolutionRepository pendingResolutionRepository;
+    @Mock private DamageTypeRepository damageTypeRepository;
     @Mock private com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
     @Mock private com.dnd.app.integration.map.MapTokenMover mapTokenMover;
     @Spy private CommandDedupService commandDedupService = new CommandDedupService();

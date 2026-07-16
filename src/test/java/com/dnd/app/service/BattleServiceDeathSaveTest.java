@@ -82,6 +82,8 @@ class BattleServiceDeathSaveTest {
                 mock(CombatFeatureExecutionService.class),
                 mock(StatTypeRepository.class),
                 mock(FeatureEffectService.class),
+                org.mockito.Mockito.mock(BattlePendingResolutionRepository.class),
+                org.mockito.Mockito.mock(DamageTypeRepository.class),
                 mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();

@@ -41,6 +41,7 @@ class FeatureEffectServiceTest {
     @Mock private FeatureFormulaService formulaService;
     @Mock private DurationUnitRepository durationUnitRepository;
     @Mock private CharacterFormulaContextFactory contextFactory;
+    @Mock private ActiveEffectConditionLinker conditionLinker;
 
     @InjectMocks private FeatureEffectService service;
 

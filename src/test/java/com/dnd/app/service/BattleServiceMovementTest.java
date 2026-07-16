@@ -84,6 +84,8 @@ class BattleServiceMovementTest {
                 org.mockito.Mockito.mock(CombatFeatureExecutionService.class),
                 org.mockito.Mockito.mock(StatTypeRepository.class),
                 org.mockito.Mockito.mock(FeatureEffectService.class),
+                org.mockito.Mockito.mock(BattlePendingResolutionRepository.class),
+                org.mockito.Mockito.mock(DamageTypeRepository.class),
                 org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
 
         User gm = User.builder().id(UUID.randomUUID()).username(username).role(Role.ADMIN).build();

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      SAVE_PROMPT: отложенный исход заклинания у цели. При касте боевого заклинания со спасброском
+      движок больше не решает за игрока — он катит кости урона, вычисляет рекомендацию (спас vs DC) и
+      кладёт сюда «ожидающее решение». Ответственный за цель (игрок за своего персонажа, GM за остальных)
+      выбирает исход (весь урон / половина / не получать) и накладывать ли состояние; движок только
+      рекомендует. Одна строка = один отложенный исход одной цели от одного каста (AoE — по строке на цель).
+      Удаляется при разрешении. condition_ids/applied_active_effect_ids — Фаза 2 (гейтинг состояний).
+    -->
+    <changeSet id="113-battle-pending-resolution" author="claude">
+        <createTable tableName="battle_pending_resolution">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="combatant_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="battle_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="caster_character_id" type="uuid"/>
+            <column name="spell_name" type="varchar(200)"/>
+            <column name="damage_amount" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="damage_type_id" type="uuid"/>
+            <column name="half_on_save" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="save_dc" type="int"/>
+            <column name="save_ability" type="varchar(16)"/>
+            <column name="recommended_outcome" type="varchar(16)"/>
+            <column name="recommended_roll" type="int"/>
+            <column name="recommended_save_bonus" type="int"/>
+            <column name="condition_ids" type="text"/>
+            <column name="condition_duration_rounds" type="int"/>
+            <column name="applied_active_effect_ids" type="text"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="battle_pending_resolution" baseColumnNames="combatant_id"
+                                 referencedTableName="battle_combatants" referencedColumnNames="id"
+                                 constraintName="fk_bpr_combatant" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="battle_pending_resolution" baseColumnNames="battle_id"
+                                 referencedTableName="battles" referencedColumnNames="id"
+                                 constraintName="fk_bpr_battle" onDelete="CASCADE"/>
+
+        <createIndex tableName="battle_pending_resolution" indexName="idx_bpr_combatant">
+            <column name="combatant_id"/>
+        </createIndex>
+        <createIndex tableName="battle_pending_resolution" indexName="idx_bpr_battle">
+            <column name="battle_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

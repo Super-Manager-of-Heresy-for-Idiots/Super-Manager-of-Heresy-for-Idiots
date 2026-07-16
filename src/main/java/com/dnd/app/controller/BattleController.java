@@ -9,6 +9,7 @@ import com.dnd.app.dto.request.BattleAttackRequest;
 import com.dnd.app.dto.request.BattleUseItemRequest;
 import com.dnd.app.dto.request.BattleCastSpellRequest;
 import com.dnd.app.dto.request.BattleUseAbilityRequest;
+import com.dnd.app.dto.request.ResolveSpellSaveRequest;
 import com.dnd.app.dto.request.BulkActionRequest;
 import com.dnd.app.dto.request.ConcentrationCheckRequest;
 import com.dnd.app.dto.request.GroupInitiativeRequest;
@@ -814,6 +815,32 @@ public class BattleController {
         return CompletableFuture.supplyAsync(() -> {
             BattleResponse data = battleService.resolveConcentration(campaignId, battleId, combatantId, d20, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(data, "Concentration check resolved"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * SAVE_PROMPT: разрешает отложенный исход заклинания у цели — ответственный за неё выбирает исход
+     * (FULL/HALF/NONE); собственный d20 необязателен (только для лога/рекомендации).
+     * @param campaignId кампания
+     * @param battleId бой
+     * @param combatantId цель (комбатант)
+     * @param resolutionId id отложенного исхода
+     * @param request тело с выбором исхода и необязательным броском
+     * @param auth текущий пользователь (владелец цели или GM)
+     * @return актуальное состояние боя
+     */
+    @PostMapping("/{battleId}/combatants/{combatantId}/pending-resolutions/{resolutionId}/resolve")
+    @Operation(summary = "Resolve a pending spell save outcome (target's owner or GM chooses FULL/HALF/NONE)")
+    public CompletableFuture<ResponseEntity<ApiResponse<BattleResponse>>> resolveSpellSave(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID battleId,
+            @PathVariable UUID combatantId,
+            @PathVariable UUID resolutionId,
+            @Valid @RequestBody ResolveSpellSaveRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            BattleResponse data = battleService.resolveSpellSave(campaignId, battleId, combatantId, resolutionId,
+                    request.getOutcome(), request.getD20(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Spell save resolved"));
         }, controllerTaskExecutor);
     }
 

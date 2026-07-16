@@ -70,6 +70,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -123,6 +124,8 @@ public class BattleService {
     private final CombatFeatureExecutionService combatFeatureExecutionService;
     private final StatTypeRepository statTypeRepository;
     private final FeatureEffectService featureEffectService;
+    private final BattlePendingResolutionRepository pendingResolutionRepository;
+    private final DamageTypeRepository damageTypeRepository;
     private final com.dnd.app.integration.map.MapZoneCreator mapZoneCreator;
     /** Клиент принудительного перемещения токенов на карте (push/pull/slide/телепорт, фаза 2.12). */
     private final com.dnd.app.integration.map.MapTokenMover mapTokenMover;
@@ -843,7 +846,7 @@ public class BattleService {
             for (UUID targetId : targetIds) {
                 SpellDamageSummary one = applyPlanOutcome(plan, targetId, actor, user, campaignId, battleId,
                         request.getDamageRollMode(), request.getManualDamage(),
-                        BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL");
+                        BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL", false);
                 total += one.total();
                 if (one.modifier() != null) {
                     modifier = one.modifier();
@@ -852,7 +855,7 @@ public class BattleService {
         } else {
             SpellDamageSummary one = applyPlanOutcome(plan, null, actor, user, campaignId, battleId,
                     request.getDamageRollMode(), request.getManualDamage(),
-                    BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL");
+                    BattleLogType.FEATURE_USE, "FEATURE_DAMAGE_MANUAL", false);
             if (one.applied()) {
                 total = one.total();
                 modifier = one.modifier();
@@ -1007,13 +1010,15 @@ public class BattleService {
     private SpellDamageSummary applySpellPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
             BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId,
             String damageRollMode, Integer manualDamage) {
+        // SAVE_PROMPT: урон заклинания со спасброском отсрочивается — решает ответственный за цель (deferSaveToTarget=true).
         return applyPlanOutcome(plan, targetCombatantId, casterCombatant, user, campaignId, battleId,
-                damageRollMode, manualDamage, BattleLogType.SPELL, "SPELL_DAMAGE_MANUAL");
+                damageRollMode, manualDamage, BattleLogType.SPELL, "SPELL_DAMAGE_MANUAL", true);
     }
 
     private SpellDamageSummary applyPlanOutcome(FeatureExecutionPlan plan, UUID targetCombatantId,
             BattleCombatant casterCombatant, User user, UUID campaignId, UUID battleId,
-            String damageRollMode, Integer manualDamage, BattleLogType manualLogType, String manualEvent) {
+            String damageRollMode, Integer manualDamage, BattleLogType manualLogType, String manualEvent,
+            boolean deferSaveToTarget) {
         if (plan == null) {
             return SpellDamageSummary.none();
         }
@@ -1038,7 +1043,7 @@ public class BattleService {
                 Integer manualForLine = manual && i == 0 ? manualDamage : null;
                 SpellDamageSummary line = applySpellDamage(
                         damages.get(i), target, saveAbilityCode, manualForLine, user, campaignId, battleId,
-                        manualLogType, manualEvent);
+                        manualLogType, manualEvent, deferSaveToTarget, plan.getFeatureName(), casterCombatant);
                 totalDamage += line.total();
                 if (line.modifier() != null && !"NONE".equals(line.modifier())) {
                     modifier = line.modifier();
@@ -1065,7 +1070,8 @@ public class BattleService {
      */
     private SpellDamageSummary applySpellDamage(FeatureExecutionPlan.Damage dmg, BattleCombatant target,
             String saveAbilityCode, Integer manualDamage, User user, UUID campaignId, UUID battleId,
-            BattleLogType manualLogType, String manualEvent) {
+            BattleLogType manualLogType, String manualEvent, boolean deferSaveToTarget, String spellName,
+            BattleCombatant casterCombatant) {
         // Attack-roll spells need a spell-attack bonus the plan does not carry → GM adjudicates.
         if (dmg.isRequiresAttackHit()) {
             logSpellManual(battleId, campaignId, target, "attack_roll", user, manualLogType, manualEvent);
@@ -1084,6 +1090,14 @@ public class BattleService {
                 rolled += dmg.getFlatAmount();
             }
             rolled = Math.max(0, rolled);
+        }
+
+        // SAVE_PROMPT: урон со спасброском не решается движком — откладываем исход на ответственного за цель.
+        // Движок катит кости (выше) и рекомендацию (спас vs DC), но применит урон уже resolveSpellSave по выбору игрока.
+        if (deferSaveToTarget && dmg.isRequiresSave() && dmg.getSaveDc() != null && saveAbilityCode != null) {
+            deferSaveResolution(dmg, target, saveAbilityCode, rolled, spellName, casterCombatant,
+                    battleId, campaignId, user);
+            return SpellDamageSummary.none();
         }
 
         if (dmg.isRequiresSave() && dmg.getSaveDc() != null) {
@@ -1122,6 +1136,149 @@ public class BattleService {
             BattleLogType manualLogType, String manualEvent) {
         battleLogService.append(battleId, campaignId, manualLogType, null, target.getId(),
                 Map.of("event", manualEvent, "reason", reason), BattleLogVisibility.GM_ONLY, user.getId());
+    }
+
+    /**
+     * SAVE_PROMPT: кладёт «отложенный исход» урона со спасброском на цель и логирует, что нужен выбор.
+     * Движок катит рекомендацию (спас vs DC), но урон применит {@link #resolveSpellSave} по выбору игрока.
+     * @param dmg строка урона плана (тип/half-on-save)
+     * @param target цель — комбатант активного боя
+     * @param saveAbilityCode слаг характеристики спасброска
+     * @param rolledDamage скатанный урон до митигации/спаса
+     * @param spellName название заклинания (для окна/лога)
+     * @param casterCombatant кастующий (для источника)
+     * @param battleId бой
+     * @param campaignId кампания
+     * @param user инициатор каста (для лога)
+     */
+    private void deferSaveResolution(FeatureExecutionPlan.Damage dmg, BattleCombatant target, String saveAbilityCode,
+            int rolledDamage, String spellName, BattleCombatant casterCombatant, UUID battleId, UUID campaignId,
+            User user) {
+        int saveBonus = resolveTargetSaveBonus(target, saveAbilityCode);
+        int d20 = diceRoller.rollD20();
+        AttackResolver.SaveOutcome recommended = AttackResolver.resolveSave(d20, saveBonus, dmg.getSaveDc());
+        UUID casterCharacterId = casterCombatant != null && casterCombatant.getCharacter() != null
+                ? casterCombatant.getCharacter().getId() : null;
+        pendingResolutionRepository.save(BattlePendingResolution.builder()
+                .combatantId(target.getId())
+                .battleId(battleId)
+                .casterCharacterId(casterCharacterId)
+                .spellName(spellName)
+                .damageAmount(rolledDamage)
+                .damageTypeId(dmg.getDamageTypeId())
+                .halfOnSave(dmg.isHalfOnSave())
+                .saveDc(dmg.getSaveDc())
+                .saveAbility(saveAbilityCode)
+                .recommendedOutcome(recommended.name())
+                .recommendedRoll(d20)
+                .recommendedSaveBonus(saveBonus)
+                .build());
+        Map<String, Object> log = new HashMap<>();
+        log.put("event", "SAVE_PENDING");
+        log.put("targetName", target.getDisplayName());
+        log.put("saveDc", dmg.getSaveDc());
+        log.put("saveAbility", saveAbilityCode);
+        log.put("damage", rolledDamage);
+        battleLogService.append(battleId, campaignId, BattleLogType.SPELL, null, target.getId(),
+                log, BattleLogVisibility.PUBLIC, user.getId());
+    }
+
+    /**
+     * SAVE_PROMPT: разрешает отложенный исход заклинания у цели по выбору ответственного (свобода воли).
+     * Игрок сам выбирает {@code outcome} (FULL/HALF/NONE) — движок применяет ровно это; необязательный {@code d20}
+     * лишь пересчитывает и логирует рекомендацию, не переопределяя выбор. Урон проходит через митигацию и
+     * {@link #applyDamageOrHeal} (то есть корректно триггерит проверку концентрации/смерть). Строка pending удаляется.
+     * @param campaignId кампания
+     * @param battleId бой
+     * @param combatantId цель (комбатант)
+     * @param resolutionId id отложенного исхода
+     * @param outcome выбор игрока: FULL | HALF | NONE
+     * @param d20 необязательный собственный бросок спасброска игрока (1–20) — только для лога/рекомендации
+     * @param username инициатор разрешения (владелец цели или GM)
+     * @return актуальное состояние боя
+     */
+    @Transactional
+    public BattleResponse resolveSpellSave(UUID campaignId, UUID battleId, UUID combatantId, UUID resolutionId,
+            String outcome, Integer d20, String username) {
+        User user = getUser(username);
+        Battle battle = findBattleForUpdate(battleId, campaignId);
+        requireStatus(battle, BattleStatus.ACTIVE, "Spell save can only be resolved in an active battle");
+        BattleCombatant combatant = combatantRepository.findByIdForUpdate(combatantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Combatant not found in battle"));
+        if (combatant.getBattle() == null || !combatant.getBattle().getId().equals(battleId)) {
+            throw new BadRequestException("Combatant does not belong to this battle");
+        }
+        enforceControls(campaignId, user, combatant);
+        BattlePendingResolution pending = pendingResolutionRepository.findById(resolutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pending resolution not found"));
+        if (!pending.getCombatantId().equals(combatantId)) {
+            throw new BadRequestException("Pending resolution does not belong to this combatant");
+        }
+        if (d20 != null && (d20 < 1 || d20 > 20)) {
+            throw new BadRequestException("d20 must be between 1 and 20");
+        }
+        String choice = outcome == null ? "FULL" : outcome.trim().toUpperCase(Locale.ROOT);
+        if (!List.of("FULL", "HALF", "NONE").contains(choice)) {
+            throw new BadRequestException("Outcome must be FULL, HALF or NONE");
+        }
+        int base = Math.max(0, pending.getDamageAmount());
+        int toApply = switch (choice) {
+            case "HALF" -> base / 2;
+            case "NONE" -> 0;
+            default -> base;
+        };
+        String modifier = null;
+        int finalDamage = 0;
+        if (toApply > 0) {
+            DamageMitigationService.Mitigation mit =
+                    damageMitigationService.mitigate(combatant, toApply, pending.getDamageTypeId());
+            finalDamage = mit.finalDamage();
+            modifier = mit.modifier().name();
+            if (finalDamage > 0) {
+                applyDamageOrHeal(combatant, -finalDamage, user, campaignId);
+            }
+        }
+        Map<String, Object> log = new HashMap<>();
+        log.put("event", "SAVE_RESOLVED");
+        log.put("targetName", combatant.getDisplayName());
+        log.put("choice", choice);
+        log.put("damage", finalDamage);
+        if (modifier != null && !"NONE".equals(modifier)) {
+            log.put("modifier", modifier);
+        }
+        if (d20 != null && pending.getSaveDc() != null) {
+            int bonus = pending.getRecommendedSaveBonus() != null ? pending.getRecommendedSaveBonus()
+                    : resolveTargetSaveBonus(combatant, pending.getSaveAbility());
+            log.put("saveRoll", d20);
+            log.put("saveTotal", d20 + bonus);
+            log.put("saveDc", pending.getSaveDc());
+        }
+        battleLogService.append(battleId, campaignId, BattleLogType.SAVE, null, combatant.getId(),
+                log, BattleLogVisibility.PUBLIC, user.getId());
+        pendingResolutionRepository.delete(pending);
+        webSocketEventService.sendCampaignEvent(WebSocketEventType.BATTLE_UPDATED, campaignId,
+                Map.of("battleId", battleId), user.getId());
+        return toResponse(battle, orderedCombatants(battleId));
+    }
+
+    /** SAVE_PROMPT: отложенные исходы цели → DTO для окна выбора (порядок — по времени создания). */
+    private List<PendingResolutionResponse> pendingResolutionsFor(UUID combatantId) {
+        return pendingResolutionRepository.findByCombatantIdOrderByCreatedAtAsc(combatantId).stream()
+                .map(p -> PendingResolutionResponse.builder()
+                        .id(p.getId())
+                        .spellName(p.getSpellName())
+                        .damageAmount(p.getDamageAmount())
+                        .damageTypeName(p.getDamageTypeId() == null ? null
+                                : damageTypeRepository.findById(p.getDamageTypeId())
+                                        .map(DamageType::getNameRu).orElse(null))
+                        .halfOnSave(p.isHalfOnSave())
+                        .saveDc(p.getSaveDc())
+                        .saveAbility(p.getSaveAbility())
+                        .recommendedOutcome(p.getRecommendedOutcome())
+                        .recommendedRoll(p.getRecommendedRoll())
+                        .recommendedSaveBonus(p.getRecommendedSaveBonus())
+                        .build())
+                .toList();
     }
 
     /**
@@ -4340,6 +4497,7 @@ public class BattleService {
                 .concentrating(c.getCharacter() != null
                         && featureEffectService.isConcentrating(c.getCharacter().getId()))
                 .pendingConcentrationDc(c.getPendingConcentrationDc())
+                .pendingResolutions(pendingResolutionsFor(c.getId()))
                 .dashing(Boolean.TRUE.equals(c.getDashing()))
                 .dodging(Boolean.TRUE.equals(c.getDodging()))
                 .disengaged(Boolean.TRUE.equals(c.getDisengaged()))
