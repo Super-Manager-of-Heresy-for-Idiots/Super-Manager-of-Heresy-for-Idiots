@@ -179,4 +179,13 @@
     <!-- P1-4 хвост: created_by/updated_by на magic_item, equipment_item, background (IT-2/IT-3 + P2-3). -->
     <include file="db/changelog/108-item-background-created-by.xml"/>
 
+    <!-- HB_UX Фаза 1: слаг триггера реакции на spell (структурный авторинг времени сотворения). -->
+    <include file="db/changelog/109-spell-reaction-trigger.xml"/>
+
+    <!-- HB_UX Фаза 5: структурное ограничение настройки magic_item (классы/расы, enforced в /attune). -->
+    <include file="db/changelog/110-magic-item-attunement-restriction.xml"/>
+
+    <!-- HB_UX Фаза 6: бэкфилл легаси homebrew-заклинаний (range_type/duration_raw → структурные колонки). -->
+    <include file="db/changelog/111-homebrew-spell-structural-backfill.xml"/>
+
 </databaseChangeLog>

@@ -95,8 +95,9 @@ public class SpellMechanicsService {
         }
 
         if (hasDamage) {
-            UUID diceFormulaId = formula(
-                    "dice(\"" + DiceNotation.normalize(request.getDamageDice().trim()) + "\")", "dice", "dice");
+            String normDamage = DiceNotation.normalize(request.getDamageDice().trim());
+            DiceNotation.enforceDiceCaps(normDamage);
+            UUID diceFormulaId = formula("dice(\"" + normDamage + "\")", "dice", "dice");
             UUID damageTypeId = notBlank(request.getDamageType()) ? resolveDamageType(request.getDamageType()) : null;
             FeatureRule dmg = createRule(spell, pkg, "damage", 1,
                     "Урон " + request.getDamageDice(), username);
@@ -231,6 +232,7 @@ public class SpellMechanicsService {
     private UUID healingFormulaId(String healing) {
         // Нормализуем русскую дайс-нотацию («2к8») до классификации: иначе чистые кости уйдут в scalar-парсер.
         String norm = DiceNotation.normalize(healing);
+        DiceNotation.enforceDiceCaps(norm);
         if (PURE_DICE.matcher(norm).matches()) {
             return formula("dice(\"" + norm.replaceAll("\\s+", "") + "\")", "dice", "dice");
         }

@@ -15,6 +15,7 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.HomebrewContentItemRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.SpellSchoolRepository;
+import com.dnd.app.repository.TriggerEventTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class SpellAuthoringService {
     private final HomebrewAccessService homebrewAccessService;
     private final HomebrewContentItemRepository contentItemRepository;
     private final SpellMechanicsService spellMechanicsService;
+    private final TriggerEventTypeRepository triggerEventTypeRepository;
 
     /**
      * Создаёт заклинание в пакете.
@@ -111,20 +113,80 @@ public class SpellAuthoringService {
 
     // ================= helpers =================
 
+    /**
+     * Проецирует запрос на сущность заклинания: структурные пикеры каста/дистанции/длительности/области (HB_UX
+     * Фазы 1/3) пишутся в структурные колонки, а отображаемые строки (casting_time_raw, duration_raw)
+     * ГЕНЕРИРУЮТСЯ из структуры — свободная форма не парсится (инвариант плана). Механика — отдельно в sync().
+     * @param spell целевая сущность
+     * @param request тело запроса
+     * @param pkg пакет-владелец (для автора)
+     */
     private void apply(Spell spell, HomebrewSpellRequest request, HomebrewPackage pkg) {
+        SpellDisplayStrings.validate(request);
+        boolean isReaction = "reaction".equals(request.getCastingActionSlug());
+        boolean isDistance = "distance".equals(request.getRangeType());
+        boolean isTimed = "timed".equals(request.getDurationType());
+        boolean hasArea = notBlank(request.getAreaShape());
+
         spell.setUpdatedBy(pkg.getAuthor());
         spell.setNameRu(request.getName());
         spell.setNameEn(request.getNameEn());
         spell.setLevel(request.getLevel());
         spell.setSchool(resolveSchool(request.getSchool()));
-        spell.setCastingTimeRaw(request.getCastingTimeRaw());
+
+        // Время сотворения: слаг экономики действия + сгенерированная строка карточки.
+        boolean isTimedCast = "time".equals(request.getCastingActionSlug());
+        spell.setCastingActionSlug(blankToNull(request.getCastingActionSlug()));
+        spell.setReactionTriggerSlug(isReaction ? resolveTrigger(request.getReactionTriggerSlug()) : null);
+        spell.setCastingTimeAmount(isTimedCast ? request.getCastingTimeAmount() : null);
+        spell.setCastingTimeUnit(isTimedCast ? blankToNull(request.getCastingTimeUnit()) : null);
+        spell.setCastingTimeRaw(SpellDisplayStrings.castingTimeRaw(request));
         spell.setRitual(Boolean.TRUE.equals(request.getRitual()));
-        spell.setRangeType(request.getRangeText());
-        spell.setDurationRaw(request.getDurationText());
+
+        // Дистанция: слаг типа + структурное расстояние (только для distance).
+        spell.setRangeType(blankToNull(request.getRangeType()));
+        spell.setRangeDistance(isDistance ? request.getRangeDistance() : null);
+        spell.setRangeUnit(isDistance ? orDefault(request.getRangeUnit(), "ft") : null);
+
+        // Длительность: тип + структурные amount/unit (движок конвертирует в раунды) + строка карточки.
+        spell.setDurationType(blankToNull(request.getDurationType()));
+        spell.setDurationAmount(isTimed ? request.getDurationAmount() : null);
+        spell.setDurationUnit(isTimed ? blankToNull(request.getDurationUnit()) : null);
         spell.setConcentration(Boolean.TRUE.equals(request.getConcentration()));
+        spell.setDurationRaw(SpellDisplayStrings.durationRaw(request));
+
+        // Область действия (091): форма + размер + признаки зоны.
+        spell.setAreaShape(blankToNull(request.getAreaShape()));
+        spell.setAreaSizeFt(hasArea ? request.getAreaSizeFt() : null);
+        spell.setZonePersists(hasArea && Boolean.TRUE.equals(request.getZonePersists()));
+        spell.setZoneTerrain(hasArea ? blankToNull(request.getZoneTerrain()) : null);
+        spell.setZoneObscurement(hasArea ? blankToNull(request.getZoneObscurement()) : null);
+
         spell.setDescription(request.getDescription());
         spell.setHigherLevels(request.getHigherLevels());
         spell.setClasses(resolveClasses(request.getAvailableToClassIds()));
+    }
+
+    /** Проверяет слаг триггера реакции по словарю событий движка (trigger_event_type); null допустим. */
+    private String resolveTrigger(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return null;
+        }
+        return triggerEventTypeRepository.findByCode(slug)
+                .orElseThrow(() -> new BadRequestException("Неизвестный триггер реакции: " + slug))
+                .getCode();
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private static String orDefault(String s, String fallback) {
+        return (s == null || s.isBlank()) ? fallback : s;
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     private SpellSchool resolveSchool(String slug) {
@@ -178,9 +240,23 @@ public class SpellAuthoringService {
                 .level(spell.getLevel())
                 .school(spell.getSchool() != null ? spell.getSchool().getSlug() : null)
                 .castingTimeRaw(spell.getCastingTimeRaw())
+                .castingActionSlug(spell.getCastingActionSlug())
+                .castingTimeAmount(spell.getCastingTimeAmount())
+                .castingTimeUnit(spell.getCastingTimeUnit())
+                .reactionTriggerSlug(spell.getReactionTriggerSlug())
                 .ritual(spell.getRitual())
-                .rangeText(spell.getRangeType())
-                .durationText(spell.getDurationRaw())
+                .rangeType(spell.getRangeType())
+                .rangeDistance(spell.getRangeDistance())
+                .rangeUnit(spell.getRangeUnit())
+                .durationType(spell.getDurationType())
+                .durationAmount(spell.getDurationAmount())
+                .durationUnit(spell.getDurationUnit())
+                .durationRaw(spell.getDurationRaw())
+                .areaShape(spell.getAreaShape())
+                .areaSizeFt(spell.getAreaSizeFt())
+                .zonePersists(spell.getZonePersists())
+                .zoneTerrain(spell.getZoneTerrain())
+                .zoneObscurement(spell.getZoneObscurement())
                 .concentration(spell.getConcentration())
                 .description(spell.getDescription())
                 .higherLevels(spell.getHigherLevels())

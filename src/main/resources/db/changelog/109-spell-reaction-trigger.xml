@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      HB_UX Фаза 1: слаг триггера реакции для заклинания с временем сотворения «реакция».
+      Хранит code из trigger_event_type (attack_declared / damage_applied / spell_cast_started / …),
+      выбираемый из словаря событий движка — свободный текст не парсится. Пока triggers-флаг
+      feature-rules выключен, слаг питает только генерацию строки карточки и подсказку в панели
+      реакций; автопромпт в бою включится вместе с флагом. Колонка nullable (не-реакции = NULL).
+    -->
+    <changeSet id="109-spell-reaction-trigger" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.spell
+                ADD COLUMN IF NOT EXISTS reaction_trigger_slug text,
+                ADD COLUMN IF NOT EXISTS casting_time_amount int,
+                ADD COLUMN IF NOT EXISTS casting_time_unit text;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.spell
+                    DROP COLUMN IF EXISTS reaction_trigger_slug,
+                    DROP COLUMN IF EXISTS casting_time_amount,
+                    DROP COLUMN IF EXISTS casting_time_unit;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -25,9 +25,24 @@ public class HomebrewSpellResponse {
     private Integer level;
     private String school;
     private String castingTimeRaw;
+    // Структурные поля каста/дистанции/длительности/области (HB_UX Фазы 1/3) — для round-trip пикеров.
+    private String castingActionSlug;
+    private Integer castingTimeAmount;
+    private String castingTimeUnit;
+    private String reactionTriggerSlug;
     private Boolean ritual;
-    private String rangeText;
-    private String durationText;
+    private String rangeType;
+    private Integer rangeDistance;
+    private String rangeUnit;
+    private String durationType;
+    private Integer durationAmount;
+    private String durationUnit;
+    private String durationRaw;
+    private String areaShape;
+    private Integer areaSizeFt;
+    private Boolean zonePersists;
+    private String zoneTerrain;
+    private String zoneObscurement;
     private Boolean concentration;
     private String description;
     private String higherLevels;

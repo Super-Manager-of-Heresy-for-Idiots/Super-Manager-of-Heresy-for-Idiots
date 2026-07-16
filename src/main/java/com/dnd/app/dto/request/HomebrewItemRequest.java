@@ -1,10 +1,14 @@
 package com.dnd.app.dto.request;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * DTO HomebrewItemRequest — тело авторинга единого homebrew-предмета (P1.5 / IT-2). Снаружи предмет — одна
@@ -32,7 +36,14 @@ public class HomebrewItemRequest {
 
     private Boolean attunementRequired;
 
+    /** Свободный текст условия настройки — ФЛЕЙВОР, не проверяется автоматически (HB_UX Фаза 5). */
     private String attunementRequirement;
+
+    /** Структурное ограничение настройки: слаги классов; enforced в POST /attune. Пусто — без ограничения. */
+    private List<String> attunementClassSlugs;
+
+    /** Структурное ограничение настройки: слаги рас; enforced в POST /attune. Пусто — без ограничения. */
+    private List<String> attunementRaceSlugs;
 
     // --- EQUIPMENT: общее ---
     /** Вид снаряжения: weapon | armor | gear | tool. */
@@ -42,14 +53,18 @@ public class HomebrewItemRequest {
     private String category;
 
     /** Стоимость в золотых монетах (опционально). */
+    @DecimalMin(value = "0", message = "Стоимость не может быть отрицательной")
     private BigDecimal costGold;
 
     /** Вес в фунтах (опционально). */
+    @DecimalMin(value = "0", message = "Вес не может быть отрицательным")
     private BigDecimal weightLb;
 
     // --- EQUIPMENT: weapon-секция ---
+    @Min(1) @Max(40)
     private Integer damageDiceCount;
 
+    @Min(2) @Max(100)
     private Integer damageDieSize;
 
     private Integer damageBonus;
@@ -60,12 +75,15 @@ public class HomebrewItemRequest {
     private Integer flatDamage;
 
     // --- EQUIPMENT: armor-секция ---
+    @Min(0) @Max(30)
     private Integer baseAc;
 
     private Boolean dexBonusAllowed;
 
+    @Min(0) @Max(10)
     private Integer maxDexBonus;
 
+    @Min(0) @Max(30)
     private Integer strengthRequired;
 
     private Boolean stealthDisadvantage;

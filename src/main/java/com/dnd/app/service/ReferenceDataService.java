@@ -43,6 +43,7 @@ public class ReferenceDataService {
     private final BestiaryConditionRepository bestiaryConditionRepository;
     private final SpellSchoolRepository spellSchoolRepository;
     private final CreatureSizeRepository creatureSizeRepository;
+    private final TriggerEventTypeRepository triggerEventTypeRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
@@ -335,6 +336,26 @@ public class ReferenceDataService {
     public List<ContentLabelDto> getSizes(String lang) {
         return creatureSizeRepository.findByHomebrewIsNullOrderByNameRuAsc().stream()
                 .map(s -> label(lang, s.getId(), s.getSlug(), s.getNameRu(), s.getNameEn()))
+                .toList();
+    }
+
+    /**
+     * Возвращает словарь событий-триггеров движка для пикера триггера реакции homebrew-заклинания (HB_UX Фаза 1).
+     * slug = trigger_event_type.code (стабильный код события); name = отображаемое имя. Русские подписи FE берёт
+     * из i18n по коду (fallback — displayName). rest_completed исключён: как триггер реакции он не имеет смысла.
+     * @param lang язык (для будущей локализации; сейчас имя = displayName)
+     * @return список меток событий по порядку сортировки
+     */
+    @Transactional(readOnly = true)
+    public List<ContentLabelDto> getReactionTriggers(String lang) {
+        return triggerEventTypeRepository.findAll().stream()
+                .filter(t -> !"rest_completed".equals(t.getCode()))
+                .sorted(Comparator.comparing(com.dnd.app.domain.featurerule.TriggerEventType::getSortOrder,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .map(t -> ContentLabelDto.builder()
+                        .slug(t.getCode())
+                        .name(t.getDisplayName())
+                        .build())
                 .toList();
     }
 

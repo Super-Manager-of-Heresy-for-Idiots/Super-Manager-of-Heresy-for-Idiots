@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,6 +32,9 @@ public class HomebrewItemResponse {
     private String rarity;
     private Boolean attunementRequired;
     private String attunementRequirement;
+    /** Структурное ограничение настройки (HB_UX Фаза 5): слаги классов/рас; enforced в /attune. */
+    private List<String> attunementClassSlugs;
+    private List<String> attunementRaceSlugs;
 
     // --- EQUIPMENT: общее ---
     private String equipmentKind;

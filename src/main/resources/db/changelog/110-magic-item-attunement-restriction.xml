@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      HB_UX Фаза 5: структурное (исполняемое) ограничение настройки магического предмета.
+      Раньше условие настройки жило только в свободном тексте magic_item.attunement_requirement
+      («только для друидов») — приложение не могло его исполнить. Добавляем контролируемые списки
+      слагов классов/рас (из существующих словарей), которые /attune проверяет: персонаж, не
+      подходящий под ограничение, к настройке не допускается. Свободный текст остаётся флейвором
+      (не парсится). Пустые списки = ограничения по классу/расе нет. Слаги через запятую.
+    -->
+    <changeSet id="110-magic-item-attunement-restriction" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.magic_item
+                ADD COLUMN IF NOT EXISTS attunement_class_slugs text,
+                ADD COLUMN IF NOT EXISTS attunement_race_slugs  text;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                ALTER TABLE public.magic_item
+                    DROP COLUMN IF EXISTS attunement_class_slugs,
+                    DROP COLUMN IF EXISTS attunement_race_slugs;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

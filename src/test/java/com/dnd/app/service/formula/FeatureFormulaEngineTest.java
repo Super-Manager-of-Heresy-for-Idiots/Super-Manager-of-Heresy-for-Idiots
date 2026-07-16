@@ -1,6 +1,7 @@
 package com.dnd.app.service.formula;
 
 import com.dnd.app.domain.featurerule.FeatureFormula;
+import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateRequest;
 import com.dnd.app.dto.featurerule.FeatureFormulaEvaluateResponse;
 import com.dnd.app.dto.featurerule.FeatureFormulaValidationResponse;
@@ -142,6 +143,38 @@ class FeatureFormulaEngineTest {
         assertThat(DiceNotation.normalize("8 Д 6")).isEqualTo("8d6");
         assertThat(DiceNotation.normalize("dex_mod + 1")).isEqualTo("dex_mod + 1");
         assertThat(DiceNotation.normalize(null)).isNull();
+    }
+
+    @Test
+    void diceCapsAcceptRealDiceAndScalars() {
+        // Реальные кости и безкостёвые скаляры проходят капы без ошибок.
+        DiceNotation.enforceDiceCaps("8d6");
+        DiceNotation.enforceDiceCaps("2d8 + wis_mod");
+        DiceNotation.enforceDiceCaps("dex_mod + 1");
+        DiceNotation.enforceDiceCaps(null);
+        DiceNotation.enforceDiceCaps("");
+    }
+
+    @Test
+    void diceCapsRejectTooManyDice() {
+        // «1000d1000» — синтаксически валидно, но количество и грани вне реальных костей.
+        assertThatThrownBy(() -> DiceNotation.enforceDiceCaps("1000d1000"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Слишком много костей");
+        assertThatThrownBy(() -> DiceNotation.enforceDiceCaps("41d6"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Слишком много костей");
+    }
+
+    @Test
+    void diceCapsRejectUnrealDie() {
+        // d1000 / d7 — не игровая кость.
+        assertThatThrownBy(() -> DiceNotation.enforceDiceCaps("2d7"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Недопустимая кость");
+        assertThatThrownBy(() -> DiceNotation.enforceDiceCaps("1d1000"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Недопустимая кость");
     }
 
     // ── Boolean predicates ───────────────────────────────────────────────────

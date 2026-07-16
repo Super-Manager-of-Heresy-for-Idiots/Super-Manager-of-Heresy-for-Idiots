@@ -60,6 +60,18 @@ public class Spell {
     @Column(name = "casting_action_slug", columnDefinition = "text")
     private String castingActionSlug;
 
+    /** Слаг триггера реакции (trigger_event_type.code), когда время сотворения = «реакция»; null иначе. */
+    @Column(name = "reaction_trigger_slug", columnDefinition = "text")
+    private String reactionTriggerSlug;
+
+    /** Количество единиц времени для «долгого» каста (casting_action_slug = time); null иначе. */
+    @Column(name = "casting_time_amount")
+    private Integer castingTimeAmount;
+
+    /** Единица времени «долгого» каста: minute | hour; null иначе. */
+    @Column(name = "casting_time_unit", columnDefinition = "text")
+    private String castingTimeUnit;
+
     @Column(name = "is_ritual", nullable = false)
     @Builder.Default
     private Boolean ritual = false;

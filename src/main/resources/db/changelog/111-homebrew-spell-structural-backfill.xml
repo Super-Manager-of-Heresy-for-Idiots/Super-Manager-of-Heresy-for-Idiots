@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      HB_UX Фаза 6: разовый бэкфилл легаси homebrew-заклинаний, созданных ДО структурного авторинга.
+      Прежняя форма писала свободный текст в range_type ("На себя" / "60 футов") и duration_raw
+      ("Мгновенная"), структурные колонки оставались пустыми. Здесь — ЕДИНСТВЕННОЕ место, где мы
+      парсим текст (разовая миграция данных, не runtime): переводим уверенно-парсибельные значения
+      в слаги/числа. Непарсибельное («доширак») не трогаем — range_type остаётся не-слагом, и форма
+      на чтении покажет бейдж «требует правки». Затрагиваются только homebrew-строки (homebrew_id IS NOT NULL).
+    -->
+    <changeSet id="111-homebrew-spell-structural-backfill" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            -- range_type: точные "на себя" / "касание" → слаги
+            UPDATE public.spell SET range_type = 'self'
+                WHERE homebrew_id IS NOT NULL
+                  AND lower(btrim(range_type)) IN ('на себя', 'self', 'на себя.', 'вы');
+            UPDATE public.spell SET range_type = 'touch'
+                WHERE homebrew_id IS NOT NULL
+                  AND lower(btrim(range_type)) IN ('касание', 'touch', 'прикосновение');
+
+            -- range_type: "<N> фут(ов)" → distance + range_distance (ft)
+            UPDATE public.spell
+                SET range_distance = (substring(range_type from '(\d+)'))::int,
+                    range_unit = 'ft',
+                    range_type = 'distance'
+                WHERE homebrew_id IS NOT NULL
+                  AND range_distance IS NULL
+                  AND range_type ~* '^\s*\d+\s*(фут|feet|ft)';
+
+            -- range_type: "<N> метр(ов)" → distance в футах (метры × 3.28, округление до 5 футов)
+            UPDATE public.spell
+                SET range_distance = (round(((substring(range_type from '(\d+)'))::numeric * 3.28) / 5) * 5)::int,
+                    range_unit = 'ft',
+                    range_type = 'distance'
+                WHERE homebrew_id IS NOT NULL
+                  AND range_distance IS NULL
+                  AND range_type ~* '^\s*\d+\s*метр';
+
+            -- duration_raw: "мгновенная" → instantaneous
+            UPDATE public.spell SET duration_type = 'instantaneous'
+                WHERE homebrew_id IS NOT NULL
+                  AND duration_type IS NULL
+                  AND lower(btrim(duration_raw)) IN ('мгновенная', 'мгновенно', 'instantaneous');
+
+            -- duration_raw: "<N> раунд/минута/час/день" → timed + amount + unit
+            UPDATE public.spell
+                SET duration_amount = (substring(duration_raw from '(\d+)'))::int,
+                    duration_unit = 'round',
+                    duration_type = 'timed'
+                WHERE homebrew_id IS NOT NULL AND duration_type IS NULL
+                  AND duration_raw ~* '^\s*\d+\s*раунд';
+            UPDATE public.spell
+                SET duration_amount = (substring(duration_raw from '(\d+)'))::int,
+                    duration_unit = 'minute',
+                    duration_type = 'timed'
+                WHERE homebrew_id IS NOT NULL AND duration_type IS NULL
+                  AND duration_raw ~* '^\s*\d+\s*минут';
+            UPDATE public.spell
+                SET duration_amount = (substring(duration_raw from '(\d+)'))::int,
+                    duration_unit = 'hour',
+                    duration_type = 'timed'
+                WHERE homebrew_id IS NOT NULL AND duration_type IS NULL
+                  AND duration_raw ~* '^\s*\d+\s*час';
+            UPDATE public.spell
+                SET duration_amount = (substring(duration_raw from '(\d+)'))::int,
+                    duration_unit = 'day',
+                    duration_type = 'timed'
+                WHERE homebrew_id IS NOT NULL AND duration_type IS NULL
+                  AND duration_raw ~* '^\s*\d+\s*(день|дн|сут)';
+        ]]></sql>
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>

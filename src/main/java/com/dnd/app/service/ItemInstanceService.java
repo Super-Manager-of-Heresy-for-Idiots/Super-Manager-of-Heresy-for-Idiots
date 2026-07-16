@@ -26,9 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Класс ItemInstanceService описывает сервис бизнес-логики, который координирует правила домена и работу с данными.
@@ -405,6 +408,10 @@ public class ItemInstanceService {
         if (used >= MAX_ATTUNED_ITEMS && !gmOverride) {
             throw new DuplicateResourceException("ATTUNEMENT_LIMIT_REACHED");
         }
+        // HB_UX Фаза 5: структурное ограничение настройки (класс/раса) исполняется здесь; GM может форсировать.
+        if (!gmOverride) {
+            enforceAttunementRestriction(instance, character);
+        }
 
         instance.setAttuned(true);
         instance.setAttunedAt(Instant.now());
@@ -572,6 +579,61 @@ public class ItemInstanceService {
         if (instance.getOwnerCharacter() == null || !instance.getOwnerCharacter().getId().equals(characterId)) {
             throw new BadRequestException("Item does not belong to this character");
         }
+    }
+
+    /**
+     * Исполняет структурное ограничение настройки предмета (HB_UX Фаза 5): если у magic_item заданы слаги
+     * классов/рас, персонаж обязан подходить хотя бы под один из перечисленных вариантов. Свободный текст
+     * условия («только для друидов») НЕ проверяется — он флейвор. Ограничения нет → допускаем.
+     * @param instance экземпляр настраиваемого предмета
+     * @param character персонаж-владелец
+     * @throws BadRequestException если персонаж не подходит под ограничение
+     */
+    private void enforceAttunementRestriction(ItemInstance instance, PlayerCharacter character) {
+        MagicItem mi = instance.getMagicItem();
+        if (mi == null) {
+            return; // у шаблонных предметов структурного ограничения нет
+        }
+        Set<String> classReq = slugSet(mi.getAttunementClassSlugs());
+        Set<String> raceReq = slugSet(mi.getAttunementRaceSlugs());
+        if (classReq.isEmpty() && raceReq.isEmpty()) {
+            return;
+        }
+        Set<String> charClasses = character.getClassLevels().stream()
+                .map(CharacterClassLevel::getCharacterClass)
+                .filter(java.util.Objects::nonNull)
+                .map(c -> c.getSlug() == null ? null : c.getSlug().toLowerCase(Locale.ROOT))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        String charRace = (character.getRace() != null && character.getRace().getSlug() != null)
+                ? character.getRace().getSlug().toLowerCase(Locale.ROOT) : null;
+
+        boolean classMatch = !classReq.isEmpty() && charClasses.stream().anyMatch(classReq::contains);
+        boolean raceMatch = !raceReq.isEmpty() && charRace != null && raceReq.contains(charRace);
+        if (!(classMatch || raceMatch)) {
+            StringBuilder allowed = new StringBuilder();
+            if (!classReq.isEmpty()) {
+                allowed.append("классы: ").append(String.join(", ", classReq));
+            }
+            if (!raceReq.isEmpty()) {
+                if (allowed.length() > 0) {
+                    allowed.append("; ");
+                }
+                allowed.append("расы: ").append(String.join(", ", raceReq));
+            }
+            throw new BadRequestException("Персонаж не подходит под условие настройки предмета (" + allowed + ")");
+        }
+    }
+
+    /** Разбирает csv-слаги ограничения в множество (trim/lower); пусто → пустое множество. */
+    private static Set<String> slugSet(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return Set.of();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(s -> s.trim().toLowerCase(Locale.ROOT))
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toSet());
     }
 
     private boolean supportsAttunement(ItemInstance instance) {

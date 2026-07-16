@@ -214,11 +214,38 @@ public class ItemAuthoringService {
         item.setVariableRarity(false);
         item.setAttunementRequired(Boolean.TRUE.equals(request.getAttunementRequired()));
         item.setAttunementRequirement(request.getAttunementRequirement());
+        // Структурное ограничение настройки (HB_UX Фаза 5): слаги классов/рас нормализуются и хранятся csv.
+        item.setAttunementClassSlugs(joinSlugs(request.getAttunementClassSlugs()));
+        item.setAttunementRaceSlugs(joinSlugs(request.getAttunementRaceSlugs()));
         if (request.getRarity() != null && !request.getRarity().isBlank()) {
             item.setRarity(contentDictionaryResolver.resolveRarity(request.getRarity(), pkg));
         } else {
             item.setRarity(null);
         }
+    }
+
+    /** Нормализует список слагов ограничения настройки в csv (trim, lower, без пустых/дублей); null если пусто. */
+    private static String joinSlugs(List<String> slugs) {
+        if (slugs == null || slugs.isEmpty()) {
+            return null;
+        }
+        List<String> clean = slugs.stream()
+                .filter(s -> s != null && !s.isBlank())
+                .map(s -> s.trim().toLowerCase(Locale.ROOT))
+                .distinct()
+                .toList();
+        return clean.isEmpty() ? null : String.join(",", clean);
+    }
+
+    /** Разбирает csv-слаги ограничения настройки в список (для round-trip ответа); пусто → пустой список. */
+    private static List<String> splitSlugs(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
     }
 
     private HomebrewItemResponse toMagicResponse(MagicItem item) {
@@ -227,6 +254,8 @@ public class ItemAuthoringService {
                 .rarity(item.getRarity() != null ? item.getRarity().getSlug() : null)
                 .attunementRequired(item.getAttunementRequired())
                 .attunementRequirement(item.getAttunementRequirement())
+                .attunementClassSlugs(splitSlugs(item.getAttunementClassSlugs()))
+                .attunementRaceSlugs(splitSlugs(item.getAttunementRaceSlugs()))
                 .build();
         itemMechanicsService.read(FeatureRuleOwnerType.ITEM_MAGIC, item.getId(),
                 item.getHomebrew() != null ? item.getHomebrew().getId() : null, resp);

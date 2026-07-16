@@ -195,6 +195,20 @@ public class VanillaReferenceController {
     }
 
     /**
+     * Возвращает словарь событий-триггеров движка для пикера триггера реакции homebrew-заклинания (HB_UX Фаза 1).
+     * @param lang входящее значение lang, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/reaction-triggers")
+    @Operation(summary = "Get engine gameplay-event triggers for the spell reaction-trigger picker")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ContentLabelDto>>>> getReactionTriggers(
+            @RequestParam(defaultValue = "en") String lang) {
+        return CompletableFuture.supplyAsync(() ->
+                ResponseEntity.ok(ApiResponse.ok(referenceDataService.getReactionTriggers(lang))),
+                controllerTaskExecutor);
+    }
+
+    /**
      * Возвращает результат операции "get spell schools" в рамках бизнес-логики API.
      * @param lang входящее значение lang, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции

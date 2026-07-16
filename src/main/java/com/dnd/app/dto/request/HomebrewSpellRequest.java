@@ -30,18 +30,66 @@ public class HomebrewSpellRequest {
     @NotBlank(message = "Школа магии обязательна")
     private String school;
 
-    /** Время сотворения (текст, напр. «1 действие», «1 бонусное действие»). */
-    private String castingTimeRaw;
+    // --- Время сотворения (HB_UX Фаза 1): структурный пикер вместо свободного текста. ---
+
+    /** Слаг экономики действия: action | bonus-action | reaction | time. Пусто = «действие». */
+    private String castingActionSlug;
+
+    /** Для «долгого» каста (castingActionSlug=time): количество единиц времени. */
+    @Min(1) @Max(1440)
+    private Integer castingTimeAmount;
+
+    /** Для «долгого» каста: единица времени (minute | hour). */
+    private String castingTimeUnit;
+
+    /** Слаг триггера реакции (trigger_event_type.code) для castingActionSlug=reaction; иначе null. */
+    private String reactionTriggerSlug;
 
     private Boolean ritual;
 
-    /** Дистанция (текст, напр. «60 футов», «На себя»). */
-    private String rangeText;
+    // --- Дистанция (HB_UX Фаза 1): структурный пикер. ---
 
-    /** Длительность (текст, напр. «Мгновенная», «Концентрация, до 1 минуты»). */
-    private String durationText;
+    /** Тип дистанции: self | touch | distance | sight | unlimited. */
+    private String rangeType;
+
+    /** Для rangeType=distance: дистанция в футах. */
+    @Min(0) @Max(100000)
+    private Integer rangeDistance;
+
+    /** Единица дистанции (ft); для distance. */
+    private String rangeUnit;
+
+    // --- Длительность (HB_UX Фаза 1): структурный пикер. ---
+
+    /** Тип длительности: instantaneous | timed | until-dispelled | special. */
+    private String durationType;
+
+    /** Для timed: количество единиц (конвертируется в раунды детерминированно). */
+    @Min(1) @Max(100000)
+    private Integer durationAmount;
+
+    /** Единица длительности: round | minute | hour | day. */
+    private String durationUnit;
 
     private Boolean concentration;
+
+    // --- Область действия (HB_UX Фаза 3): структурный пикер формы. ---
+
+    /** Форма области: SPHERE | CUBE | CONE | CYLINDER | LINE; null = нет области. */
+    private String areaShape;
+
+    /** Размер формы в футах (радиус/ребро/длина). */
+    @Min(0) @Max(1000)
+    private Integer areaSizeFt;
+
+    /** Зона остаётся на длительность (Web) vs мгновенная вспышка (Fireball). */
+    private Boolean zonePersists;
+
+    /** Труднопроходимая местность в зоне: DIFFICULT | null. */
+    private String zoneTerrain;
+
+    /** Затруднение видимости в зоне: LIGHT | HEAVY | null. */
+    private String zoneObscurement;
 
     private String description;
 

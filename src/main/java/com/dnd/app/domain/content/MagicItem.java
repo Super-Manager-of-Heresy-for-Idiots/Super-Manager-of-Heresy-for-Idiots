@@ -65,6 +65,14 @@ public class MagicItem {
     @Column(name = "attunement_requirement", columnDefinition = "text")
     private String attunementRequirement;
 
+    /** Структурное ограничение настройки по классам (слаги через запятую); enforced в /attune. Пусто — без ограничения. */
+    @Column(name = "attunement_class_slugs", columnDefinition = "text")
+    private String attunementClassSlugs;
+
+    /** Структурное ограничение настройки по расам (слаги через запятую); enforced в /attune. Пусто — без ограничения. */
+    @Column(name = "attunement_race_slugs", columnDefinition = "text")
+    private String attunementRaceSlugs;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cost_money_value_id")
     private MoneyValue cost;
