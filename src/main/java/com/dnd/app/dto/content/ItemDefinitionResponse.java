@@ -57,6 +57,14 @@ public class ItemDefinitionResponse {
     private Boolean attunementRequired;
     private String attunementRequirement;
 
+    /**
+     * Даёт ли предмет исполняемые умения — есть ли у определения approved item-правило
+     * (ITEM_ABIL Фаза 5, §5.7). Проставляется каталог-сервисом только при активной item-механике,
+     * иначе false. Для бейджа «даёт умения» в диалоге выдачи предмета.
+     */
+    @Builder.Default
+    private boolean grantsAbilities = false;
+
     // --- EQUIPMENT ---
     @Schema(example = "weapon", description = "weapon / armor / gear / tool — только для EQUIPMENT")
     private String equipmentKind;

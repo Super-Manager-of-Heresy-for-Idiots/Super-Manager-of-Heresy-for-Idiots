@@ -22,6 +22,8 @@ import com.dnd.app.mapper.EquipmentItemMapper;
 import com.dnd.app.mapper.FeatMapper;
 import com.dnd.app.mapper.MagicItemMapper;
 import com.dnd.app.mapper.SpellMapper;
+import com.dnd.app.config.FeatureRulesProperties;
+import com.dnd.app.domain.featurerule.FeatureRuleOwnerType;
 import com.dnd.app.repository.BackgroundRepository;
 import com.dnd.app.repository.CampaignHomebrewRepository;
 import com.dnd.app.repository.EquipmentItemRepository;
@@ -65,6 +67,8 @@ public class ContentCatalogService {
     private final CampaignHomebrewRepository campaignHomebrewRepository;
     private final CampaignService campaignService;
     private final UserRepository userRepository;
+    private final FeatureRulesProperties featureRulesProperties;
+    private final CharacterFeatureResolver characterFeatureResolver;
 
     // --- feats: vanilla / core only ---
 
@@ -449,6 +453,7 @@ public class ContentCatalogService {
                 .forEach(m -> out.add(ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(m, resolvedLang))));
         itemTemplateRepository.findByHomebrewIsNull()
                 .forEach(t -> out.add(toTemplateDefinition(t, resolvedLang)));
+        markGrantsAbilities(out);
         return out;
     }
 
@@ -513,7 +518,56 @@ public class ContentCatalogService {
         equipment.forEach(e -> out.add(ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(e, resolvedLang))));
         magic.forEach(m -> out.add(ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(m, resolvedLang))));
         templates.forEach(t -> out.add(toTemplateDefinition(t, resolvedLang)));
+        markGrantsAbilities(out);
         return out;
+    }
+
+    /**
+     * Проставляет {@link ItemDefinitionResponse#isGrantsAbilities()} для предметов, у которых
+     * есть approved+enabled item-правило (ITEM_ABIL Фаза 5, §5.7). No-op при выключенной
+     * item-механике — тогда бейдж «даёт умения» не показывается.
+     * @param items унифицированные определения предметов (мутируются на месте)
+     */
+    private void markGrantsAbilities(List<ItemDefinitionResponse> items) {
+        if (!featureRulesProperties.itemsActive() || items.isEmpty()) {
+            return;
+        }
+        java.util.Map<FeatureRuleOwnerType, List<UUID>> idsByOwner = new java.util.EnumMap<>(FeatureRuleOwnerType.class);
+        for (ItemDefinitionResponse d : items) {
+            FeatureRuleOwnerType owner = ownerTypeForKind(d.getKind());
+            if (owner != null && d.getId() != null) {
+                idsByOwner.computeIfAbsent(owner, k -> new ArrayList<>()).add(d.getId());
+            }
+        }
+        Set<UUID> withRules = new java.util.HashSet<>();
+        idsByOwner.forEach((owner, ids) ->
+                characterFeatureResolver.approvedEnabledRules(owner, ids)
+                        .forEach(rule -> withRules.add(rule.getOwnerId())));
+        if (withRules.isEmpty()) {
+            return;
+        }
+        items.forEach(d -> {
+            if (withRules.contains(d.getId())) {
+                d.setGrantsAbilities(true);
+            }
+        });
+    }
+
+    /**
+     * Маппит дискриминатор каталога (EQUIPMENT/MAGIC/TEMPLATE) в owner-тип feature-rules.
+     * @param kind строковый вид предмета из {@link ItemDefinitionResponse#getKind()}
+     * @return owner-тип item-семейства или null, если вид неизвестен
+     */
+    private FeatureRuleOwnerType ownerTypeForKind(String kind) {
+        if (kind == null) {
+            return null;
+        }
+        return switch (kind) {
+            case "MAGIC" -> FeatureRuleOwnerType.ITEM_MAGIC;
+            case "EQUIPMENT" -> FeatureRuleOwnerType.ITEM_EQUIPMENT;
+            case "TEMPLATE" -> FeatureRuleOwnerType.ITEM_TEMPLATE;
+            default -> null;
+        };
     }
 
     /**
