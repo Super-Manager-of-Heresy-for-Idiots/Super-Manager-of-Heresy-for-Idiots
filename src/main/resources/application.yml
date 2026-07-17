@@ -119,7 +119,9 @@ app:
     triggers-enabled: ${APP_FEATURE_RULES_TRIGGERS_ENABLED:false}
     forms-enabled: ${APP_FEATURE_RULES_FORMS_ENABLED:false}
     spells-enabled: ${APP_FEATURE_RULES_SPELLS_ENABLED:true}
-    items-enabled: ${APP_FEATURE_RULES_ITEMS_ENABLED:false}
+    # 2026-07-17: items enabled by default — prod (dnd-gitops backend.yaml) уже включает флаг явно,
+    # а локальный дефолт false молча отключал умения homebrew-предметов в бою на дев-стенде.
+    items-enabled: ${APP_FEATURE_RULES_ITEMS_ENABLED:true}
 
 management:
   endpoints:

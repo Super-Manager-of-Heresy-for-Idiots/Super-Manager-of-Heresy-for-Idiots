@@ -13,6 +13,7 @@ import com.dnd.app.dto.response.CampaignAvailableContentResponse.AvailableConten
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.homebrew.HomebrewAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,13 +43,16 @@ public class CampaignContentService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final PlayerCharacterRepository playerCharacterRepository;
+    private final HomebrewAccessService homebrewAccessService;
 
     /**
-     * Выполняет операции "activate homebrew" в рамках бизнес-логики домена.
-     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
-     * @param request входящие данные запроса для выполнения бизнес-сценария
-     * @param username имя пользователя, от имени которого выполняется бизнес-сценарий
-     * @return результат выполнения бизнес-операции
+     * Привязывает homebrew-пакет к кампании (активация контента пакета для визарда, каталогов и боя).
+     * Чужие пакеты доступны только в статусе PUBLISHED; автор пакета или ADMIN может привязать
+     * и черновик (DRAFT) — для плейтеста собственного контента без обязательной публикации.
+     * @param campaignId идентификатор кампании, к которой привязывается пакет
+     * @param request запрос с идентификатором homebrew-пакета
+     * @param username имя пользователя (должен быть ГМом кампании или админом)
+     * @return сводка привязанного пакета для страницы Homebrew кампании
      */
     @Transactional
     public CampaignHomebrewResponse activateHomebrew(UUID campaignId, ActivateHomebrewRequest request, String username) {
@@ -59,7 +63,13 @@ public class CampaignContentService {
         HomebrewPackage pkg = homebrewPackageRepository.findById(request.getHomebrewPackageId())
                 .orElseThrow(() -> new ResourceNotFoundException("Homebrew-пакет не найден"));
 
-        if (pkg.getStatus() != HomebrewStatus.PUBLISHED || pkg.isDeleted()) {
+        // Чужой пакет можно подключить только опубликованным; автор пакета (или ADMIN) может
+        // подключить и черновик — плейтест собственного контента в своей кампании без публикации.
+        boolean ownerOrAdmin = homebrewAccessService.isOwnerOrAdmin(pkg, user);
+        boolean attachable = !pkg.isDeleted()
+                && (pkg.getStatus() == HomebrewStatus.PUBLISHED
+                        || (ownerOrAdmin && pkg.getStatus().isEditable()));
+        if (!attachable) {
             throw new ResourceNotFoundException("Homebrew-пакет не найден или не опубликован");
         }
 
