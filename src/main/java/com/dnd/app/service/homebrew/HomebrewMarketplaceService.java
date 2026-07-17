@@ -112,7 +112,11 @@ public class HomebrewMarketplaceService {
     @Transactional(readOnly = true)
     public HomebrewDetailResponse getMarketplacePackage(UUID id, String username) {
         User gm = getGameMaster(username);
-        HomebrewPackage pkg = packageRepository.findPublishedById(id)
+        // Опубликованный пакет виден всем; свой пакет (в т.ч. DRAFT) автор видит для «предпросмотра как читатель» —
+        // раньше здесь был только findPublishedById, из-за чего предпросмотр черновика давал 404 и вечную загрузку.
+        HomebrewPackage pkg = packageRepository.findById(id)
+                .filter(p -> !p.isDeleted())
+                .filter(p -> p.getStatus() == HomebrewStatus.PUBLISHED || p.getAuthor().getId().equals(gm.getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Пакет не найден"));
         HomebrewDetailResponse response = authoringService.toDetailResponse(pkg);
         HomebrewRatingResponse rating = buildRatingResponse(id, gm.getId());
