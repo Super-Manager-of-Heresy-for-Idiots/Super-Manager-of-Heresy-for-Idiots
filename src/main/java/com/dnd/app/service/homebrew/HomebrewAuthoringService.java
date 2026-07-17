@@ -74,6 +74,29 @@ public class HomebrewAuthoringService {
         return toDetailResponse(pkg);
     }
 
+    /** Well-known название служебного пакета кастомных предметов (inscribe relic — точечная выдача). */
+    private static final String SCRATCH_ITEMS_TITLE = "Мои предметы";
+
+    /**
+     * Возвращает (создавая при первом обращении) служебный DRAFT-пакет автора для кастомных предметов,
+     * выдаваемых персонажам «точечной настройкой» (inscribe relic). Держит созданные на лету предметы,
+     * чтобы их можно было выдать по id; в маркетплейс не публикуется.
+     * @param username автор (ГМ)
+     * @return деталь служебного пакета (нужен только id для ItemModal)
+     */
+    @Transactional
+    public HomebrewDetailResponse getOrCreateScratchPackage(String username) {
+        User gm = getGameMaster(username);
+        HomebrewPackage pkg = packageRepository
+                .findFirstByAuthorIdAndTitleAndDeletedAtIsNull(gm.getId(), SCRATCH_ITEMS_TITLE)
+                .orElseGet(() -> packageRepository.save(HomebrewPackage.builder()
+                        .author(gm)
+                        .title(SCRATCH_ITEMS_TITLE)
+                        .description("Кастомные предметы, созданные при выдаче персонажам.")
+                        .build()));
+        return toDetailResponse(pkg);
+    }
+
     /**
      * Возвращает список для операции "list my packages" в рамках бизнес-логики homebrew-контента.
      * @param username имя пользователя, от имени которого выполняется бизнес-сценарий

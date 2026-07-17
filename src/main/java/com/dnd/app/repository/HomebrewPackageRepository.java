@@ -53,6 +53,9 @@ public interface HomebrewPackageRepository extends JpaRepository<HomebrewPackage
 
     Optional<HomebrewPackage> findByIdAndAuthorId(UUID id, UUID authorId);
 
+    /** Служебный пакет автора по well-known названию (inscribe-relic: кастомные предметы). */
+    Optional<HomebrewPackage> findFirstByAuthorIdAndTitleAndDeletedAtIsNull(UUID authorId, String title);
+
     @Query("SELECT p FROM HomebrewPackage p WHERE p.id = :id AND p.status = 'PUBLISHED' AND p.deletedAt IS NULL")
     Optional<HomebrewPackage> findPublishedById(@Param("id") UUID id);
 

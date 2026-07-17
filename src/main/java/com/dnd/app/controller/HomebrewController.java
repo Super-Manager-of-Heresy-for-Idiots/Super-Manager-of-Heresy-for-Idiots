@@ -74,6 +74,20 @@ public class HomebrewController {
     }
 
     /**
+     * Служебный пакет автора для кастомных предметов (inscribe relic — «точечная настройка» при выдаче).
+     * Возвращает (создавая при первом обращении) DRAFT-пакет, куда ItemModal кладёт предмет перед грантом.
+     * @param auth текущий пользователь (ГМ)
+     * @return деталь служебного пакета
+     */
+    @GetMapping("/scratch-package")
+    public CompletableFuture<ResponseEntity<ApiResponse<HomebrewDetailResponse>>> getScratchPackage(Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            HomebrewDetailResponse data = authoringService.getOrCreateScratchPackage(auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    /**
      * Возвращает результат операции "get my package" в рамках бизнес-логики API.
      * @param id идентификатор id, используемый для выбора нужного бизнес-объекта
      * @param auth входящее значение auth, используемое бизнес-сценарием
