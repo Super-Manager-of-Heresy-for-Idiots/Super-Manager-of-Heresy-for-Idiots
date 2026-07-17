@@ -60,4 +60,7 @@ public class HomebrewSpellResponse {
     private String source;
     private UUID homebrewPackageId;
     private String homebrewPackageTitle;
+    // HB_MODES: режим и оригинал для round-trip формы.
+    private String originMode;
+    private UUID sourceId;
 }

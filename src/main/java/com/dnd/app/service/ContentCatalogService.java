@@ -194,6 +194,7 @@ public class ContentCatalogService {
         if (!pkgIds.isEmpty()) {
             spells.addAll(spellRepository.findAllByHomebrewIdIn(pkgIds));
         }
+        spells = new ArrayList<>(applyOverrides(spells, Spell::getId, Spell::getOriginMode, Spell::getOriginSourceId));
         return spells.stream().map(s -> spellMapper.toDetail(s, resolvedLang)).toList();
     }
 
@@ -340,6 +341,7 @@ public class ContentCatalogService {
         if (!pkgIds.isEmpty()) {
             items.addAll(equipmentItemRepository.findAllByHomebrewIdIn(pkgIds));
         }
+        items = new ArrayList<>(applyOverrides(items, EquipmentItem::getId, EquipmentItem::getOriginMode, EquipmentItem::getOriginSourceId));
         return items.stream().map(e -> equipmentItemMapper.toDetail(e, resolvedLang)).toList();
     }
 
@@ -413,6 +415,7 @@ public class ContentCatalogService {
         if (!pkgIds.isEmpty()) {
             items.addAll(magicItemRepository.findAllByHomebrewIdIn(pkgIds));
         }
+        items = new ArrayList<>(applyOverrides(items, MagicItem::getId, MagicItem::getOriginMode, MagicItem::getOriginSourceId));
         return items.stream().map(m -> magicItemMapper.toDetail(m, resolvedLang)).toList();
     }
 
@@ -515,11 +518,41 @@ public class ContentCatalogService {
             magic.addAll(magicItemRepository.findAllByHomebrewIdIn(pkgIds));
             templates.addAll(itemTemplateRepository.findByHomebrewIdIn(new ArrayList<>(pkgIds)));
         }
+        equipment = new ArrayList<>(applyOverrides(equipment, EquipmentItem::getId, EquipmentItem::getOriginMode, EquipmentItem::getOriginSourceId));
+        magic = new ArrayList<>(applyOverrides(magic, MagicItem::getId, MagicItem::getOriginMode, MagicItem::getOriginSourceId));
         equipment.forEach(e -> out.add(ItemDefinitionResponse.fromEquipment(equipmentItemMapper.toDetail(e, resolvedLang))));
         magic.forEach(m -> out.add(ItemDefinitionResponse.fromMagic(magicItemMapper.toDetail(m, resolvedLang))));
         templates.forEach(t -> out.add(toTemplateDefinition(t, resolvedLang)));
         markGrantsAbilities(out);
         return out;
+    }
+
+    /**
+     * HB_MODES (OVERRIDE): скрывает из объединённого списка «ваниль + активные пакеты» оригиналы,
+     * перезаписанные OVERRIDE-сущностями активных пакетов (shadowing по мягкой ссылке source_id).
+     * Ноль дополнительных запросов: и оригиналы, и override уже загружены; подмена — фильтр в памяти.
+     * Битая ссылка (оригинал удалён) безвредна — фильтр просто никого не скрывает.
+     * @param merged объединённый список (ваниль + homebrew активных пакетов)
+     * @param idOf извлечение id сущности
+     * @param modeOf извлечение origin_mode (у ванили всегда NEW)
+     * @param sourceOf извлечение source_id
+     * @return список с подменёнными (скрытыми) оригиналами
+     */
+    private static <T> List<T> applyOverrides(List<T> merged,
+            java.util.function.Function<T, UUID> idOf,
+            java.util.function.Function<T, String> modeOf,
+            java.util.function.Function<T, UUID> sourceOf) {
+        Set<UUID> overridden = merged.stream()
+                .filter(e -> "OVERRIDE".equals(modeOf.apply(e)) && sourceOf.apply(e) != null)
+                .map(sourceOf)
+                .collect(java.util.stream.Collectors.toSet());
+        if (overridden.isEmpty()) {
+            return merged;
+        }
+        // Сам override не скрываем, даже если ссылки зациклены (самоссылка/цепочка).
+        return merged.stream()
+                .filter(e -> !overridden.contains(idOf.apply(e)) || "OVERRIDE".equals(modeOf.apply(e)))
+                .toList();
     }
 
     /**

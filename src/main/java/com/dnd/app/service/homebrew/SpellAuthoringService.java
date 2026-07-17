@@ -165,6 +165,15 @@ public class SpellAuthoringService {
         spell.setDescription(request.getDescription());
         spell.setHigherLevels(request.getHigherLevels());
         spell.setClasses(resolveClasses(request.getAvailableToClassIds()));
+
+        // HB_MODES: режим NEW/DERIVED/OVERRIDE + мягкая ссылка на оригинал (валидация — общая).
+        String mode = HomebrewOriginModes.normalize(request.getOriginMode());
+        Spell source = request.getSourceId() == null ? null
+                : spellRepository.findById(request.getSourceId()).orElse(null);
+        UUID originSourceId = HomebrewOriginModes.validateSource(mode, request.getSourceId(), source != null,
+                source != null && source.getHomebrew() != null ? source.getHomebrew().getId() : null, pkg.getId());
+        spell.setOriginMode(mode);
+        spell.setOriginSourceId(originSourceId);
     }
 
     /** Проверяет слаг триггера реакции по словарю событий движка (trigger_event_type); null допустим. */
@@ -264,6 +273,8 @@ public class SpellAuthoringService {
                 .source(spell.getHomebrew() != null ? "HOMEBREW" : "GLOBAL")
                 .homebrewPackageId(spell.getHomebrew() != null ? spell.getHomebrew().getId() : null)
                 .homebrewPackageTitle(spell.getHomebrew() != null ? spell.getHomebrew().getTitle() : null)
+                .originMode(spell.getOriginMode())
+                .sourceId(spell.getOriginSourceId())
                 .build();
         spellMechanicsService.read(spell, resp);
         return resp;

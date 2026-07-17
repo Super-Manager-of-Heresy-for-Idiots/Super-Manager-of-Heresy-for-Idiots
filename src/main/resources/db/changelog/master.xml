@@ -194,4 +194,7 @@
     <!-- SAVE_PROMPT: отложенный исход заклинания у цели (окно «принять урон?» вместо авто-решения движка). -->
     <include file="db/changelog/113-battle-pending-resolution.xml"/>
 
+    <!-- HB_MODES: три режима homebrew (NEW/DERIVED/OVERRIDE) — origin_mode + source_id на spell/magic_item/equipment_item. -->
+    <include file="db/changelog/114-homebrew-origin-mode.xml"/>
+
 </databaseChangeLog>

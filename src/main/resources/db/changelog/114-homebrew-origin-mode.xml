@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      HB_MODES Фаза 0/2: три режима homebrew-сущности. origin_mode: NEW (полностью новая, по умолчанию) |
+      DERIVED (создана на основе origin_source_id, независима) | OVERRIDE (перезаписывает origin_source_id:
+      в кампаниях с активным пакетом оригинал скрывается из каталога, показывается override).
+      Имя колонки origin_source_id — НЕ source_id: на этих таблицах source_id уже занят ссылкой на
+      книгу-источник. Ссылка мягкая (без FK): удаление оригинала не рушит homebrew — резолвер трактует
+      битую ссылку как no-op. Ноль лишних запросов: колонки приезжают с уже загружаемыми строками каталога.
+    -->
+    <changeSet id="114-homebrew-origin-mode" author="claude">
+        <sql splitStatements="true" stripComments="false"><![CDATA[
+            ALTER TABLE public.spell
+                ADD COLUMN IF NOT EXISTS origin_mode varchar(16) NOT NULL DEFAULT 'NEW',
+                ADD COLUMN IF NOT EXISTS origin_source_id uuid;
+            ALTER TABLE public.magic_item
+                ADD COLUMN IF NOT EXISTS origin_mode varchar(16) NOT NULL DEFAULT 'NEW',
+                ADD COLUMN IF NOT EXISTS origin_source_id uuid;
+            ALTER TABLE public.equipment_item
+                ADD COLUMN IF NOT EXISTS origin_mode varchar(16) NOT NULL DEFAULT 'NEW',
+                ADD COLUMN IF NOT EXISTS origin_source_id uuid;
+
+            CREATE INDEX IF NOT EXISTS idx_spell_origin_source ON public.spell (origin_source_id) WHERE origin_source_id IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_magic_item_origin_source ON public.magic_item (origin_source_id) WHERE origin_source_id IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_equipment_item_origin_source ON public.equipment_item (origin_source_id) WHERE origin_source_id IS NOT NULL;
+        ]]></sql>
+        <rollback>
+            <sql splitStatements="true" stripComments="false"><![CDATA[
+                DROP INDEX IF EXISTS idx_spell_origin_source;
+                DROP INDEX IF EXISTS idx_magic_item_origin_source;
+                DROP INDEX IF EXISTS idx_equipment_item_origin_source;
+                ALTER TABLE public.spell DROP COLUMN IF EXISTS origin_mode, DROP COLUMN IF EXISTS origin_source_id;
+                ALTER TABLE public.magic_item DROP COLUMN IF EXISTS origin_mode, DROP COLUMN IF EXISTS origin_source_id;
+                ALTER TABLE public.equipment_item DROP COLUMN IF EXISTS origin_mode, DROP COLUMN IF EXISTS origin_source_id;
+            ]]></sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

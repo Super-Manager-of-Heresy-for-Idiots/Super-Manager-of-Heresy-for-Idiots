@@ -9,6 +9,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * DTO HomebrewItemRequest — тело авторинга единого homebrew-предмета (P1.5 / IT-2). Снаружи предмет — одна
@@ -113,4 +114,12 @@ public class HomebrewItemRequest {
 
     /** Умение расходует предмет при использовании (одноразовое, напр. зелье). */
     private Boolean abilityConsumeOnUse;
+
+    // --- HB_MODES: три режима создания ---
+
+    /** Режим: NEW (по умолчанию) | DERIVED (на основе sourceId) | OVERRIDE (перезаписывает sourceId). */
+    private String originMode;
+
+    /** Оригинал того же вида (ваниль или свой) для DERIVED/OVERRIDE; обязателен для OVERRIDE. */
+    private UUID sourceId;
 }

@@ -131,4 +131,12 @@ public class HomebrewSpellRequest {
     /** Длительность накладываемых состояний в раундах (1 раунд = 6 с); null — до снятия/конца эффекта. */
     @Min(1) @Max(1000)
     private Integer conditionDurationRounds;
+
+    // --- HB_MODES: три режима создания ---
+
+    /** Режим: NEW (по умолчанию) | DERIVED (на основе sourceId) | OVERRIDE (перезаписывает sourceId). */
+    private String originMode;
+
+    /** Оригинал для DERIVED/OVERRIDE (ванильное или своё заклинание); обязателен для OVERRIDE. */
+    private UUID sourceId;
 }

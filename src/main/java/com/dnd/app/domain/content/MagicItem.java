@@ -91,6 +91,15 @@ public class MagicItem {
     @JoinColumn(name = "homebrew_id")
     private HomebrewPackage homebrew;
 
+    /** HB_MODES: режим homebrew-сущности — NEW | DERIVED (на основе source_id) | OVERRIDE (перезаписывает source_id). */
+    @Column(name = "origin_mode", nullable = false, length = 16)
+    @Builder.Default
+    private String originMode = "NEW";
+
+    /** HB_MODES: оригинал для DERIVED/OVERRIDE (мягкая ссылка, без FK); null для NEW. Не путать с source_id (книга). */
+    @Column(name = "origin_source_id")
+    private UUID originSourceId;
+
     // Авторство (P1-4): кто создал/изменил homebrew-предмет; null для ванильных строк.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")

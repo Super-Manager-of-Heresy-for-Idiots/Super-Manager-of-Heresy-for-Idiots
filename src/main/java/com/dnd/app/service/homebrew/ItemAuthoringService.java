@@ -208,6 +208,13 @@ public class ItemAuthoringService {
 
     private void applyMagic(MagicItem item, HomebrewItemRequest request, HomebrewPackage pkg) {
         item.setUpdatedBy(pkg.getAuthor());
+        // HB_MODES: режим NEW/DERIVED/OVERRIDE + мягкая ссылка на оригинал того же вида.
+        String mode = HomebrewOriginModes.normalize(request.getOriginMode());
+        MagicItem src = request.getSourceId() == null ? null
+                : magicItemRepository.findById(request.getSourceId()).orElse(null);
+        item.setOriginMode(mode);
+        item.setOriginSourceId(HomebrewOriginModes.validateSource(mode, request.getSourceId(), src != null,
+                src != null && src.getHomebrew() != null ? src.getHomebrew().getId() : null, pkg.getId()));
         item.setNameRu(request.getName());
         item.setNameEn(request.getNameEn());
         item.setDescription(request.getDescription());
@@ -251,6 +258,8 @@ public class ItemAuthoringService {
     private HomebrewItemResponse toMagicResponse(MagicItem item) {
         HomebrewItemResponse resp = baseResponse(item.getId(), "MAGIC", item.getNameRu(), item.getNameEn(),
                 item.getDescription(), item.getHomebrew())
+                .originMode(item.getOriginMode())
+                .sourceId(item.getOriginSourceId())
                 .rarity(item.getRarity() != null ? item.getRarity().getSlug() : null)
                 .attunementRequired(item.getAttunementRequired())
                 .attunementRequirement(item.getAttunementRequirement())
@@ -280,6 +289,13 @@ public class ItemAuthoringService {
 
     private void applyEquipmentCommon(EquipmentItem item, HomebrewItemRequest request, HomebrewPackage pkg) {
         item.setUpdatedBy(pkg.getAuthor());
+        // HB_MODES: режим NEW/DERIVED/OVERRIDE + мягкая ссылка на оригинал того же вида.
+        String mode = HomebrewOriginModes.normalize(request.getOriginMode());
+        EquipmentItem src = request.getSourceId() == null ? null
+                : equipmentItemRepository.findById(request.getSourceId()).orElse(null);
+        item.setOriginMode(mode);
+        item.setOriginSourceId(HomebrewOriginModes.validateSource(mode, request.getSourceId(), src != null,
+                src != null && src.getHomebrew() != null ? src.getHomebrew().getId() : null, pkg.getId()));
         String kind = request.getEquipmentKind() == null ? "" : request.getEquipmentKind().toLowerCase(Locale.ROOT);
         if (!EQUIPMENT_KINDS.contains(kind)) {
             throw new BadRequestException("equipmentKind должен быть одним из: weapon, armor, gear, tool");
@@ -397,6 +413,8 @@ public class ItemAuthoringService {
     private HomebrewItemResponse toEquipmentResponse(EquipmentItem item, WeaponStat weaponStat, ArmorStat armorStat) {
         HomebrewItemResponse.HomebrewItemResponseBuilder b = baseResponse(item.getId(), "EQUIPMENT",
                 item.getNameRu(), item.getNameEn(), item.getPropertiesText(), item.getHomebrew())
+                .originMode(item.getOriginMode())
+                .sourceId(item.getOriginSourceId())
                 .equipmentKind(item.getKind())
                 .category(item.getCategory() != null ? item.getCategory().getSlug() : null)
                 .costGold(item.getCost() != null ? item.getCost().getAmount() : null)
