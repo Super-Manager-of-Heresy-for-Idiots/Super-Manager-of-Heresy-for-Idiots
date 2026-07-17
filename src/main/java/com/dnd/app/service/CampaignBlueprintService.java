@@ -53,6 +53,7 @@ public class CampaignBlueprintService {
     private static final String VANILLA_SLUG = "vanilla";
 
     private final CampaignBlueprintRepository blueprintRepository;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
     private final UniverseRepository universeRepository;
     private final BlueprintHomebrewRepository blueprintHomebrewRepository;
     private final BlueprintNpcRepository npcRepository;
@@ -945,7 +946,8 @@ public class CampaignBlueprintService {
                 .allowForks(b.getAllowForks())
                 .downloadCount(b.getDownloadCount())
                 .authorUsername(b.getAuthor().getUsername())
-                .coverUrl(b.getCoverUrl())
+                .coverUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.BLUEPRINT_COVER, b.getId(), b.getCoverUrl()))
                 .createdAt(b.getCreatedAt())
                 .publishedAt(b.getPublishedAt())
                 .isDeleted(b.isDeleted())
@@ -1009,7 +1011,8 @@ public class CampaignBlueprintService {
                 .allowForks(b.getAllowForks())
                 .downloadCount(b.getDownloadCount())
                 .authorUsername(b.getAuthor().getUsername())
-                .coverUrl(b.getCoverUrl())
+                .coverUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.BLUEPRINT_COVER, b.getId(), b.getCoverUrl()))
                 .createdAt(b.getCreatedAt())
                 .publishedAt(b.getPublishedAt())
                 .isDeleted(b.isDeleted())

@@ -28,6 +28,8 @@ public class HomebrewPackageResponse {
     private Integer version;
     private Integer downloadCount;
     private String authorUsername;
+    /** Обложка пакета: прокси-URL media-ассета или null. Источник истины — media_asset, БД-колонки нет. */
+    private String coverUrl;
     private List<String> tags;
     private HomebrewContentSummary contentSummary;
     private Instant publishedAt;

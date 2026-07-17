@@ -27,6 +27,8 @@ public class NpcResponse {
     private String publicDescription;
     private String privateDescription;
     private Boolean isVisibleToPlayers;
+    /** Портрет NPC: прокси-URL media-ассета (/api/media/{assetId}/content) или null, если не загружен. */
+    private String portraitUrl;
 
     private NpcSourceType sourceType;
     private NpcRole npcRole;

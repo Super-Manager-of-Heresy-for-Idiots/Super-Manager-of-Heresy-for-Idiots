@@ -51,6 +51,7 @@ public class HomebrewAuthoringService {
     private final CustomResourceTypeRepository customResourceTypeRepository;
     private final ContentCharacterClassRepository contentCharacterClassRepository;
     private final com.dnd.app.service.ContentDictionaryResolver contentDictionaryResolver;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
 
     /**
      * Создает результат операции "create package" в рамках бизнес-логики homebrew-контента.
@@ -935,6 +936,8 @@ public class HomebrewAuthoringService {
                 .authorUsername(pkg.getAuthor().getUsername())
                 .tags(pkg.getTags().stream().map(HomebrewTag::getName).sorted().toList())
                 .contentSummary(buildContentSummary(pkg.getId()))
+                .coverUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.HOMEBREW_COVER, pkg.getId(), null))
                 .publishedAt(pkg.getPublishedAt())
                 .createdAt(pkg.getCreatedAt())
                 .isDeleted(pkg.isDeleted())
@@ -958,6 +961,8 @@ public class HomebrewAuthoringService {
                 .tags(pkg.getTags().stream().map(HomebrewTag::getName).sorted().toList())
                 .contentSummary(buildContentSummary(pkg.getId()))
                 .contentByType(buildContentByType(pkg.getId()))
+                .coverUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.HOMEBREW_COVER, pkg.getId(), null))
                 .publishedAt(pkg.getPublishedAt())
                 .createdAt(pkg.getCreatedAt())
                 .isDeleted(pkg.isDeleted())

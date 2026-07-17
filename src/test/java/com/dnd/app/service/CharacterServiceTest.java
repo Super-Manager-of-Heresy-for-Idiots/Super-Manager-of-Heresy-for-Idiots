@@ -10,6 +10,7 @@ import com.dnd.app.dto.response.CharacterStatResponse;
 import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.mapper.CharacterMapper;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.media.MediaUrlResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,7 @@ class CharacterServiceTest {
     @Mock private CharacterMapper characterMapper;
     @Mock private SpeciesService speciesService;
     @Mock private ReferenceDataService referenceDataService;
+    @Mock private MediaUrlResolver mediaUrlResolver;
 
     @InjectMocks private CharacterService characterService;
 

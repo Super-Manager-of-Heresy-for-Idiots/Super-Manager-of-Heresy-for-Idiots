@@ -22,6 +22,7 @@ import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.service.media.MediaUrlResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.*;
 class NpcServiceTest {
 
     @Mock private CampaignNpcRepository npcRepository;
+    @Mock private MediaUrlResolver mediaUrlResolver;
     @Mock private NpcNoteRepository noteRepository;
     @Mock private UserRepository userRepository;
     @Mock private CampaignService campaignService;

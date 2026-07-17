@@ -112,6 +112,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Обрабатывает превышение лимита размера multipart-загрузки (слишком большой файл/запрос).
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex, request, null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("BAD_REQUEST", "Файл слишком большой для загрузки."));
+    }
+
+    /**
      * Обрабатывает событие операции "handle unprocessable" в рамках бизнес-логики приложения.
      * @param ex входящее значение ex, используемое бизнес-сценарием
      * @param request входящие данные запроса для выполнения бизнес-сценария

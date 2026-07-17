@@ -37,6 +37,12 @@ spring:
       # Exclude ASYNC: CompletableFuture controllers re-dispatch through the servlet ASYNC type where
       # the JWT filter (OncePerRequestFilter) doesn't re-run, so security would 403 the empty context.
       dispatcher-types: request,error
+  servlet:
+    multipart:
+      # Upload ceiling for the media module. Per-owner-type limits (avatar 5MB / cover 10MB) are
+      # enforced in code; this is the hard servlet cap that rejects oversized requests early.
+      max-file-size: ${MEDIA_MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MEDIA_MULTIPART_MAX_REQUEST_SIZE:11MB}
 
 server:
   port: 8080
@@ -48,6 +54,13 @@ springdoc:
     path: /v3/api-docs
 
 app:
+  # Media module (MinIO-backed images: avatars, portraits, covers). See docs/MINIO_PLAN.md.
+  # NB: the MinIO connection itself (minio.endpoint / minio.access-key / minio.secret-key) is bound
+  # DIRECTLY from env vars (MINIO_ENDPOINT / MINIO_ACCESS_KEY / MINIO_SECRET_KEY) and is intentionally
+  # NOT declared here. That keeps `minio.endpoint` truly absent without env, so @ConditionalOnProperty
+  # leaves the whole media module disabled (e.g. the ws role) instead of failing on an unresolved value.
+  media:
+    bucket: ${CORE_ASSETS_BUCKET:dnd-core-assets}
   jwt:
     secret: ${JWT_SECRET:?JWT_SECRET must be provided (>= 32 bytes)}
     # Access token TTL (short). The session stays alive far longer via silent refresh.

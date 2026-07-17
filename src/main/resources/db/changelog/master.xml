@@ -197,4 +197,7 @@
     <!-- HB_MODES: три режима homebrew (NEW/DERIVED/OVERRIDE) — origin_mode + source_id на spell/magic_item/equipment_item. -->
     <include file="db/changelog/114-homebrew-origin-mode.xml"/>
 
+    <!-- MINIO_PLAN Фаза 0: полиморфная таблица media_asset для картинок из MinIO (аватары/портреты/обложки). -->
+    <include file="db/changelog/115-media-asset.xml"/>
+
 </databaseChangeLog>

@@ -10,6 +10,7 @@ import com.dnd.app.domain.enums.ContentType;
 import com.dnd.app.domain.enums.HomebrewStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.service.ContentDictionaryResolver;
+import com.dnd.app.service.media.MediaUrlResolver;
 import com.dnd.app.dto.request.CreateItemTypeRequest;
 import com.dnd.app.dto.response.AttachableContentResponse;
 import com.dnd.app.dto.response.ContentSummaryDto;
@@ -52,6 +53,7 @@ class HomebrewAuthoringServiceTest {
     @Mock private CustomResourceTypeRepository customResourceTypeRepository;
     @Mock private ContentCharacterClassRepository contentCharacterClassRepository;
     @Mock private ContentDictionaryResolver contentDictionaryResolver;
+    @Mock private MediaUrlResolver mediaUrlResolver;
 
     @InjectMocks private HomebrewAuthoringService service;
 

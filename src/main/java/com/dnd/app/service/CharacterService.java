@@ -55,6 +55,7 @@ public class CharacterService {
     private final CharacterResourceRepository resourceRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final WebSocketEventService webSocketEventService;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
 
     /**
      * Возвращает список для операции "list templates" в рамках бизнес-логики домена.
@@ -586,7 +587,8 @@ public class CharacterService {
         response.setMaxHp(character.getMaxHp());
         response.setTempHp(character.getTempHp());
         response.setAlignment(character.getAlignment());
-        response.setAvatarUrl(character.getAvatarUrl());
+        response.setAvatarUrl(mediaUrlResolver.resolve(
+                com.dnd.app.domain.enums.MediaOwnerType.CHARACTER_AVATAR, character.getId(), character.getAvatarUrl()));
         response.setArmorClass(character.getArmorClass());
         response.setSpeed(character.getSpeed());
         response.setInspiration(character.getInspiration());

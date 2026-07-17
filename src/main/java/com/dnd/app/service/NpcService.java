@@ -47,6 +47,7 @@ public class NpcService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
     private final SpeciesRepository speciesRepository;
     private final ContentCharacterClassRepository classRepository;
     private final SpellRepository spellRepository;
@@ -322,6 +323,8 @@ public class NpcService {
                 .notes(notes)
                 .createdAt(npc.getCreatedAt())
                 .updatedAt(npc.getUpdatedAt())
+                .portraitUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.NPC_PORTRAIT, npc.getId(), null))
                 .build();
     }
 

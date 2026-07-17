@@ -38,6 +38,7 @@ public class CampaignBlueprintMarketplaceService {
 
     private final CampaignBlueprintRepository blueprintRepository;
     private final CampaignBlueprintService blueprintService;
+    private final org.springframework.beans.factory.ObjectProvider<com.dnd.app.service.media.BlueprintCoverForkCopier> coverForkCopier;
 
     private final BlueprintNpcRepository npcRepository;
     private final BlueprintQuestRepository questRepository;
@@ -138,6 +139,11 @@ public class CampaignBlueprintMarketplaceService {
                 .version(1)
                 .build();
         copy = blueprintRepository.save(copy);
+
+        // Фаза 4: копируем обложку-ассет оригинала на форк (владелец — форкающий). При выключенном
+        // media-модуле copier отсутствует → no-op; легаси cover_url уже скопирован в билдере выше.
+        final CampaignBlueprint forkCopy = copy;
+        coverForkCopier.ifAvailable(c -> c.copyCover(original.getId(), forkCopy.getId(), caller.getId()));
 
         for (BlueprintNpc n : npcRepository.findByBlueprintId(original.getId())) {
             BlueprintNpc nc = BlueprintNpc.builder()
