@@ -906,6 +906,21 @@ public class MonsterService {
                 .build();
     }
 
+    /**
+     * Полные статблоки всех монстров пакета — для богатого предпросмотра витрины.
+     * Монстры не являются {@code HomebrewContentItem}, поэтому тянутся отдельно по homebrew_id.
+     * Контроль доступа к пакету выполняет вызывающий агрегатор; метод только на чтение.
+     * @param packageId пакет-владелец
+     * @param lang язык локализации
+     * @return список полных статблоков
+     */
+    @Transactional(readOnly = true)
+    public List<MonsterResponse> listHomebrewMonstersDetailed(UUID packageId, String lang) {
+        return monsterRepository.findAllByHomebrewId(packageId).stream()
+                .map(m -> toResponse(m, lang))
+                .toList();
+    }
+
     private MonsterResponse toResponse(Monster m) {
         return toResponse(m, Localization.DEFAULT_LANG);
     }

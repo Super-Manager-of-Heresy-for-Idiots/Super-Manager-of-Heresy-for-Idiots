@@ -36,6 +36,7 @@ public class HomebrewController {
     private final HomebrewAuthoringService authoringService;
     private final HomebrewMarketplaceService marketplaceService;
     private final HomebrewLibraryService libraryService;
+    private final com.dnd.app.service.homebrew.HomebrewPreviewService previewService;
     private final Executor controllerTaskExecutor;
 
     // === Authoring (own packages) ===
@@ -431,6 +432,26 @@ public class HomebrewController {
             @PathVariable UUID id, Authentication auth) {
         return CompletableFuture.supplyAsync(() -> {
             HomebrewDetailResponse data = marketplaceService.getMarketplacePackage(id, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Богатый предпросмотр пакета для витрины: полный состав по типам с игровыми паспортами
+     * (механика заклинаний, статы предметов, прогрессия классов, трейты видов, статблоки монстров).
+     * @param id идентификатор пакета
+     * @param lang язык локализации (опционально)
+     * @param auth аутентификация (владелец видит и свой черновик, чужой — только PUBLISHED)
+     * @return богатый предпросмотр
+     */
+    @GetMapping("/marketplace/{id}/preview")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Rich homebrew package preview (full content passports)")
+    public CompletableFuture<ResponseEntity<ApiResponse<com.dnd.app.dto.response.HomebrewPreviewResponse>>> getPackagePreview(
+            @PathVariable UUID id,
+            @RequestParam(value = "lang", required = false) String lang,
+            Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            com.dnd.app.dto.response.HomebrewPreviewResponse data = previewService.getPreview(id, auth.getName(), lang);
             return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }

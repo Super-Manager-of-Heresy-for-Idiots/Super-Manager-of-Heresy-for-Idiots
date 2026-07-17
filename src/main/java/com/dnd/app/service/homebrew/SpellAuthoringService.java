@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -90,6 +91,20 @@ public class SpellAuthoringService {
     public HomebrewSpellResponse get(UUID packageId, UUID spellId, String username) {
         homebrewAccessService.enforceReadable(packageId, username);
         return toResponse(requirePackageSpell(packageId, spellId));
+    }
+
+    /**
+     * Все заклинания пакета с полной механикой — для богатого предпросмотра витрины.
+     * Контроль доступа выполняет вызывающий агрегатор ({@code HomebrewPreviewService}),
+     * поэтому здесь проверки нет; метод package-scoped и только на чтение.
+     * @param packageId пакет-владелец
+     * @return список homebrew-заклинаний (с реконструированной механикой из feature-rules)
+     */
+    @Transactional(readOnly = true)
+    public List<HomebrewSpellResponse> previewByPackage(UUID packageId) {
+        return spellRepository.findAllByHomebrewIdIn(Set.of(packageId)).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     /**
