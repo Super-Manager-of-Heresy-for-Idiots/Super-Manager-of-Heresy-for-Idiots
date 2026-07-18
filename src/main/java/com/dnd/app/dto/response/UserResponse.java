@@ -21,5 +21,7 @@ public class UserResponse {
     private String username;
     private String email;
     private String role;
+    /** Аватар пользователя: прокси-URL media-ассета или null. */
+    private String avatarUrl;
     private Instant createdAt;
 }

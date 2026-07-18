@@ -56,6 +56,7 @@ public class MonsterService {
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
     private final com.dnd.app.service.homebrew.HomebrewAccessService homebrewAccessService;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
 
     // =================================== Reads ===================================
 
@@ -903,6 +904,8 @@ public class MonsterService {
                 .campaignId(m.getCampaign() != null ? m.getCampaign().getId() : null)
                 .isVisibleToPlayers(m.getIsVisibleToPlayers())
                 .isActive(m.getIsActive())
+                .portraitUrl(mediaUrlResolver.resolve(com.dnd.app.domain.enums.MediaOwnerType.MONSTER_PORTRAIT, m.getId(), null))
+                .tokenUrl(mediaUrlResolver.resolve(com.dnd.app.domain.enums.MediaOwnerType.MONSTER_TOKEN, m.getId(), null))
                 .build();
     }
 
@@ -1002,6 +1005,8 @@ public class MonsterService {
                 .gear(m.getGear().stream().map(g -> MonsterResponse.GearView.builder()
                         .id(g.getId()).item(ref(g.getItem(), lang)).qty(g.getQty()).build()).toList())
                 .features(m.getFeatures().stream().map(f -> featureView(f, lang)).toList())
+                .portraitUrl(mediaUrlResolver.resolve(com.dnd.app.domain.enums.MediaOwnerType.MONSTER_PORTRAIT, m.getId(), null))
+                .tokenUrl(mediaUrlResolver.resolve(com.dnd.app.domain.enums.MediaOwnerType.MONSTER_TOKEN, m.getId(), null))
                 .build();
     }
 

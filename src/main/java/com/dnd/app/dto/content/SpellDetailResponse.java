@@ -71,6 +71,9 @@ public class SpellDetailResponse {
     @Schema(description = "Homebrew package title; null for core content")
     private String homebrewTitle;
 
+    @Schema(description = "Spell art: media proxy URL (/api/media/{id}/content) or null")
+    private String artUrl;
+
     @Schema(description = "True when the spell's auto-derived resolution was flagged for manual admin review")
     private Boolean warning;
 

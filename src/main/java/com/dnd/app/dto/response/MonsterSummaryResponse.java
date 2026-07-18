@@ -24,6 +24,10 @@ public class MonsterSummaryResponse {
     private String name;
     private String nameRusloc;
     private String nameEngloc;
+    /** Портрет монстра: прокси-URL media-ассета или null. */
+    private String portraitUrl;
+    /** Токен монстра для карты: прокси-URL media-ассета или null. */
+    private String tokenUrl;
     private MonsterResponse.DictionaryRef size;
     private String crRating;
     private BigDecimal crValue;

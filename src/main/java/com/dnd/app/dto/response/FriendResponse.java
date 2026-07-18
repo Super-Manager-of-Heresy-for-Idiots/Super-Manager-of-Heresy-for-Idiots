@@ -19,5 +19,7 @@ public class FriendResponse {
     private UUID id;
     private String username;
     private String role;
+    /** Аватар друга: прокси-URL media-ассета или null. */
+    private String avatarUrl;
     private Instant friendsSince;
 }

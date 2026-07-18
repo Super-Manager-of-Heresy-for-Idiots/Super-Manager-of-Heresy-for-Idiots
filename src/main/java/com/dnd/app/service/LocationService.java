@@ -31,6 +31,7 @@ public class LocationService {
     private final UserRepository userRepository;
     private final CampaignService campaignService;
     private final WebSocketEventService webSocketEventService;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
 
     /**
      * Создает результат операции "create location" в рамках бизнес-логики домена.
@@ -182,6 +183,8 @@ public class LocationService {
                 .name(location.getName())
                 .description(location.getDescription())
                 .isVisibleToPlayers(location.getIsVisibleToPlayers())
+                .previewUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.LOCATION_PREVIEW, location.getId(), null))
                 .createdAt(location.getCreatedAt())
                 .updatedAt(location.getUpdatedAt())
                 .build();

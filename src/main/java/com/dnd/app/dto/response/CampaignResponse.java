@@ -25,6 +25,8 @@ public class CampaignResponse {
     private String status;
     private String inviteCode;
     private int memberCount;
+    /** Обложка кампании: прокси-URL media-ассета или null, если не загружена. */
+    private String coverUrl;
     private Instant createdAt;
     private Instant updatedAt;
 }

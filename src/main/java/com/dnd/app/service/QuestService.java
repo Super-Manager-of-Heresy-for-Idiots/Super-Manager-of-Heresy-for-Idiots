@@ -40,6 +40,7 @@ import java.util.UUID;
 public class QuestService {
 
     private final CampaignQuestRepository questRepository;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
     private final QuestNoteRepository noteRepository;
     private final QuestNpcRepository questNpcRepository;
     private final QuestLocationRepository questLocationRepository;
@@ -577,6 +578,8 @@ public class QuestService {
                 .status(quest.getStatus().name())
                 .isVisibleToPlayers(quest.getIsVisibleToPlayers())
                 .notes(notes)
+                .artUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.QUEST_ART, quest.getId(), null))
                 .createdAt(quest.getCreatedAt())
                 .updatedAt(quest.getUpdatedAt())
                 .build();

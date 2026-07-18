@@ -46,6 +46,7 @@ public class FriendService {
 
     private final UserRepository userRepository;
     private final UserRelationshipRepository relationshipRepository;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
     private final WebSocketEventService webSocketEventService;
     private final FriendRateLimiter rateLimiter;
     private final MessengerClient messengerClient;
@@ -165,6 +166,8 @@ public class FriendService {
                 .id(requester.getId())
                 .username(requester.getUsername())
                 .role(requester.getRole().name())
+                .avatarUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.USER_AVATAR, requester.getId(), null))
                 .friendsSince(relationship.getUpdatedAt())
                 .build();
     }
@@ -214,6 +217,8 @@ public class FriendService {
                     .id(other.getId())
                     .username(other.getUsername())
                     .role(other.getRole().name())
+                    .avatarUrl(mediaUrlResolver.resolve(
+                            com.dnd.app.domain.enums.MediaOwnerType.USER_AVATAR, other.getId(), null))
                     .friendsSince(rel.getUpdatedAt())
                     .build()));
         }

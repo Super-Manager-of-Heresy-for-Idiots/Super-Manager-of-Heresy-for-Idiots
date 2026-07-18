@@ -25,6 +25,8 @@ public class QuestResponse {
     private String description;
     private String status;
     private Boolean isVisibleToPlayers;
+    /** Арт квеста: прокси-URL media-ассета или null. */
+    private String artUrl;
     private List<NoteResponse> notes;
     private List<?> rewards;
     private Instant createdAt;

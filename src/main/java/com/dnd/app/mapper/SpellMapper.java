@@ -10,7 +10,10 @@ import com.dnd.app.domain.content.SpellComponent;
 import com.dnd.app.domain.content.SpellDamage;
 import com.dnd.app.dto.content.ContentLabelDto;
 import com.dnd.app.dto.content.SpellDetailResponse;
+import com.dnd.app.domain.enums.MediaOwnerType;
+import com.dnd.app.service.media.MediaUrlResolver;
 import com.dnd.app.util.Localization;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -25,7 +28,10 @@ import java.util.Comparator;
  * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
  */
 @Component
+@RequiredArgsConstructor
 public class SpellMapper {
+
+    private final MediaUrlResolver mediaUrlResolver;
 
     /**
      * Преобразует данные операции "to detail" в рамках бизнес-логики преобразования данных.
@@ -62,6 +68,7 @@ public class SpellMapper {
                 .packageId(com.dnd.app.util.HomebrewOrigin.id(s.getHomebrew()))
                 .source(com.dnd.app.util.HomebrewOrigin.source(s.getHomebrew()))
                 .homebrewTitle(com.dnd.app.util.HomebrewOrigin.title(s.getHomebrew()))
+                .artUrl(mediaUrlResolver.resolve(MediaOwnerType.SPELL_ART, s.getId(), null))
                 .warning(s.getWarning())
                 .warningReason(s.getWarningReason())
                 .components(s.getComponents().stream().map(this::mapComponent).toList())

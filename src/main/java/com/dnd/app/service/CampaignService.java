@@ -41,6 +41,7 @@ public class CampaignService {
     private final CampaignNpcRepository campaignNpcRepository;
     private final com.dnd.app.mapper.CharacterMapper characterMapper;
     private final WebSocketEventService webSocketEventService;
+    private final com.dnd.app.service.media.MediaUrlResolver mediaUrlResolver;
 
     /**
      * Создает результат операции "create campaign" в рамках бизнес-логики домена.
@@ -640,6 +641,8 @@ public class CampaignService {
                 .status(campaign.getStatus().name())
                 .inviteCode(showInviteCode ? campaign.getInviteCode() : null)
                 .memberCount(members.size())
+                .coverUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.CAMPAIGN_COVER, campaign.getId(), null))
                 .createdAt(campaign.getCreatedAt())
                 .updatedAt(campaign.getUpdatedAt())
                 .build();
@@ -649,6 +652,8 @@ public class CampaignService {
         return CampaignMemberResponse.builder()
                 .userId(member.getUser().getId())
                 .username(member.getUser().getUsername())
+                .avatarUrl(mediaUrlResolver.resolve(
+                        com.dnd.app.domain.enums.MediaOwnerType.USER_AVATAR, member.getUser().getId(), null))
                 .roleInCampaign(member.getRoleInCampaign().name())
                 .isCreator(member.getIsCreator())
                 .joinedAt(member.getJoinedAt())

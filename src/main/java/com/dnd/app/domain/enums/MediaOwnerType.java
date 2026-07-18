@@ -19,7 +19,28 @@ public enum MediaOwnerType {
     HOMEBREW_COVER(MediaLimitCategory.COVER),
 
     /** Обложка campaign blueprint (owner_id = campaign_blueprints.id). */
-    BLUEPRINT_COVER(MediaLimitCategory.COVER);
+    BLUEPRINT_COVER(MediaLimitCategory.COVER),
+
+    /** Превью локации кампании (owner_id = campaign_locations.id). */
+    LOCATION_PREVIEW(MediaLimitCategory.COVER),
+
+    /** Портрет монстра бестиария (owner_id = monsters.id). */
+    MONSTER_PORTRAIT(MediaLimitCategory.AVATAR),
+
+    /** Токен монстра для карты боя (owner_id = monsters.id); браузер грузит его как обычный media. */
+    MONSTER_TOKEN(MediaLimitCategory.AVATAR),
+
+    /** Аватар пользователя (owner_id = users.id). */
+    USER_AVATAR(MediaLimitCategory.AVATAR),
+
+    /** Обложка кампании (owner_id = campaigns.id). */
+    CAMPAIGN_COVER(MediaLimitCategory.COVER),
+
+    /** Арт квеста кампании (owner_id = campaign_quests.id). */
+    QUEST_ART(MediaLimitCategory.COVER),
+
+    /** Арт заклинания (owner_id = spell.spell_id). */
+    SPELL_ART(MediaLimitCategory.COVER);
 
     private final MediaLimitCategory limitCategory;
 

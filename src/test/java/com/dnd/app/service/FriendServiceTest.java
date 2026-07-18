@@ -21,6 +21,7 @@ import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.UserRelationshipRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.service.media.MediaUrlResolver;
 import com.dnd.app.util.UuidOrdering;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,7 @@ class FriendServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private UserRelationshipRepository relationshipRepository;
+    @Mock private MediaUrlResolver mediaUrlResolver;
     @Mock private WebSocketEventService webSocketEventService;
     @Mock private FriendRateLimiter rateLimiter;
     @Mock private MessengerClient messengerClient;

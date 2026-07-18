@@ -19,6 +19,8 @@ import java.util.UUID;
 public class CampaignMemberResponse {
     private UUID userId;
     private String username;
+    /** Аватар участника: прокси-URL media-ассета или null. */
+    private String avatarUrl;
     private String roleInCampaign;
     private boolean isCreator;
     private Instant joinedAt;

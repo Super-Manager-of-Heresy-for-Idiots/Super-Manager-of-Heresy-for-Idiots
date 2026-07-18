@@ -23,6 +23,8 @@ public class LocationResponse {
     private String name;
     private String description;
     private Boolean isVisibleToPlayers;
+    /** Превью локации: прокси-URL media-ассета или null, если не загружено. */
+    private String previewUrl;
     private Instant createdAt;
     private Instant updatedAt;
 }

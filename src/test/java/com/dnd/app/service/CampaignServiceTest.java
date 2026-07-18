@@ -6,6 +6,7 @@ import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
 import com.dnd.app.exception.*;
 import com.dnd.app.repository.*;
+import com.dnd.app.service.media.MediaUrlResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class CampaignServiceTest {
 
     @Mock
     private CampaignRepository campaignRepository;
+
+    @Mock
+    private MediaUrlResolver mediaUrlResolver;
 
     @Mock
     private CampaignMemberRepository campaignMemberRepository;

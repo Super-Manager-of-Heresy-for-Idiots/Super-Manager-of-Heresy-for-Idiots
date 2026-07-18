@@ -28,6 +28,10 @@ public class MonsterResponse {
     private String name;
     private String nameRusloc;
     private String nameEngloc;
+    /** Портрет монстра: прокси-URL media-ассета или null. */
+    private String portraitUrl;
+    /** Токен монстра для карты: прокси-URL media-ассета или null. */
+    private String tokenUrl;
 
     private DictionaryRef alignment;
     private DictionaryRef size;
