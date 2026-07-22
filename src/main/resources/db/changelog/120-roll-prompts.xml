@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      ROLL_PROMPT: мастер инициирует проверку (характеристика/спасбросок/произвольный d20),
+      у владельца персонажа появляется окно броска. Бросок исполняется на сервере
+      (честный d20 + модификатор персонажа), результат сохраняется и рассылается по WS.
+      hide_dc — мастер может скрыть Сложность от игрока до броска.
+    -->
+    <changeSet id="120-roll-prompts" author="claude">
+        <createTable tableName="roll_prompts">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requested_by" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="roll_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="stat_type_id" type="uuid"/>
+            <column name="dc" type="integer"/>
+            <column name="hide_dc" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="advantage_mode" type="varchar(12)" defaultValue="NORMAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(200)"/>
+            <column name="status" type="varchar(12)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="roll_natural" type="integer"/>
+            <column name="roll_second" type="integer"/>
+            <column name="modifier" type="integer"/>
+            <column name="total" type="integer"/>
+            <column name="success" type="boolean"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rolled_at" type="timestamp with time zone"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="roll_prompts"
+                baseColumnNames="campaign_id"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                constraintName="fk_rollprompts_campaign"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="roll_prompts"
+                baseColumnNames="character_id"
+                referencedTableName="characters"
+                referencedColumnNames="id"
+                constraintName="fk_rollprompts_character"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="roll_prompts"
+                baseColumnNames="requested_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_rollprompts_requested_by"/>
+
+        <addForeignKeyConstraint
+                baseTableName="roll_prompts"
+                baseColumnNames="stat_type_id"
+                referencedTableName="ability_score"
+                referencedColumnNames="id"
+                constraintName="fk_rollprompts_stat_type"/>
+
+        <createIndex tableName="roll_prompts" indexName="idx_rollprompts_campaign_status">
+            <column name="campaign_id"/>
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="roll_prompts" indexName="idx_rollprompts_character_status">
+            <column name="character_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

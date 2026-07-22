@@ -212,4 +212,7 @@
     <!-- WORLD_PLAN Этап 5: переходы между картами через ключевые клетки (map_transitions + traverse). -->
     <include file="db/changelog/119-map-transitions.xml"/>
 
+    <!-- ROLL_PROMPT: запрошенные мастером проверки — окно броска у игрока, серверный d20, результат мастеру. -->
+    <include file="db/changelog/120-roll-prompts.xml"/>
+
 </databaseChangeLog>
