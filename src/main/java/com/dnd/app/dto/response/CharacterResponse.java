@@ -29,6 +29,8 @@ public class CharacterResponse {
     private UUID ownerId;
     private String ownerUsername;
     private UUID campaignId;
+    /** Текущая локация персонажа в мире кампании (WORLD_PLAN Этап 1) или null. */
+    private LocationRefResponse currentLocation;
     private String status;
     private List<CharacterStatResponse> stats;
     private Integer currentHp;

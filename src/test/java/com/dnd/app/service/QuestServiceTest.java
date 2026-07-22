@@ -66,6 +66,8 @@ class QuestServiceTest {
     @Mock private ItemInstanceService itemInstanceService;
     @Mock private WalletService walletService;
     @Mock private XpService xpService;
+    // WORLD_PLAN Этап 2: журнал квестов — completeQuest помечает запись получателя завершённой.
+    @Mock private com.dnd.app.repository.CharacterQuestRepository characterQuestRepository;
 
     @InjectMocks
     private QuestService questService;

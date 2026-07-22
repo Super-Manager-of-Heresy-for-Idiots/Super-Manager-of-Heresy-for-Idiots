@@ -19,6 +19,10 @@ public interface CampaignNpcRepository extends JpaRepository<CampaignNpc, UUID> 
 
     List<CampaignNpc> findByCampaignIdAndIsVisibleToPlayersTrue(UUID campaignId);
 
+    List<CampaignNpc> findByLocationId(UUID locationId);
+
+    List<CampaignNpc> findByLocationIdAndIsVisibleToPlayersTrue(UUID locationId);
+
     // Detach NPCs from this campaign's monsters before those monsters are deleted
     // (campaign_npcs.source_monster_id has no ON DELETE action).
     @Modifying

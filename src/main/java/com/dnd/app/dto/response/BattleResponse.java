@@ -24,6 +24,10 @@ public class BattleResponse {
     private UUID campaignId;
     private String name;
     private String status;
+    /** Локация боя в мире кампании (WORLD_PLAN Этап 4) или null. */
+    private LocationRefResponse location;
+    /** Карта локации по умолчанию (external map-service id) для предвыбора или null. */
+    private UUID defaultMapId;
     private Integer roundNumber;
     private Integer currentTurnIndex;
     private UUID currentCombatantId;

@@ -57,6 +57,7 @@ public class QuestService {
     private final ItemInstanceService itemInstanceService;
     private final WalletService walletService;
     private final XpService xpService;
+    private final CharacterQuestRepository characterQuestRepository;
 
     /**
      * Создает результат операции "create quest" в рамках бизнес-логики домена.
@@ -419,6 +420,15 @@ public class QuestService {
 
         quest.setStatus(QuestStatus.COMPLETED);
         quest = questRepository.save(quest);
+
+        // WORLD_PLAN Этап 2: если получатель брал квест в журнал — пометить запись завершённой.
+        characterQuestRepository.findByCharacterIdAndQuestId(recipientId, questId).ifPresent(entry -> {
+            if (entry.getStatus() == com.dnd.app.domain.enums.CharacterQuestStatus.ACCEPTED) {
+                entry.setStatus(com.dnd.app.domain.enums.CharacterQuestStatus.COMPLETED);
+                entry.setCompletedAt(java.time.Instant.now());
+                characterQuestRepository.save(entry);
+            }
+        });
 
         log.info("Quest completed: questId={}, recipientId={}, itemsGranted={}, xpGranted={}, by={}",
                 questId, recipientId, itemsGranted, xpToGrant, username);

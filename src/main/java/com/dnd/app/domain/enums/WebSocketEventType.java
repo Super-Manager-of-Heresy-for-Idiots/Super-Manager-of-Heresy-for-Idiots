@@ -32,5 +32,10 @@ public enum WebSocketEventType {
     COMBATANT_CONDITIONS_CHANGED,
     FRIEND_REQUEST_RECEIVED,
     FRIEND_REQUEST_ACCEPTED,
-    FRIEND_REMOVED
+    FRIEND_REMOVED,
+    // WORLD_PLAN: присутствие в мире, журнал квестов, переходы между картами.
+    LOCATION_PRESENCE_CHANGED,
+    QUEST_ACCEPTED,
+    QUEST_ABANDONED,
+    MAP_TRANSITION_TRAVERSED
 }

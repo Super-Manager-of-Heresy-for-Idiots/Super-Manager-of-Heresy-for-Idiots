@@ -33,6 +33,10 @@ public interface PlayerCharacterRepository extends JpaRepository<PlayerCharacter
 
     List<PlayerCharacter> findByCampaignIdAndOwnerId(UUID campaignId, UUID ownerId);
 
+    /** Персонажи, находящиеся сейчас в локации (WORLD_PLAN Этап 1: присутствие). */
+    @EntityGraph(attributePaths = {"owner"})
+    List<PlayerCharacter> findByCurrentLocationId(UUID locationId);
+
     long countByRaceId(UUID raceId);
 
     // --- P1-2: orphaned-reference detection at homebrew detach ---

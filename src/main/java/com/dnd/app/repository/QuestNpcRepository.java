@@ -13,4 +13,6 @@ import java.util.UUID;
 public interface QuestNpcRepository extends JpaRepository<QuestNpc, UUID> {
 
     List<QuestNpc> findByQuestId(UUID questId);
+
+    List<QuestNpc> findByNpcId(UUID npcId);
 }

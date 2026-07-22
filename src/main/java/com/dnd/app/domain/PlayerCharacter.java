@@ -74,6 +74,12 @@ public class PlayerCharacter {
     @JoinColumn(name = "campaign_id")
     private Campaign campaign;
 
+    // Where the character currently is in the campaign world. NULL => "nowhere"
+    // (not yet placed). Cleared automatically when the location is deleted (SET NULL).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_location_id")
+    private CampaignLocation currentLocation;
+
     // Set when this character is a pre-built template attached to a blueprint.
     // Invariant (enforced in service): blueprint and campaign cannot both be set.
     @ManyToOne(fetch = FetchType.LAZY)

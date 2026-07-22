@@ -43,6 +43,9 @@ public class NpcResponse {
     // MONSTER_BASED
     private Ref sourceMonster;
 
+    /** Локация, в которой размещён NPC (WORLD_PLAN Этап 1), или null. */
+    private Ref location;
+
     private List<NoteResponse> notes;
     private Instant createdAt;
     private Instant updatedAt;

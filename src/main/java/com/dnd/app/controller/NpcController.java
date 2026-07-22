@@ -28,6 +28,9 @@ import java.util.concurrent.Executor;
 public class NpcController {
 
     private final NpcService npcService;
+    private final com.dnd.app.service.PresenceService presenceService;
+    private final com.dnd.app.service.CharacterQuestService characterQuestService;
+    private final com.dnd.app.service.NpcInteractionService npcInteractionService;
     private final Executor controllerTaskExecutor;
 
     /**
@@ -197,6 +200,92 @@ public class NpcController {
         return CompletableFuture.supplyAsync(() -> {
             npcService.deleteNote(noteId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(null, "Note deleted"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Размещает NPC в локации кампании или снимает его с локации (WORLD_PLAN Этап 1).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PutMapping("/{npcId}/location")
+    @Operation(summary = "Place the NPC into a location, or remove it (locationId = null; GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationRefResponse>>> setNpcLocation(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @Valid @RequestBody SetNpcLocationRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            LocationRefResponse response = presenceService.setNpcLocation(
+                    campaignId, npcId, request.getLocationId(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "NPC location updated"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает квесты, доступные для взятия у NPC (WORLD_PLAN Этап 2).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор персонажа игрока (обязателен для не-ГМ)
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/{npcId}/quests")
+    @Operation(summary = "List quests this NPC offers (player: co-located character required)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<QuestResponse>>>> listNpcQuests(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @RequestParam(required = false) UUID characterId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<QuestResponse> response = characterQuestService.listAvailableQuests(
+                    campaignId, npcId, characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Персонаж берёт квест у NPC (WORLD_PLAN Этап 2: журнал квестов).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{npcId}/quests/{questId}/accept")
+    @Operation(summary = "Accept a quest from this NPC for a character")
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterQuestResponse>>> acceptQuest(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @PathVariable UUID questId,
+            @Valid @RequestBody AcceptQuestRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterQuestResponse response = characterQuestService.acceptQuest(
+                    campaignId, npcId, questId, request.getCharacterId(), auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Quest accepted"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Агрегированное взаимодействие с NPC: осмотр + квесты + витрина (WORLD_PLAN Этап 3).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор персонажа игрока (обязателен для не-ГМ)
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/{npcId}/interact")
+    @Operation(summary = "Approach an NPC: public info, offered quests and merchant stock")
+    public CompletableFuture<ResponseEntity<ApiResponse<NpcInteractionResponse>>> interact(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @RequestParam(required = false) UUID characterId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            NpcInteractionResponse response = npcInteractionService.interact(
+                    campaignId, npcId, characterId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
         }, controllerTaskExecutor);
     }
 }

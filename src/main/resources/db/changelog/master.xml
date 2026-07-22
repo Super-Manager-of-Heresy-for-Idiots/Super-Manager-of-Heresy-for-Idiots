@@ -200,4 +200,16 @@
     <!-- MINIO_PLAN Фаза 0: полиморфная таблица media_asset для картинок из MinIO (аватары/портреты/обложки). -->
     <include file="db/changelog/115-media-asset.xml"/>
 
+    <!-- WORLD_PLAN Этап 1: присутствие в мире — characters.current_location_id + campaign_npcs.location_id. -->
+    <include file="db/changelog/116-world-presence.xml"/>
+
+    <!-- WORLD_PLAN Этап 2: журнал квестов персонажа (character_quests: взято у NPC / завершено / брошено). -->
+    <include file="db/changelog/117-character-quests.xml"/>
+
+    <!-- WORLD_PLAN Этап 4: связь карт с локациями (location_maps, слабая ссылка на map-service) + battles.location_id. -->
+    <include file="db/changelog/118-location-maps.xml"/>
+
+    <!-- WORLD_PLAN Этап 5: переходы между картами через ключевые клетки (map_transitions + traverse). -->
+    <include file="db/changelog/119-map-transitions.xml"/>
+
 </databaseChangeLog>

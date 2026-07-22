@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 5: переходы между картами через "ключевые клетки". Переход — это
+      набор клеток на карте A (from_cells_json) и точка появления на карте B (to_cell_json),
+      опционально со сменой локации мира (to_location_id). Карты — внешние id map-service
+      (слабые ссылки, как в location_maps). enabled — ГМ может "запереть дверь".
+    -->
+    <changeSet id="119-map-transitions" author="claude">
+        <createTable tableName="map_transitions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_map_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_cells_json" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="to_map_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="to_cell_json" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="to_location_id" type="uuid"/>
+            <column name="label" type="varchar(120)"/>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="map_transitions"
+                baseColumnNames="campaign_id"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                constraintName="fk_maptrans_campaign"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="map_transitions"
+                baseColumnNames="to_location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_maptrans_location"
+                onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+                baseTableName="map_transitions"
+                baseColumnNames="created_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_maptrans_created_by"/>
+
+        <createIndex tableName="map_transitions" indexName="idx_maptrans_from_map">
+            <column name="from_map_id"/>
+        </createIndex>
+
+        <createIndex tableName="map_transitions" indexName="idx_maptrans_campaign">
+            <column name="campaign_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

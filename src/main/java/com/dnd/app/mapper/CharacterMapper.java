@@ -35,7 +35,23 @@ public abstract class CharacterMapper {
     @Mapping(target = "knownSpells", ignore = true)
     @Mapping(target = "biography", ignore = true)
     @Mapping(target = "attacks", ignore = true)
+    @Mapping(target = "currentLocation", source = "currentLocation")
     public abstract CharacterResponse toResponse(PlayerCharacter character);
+
+    /**
+     * Преобразует локацию в короткую ссылку (id + имя) для ответа персонажа.
+     * @param location локация кампании или null
+     * @return ссылка на локацию или null
+     */
+    protected com.dnd.app.dto.response.LocationRefResponse toLocationRef(com.dnd.app.domain.CampaignLocation location) {
+        if (location == null) {
+            return null;
+        }
+        return com.dnd.app.dto.response.LocationRefResponse.builder()
+                .id(location.getId())
+                .name(location.getName())
+                .build();
+    }
 
     /**
      * Преобразует данные операции "to class level response" в рамках бизнес-логики преобразования данных.

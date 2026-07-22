@@ -320,6 +320,8 @@ public class NpcService {
                 .spells(spellRefs)
                 .sourceMonster(npc.getSourceMonster() == null ? null
                         : ref(npc.getSourceMonster().getId(), npc.getSourceMonster().getNameRusloc()))
+                .location(npc.getLocation() == null ? null
+                        : ref(npc.getLocation().getId(), npc.getLocation().getName()))
                 .notes(notes)
                 .createdAt(npc.getCreatedAt())
                 .updatedAt(npc.getUpdatedAt())

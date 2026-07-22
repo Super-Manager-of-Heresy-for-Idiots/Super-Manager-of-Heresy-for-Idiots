@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 4: связь карт с локациями. Карты живут в map-service, поэтому
+      location_maps хранит "слабую" ссылку external_map_id (без FK) — core остаётся
+      источником истины по миру, map-service по геометрии. is_default — карта,
+      предлагаемая по умолчанию при создании боя в локации. battles.location_id
+      привязывает бой к месту в мире.
+    -->
+    <changeSet id="118-location-maps" author="claude">
+        <createTable tableName="location_maps">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="location_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_map_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_default" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="location_maps"
+                columnNames="location_id, external_map_id"
+                constraintName="uq_location_maps_location_map"/>
+
+        <addForeignKeyConstraint
+                baseTableName="location_maps"
+                baseColumnNames="location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_locmaps_location"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="location_maps" indexName="idx_locmaps_location">
+            <column name="location_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="118-battle-location" author="claude">
+        <addColumn tableName="battles">
+            <column name="location_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="battles"
+                baseColumnNames="location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_battles_location"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

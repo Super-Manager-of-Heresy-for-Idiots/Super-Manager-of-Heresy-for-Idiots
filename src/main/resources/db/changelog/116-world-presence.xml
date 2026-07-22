@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 1: присутствие в мире. Персонаж и NPC получают привязку к локации
+      кампании: characters.current_location_id (где персонаж находится сейчас) и
+      campaign_npcs.location_id (где NPC "живёт"). Обе связи опциональны; удаление
+      локации выбрасывает обитателей в "нигде" (SET NULL), не каскадя их самих.
+    -->
+    <changeSet id="116-character-current-location" author="claude">
+        <addColumn tableName="characters">
+            <column name="current_location_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="characters"
+                baseColumnNames="current_location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_characters_current_location"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="characters" indexName="idx_characters_current_location">
+            <column name="current_location_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="116-npc-location" author="claude">
+        <addColumn tableName="campaign_npcs">
+            <column name="location_id" type="uuid"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="campaign_npcs"
+                baseColumnNames="location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_npcs_location"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="campaign_npcs" indexName="idx_npcs_location">
+            <column name="location_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
