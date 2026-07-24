@@ -94,6 +94,8 @@ app:
     login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
     register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
     refresh-per-minute: ${APP_RATELIMIT_REFRESH_PER_MIN:20}
+    # Per-IP cap for trusted-device account switching (/api/auth/switch).
+    switch-per-minute: ${APP_RATELIMIT_SWITCH_PER_MIN:20}
     friend-requests-per-day: ${APP_RATELIMIT_FRIEND_REQUESTS_PER_DAY:30}
     user-search-per-minute: ${APP_RATELIMIT_USER_SEARCH_PER_MIN:30}
   security:
@@ -101,6 +103,9 @@ app:
     # X-Forwarded-For so the client IP cannot be spoofed to bypass auth rate limiting. Set to 0 if the
     # app is exposed directly with no proxy.
     trusted-proxy-count: ${APP_TRUSTED_PROXY_COUNT:1}
+    # Application-side backstop for request body size (bytes). nginx enforces the primary limit in prod;
+    # this rejects oversized Content-Length bodies before Jackson buffers them. Default 25 MiB. 0 = off.
+    max-request-bytes: ${APP_MAX_REQUEST_BYTES:26214400}
   websocket:
     endpoint:
       # true = this node terminates client /ws connections (WS role / all-in-one).

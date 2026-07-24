@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,13 +47,16 @@ public class ClassWriteRequest {
     @Schema(description = "6 | 8 | 10 | 12")
     private Integer hitDie;
 
+    @Size(max = 20, message = "слишком много primaryAbilityIds")
     @Schema(description = "ability_score ids; >= 1")
     private List<UUID> primaryAbilityIds;
+    @Size(max = 20, message = "слишком много savingThrowIds")
     @Schema(description = "ability_score ids (обычно 2)")
     private List<UUID> savingThrowIds;
 
     private Integer skillChoiceCount;
     private Boolean skillChoiceAny;
+    @Size(max = 100, message = "слишком много skillOptionIds")
     @Schema(description = "skill ids; пул, если skillChoiceAny=false")
     private List<UUID> skillOptionIds;
 
@@ -63,10 +67,13 @@ public class ClassWriteRequest {
     @Valid
     private SpellcastingProfile spellcasting;
 
+    @Size(max = 1000, message = "слишком много features")
     @Valid
     private List<FeatureInput> features;
+    @Size(max = 100, message = "слишком много subclasses")
     @Valid
     private List<SubclassInput> subclasses;
+    @Size(max = 1000, message = "слишком много rewardGroups")
     @Valid
     private List<RewardGroupInput> rewardGroups;
 
@@ -140,8 +147,10 @@ public class ClassWriteRequest {
         private Integer sortOrder;
         private UUID classFeatureId;
         private String classFeatureKey;
+        @Size(max = 100, message = "слишком много options")
         @Valid
         private List<RewardOptionInput> options;
+        @Size(max = 100, message = "слишком много grants")
         @Valid
         private List<GrantInput> grants;
     }
@@ -162,6 +171,7 @@ public class ClassWriteRequest {
         private String description;
         private Boolean recommended;
         private Integer sortOrder;
+        @Size(max = 100, message = "слишком много grants")
         @Valid
         private List<GrantInput> grants;
     }

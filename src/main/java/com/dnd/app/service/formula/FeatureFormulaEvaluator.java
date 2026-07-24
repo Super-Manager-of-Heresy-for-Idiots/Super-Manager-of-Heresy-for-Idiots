@@ -22,6 +22,13 @@ public class FeatureFormulaEvaluator {
     private static final Set<String> MATH_FUNCTIONS = Set.of("floor", "ceil", "round", "abs", "min", "max");
     private static final String STEP_FUNCTION = "step";
 
+    /** Максимальная длина формулы в символах — защита от чрезмерно больших выражений. */
+    private static final int MAX_FORMULA_LENGTH = 2000;
+    /** Максимальная глубина вложенности при разборе — защита от StackOverflow на «((((…))))». */
+    private static final int MAX_PARSE_DEPTH = 200;
+    /** Верхняя граница количества костей и числа граней в записи NdM (защита от переполнения/DoS). */
+    private static final int MAX_DICE = 1000;
+
     /**
      * Выполняет операции "scalar names" в рамках бизнес-логики домена.
      * @return результат выполнения бизнес-операции
@@ -93,6 +100,18 @@ public class FeatureFormulaEvaluator {
         static Token of(Kind k, String t) { return new Token(k, t, 0, 0); }
     }
 
+    /** Разбирает число костей/граней из литерала NdM с ограничением диапазона (защита от переполнения/DoS). */
+    private int parseDiceLiteral(String digits) {
+        if (digits.length() > 6) {
+            throw new FormulaException("Слишком большое значение кости (максимум " + MAX_DICE + ")");
+        }
+        int v = Integer.parseInt(digits);
+        if (v <= 0 || v > MAX_DICE) {
+            throw new FormulaException("Значение кости вне диапазона 1.." + MAX_DICE);
+        }
+        return v;
+    }
+
     private List<Token> tokenize(String s) {
         List<Token> tokens = new ArrayList<>();
         int i = 0;
@@ -105,11 +124,11 @@ public class FeatureFormulaEvaluator {
                 while (i < n && Character.isDigit(s.charAt(i))) i++;
                 // dice literal NdM
                 if (i < n && (s.charAt(i) == 'd' || s.charAt(i) == 'D') && i + 1 < n && Character.isDigit(s.charAt(i + 1))) {
-                    int count = Integer.parseInt(s.substring(start, i));
+                    int count = parseDiceLiteral(s.substring(start, i));
                     i++; // consume 'd'
                     int sStart = i;
                     while (i < n && Character.isDigit(s.charAt(i))) i++;
-                    int sides = Integer.parseInt(s.substring(sStart, i));
+                    int sides = parseDiceLiteral(s.substring(sStart, i));
                     tokens.add(new Token(Kind.DICE, s.substring(start, i), count, sides));
                     continue;
                 }
@@ -164,6 +183,9 @@ public class FeatureFormulaEvaluator {
         if (expression == null || expression.isBlank()) {
             throw new FormulaException("Пустая формула");
         }
+        if (expression.length() > MAX_FORMULA_LENGTH) {
+            throw new FormulaException("Формула слишком длинная (максимум " + MAX_FORMULA_LENGTH + " символов)");
+        }
         Parser p = new Parser(tokenize(expression));
         Node node = p.parseOr();
         p.expect(Kind.EOF);
@@ -173,6 +195,7 @@ public class FeatureFormulaEvaluator {
     private final class Parser {
         private final List<Token> tokens;
         private int pos = 0;
+        private int depth = 0;
 
         Parser(List<Token> tokens) { this.tokens = tokens; }
 
@@ -182,6 +205,14 @@ public class FeatureFormulaEvaluator {
         void expect(Kind k) {
             if (peek().kind() != k) throw new FormulaException("Ожидалось " + k + ", получено '" + peek().text() + "'");
         }
+
+        /** Считает и ограничивает глубину рекурсивного спуска (защита от StackOverflow). */
+        void enter() {
+            if (++depth > MAX_PARSE_DEPTH) {
+                throw new FormulaException("Формула слишком глубоко вложена");
+            }
+        }
+        void exit() { depth--; }
 
         Node parseOr() {
             Node left = parseAnd();
@@ -223,12 +254,26 @@ public class FeatureFormulaEvaluator {
         }
 
         Node parseUnary() {
-            if (isOp("-")) { next(); return new Neg(parseUnary()); }
-            if (isOp("!")) { next(); return new Not(parseUnary()); }
-            return parsePrimary();
+            enter();
+            try {
+                if (isOp("-")) { next(); return new Neg(parseUnary()); }
+                if (isOp("!")) { next(); return new Not(parseUnary()); }
+                return parsePrimary();
+            } finally {
+                exit();
+            }
         }
 
         Node parsePrimary() {
+            enter();
+            try {
+                return parsePrimaryInner();
+            } finally {
+                exit();
+            }
+        }
+
+        private Node parsePrimaryInner() {
             Token t = peek();
             switch (t.kind()) {
                 case NUMBER -> { next(); return new Num(Double.parseDouble(t.text())); }
@@ -421,7 +466,7 @@ public class FeatureFormulaEvaluator {
         try {
             int count = d == 0 ? 1 : Integer.parseInt(s.substring(0, d));
             int sides = Integer.parseInt(s.substring(d + 1));
-            if (count <= 0 || sides <= 0) throw invalidDice(spec);
+            if (count <= 0 || sides <= 0 || count > MAX_DICE || sides > MAX_DICE) throw invalidDice(spec);
             return new DiceValue(count, sides);
         } catch (NumberFormatException e) {
             throw invalidDice(spec);

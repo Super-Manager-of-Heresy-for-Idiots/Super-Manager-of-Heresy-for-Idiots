@@ -17,6 +17,21 @@ public record DiceExpression(int count, int sides, int modifier) {
     private static final Pattern FLAT = Pattern.compile("\\s*([+\\-]?\\d+)\\s*");
 
     /**
+     * Верхняя граница количества костей и числа граней. Легальные D&D-выражения на порядки меньше;
+     * ограничение защищает от переполнения и раскрутки цикла броска (DoS), если во входных данных
+     * окажется абсурдно большое значение.
+     */
+    private static final int MAX_DICE = 1000;
+
+    /** Безопасно разбирает число костей/граней, обрезая слишком большие значения до {@link #MAX_DICE}. */
+    private static int clampDice(String digits) {
+        if (digits.length() > 6) {
+            return MAX_DICE;
+        }
+        return Math.min(Integer.parseInt(digits), MAX_DICE);
+    }
+
+    /**
      * Выполняет операции "parse" в рамках бизнес-логики боя.
      * @param expr входящее значение expr, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
@@ -27,8 +42,8 @@ public record DiceExpression(int count, int sides, int modifier) {
         }
         Matcher m = DICE.matcher(expr);
         if (m.matches()) {
-            int count = m.group(1).isEmpty() ? 1 : Integer.parseInt(m.group(1));
-            int sides = Integer.parseInt(m.group(2));
+            int count = m.group(1).isEmpty() ? 1 : clampDice(m.group(1));
+            int sides = clampDice(m.group(2));
             int mod = (m.group(3) == null) ? 0 : Integer.parseInt(m.group(3).replaceAll("\\s", ""));
             return new DiceExpression(count, sides, mod);
         }

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class AddBattleMonstersRequest {
 
     @NotEmpty(message = "At least one monster entry is required")
+    @Size(max = 100, message = "At most 100 monster entries are allowed")
     @Valid
     private List<MonsterEntry> monsters;
 

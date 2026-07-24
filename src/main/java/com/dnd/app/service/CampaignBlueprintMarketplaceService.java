@@ -350,12 +350,18 @@ public class CampaignBlueprintMarketplaceService {
         }
     }
 
+    /** Верхняя граница размера страницы витрины: клиентский size ограничивается, чтобы нельзя было
+     * запросить огромную выборку (DoS). Значение с запасом выше любого реального запроса UI. */
+    private static final int MAX_PAGE_SIZE = 200;
+
     private Pageable buildPageable(String sort, int page, int size) {
         Sort sortOrder = switch (sort != null ? sort.toLowerCase() : "newest") {
             case "downloads" -> Sort.by(Sort.Direction.DESC, "downloadCount");
             case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
-        return PageRequest.of(page, size, sortOrder);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        return PageRequest.of(safePage, safeSize, sortOrder);
     }
 }

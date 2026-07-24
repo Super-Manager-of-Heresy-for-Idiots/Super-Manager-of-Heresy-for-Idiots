@@ -110,16 +110,14 @@ public class SpellSlotService {
         if (max <= 0) {
             throw new UnprocessableEntityException("У персонажа нет ячеек заклинаний " + spellLevel + "-го уровня");
         }
-        CharacterSpellSlotUsage usage = usageRepository
-                .findByCharacterIdAndSpellLevel(characterId, spellLevel)
-                .orElseGet(() -> CharacterSpellSlotUsage.builder()
-                        .characterId(characterId).spellLevel(spellLevel).expendedCount(0).build());
-        if (usage.getExpendedCount() >= max) {
+        // Атомарное списание вместо read-modify-write: устраняет гонку (TOCTOU), при которой
+        // конкурентные запросы могли потратить одну ячейку несколько раз. 0 изменённых строк
+        // означает, что все ячейки этого уровня уже потрачены.
+        int updated = usageRepository.expendSlotAtomically(characterId, spellLevel, max);
+        if (updated == 0) {
             throw new UnprocessableEntityException(
                     "Все ячейки " + spellLevel + "-го уровня уже потрачены");
         }
-        usage.setExpendedCount(usage.getExpendedCount() + 1);
-        usageRepository.save(usage);
     }
 
     /**

@@ -9,6 +9,7 @@ import com.dnd.app.dto.response.UserResponse;
 import com.dnd.app.security.AuthCookieService;
 import com.dnd.app.service.AuthService;
 import com.dnd.app.service.IssuedTokens;
+import com.dnd.app.util.LogSanitizer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -62,8 +63,8 @@ public class AuthController {
     public CompletableFuture<ResponseEntity<ApiResponse<UserResponse>>> register(@Valid @RequestBody RegisterRequest request) {
         return CompletableFuture.supplyAsync(() -> {
             log.info("Registration attempt: username={}, email={}, role={}",
-                    request.getUsername(),
-                    request.getEmail(),
+                    LogSanitizer.clean(request.getUsername()),
+                    LogSanitizer.clean(request.getEmail()),
                     request.getRole());
             long startTime = System.currentTimeMillis();
 
@@ -96,7 +97,7 @@ public class AuthController {
         String ip = clientIp(httpRequest);
         String deviceToken = trustedDeviceToken != null ? trustedDeviceToken : authService.generateTrustedDeviceToken();
         return CompletableFuture.supplyAsync(() -> {
-            log.info("Login attempt: username={}", request.getUsername());
+            log.info("Login attempt: username={}", LogSanitizer.clean(request.getUsername()));
             long startTime = System.currentTimeMillis();
 
             IssuedTokens tokens = authService.login(request, userAgent, ip, deviceToken);

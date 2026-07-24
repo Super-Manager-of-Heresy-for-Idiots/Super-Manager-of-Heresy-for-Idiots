@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.dnd.app.util.LogSanitizer;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -39,7 +40,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         long startedAt = System.nanoTime();
 
         log.info("HTTP request started: id={}, method={}, path={}, routeType={}, remote={}, userAgent='{}'",
-                requestId, request.getMethod(), path, routeType, remoteAddress, request.getHeader("User-Agent"));
+                requestId, request.getMethod(), path, routeType, remoteAddress,
+                LogSanitizer.clean(request.getHeader("User-Agent")));
 
         try {
             filterChain.doFilter(request, response);

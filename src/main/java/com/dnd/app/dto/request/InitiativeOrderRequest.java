@@ -1,8 +1,11 @@
 package com.dnd.app.dto.request;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -20,6 +23,7 @@ import lombok.NoArgsConstructor;
 public class InitiativeOrderRequest {
 
     @NotEmpty(message = "entries must not be empty")
+    @Size(max = 500, message = "at most 500 entries are allowed")
     @Valid
     private List<Entry> entries;
 
@@ -32,6 +36,8 @@ public class InitiativeOrderRequest {
         private UUID combatantId;
 
         @NotNull(message = "initiative is required")
+        @Min(value = -100, message = "initiative must be >= -100")
+        @Max(value = 100, message = "initiative must be <= 100")
         private Integer initiative;
     }
 }

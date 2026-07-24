@@ -4,6 +4,7 @@ import com.dnd.app.security.AuthRateLimitFilter;
 import com.dnd.app.security.InternalApiKeyFilter;
 import com.dnd.app.security.JwtAuthenticationFilter;
 import com.dnd.app.dto.response.ApiResponse;
+import com.dnd.app.util.LogSanitizer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -117,9 +118,9 @@ public class SecurityConfig {
                             username,
                             authorities,
                             request.getRemoteAddr(),
-                            request.getHeader("Referer"),
-                            request.getHeader("Origin"),
-                            request.getHeader("User-Agent"),
+                            LogSanitizer.clean(request.getHeader("Referer")),
+                            LogSanitizer.clean(request.getHeader("Origin")),
+                            LogSanitizer.clean(request.getHeader("User-Agent")),
                             accessDeniedException.getClass().getSimpleName(),
                             accessDeniedException.getMessage()
                     );

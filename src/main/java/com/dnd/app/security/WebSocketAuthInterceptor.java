@@ -3,6 +3,7 @@ package com.dnd.app.security;
 import com.dnd.app.domain.enums.CampaignRole;
 import com.dnd.app.repository.CampaignMemberRepository;
 import com.dnd.app.repository.UserRepository;
+import com.dnd.app.util.LogSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -76,16 +77,32 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         log.debug("WebSocket CONNECT authenticated: {}", username);
     }
 
+    /**
+     * Авторизует STOMP SUBSCRIBE по принципу default-deny: разрешены только персональные очереди
+     * ({@code /user/**}, которые Spring перенаправляет в приватную очередь аутентифицированного
+     * принципала) и конкретный топик кампании {@code /topic/campaign.<uuid>} при подтверждённом
+     * членстве. Любой другой destination — включая wildcard-подписки вроде {@code /topic/*} или
+     * {@code /topic/**} — отклоняется, иначе wildcard получал бы бродкасты всех кампаний.
+     * @param accessor заголовки STOMP-фрейма подписки
+     */
     private void handleSubscribe(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
         if (destination == null || accessor.getUser() == null) return;
 
-        String username = accessor.getUser().getName();
-        var user = userRepository.findByUsername(username).orElse(null);
-        if (user == null) return;
+        // Персональные очереди безопасны: /user/** резолвится Spring в очередь текущего принципала,
+        // подписаться на чужую нельзя.
+        if (destination.startsWith("/user/")) {
+            return;
+        }
 
-        // Validate campaign subscription membership
+        // Единственный разрешённый бродкаст-топик — конкретная кампания, участником которой является
+        // пользователь. Точное совпадение с /topic/campaign.<uuid>; wildcard сюда не попадает.
         if (destination.startsWith("/topic/campaign.")) {
+            String username = accessor.getUser().getName();
+            var user = userRepository.findByUsername(username).orElse(null);
+            if (user == null) {
+                throw new org.springframework.messaging.MessageDeliveryException("Unknown user");
+            }
             try {
                 String campaignIdStr = destination.substring("/topic/campaign.".length());
                 UUID campaignId = UUID.fromString(campaignIdStr);
@@ -96,14 +113,21 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     throw new org.springframework.messaging.MessageDeliveryException(
                             "Not authorized to subscribe to this campaign");
                 }
+                return;
             } catch (IllegalArgumentException e) {
                 log.warn(
                         "WebSocketAuthInterceptor#handleSubscribe denied: operation=websocket-subscribe-authorize, reason=malformed-campaign-destination, destination={}",
-                        destination,
+                        LogSanitizer.clean(destination),
                         e);
                 throw new org.springframework.messaging.MessageDeliveryException(
                         "Malformed subscription destination");
             }
         }
+
+        // Всё остальное (в т.ч. wildcard-подписки) — запрещено.
+        log.warn("WebSocket SUBSCRIBE denied: user={} destination={} not permitted",
+                accessor.getUser().getName(), LogSanitizer.clean(destination));
+        throw new org.springframework.messaging.MessageDeliveryException(
+                "Subscription destination not permitted");
     }
 }

@@ -31,7 +31,7 @@ class AuthRateLimitFilterTest {
     @DisplayName("Подделка левого хопа XFF не создаёт новый бакет — лимит по реальному клиенту")
     void spoofedLeftHopSharesBucket() throws Exception {
         // loginPerMinute=2, one trusted proxy in front.
-        AuthRateLimitFilter filter = new AuthRateLimitFilter(2, 3, 20, 1);
+        AuthRateLimitFilter filter = new AuthRateLimitFilter(2, 3, 20, 20, 1);
 
         // Same real client (rightmost hop appended by our proxy), different spoofed left hops.
         assertEquals(200, post(filter, "/api/auth/login", "evilA, 9.9.9.9").getStatus());
@@ -43,7 +43,7 @@ class AuthRateLimitFilterTest {
     @Test
     @DisplayName("Разные реальные клиенты получают раздельные бакеты")
     void distinctRealClientsAreIndependent() throws Exception {
-        AuthRateLimitFilter filter = new AuthRateLimitFilter(1, 3, 20, 1);
+        AuthRateLimitFilter filter = new AuthRateLimitFilter(1, 3, 20, 20, 1);
 
         assertEquals(200, post(filter, "/api/auth/login", "proxy, 1.1.1.1").getStatus());
         // Different real client → its own bucket, still allowed though the first one is full.
@@ -55,7 +55,7 @@ class AuthRateLimitFilterTest {
     @Test
     @DisplayName("Эндпоинт refresh теперь под rate-limit")
     void refreshIsRateLimited() throws Exception {
-        AuthRateLimitFilter filter = new AuthRateLimitFilter(5, 3, 1, 1); // refreshPerMinute=1
+        AuthRateLimitFilter filter = new AuthRateLimitFilter(5, 3, 1, 20, 1); // refreshPerMinute=1
 
         assertEquals(200, post(filter, "/api/auth/refresh", "x, 8.8.8.8").getStatus());
         assertEquals(429, post(filter, "/api/auth/refresh", "x, 8.8.8.8").getStatus());

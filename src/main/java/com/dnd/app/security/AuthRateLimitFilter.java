@@ -29,15 +29,18 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/api/auth/login";
     private static final String REGISTER_PATH = "/api/auth/register";
     private static final String REFRESH_PATH = "/api/auth/refresh";
+    private static final String SWITCH_PATH = "/api/auth/switch";
 
     private final int loginPerMinute;
     private final int registerPerHour;
     private final int refreshPerMinute;
+    private final int switchPerMinute;
     private final int trustedProxyCount;
 
     private final ConcurrentHashMap<String, Deque<Instant>> loginHits = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deque<Instant>> registerHits = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deque<Instant>> refreshHits = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Deque<Instant>> switchHits = new ConcurrentHashMap<>();
 
     /**
      * Создает экземпляр компонента безопасности и получает зависимости, необходимые для выполнения бизнес-логики.
@@ -50,11 +53,13 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             @Value("${app.ratelimit.login-per-minute:5}") int loginPerMinute,
             @Value("${app.ratelimit.register-per-hour:3}") int registerPerHour,
             @Value("${app.ratelimit.refresh-per-minute:20}") int refreshPerMinute,
+            @Value("${app.ratelimit.switch-per-minute:20}") int switchPerMinute,
             @Value("${app.security.trusted-proxy-count:1}") int trustedProxyCount
     ) {
         this.loginPerMinute = loginPerMinute;
         this.registerPerHour = registerPerHour;
         this.refreshPerMinute = refreshPerMinute;
+        this.switchPerMinute = switchPerMinute;
         this.trustedProxyCount = trustedProxyCount;
     }
 
@@ -79,6 +84,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         }
         if (REFRESH_PATH.equals(path) && exceeds(refreshHits, ip, refreshPerMinute, Duration.ofMinutes(1))) {
             reject(response, "Too many refresh attempts. Try again later.");
+            return;
+        }
+        if (SWITCH_PATH.equals(path) && exceeds(switchHits, ip, switchPerMinute, Duration.ofMinutes(1))) {
+            reject(response, "Too many account switch attempts. Try again later.");
             return;
         }
 

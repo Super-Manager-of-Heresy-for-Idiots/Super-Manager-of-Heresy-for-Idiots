@@ -16,7 +16,6 @@ import com.dnd.app.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -118,16 +117,13 @@ class SpellSlotServiceTest {
         ownerAuth();
         classAtLevel(3);
         slotRows(3, row("yacheyki-zaklinaniy-level1", 2));
-        when(usageRepository.findByCharacterIdAndSpellLevel(characterId, 1)).thenReturn(Optional.empty());
+        // max ячеек 1-го уровня = 2 (из прогрессии); атомарное списание возвращает 1 (успех).
+        when(usageRepository.expendSlotAtomically(characterId, 1, 2)).thenReturn(1);
         when(usageRepository.findAllByCharacterId(characterId)).thenReturn(List.of());
-        when(usageRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(i -> i.getArgument(0));
 
         service.expend(characterId, USERNAME, 1);
 
-        ArgumentCaptor<CharacterSpellSlotUsage> cap = ArgumentCaptor.forClass(CharacterSpellSlotUsage.class);
-        verify(usageRepository).save(cap.capture());
-        assertEquals(1, cap.getValue().getExpendedCount());
-        assertEquals(1, cap.getValue().getSpellLevel());
+        verify(usageRepository).expendSlotAtomically(characterId, 1, 2);
     }
 
     @Test
@@ -146,11 +142,10 @@ class SpellSlotServiceTest {
         ownerAuth();
         classAtLevel(3);
         slotRows(3, row("yacheyki-zaklinaniy-level1", 2));
-        when(usageRepository.findByCharacterIdAndSpellLevel(characterId, 1)).thenReturn(Optional.of(
-                CharacterSpellSlotUsage.builder().characterId(characterId).spellLevel(1).expendedCount(2).build()));
+        // Атомарное списание возвращает 0 — все ячейки уровня уже потрачены.
+        when(usageRepository.expendSlotAtomically(characterId, 1, 2)).thenReturn(0);
 
         assertThrows(UnprocessableEntityException.class, () -> service.expend(characterId, USERNAME, 1));
-        verify(usageRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
