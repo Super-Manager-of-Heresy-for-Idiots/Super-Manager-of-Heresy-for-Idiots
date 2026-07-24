@@ -90,6 +90,14 @@ app:
     base-url: ${MESSENGER_BASE_URL:http://localhost:8082}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  async:
+    # SEC_TUNE N9 admission control on the controller task executor (per-pod). Bounds the number of
+    # in-flight requests so a flood cannot pile up thousands of 10s-timeout requests and exhaust heap.
+    # enabled=false is the kill-switch: restores the exact prior unbounded behaviour.
+    enabled: ${APP_ASYNC_LIMIT_ENABLED:true}
+    max-in-flight: ${APP_ASYNC_MAX_IN_FLIGHT:200}
+    # How long a request parks waiting for a free slot before a fast 503 (smooths micro-bursts).
+    acquire-timeout-ms: ${APP_ASYNC_ACQUIRE_TIMEOUT_MS:2000}
   ratelimit:
     login-per-minute: ${APP_RATELIMIT_LOGIN_PER_MIN:5}
     register-per-hour: ${APP_RATELIMIT_REGISTER_PER_HOUR:3}
@@ -98,6 +106,13 @@ app:
     switch-per-minute: ${APP_RATELIMIT_SWITCH_PER_MIN:20}
     friend-requests-per-day: ${APP_RATELIMIT_FRIEND_REQUESTS_PER_DAY:30}
     user-search-per-minute: ${APP_RATELIMIT_USER_SEARCH_PER_MIN:30}
+    # SEC_TUNE N14: replica-safe DB backstop cap on friend requests per requester per 24h (2× the
+    # in-memory per-pod limit). Not obviated by pod restarts or spreading across replicas. 0 = disabled.
+    friend-requests-day-cap: ${APP_RATELIMIT_FRIEND_REQUESTS_DAY_CAP:60}
+    # SEC_TUNE N13: bounded Caffeine key caps for the per-pod rate-limit registry (memory ceiling).
+    cache:
+      auth-max-keys: ${APP_RATELIMIT_AUTH_MAX_KEYS:100000}
+      user-max-keys: ${APP_RATELIMIT_USER_MAX_KEYS:50000}
   security:
     # Number of reverse proxies (e.g. nginx) in front of the app. Used to pick the trusted hop from
     # X-Forwarded-For so the client IP cannot be spoofed to bypass auth rate limiting. Set to 0 if the

@@ -27,4 +27,18 @@ public interface UserRelationshipRepository extends JpaRepository<UserRelationsh
                                                  @Param("userId") UUID userId);
 
     List<UserRelationship> findByStatusAndBlockedById(RelationshipStatus status, UUID blockedById);
+
+    /**
+     * Считает заявки в друзья, отправленные пользователем за последние 24 часа (N14, replica-safe
+     * backstop). В отличие от per-pod in-memory лимитера, этот потолок не обходится ни рестартом пода,
+     * ни размазыванием запросов по репликам. Известное занижение: отменённые/отклонённые строки
+     * удаляются и выпадают из счёта — для потолка это консервативно и допустимо.
+     * @param requesterId идентификатор пользователя-отправителя
+     * @return число заявок, созданных этим отправителем за последние сутки
+     */
+    @Query(value = """
+            select count(*) from user_relationships
+             where requester_id = :requesterId and created_at > now() - interval '24 hours'
+            """, nativeQuery = true)
+    long countRecentByRequester(@Param("requesterId") UUID requesterId);
 }

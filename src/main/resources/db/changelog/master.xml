@@ -200,4 +200,10 @@
     <!-- MINIO_PLAN Фаза 0: полиморфная таблица media_asset для картинок из MinIO (аватары/портреты/обложки). -->
     <include file="db/changelog/115-media-asset.xml"/>
 
+    <!-- SEC_TUNE N7: defense-in-depth CHECK (current_value >= 0) на character_resources. -->
+    <include file="db/changelog/116-resource-nonnegative.xml"/>
+
+    <!-- SEC_TUNE N14: индекс (requester_id, created_at) под replica-safe backstop заявок в друзья. -->
+    <include file="db/changelog/117-friend-request-rate-index.xml"/>
+
 </databaseChangeLog>

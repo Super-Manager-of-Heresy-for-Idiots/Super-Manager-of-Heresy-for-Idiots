@@ -1,10 +1,14 @@
 package com.dnd.app.security;
 
+import com.dnd.app.ratelimit.ClientIps;
+import com.dnd.app.ratelimit.SlidingWindowLimiter;
+import com.github.benmanes.caffeine.cache.Ticker;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -12,15 +16,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Класс AuthRateLimitFilter описывает компонент безопасности, который защищает бизнес-сценарии и проверяет доступ пользователя.
  * Используется для сохранения явной роли элемента в бизнес-потоке приложения.
+ *
+ * <p>N13: пороги, окна, ключи и тексты ошибок не изменились — сменилось только хранилище счётчиков.
+ * Четыре {@code ConcurrentHashMap}, растущие без предела, заменены на общий реестр лимитеров
+ * {@link SlidingWindowLimiter} поверх Caffeine (ограниченная память, вытеснение неактивных ключей).
  */
 @Slf4j
 @Component
@@ -31,36 +34,51 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     private static final String REFRESH_PATH = "/api/auth/refresh";
     private static final String SWITCH_PATH = "/api/auth/switch";
 
-    private final int loginPerMinute;
-    private final int registerPerHour;
-    private final int refreshPerMinute;
-    private final int switchPerMinute;
-    private final int trustedProxyCount;
+    /** TTL неактивного ключа для минутных/часовых окон: 2 часа (>= самого длинного окна — часа). */
+    private static final Duration KEY_TTL = Duration.ofHours(2);
 
-    private final ConcurrentHashMap<String, Deque<Instant>> loginHits = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Deque<Instant>> registerHits = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Deque<Instant>> refreshHits = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Deque<Instant>> switchHits = new ConcurrentHashMap<>();
+    private final int trustedProxyCount;
+    private final SlidingWindowLimiter loginLimiter;
+    private final SlidingWindowLimiter registerLimiter;
+    private final SlidingWindowLimiter refreshLimiter;
+    private final SlidingWindowLimiter switchLimiter;
 
     /**
-     * Создает экземпляр компонента безопасности и получает зависимости, необходимые для выполнения бизнес-логики.
-     * @param loginPerMinute входящее значение login per minute, используемое бизнес-сценарием
-     * @param registerPerHour входящее значение register per hour, используемое бизнес-сценарием
-     * @param refreshPerMinute входящее значение refresh per minute, используемое бизнес-сценарием
-     * @param trustedProxyCount входящее значение trusted proxy count, используемое бизнес-сценарием
+     * Создаёт компонент безопасности с общим реестром лимитеров (основной конструктор для Spring).
+     * @param loginPerMinute порог логинов в минуту на IP
+     * @param registerPerHour порог регистраций в час на IP
+     * @param refreshPerMinute порог обновлений токена в минуту на IP
+     * @param switchPerMinute порог переключений аккаунта в минуту на IP
+     * @param trustedProxyCount число доверенных обратных прокси (для разбора X-Forwarded-For)
+     * @param authMaxKeys верхняя граница числа IP-ключей в кэше каждого лимитера
      */
+    @Autowired
     public AuthRateLimitFilter(
             @Value("${app.ratelimit.login-per-minute:5}") int loginPerMinute,
             @Value("${app.ratelimit.register-per-hour:3}") int registerPerHour,
             @Value("${app.ratelimit.refresh-per-minute:20}") int refreshPerMinute,
             @Value("${app.ratelimit.switch-per-minute:20}") int switchPerMinute,
-            @Value("${app.security.trusted-proxy-count:1}") int trustedProxyCount
+            @Value("${app.security.trusted-proxy-count:1}") int trustedProxyCount,
+            @Value("${app.ratelimit.cache.auth-max-keys:100000}") long authMaxKeys
     ) {
-        this.loginPerMinute = loginPerMinute;
-        this.registerPerHour = registerPerHour;
-        this.refreshPerMinute = refreshPerMinute;
-        this.switchPerMinute = switchPerMinute;
         this.trustedProxyCount = trustedProxyCount;
+        this.loginLimiter = new SlidingWindowLimiter(loginPerMinute, Duration.ofMinutes(1), authMaxKeys, KEY_TTL, Ticker.systemTicker());
+        this.registerLimiter = new SlidingWindowLimiter(registerPerHour, Duration.ofHours(1), authMaxKeys, KEY_TTL, Ticker.systemTicker());
+        this.refreshLimiter = new SlidingWindowLimiter(refreshPerMinute, Duration.ofMinutes(1), authMaxKeys, KEY_TTL, Ticker.systemTicker());
+        this.switchLimiter = new SlidingWindowLimiter(switchPerMinute, Duration.ofMinutes(1), authMaxKeys, KEY_TTL, Ticker.systemTicker());
+    }
+
+    /**
+     * Конструктор-удобство для тестов: те же пороги с дефолтным размером кэша (100 000 ключей).
+     * @param loginPerMinute порог логинов в минуту на IP
+     * @param registerPerHour порог регистраций в час на IP
+     * @param refreshPerMinute порог обновлений токена в минуту на IP
+     * @param switchPerMinute порог переключений аккаунта в минуту на IP
+     * @param trustedProxyCount число доверенных обратных прокси
+     */
+    public AuthRateLimitFilter(int loginPerMinute, int registerPerHour, int refreshPerMinute,
+                               int switchPerMinute, int trustedProxyCount) {
+        this(loginPerMinute, registerPerHour, refreshPerMinute, switchPerMinute, trustedProxyCount, 100_000L);
     }
 
     @Override
@@ -72,79 +90,32 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         }
 
         String path = request.getRequestURI();
-        String ip = clientIp(request);
+        String ip = ClientIps.resolve(request, trustedProxyCount);
 
-        if (LOGIN_PATH.equals(path) && exceeds(loginHits, ip, loginPerMinute, Duration.ofMinutes(1))) {
-            reject(response, "Too many login attempts. Try again later.");
+        if (LOGIN_PATH.equals(path) && !loginLimiter.tryAcquire(ip)) {
+            reject(response, ip, "login", "Too many login attempts. Try again later.");
             return;
         }
-        if (REGISTER_PATH.equals(path) && exceeds(registerHits, ip, registerPerHour, Duration.ofHours(1))) {
-            reject(response, "Too many registration attempts. Try again later.");
+        if (REGISTER_PATH.equals(path) && !registerLimiter.tryAcquire(ip)) {
+            reject(response, ip, "register", "Too many registration attempts. Try again later.");
             return;
         }
-        if (REFRESH_PATH.equals(path) && exceeds(refreshHits, ip, refreshPerMinute, Duration.ofMinutes(1))) {
-            reject(response, "Too many refresh attempts. Try again later.");
+        if (REFRESH_PATH.equals(path) && !refreshLimiter.tryAcquire(ip)) {
+            reject(response, ip, "refresh", "Too many refresh attempts. Try again later.");
             return;
         }
-        if (SWITCH_PATH.equals(path) && exceeds(switchHits, ip, switchPerMinute, Duration.ofMinutes(1))) {
-            reject(response, "Too many account switch attempts. Try again later.");
+        if (SWITCH_PATH.equals(path) && !switchLimiter.tryAcquire(ip)) {
+            reject(response, ip, "switch", "Too many account switch attempts. Try again later.");
             return;
         }
 
         chain.doFilter(request, response);
     }
 
-    private boolean exceeds(ConcurrentHashMap<String, Deque<Instant>> hits, String key, int limit, Duration window) {
-        Instant now = Instant.now();
-        Instant cutoff = now.minus(window);
-        Deque<Instant> deque = hits.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>());
-        synchronized (deque) {
-            Iterator<Instant> it = deque.iterator();
-            while (it.hasNext()) {
-                if (it.next().isBefore(cutoff)) {
-                    it.remove();
-                } else {
-                    break;
-                }
-            }
-            if (deque.size() >= limit) {
-                log.warn("Rate limit exceeded for ip={} key=auth count={} limit={}", key, deque.size(), limit);
-                return true;
-            }
-            deque.addLast(now);
-            return false;
-        }
-    }
-
-    private void reject(HttpServletResponse response, String message) throws IOException {
+    private void reject(HttpServletResponse response, String ip, String endpoint, String message) throws IOException {
+        log.warn("Rate limit exceeded for ip={} key=auth endpoint={}", ip, endpoint);
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType("application/json");
         response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\"}");
-    }
-
-    /**
-     * Resolves the client IP used as the rate-limit key. The left side of {@code X-Forwarded-For}
-     * is attacker-controlled (a client may prepend arbitrary hops), so the leftmost value must
-     * never be trusted. With {@code trustedProxyCount} reverse proxies in front of the app — each
-     * appending the downstream peer's address (e.g. nginx {@code $proxy_add_x_forwarded_for}) — the
-     * genuine client IP is the hop our outermost proxy appended, at index
-     * {@code length - trustedProxyCount}. A header shorter than expected (forged/stripped, or no
-     * proxy in front) falls back to the transport remote address.
-     */
-    private String clientIp(HttpServletRequest request) {
-        if (trustedProxyCount > 0) {
-            String forwarded = request.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank()) {
-                String[] hops = forwarded.split(",");
-                int idx = hops.length - trustedProxyCount;
-                if (idx >= 0 && idx < hops.length) {
-                    String candidate = hops[idx].trim();
-                    if (!candidate.isEmpty()) {
-                        return candidate;
-                    }
-                }
-            }
-        }
-        return request.getRemoteAddr();
     }
 }

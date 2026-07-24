@@ -13,6 +13,8 @@ import com.dnd.app.repository.FeatureResourceDefinitionRepository;
 import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.FormulaContext;
 import com.dnd.app.service.formula.FormulaException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,9 @@ public class FeatureResourceService {
     private final FeatureFormulaRepository formulaRepository;
     private final FeatureFormulaService formulaService;
     private final CharacterFormulaContextFactory contextFactory;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /**
      * Выполняет операции "ensure resources for rules" в рамках бизнес-логики домена.
@@ -113,12 +118,19 @@ public class FeatureResourceService {
         CharacterFeatureResource res = require(characterId, resourceId);
         FeatureResourceDefinition def = definitionRepository.findById(res.getResourceDefinitionId()).orElse(null);
         boolean allowNegative = def != null && def.isAllowNegative();
-        int next = (res.getCurrentValue() != null ? res.getCurrentValue() : 0) - amount;
-        if (next < 0 && !allowNegative) {
+
+        // N7: атомарное списание условным UPDATE (блокировка строки сериализует конкурентные траты),
+        // взамен прежнего read-modify-save, где две параллельные траты при 1 заряде списывали дважды.
+        // Контракт ошибок прежний: 0 изменённых строк ⇒ тот же BadRequestException, тот же текст, 400.
+        int changed = resourceRepository.spendAtomically(res.getId(), characterId, amount, allowNegative);
+        if (changed == 0) {
             throw new BadRequestException("Недостаточно ресурса для использования");
         }
-        res.setCurrentValue(next);
-        return resourceRepository.save(res);
+        // Перечитываем ТОЛЬКО эту строку, чтобы вернуть свежий остаток, не сбрасывая весь persistence
+        // context (иначе объемлющая боевая транзакция потеряла бы уже загруженные сущности — например
+        // character, — что дало бы LazyInitializationException; поэтому НЕ clearAutomatically).
+        entityManager.refresh(res);
+        return res;
     }
 
     /**

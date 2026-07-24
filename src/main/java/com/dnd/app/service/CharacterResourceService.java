@@ -13,6 +13,7 @@ import com.dnd.app.service.formula.CharacterFormulaContextFactory;
 import com.dnd.app.service.formula.FormulaContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -187,7 +188,14 @@ public class CharacterResourceService {
                 .resourceType(resourceType)
                 .currentValue(max != null ? max : 0)
                 .build();
-        resource = characterResourceRepository.save(resource);
+        try {
+            // Проверка "уже существует" выше — первая линия; при гонке двух добавлений её проходят оба,
+            // и данные защищает unique-constraint (character_id, resource_type_id). Ловим нарушение
+            // констрейнта и превращаем 500 в прежний 400 с тем же текстом (N7, contract-preserving).
+            resource = characterResourceRepository.save(resource);
+        } catch (DataIntegrityViolationException e) {
+            throw new BadRequestException("Character already has this resource type");
+        }
 
         log.info("Resource added: characterId={}, resourceTypeId={}, by={}", characterId, resourceTypeId, username);
         return toResponse(resource, ctx);

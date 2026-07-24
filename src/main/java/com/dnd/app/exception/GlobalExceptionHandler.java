@@ -187,6 +187,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Обрабатывает перегрузку admission control (N9): пул «запросов в полёте» исчерпан. Отвечает 503 с
+     * заголовком {@code Retry-After: 1}, чтобы клиент мог быстро повторить запрос вместо зависания.
+     * @param ex входящее значение ex, используемое бизнес-сценарием
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @return результат выполнения бизнес-операции
+     */
+    @ExceptionHandler(ServerBusyException.class)
+    public ResponseEntity<ApiResponse<Void>> handleServerBusy(
+            ServerBusyException ex, HttpServletRequest request) {
+        logControllerException(HttpStatus.SERVICE_UNAVAILABLE, "SERVER_BUSY", ex, request, null);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "1")
+                .body(ApiResponse.error("SERVER_BUSY", ex.getMessage()));
+    }
+
+    /**
      * Обрабатывает событие операции "handle bad credentials" в рамках бизнес-логики приложения.
      * @param ex входящее значение ex, используемое бизнес-сценарием
      * @param request входящие данные запроса для выполнения бизнес-сценария

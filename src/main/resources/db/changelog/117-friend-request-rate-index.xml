@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      SEC_TUNE N14: индекс под replica-safe backstop заявок в друзья. FriendService.sendFriendRequest
+      считает COUNT заявок одного requester за последние 24 часа и режет при превышении потолка
+      (2× основного суточного лимита). Существующие индексы 065 покрывают только (user_x_id, status),
+      поэтому этот COUNT без индекса шёл бы seq-scan'ом. Одна редкая операция (отправка заявки) —
+      индекс делает её дешёвой.
+    -->
+    <changeSet id="117-friend-request-rate-index" author="claude">
+        <createIndex tableName="user_relationships" indexName="idx_user_rel_requester_created">
+            <column name="requester_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

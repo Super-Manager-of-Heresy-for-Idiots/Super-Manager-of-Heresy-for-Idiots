@@ -19,6 +19,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.exception.TooManyRequestsException;
 import com.dnd.app.repository.UserRelationshipRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.service.media.MediaUrlResolver;
@@ -34,6 +35,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FriendService: normalization, transitions, permissions, no-oracle")
@@ -89,6 +91,20 @@ class FriendServiceTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(actor));
         assertThatThrownBy(() -> friendService.sendFriendRequest("alice", actor.getId()))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    @DisplayName("N14 replica-safe backstop rejects at the daily requester cap (no row saved)")
+    void sendRequest_backstopRejectsAtDayCap() {
+        User actor = user("alice");
+        // @Value-поле не инъектится Mockito — выставляем потолок вручную (в проде дефолт 60).
+        ReflectionTestUtils.setField(friendService, "friendRequestsDayCap", 60);
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(actor));
+        when(relationshipRepository.countRecentByRequester(actor.getId())).thenReturn(60L);
+
+        assertThatThrownBy(() -> friendService.sendFriendRequest("alice", UUID.randomUUID()))
+                .isInstanceOf(TooManyRequestsException.class);
+        verify(relationshipRepository, never()).save(any());
     }
 
     @Test

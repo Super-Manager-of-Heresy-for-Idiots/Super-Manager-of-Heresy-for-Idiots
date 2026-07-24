@@ -17,6 +17,7 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.DuplicateResourceException;
 import com.dnd.app.exception.ResourceNotFoundException;
+import com.dnd.app.exception.TooManyRequestsException;
 import com.dnd.app.repository.UserRelationshipRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.util.UuidOrdering;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +52,13 @@ public class FriendService {
     private final WebSocketEventService webSocketEventService;
     private final FriendRateLimiter rateLimiter;
     private final MessengerClient messengerClient;
+
+    /**
+     * N14 replica-safe backstop: потолок заявок в друзья от одного отправителя за сутки (2× основного
+     * per-pod лимита). Значение {@code <= 0} отключает backstop (остаётся только in-memory лимитер).
+     */
+    @Value("${app.ratelimit.friend-requests-day-cap:60}")
+    private int friendRequestsDayCap;
 
     // --- User search ---------------------------------------------------------
 
@@ -91,6 +100,13 @@ public class FriendService {
     public FriendRequestResponse sendFriendRequest(String actorUsername, UUID targetUserId) {
         User actor = requireUser(actorUsername);
         rateLimiter.checkFriendRequest(actor.getId());
+        // N14 replica-safe backstop: потолок, который не обходится ни рестартом пода, ни размазыванием
+        // по репликам (per-pod лимитер выше — первая линия). cap <= 0 отключает backstop.
+        if (friendRequestsDayCap > 0
+                && relationshipRepository.countRecentByRequester(actor.getId()) >= friendRequestsDayCap) {
+            log.warn("Friend-request day-cap backstop hit: user={}, cap={}", actor.getId(), friendRequestsDayCap);
+            throw new TooManyRequestsException("Too many friend requests today; try again later.");
+        }
         if (actor.getId().equals(targetUserId)) {
             throw new BadRequestException("You cannot send a friend request to yourself.");
         }
