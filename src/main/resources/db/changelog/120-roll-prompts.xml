@@ -78,7 +78,7 @@
                 baseTableName="roll_prompts"
                 baseColumnNames="stat_type_id"
                 referencedTableName="ability_score"
-                referencedColumnNames="id"
+                referencedColumnNames="ability_score_id"
                 constraintName="fk_rollprompts_stat_type"/>
 
         <createIndex tableName="roll_prompts" indexName="idx_rollprompts_campaign_status">
