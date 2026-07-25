@@ -28,6 +28,8 @@ import java.util.concurrent.Executor;
 public class LocationController {
 
     private final LocationService locationService;
+    private final com.dnd.app.service.PresenceService presenceService;
+    private final com.dnd.app.service.LocationMapService locationMapService;
     private final Executor controllerTaskExecutor;
 
     /**
@@ -135,6 +137,123 @@ public class LocationController {
         return CompletableFuture.supplyAsync(() -> {
             LocationResponse response = locationService.toggleVisibility(locationId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(response, "Visibility toggled"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Помещает персонажа в локацию (WORLD_PLAN Этап 1: присутствие в мире).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{locationId}/enter")
+    @Operation(summary = "Move a character into this location (owner or GM)")
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationRefResponse>>> enterLocation(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId,
+            @Valid @RequestBody LocationPresenceRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            LocationRefResponse response = presenceService.enterLocation(
+                    campaignId, locationId, request.getCharacterId(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Location entered"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Убирает персонажа из локации (WORLD_PLAN Этап 1: присутствие в мире).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{locationId}/leave")
+    @Operation(summary = "Move a character out of this location (owner or GM)")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> leaveLocation(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId,
+            @Valid @RequestBody LocationPresenceRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            presenceService.leaveLocation(campaignId, locationId, request.getCharacterId(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Location left"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает обитателей локации (WORLD_PLAN Этап 1: присутствие в мире).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/{locationId}/occupants")
+    @Operation(summary = "List characters and NPCs currently in this location")
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationOccupantsResponse>>> getOccupants(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            LocationOccupantsResponse response = presenceService.getOccupants(campaignId, locationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает карты, привязанные к локации (WORLD_PLAN Этап 4).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/{locationId}/maps")
+    @Operation(summary = "List map-service maps attached to this location")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<LocationMapResponse>>>> listLocationMaps(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<LocationMapResponse> response = locationMapService.listMaps(campaignId, locationId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Привязывает карту map-service к локации (WORLD_PLAN Этап 4).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{locationId}/maps")
+    @Operation(summary = "Attach a map-service map to this location (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<LocationMapResponse>>> attachLocationMap(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId,
+            @Valid @RequestBody AttachLocationMapRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            LocationMapResponse response = locationMapService.attachMap(campaignId, locationId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Map attached"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Отвязывает карту от локации (WORLD_PLAN Этап 4).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param locationId идентификатор location, используемый для выбора нужного бизнес-объекта
+     * @param linkId идентификатор привязки, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @DeleteMapping("/{locationId}/maps/{linkId}")
+    @Operation(summary = "Detach a map from this location (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> detachLocationMap(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID locationId,
+            @PathVariable UUID linkId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            locationMapService.detachMap(campaignId, locationId, linkId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Map detached"));
         }, controllerTaskExecutor);
     }
 }

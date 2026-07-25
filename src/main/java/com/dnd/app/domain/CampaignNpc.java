@@ -63,6 +63,11 @@ public class CampaignNpc {
     @Column(name = "npc_role", length = 20)
     private NpcRole npcRole;
 
+    // Where the NPC is placed in the campaign world. NULL => not placed anywhere.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private CampaignLocation location;
+
     // --- CLASS_BASED build (all optional except race/class/level, enforced in service) ---
 
     @ManyToOne(fetch = FetchType.LAZY)

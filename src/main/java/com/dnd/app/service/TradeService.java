@@ -57,6 +57,7 @@ public class TradeService {
     private final CampaignService campaignService;
     private final WalletService walletService;
     private final UserRepository userRepository;
+    private final PresenceService presenceService;
 
     /**
      * Возвращает список для операции "list shop" в рамках бизнес-логики домена.
@@ -70,6 +71,9 @@ public class TradeService {
         User user = getUser(username);
         CampaignNpc npc = findMerchant(campaignId, npcId);
         campaignService.enforceMembershipOrAdmin(npc.getCampaign(), user);
+        if (!isGmOrAdmin(campaignId, user) && !Boolean.TRUE.equals(npc.getIsVisibleToPlayers())) {
+            throw new ResourceNotFoundException("NPC not found");
+        }
         return shopItemRepository.findByNpcId(npc.getId()).stream().map(this::toResponse).toList();
     }
 
@@ -126,6 +130,7 @@ public class TradeService {
         campaignService.enforceMembershipOrAdmin(npc.getCampaign(), user);
 
         PlayerCharacter character = resolveCampaignCharacter(request.getCharacterId(), campaignId, user);
+        assertCanTrade(campaignId, character, npc, user);
         int qty = request.getQuantity();
 
         NpcShopItem line = shopItemRepository.findByNpcIdAndItemTemplateId(npc.getId(), request.getItemTemplateId())
@@ -182,6 +187,7 @@ public class TradeService {
         campaignService.enforceMembershipOrAdmin(npc.getCampaign(), user);
 
         PlayerCharacter character = resolveCampaignCharacter(request.getCharacterId(), campaignId, user);
+        assertCanTrade(campaignId, character, npc, user);
         int qty = request.getQuantity();
 
         ItemInstance instance = itemInstanceRepository.findById(request.getItemInstanceId())
@@ -235,6 +241,24 @@ public class TradeService {
     }
 
     // --- helpers ---
+
+    /**
+     * WORLD_PLAN Этап 3: игровой гейт торговли. Игрок торгует только своим персонажем,
+     * стоящим в одной локации с видимым NPC-торговцем; ГМ торгует без ограничений.
+     */
+    private void assertCanTrade(UUID campaignId, PlayerCharacter character, CampaignNpc npc, User user) {
+        if (isGmOrAdmin(campaignId, user)) {
+            return;
+        }
+        if (!Boolean.TRUE.equals(npc.getIsVisibleToPlayers())) {
+            throw new ResourceNotFoundException("NPC not found");
+        }
+        presenceService.assertSameLocation(character, npc);
+    }
+
+    private boolean isGmOrAdmin(UUID campaignId, User user) {
+        return user.getRole() == Role.ADMIN || campaignService.isGmInCampaign(campaignId, user.getId());
+    }
 
     private void grantItem(PlayerCharacter character, ItemTemplate template, int qty) {
         if (Boolean.TRUE.equals(template.getIsStackable())) {

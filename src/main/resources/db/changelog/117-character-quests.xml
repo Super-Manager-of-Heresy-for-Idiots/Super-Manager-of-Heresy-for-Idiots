@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 2: журнал квестов персонажа. campaign_quests.status остаётся
+      мастер-статусом ГМа; character_quests хранит индивидуальный прогресс: кто взял
+      квест (у какого NPC), когда, и чем это закончилось (ACCEPTED/COMPLETED/FAILED/
+      ABANDONED). Повторное взятие после отказа реактивирует существующую строку.
+    -->
+    <changeSet id="117-character-quests" author="claude">
+        <createTable tableName="character_quests">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quest_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(20)" defaultValue="ACCEPTED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="given_by_npc_id" type="uuid"/>
+            <column name="accepted_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="timestamp with time zone"/>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="character_quests"
+                columnNames="character_id, quest_id"
+                constraintName="uq_character_quests_character_quest"/>
+
+        <addForeignKeyConstraint
+                baseTableName="character_quests"
+                baseColumnNames="character_id"
+                referencedTableName="characters"
+                referencedColumnNames="id"
+                constraintName="fk_charquests_character"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="character_quests"
+                baseColumnNames="quest_id"
+                referencedTableName="campaign_quests"
+                referencedColumnNames="id"
+                constraintName="fk_charquests_quest"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="character_quests"
+                baseColumnNames="given_by_npc_id"
+                referencedTableName="campaign_npcs"
+                referencedColumnNames="id"
+                constraintName="fk_charquests_npc"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="character_quests" indexName="idx_charquests_character">
+            <column name="character_id"/>
+        </createIndex>
+
+        <createIndex tableName="character_quests" indexName="idx_charquests_quest">
+            <column name="quest_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

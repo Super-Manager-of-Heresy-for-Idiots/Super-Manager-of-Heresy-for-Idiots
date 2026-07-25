@@ -32,6 +32,11 @@ public class Battle {
     @JoinColumn(name = "campaign_id", nullable = false)
     private Campaign campaign;
 
+    // Where in the campaign world this battle takes place (WORLD_PLAN Этап 4). Optional.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private CampaignLocation location;
+
     @Column(length = 120)
     private String name;
 

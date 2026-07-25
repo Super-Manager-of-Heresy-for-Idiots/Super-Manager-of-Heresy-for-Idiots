@@ -131,6 +131,9 @@ public class BattleService {
     private final com.dnd.app.integration.map.MapTokenMover mapTokenMover;
     /** Идемпотентность боевых команд по clientCommandId — защита от дублей (фаза 2.14). */
     private final CommandDedupService commandDedupService;
+    /** WORLD_PLAN Этап 4: привязка боя к локации и карта локации по умолчанию. */
+    private final CampaignLocationRepository campaignLocationRepository;
+    private final LocationMapRepository locationMapRepository;
     /** Runtime-список доступных классовых умений; field injection оставляет старые unit-конструкторы совместимыми. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private FeatureActionService featureActionService;
@@ -151,8 +154,19 @@ public class BattleService {
         campaignService.enforceGmOrAdmin(campaign, user);
         campaignService.enforceCampaignActive(campaign);
 
+        // WORLD_PLAN Этап 4: опциональная привязка боя к локации кампании.
+        CampaignLocation location = null;
+        if (request != null && request.getLocationId() != null) {
+            location = campaignLocationRepository.findById(request.getLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+            if (location.getCampaign() == null || !location.getCampaign().getId().equals(campaignId)) {
+                throw new BadRequestException("Location does not belong to this campaign");
+            }
+        }
+
         Battle battle = Battle.builder()
                 .campaign(campaign)
+                .location(location)
                 .name(request != null ? request.getName() : null)
                 .status(BattleStatus.ASSEMBLING)
                 .createdBy(user)
@@ -4436,9 +4450,23 @@ public class BattleService {
                 .map(c -> toCombatantResponse(c, battle, activeId))
                 .toList();
 
+        // WORLD_PLAN Этап 4: локация боя и карта локации по умолчанию (для предвыбора на фронте).
+        LocationRefResponse locationRef = null;
+        UUID defaultMapId = null;
+        if (battle.getLocation() != null) {
+            locationRef = LocationRefResponse.builder()
+                    .id(battle.getLocation().getId())
+                    .name(battle.getLocation().getName())
+                    .build();
+            defaultMapId = locationMapRepository.findByLocationIdAndIsDefaultTrue(battle.getLocation().getId())
+                    .stream().findFirst().map(lm -> lm.getExternalMapId()).orElse(null);
+        }
+
         return BattleResponse.builder()
                 .id(battle.getId())
                 .campaignId(battle.getCampaign().getId())
+                .location(locationRef)
+                .defaultMapId(defaultMapId)
                 .name(battle.getName())
                 .status(battle.getStatus().name())
                 .roundNumber(battle.getRoundNumber())

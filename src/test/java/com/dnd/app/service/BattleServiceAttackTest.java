@@ -81,7 +81,7 @@ class BattleServiceAttackTest {
                 org.mockito.Mockito.mock(FeatureEffectService.class),
                 org.mockito.Mockito.mock(BattlePendingResolutionRepository.class),
                 org.mockito.Mockito.mock(DamageTypeRepository.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService(), org.mockito.Mockito.mock(com.dnd.app.repository.CampaignLocationRepository.class), org.mockito.Mockito.mock(com.dnd.app.repository.LocationMapRepository.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();
@@ -174,7 +174,7 @@ class BattleServiceAttackTest {
                 org.mockito.Mockito.mock(FeatureEffectService.class),
                 org.mockito.Mockito.mock(BattlePendingResolutionRepository.class),
                 org.mockito.Mockito.mock(DamageTypeRepository.class),
-                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService());
+                org.mockito.Mockito.mock(com.dnd.app.integration.map.MapZoneCreator.class), org.mockito.Mockito.mock(com.dnd.app.integration.map.MapTokenMover.class), new com.dnd.app.service.CommandDedupService(), org.mockito.Mockito.mock(com.dnd.app.repository.CampaignLocationRepository.class), org.mockito.Mockito.mock(com.dnd.app.repository.LocationMapRepository.class));
 
         String username = "gm";
         UUID campaignId = UUID.randomUUID();

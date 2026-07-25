@@ -206,4 +206,21 @@
     <!-- SEC_TUNE N14: индекс (requester_id, created_at) под replica-safe backstop заявок в друзья. -->
     <include file="db/changelog/117-friend-request-rate-index.xml"/>
 
+    <!-- WORLD_PLAN Этап 1: присутствие в мире — characters.current_location_id + campaign_npcs.location_id.
+         Примечание: числовые префиксы 116/117 пересекаются с SEC_TUNE — это только имена файлов,
+         Liquibase идентифицирует changeset по (id, author, filename), коллизии нет. -->
+    <include file="db/changelog/116-world-presence.xml"/>
+
+    <!-- WORLD_PLAN Этап 2: журнал квестов персонажа (character_quests: взято у NPC / завершено / брошено). -->
+    <include file="db/changelog/117-character-quests.xml"/>
+
+    <!-- WORLD_PLAN Этап 4: связь карт с локациями (location_maps, слабая ссылка на map-service) + battles.location_id. -->
+    <include file="db/changelog/118-location-maps.xml"/>
+
+    <!-- WORLD_PLAN Этап 5: переходы между картами через ключевые клетки (map_transitions + traverse). -->
+    <include file="db/changelog/119-map-transitions.xml"/>
+
+    <!-- ROLL_PROMPT: запрошенные мастером проверки — окно броска у игрока, серверный d20, результат мастеру. -->
+    <include file="db/changelog/120-roll-prompts.xml"/>
+
 </databaseChangeLog>

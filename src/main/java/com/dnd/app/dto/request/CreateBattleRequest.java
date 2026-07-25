@@ -18,4 +18,7 @@ public class CreateBattleRequest {
 
     @Size(max = 120, message = "Battle name must be at most 120 characters")
     private String name;
+
+    /** Локация, в которой происходит бой (WORLD_PLAN Этап 4). Опционально. */
+    private java.util.UUID locationId;
 }
