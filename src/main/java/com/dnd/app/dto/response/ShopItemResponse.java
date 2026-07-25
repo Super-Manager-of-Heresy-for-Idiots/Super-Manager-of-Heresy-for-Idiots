@@ -20,6 +20,9 @@ public class ShopItemResponse {
     private UUID id;
     private UUID itemTemplateId;
     private String itemName;
+    /** Итоговая цена продажи с учётом модификатора цен торговца (WORLD_PLAN Этап 5). */
     private BigDecimal priceGold;
     private Integer quantity;
+    /** Базовый запас для рестокинга; null — позиция не восстанавливается. */
+    private Integer restockQuantity;
 }

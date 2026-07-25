@@ -25,6 +25,8 @@ public class QuestResponse {
     private String description;
     private String status;
     private Boolean isVisibleToPlayers;
+    /** Сдача квеста квестодателю сразу выдаёт награду (true) или ждёт подтверждения ГМа (false). */
+    private Boolean autoCompleteOnTurnIn;
     /** Арт квеста: прокси-URL media-ассета или null. */
     private String artUrl;
     private List<NoteResponse> notes;

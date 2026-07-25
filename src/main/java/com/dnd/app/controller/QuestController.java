@@ -2,6 +2,7 @@ package com.dnd.app.controller;
 
 import com.dnd.app.dto.request.*;
 import com.dnd.app.dto.response.*;
+import com.dnd.app.service.CharacterQuestService;
 import com.dnd.app.service.QuestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +29,7 @@ import java.util.concurrent.Executor;
 public class QuestController {
 
     private final QuestService questService;
+    private final CharacterQuestService characterQuestService;
     private final Executor controllerTaskExecutor;
 
     /**
@@ -61,6 +63,22 @@ public class QuestController {
         return CompletableFuture.supplyAsync(() -> {
             List<QuestResponse> quests = questService.listQuests(campaignId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(quests));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Список сдач квестов, ожидающих подтверждения ГМа в кампании (READY_FOR_TURN_IN).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/pending-turn-ins")
+    @Operation(summary = "List quest turn-ins awaiting GM confirmation (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<CharacterQuestResponse>>>> pendingTurnIns(
+            @PathVariable UUID campaignId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<CharacterQuestResponse> data = characterQuestService.listPendingTurnIns(campaignId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
         }, controllerTaskExecutor);
     }
 
@@ -137,6 +155,66 @@ public class QuestController {
         return CompletableFuture.supplyAsync(() -> {
             QuestCompletionResponse response = questService.completeQuest(questId, request, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(response, "Quest completed and reward granted"));
+        }, controllerTaskExecutor);
+    }
+
+    // --- Quest objectives (optional, GM-authored) ---
+
+    /**
+     * Список опциональных целей квеста (только мастер).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/{questId}/objectives")
+    @Operation(summary = "List optional quest objectives (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<QuestObjectiveResponse>>>> listObjectives(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<QuestObjectiveResponse> data = questService.listObjectives(questId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Добавляет опциональную цель к квесту (только мастер).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{questId}/objectives")
+    @Operation(summary = "Add an optional objective to a quest (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<QuestObjectiveResponse>>> addObjective(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId,
+            @Valid @RequestBody CreateQuestObjectiveRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            QuestObjectiveResponse response = questService.addObjective(questId, request, auth.getName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Objective added"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Удаляет цель квеста (только мастер).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param objectiveId идентификатор цели
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @DeleteMapping("/{questId}/objectives/{objectiveId}")
+    @Operation(summary = "Delete a quest objective (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> deleteObjective(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID questId,
+            @PathVariable UUID objectiveId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            questService.deleteObjective(objectiveId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Objective deleted"));
         }, controllerTaskExecutor);
     }
 

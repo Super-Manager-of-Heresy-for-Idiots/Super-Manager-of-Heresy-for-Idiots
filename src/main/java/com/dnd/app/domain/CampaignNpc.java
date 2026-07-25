@@ -68,6 +68,16 @@ public class CampaignNpc {
     @JoinColumn(name = "location_id")
     private CampaignLocation location;
 
+    // --- Опциональная экономика торговца (WORLD_PLAN Этап 5); NULL => прежнее поведение ---
+
+    /** Кошелёк торговца в золоте. NULL — выкуп без ограничений (как раньше). */
+    @Column(name = "merchant_gold")
+    private java.math.BigDecimal merchantGold;
+
+    /** Модификатор цен витрины в процентах (100 = базовые цены). NULL — базовые цены. */
+    @Column(name = "price_modifier_percent")
+    private Integer priceModifierPercent;
+
     // --- CLASS_BASED build (all optional except race/class/level, enforced in service) ---
 
     @ManyToOne(fetch = FetchType.LAZY)

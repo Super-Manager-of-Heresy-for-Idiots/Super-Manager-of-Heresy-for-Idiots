@@ -1,6 +1,7 @@
 package com.dnd.app.repository;
 
 import com.dnd.app.domain.CharacterQuest;
+import com.dnd.app.domain.enums.CharacterQuestStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -23,4 +24,8 @@ public interface CharacterQuestRepository extends JpaRepository<CharacterQuest, 
     Optional<CharacterQuest> findByCharacterIdAndQuestId(UUID characterId, UUID questId);
 
     List<CharacterQuest> findByQuestIdAndCharacterIdIn(UUID questId, List<UUID> characterIds);
+
+    /** Записи журнала в заданном статусе по кампании квеста — для ГМ-списка ожидающих сдач. */
+    @EntityGraph(attributePaths = {"quest", "character", "givenByNpc"})
+    List<CharacterQuest> findByStatusAndQuestCampaignId(CharacterQuestStatus status, UUID campaignId);
 }

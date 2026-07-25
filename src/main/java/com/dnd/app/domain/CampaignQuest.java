@@ -47,6 +47,14 @@ public class CampaignQuest {
     @Builder.Default
     private Boolean isVisibleToPlayers = false;
 
+    /**
+     * Если true — сдача квеста игроком у связанного NPC сразу выдаёт награду и завершает запись
+     * журнала; если false — запись переходит в READY_FOR_TURN_IN и ждёт подтверждения ГМа.
+     */
+    @Column(name = "auto_complete_on_turn_in", nullable = false)
+    @Builder.Default
+    private Boolean autoCompleteOnTurnIn = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

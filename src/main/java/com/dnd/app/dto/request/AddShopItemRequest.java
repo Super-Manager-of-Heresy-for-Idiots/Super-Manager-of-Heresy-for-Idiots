@@ -26,7 +26,21 @@ public class AddShopItemRequest {
     /** Sale price in gold; when null the item template's base price is used. */
     private BigDecimal priceGold;
 
+    /**
+     * Сколько единиц добавить к остатку. Допускается 0 — тогда запрос лишь обновляет
+     * параметры позиции (цену / базовый запас), не пополняя её.
+     */
     @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @Min(value = 0, message = "Quantity must be zero or positive")
     private Integer quantity;
+
+    /**
+     * Базовый запас позиции для рестокинга по команде мастера (WORLD_PLAN Этап 5).
+     * null — позиция не восстанавливается (прежнее поведение).
+     */
+    @Min(value = 0, message = "Restock quantity must be zero or positive")
+    private Integer restockQuantity;
+
+    /** true — снять базовый запас у позиции (она перестанет восстанавливаться). */
+    private Boolean clearRestockQuantity;
 }

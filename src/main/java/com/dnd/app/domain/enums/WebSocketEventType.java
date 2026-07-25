@@ -37,6 +37,8 @@ public enum WebSocketEventType {
     LOCATION_PRESENCE_CHANGED,
     QUEST_ACCEPTED,
     QUEST_ABANDONED,
+    QUEST_TURNED_IN,
+    SHOP_UPDATED,
     MAP_TRANSITION_TRAVERSED,
     // ROLL_PROMPT: мастер запрашивает проверку — окно броска у игрока, результат мастеру.
     ROLL_PROMPT_CREATED,

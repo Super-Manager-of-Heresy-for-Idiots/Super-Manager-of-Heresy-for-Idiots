@@ -7,6 +7,7 @@ import com.dnd.app.domain.User;
 import com.dnd.app.domain.enums.MediaOwnerType;
 import com.dnd.app.domain.enums.NpcRole;
 import com.dnd.app.domain.enums.Role;
+import com.dnd.app.dto.response.CharacterQuestResponse;
 import com.dnd.app.dto.response.LocationRefResponse;
 import com.dnd.app.dto.response.NpcInteractionResponse;
 import com.dnd.app.dto.response.QuestResponse;
@@ -15,6 +16,8 @@ import com.dnd.app.exception.AccessDeniedException;
 import com.dnd.app.exception.BadRequestException;
 import com.dnd.app.exception.ResourceNotFoundException;
 import com.dnd.app.repository.CampaignNpcRepository;
+import com.dnd.app.repository.CharacterWalletRepository;
+import com.dnd.app.repository.CurrencyTypeRepository;
 import com.dnd.app.repository.NpcShopItemRepository;
 import com.dnd.app.repository.PlayerCharacterRepository;
 import com.dnd.app.repository.UserRepository;
@@ -38,6 +41,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NpcInteractionService {
 
+    private static final String GOLD_SLUG = "gp";
+
     private final CampaignNpcRepository npcRepository;
     private final PlayerCharacterRepository characterRepository;
     private final NpcShopItemRepository shopItemRepository;
@@ -46,6 +51,10 @@ public class NpcInteractionService {
     private final PresenceService presenceService;
     private final CharacterQuestService characterQuestService;
     private final MediaUrlResolver mediaUrlResolver;
+    private final CharacterWalletRepository characterWalletRepository;
+    private final CurrencyTypeRepository currencyTypeRepository;
+    private final NpcDialogueService npcDialogueService;
+    private final TradeService tradeService;
 
     /**
      * Возвращает агрегированное взаимодействие с NPC для персонажа: осмотр + квесты + витрина.
@@ -75,6 +84,8 @@ public class NpcInteractionService {
         }
 
         List<QuestResponse> quests = characterQuestService.listAvailableQuests(campaignId, npcId, characterId, username);
+        List<CharacterQuestResponse> turnInQuests = characterId == null ? null
+                : characterQuestService.listTurnInQuests(campaignId, npcId, characterId, username);
 
         List<ShopItemResponse> shopItems = null;
         if (npc.getNpcRole() == NpcRole.MERCHANT) {
@@ -93,21 +104,39 @@ public class NpcInteractionService {
                                 .name(npc.getLocation().getName())
                                 .build())
                 .availableQuests(quests)
+                .turnInQuests(turnInQuests)
                 .shopItems(shopItems)
+                .buybackRatePercent(npc.getNpcRole() == NpcRole.MERCHANT
+                        ? TradeService.BUYBACK_RATE_PERCENT : null)
+                .dialogue(npcDialogueService.resolveForInteraction(npcId))
+                .goldBalance(characterId == null ? null : resolveGoldBalance(characterId))
                 .build();
     }
 
     // --- Private helpers ---
 
+    /**
+     * Возвращает баланс золота персонажа для отображения в окне торговли, либо null,
+     * если валюта золота не настроена или кошелёк ещё не создан.
+     */
+    private BigDecimal resolveGoldBalance(UUID characterId) {
+        return currencyTypeRepository.findBySlugAndHomebrewIsNull(GOLD_SLUG)
+                .flatMap(gold -> characterWalletRepository
+                        .findByCharacterIdAndCurrencyTypeId(characterId, gold.getId()))
+                .map(wallet -> wallet.getAmount())
+                .orElse(null);
+    }
+
     private ShopItemResponse toShopItem(NpcShopItem line) {
-        BigDecimal price = line.getPriceGold() != null ? line.getPriceGold()
-                : line.getItemTemplate().getPriceGold();
+        // Цена считается общим методом TradeService, чтобы игрок видел ровно то, что заплатит
+        // (включая опциональный модификатор цен торговца, WORLD_PLAN Этап 5).
         return ShopItemResponse.builder()
                 .id(line.getId())
                 .itemTemplateId(line.getItemTemplate().getId())
                 .itemName(line.getItemTemplate().getName())
-                .priceGold(price)
+                .priceGold(tradeService.resolveUnitPrice(line))
                 .quantity(line.getQuantity())
+                .restockQuantity(line.getRestockQuantity())
                 .build();
     }
 

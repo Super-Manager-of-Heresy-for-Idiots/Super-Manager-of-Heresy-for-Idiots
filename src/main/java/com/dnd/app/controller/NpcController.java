@@ -269,6 +269,29 @@ public class NpcController {
     }
 
     /**
+     * Персонаж сдаёт взятый квест квестодателю (WORLD_PLAN Этап 2: полный цикл квеста).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{npcId}/quests/{questId}/turn-in")
+    @Operation(summary = "Turn a quest in to this NPC (auto-reward or await GM confirmation)")
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterQuestResponse>>> turnInQuest(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @PathVariable UUID questId,
+            @Valid @RequestBody AcceptQuestRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterQuestResponse response = characterQuestService.turnInQuest(
+                    campaignId, npcId, questId, request.getCharacterId(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Quest turned in"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
      * Агрегированное взаимодействие с NPC: осмотр + квесты + витрина (WORLD_PLAN Этап 3).
      * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
      * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта

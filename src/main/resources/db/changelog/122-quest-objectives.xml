@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 3: опциональные цели квеста. Мастер по желанию добавляет квесту
+      список целей (убить/принести/поговорить/посетить/произвольная). Квест без целей
+      ведёт себя как прежде — сдача без ограничений. Если цели есть, сдача требует их
+      выполнения персонажем. Прогресс персонажа хранится отдельно (per character_quest).
+    -->
+    <changeSet id="122-quest-objectives" author="claude">
+        <createTable tableName="quest_objectives">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="quest_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="objective_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Опциональная ссылка на цель (item_template / monster / npc / location) для типизированных целей. -->
+            <column name="target_ref" type="uuid"/>
+            <column name="target_label" type="varchar(200)"/>
+            <column name="required_count" type="int" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_index" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="quest_objectives"
+                baseColumnNames="quest_id"
+                referencedTableName="campaign_quests"
+                referencedColumnNames="id"
+                constraintName="fk_quest_objectives_quest"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="quest_objectives" indexName="idx_quest_objectives_quest">
+            <column name="quest_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="122-character-quest-objective-progress" author="claude">
+        <createTable tableName="character_quest_objective_progress">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="character_quest_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="objective_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_count" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="timestamp with time zone"/>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="character_quest_objective_progress"
+                columnNames="character_quest_id, objective_id"
+                constraintName="uq_cq_objective_progress"/>
+
+        <addForeignKeyConstraint
+                baseTableName="character_quest_objective_progress"
+                baseColumnNames="character_quest_id"
+                referencedTableName="character_quests"
+                referencedColumnNames="id"
+                constraintName="fk_cqop_character_quest"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="character_quest_objective_progress"
+                baseColumnNames="objective_id"
+                referencedTableName="quest_objectives"
+                referencedColumnNames="id"
+                constraintName="fk_cqop_objective"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="character_quest_objective_progress" indexName="idx_cqop_character_quest">
+            <column name="character_quest_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

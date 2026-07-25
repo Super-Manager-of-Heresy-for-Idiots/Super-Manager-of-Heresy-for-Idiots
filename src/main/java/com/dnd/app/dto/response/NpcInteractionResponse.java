@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +33,24 @@ public class NpcInteractionResponse {
     /** Квесты, которые персонаж может взять у NPC (пусто, если нет). */
     private List<QuestResponse> availableQuests;
 
+    /** Взятые квесты, которые персонаж может сдать этому NPC (ACCEPTED/READY_FOR_TURN_IN). */
+    private List<CharacterQuestResponse> turnInQuests;
+
     /** Витрина торговца; null, если NPC не торговец. */
     private List<ShopItemResponse> shopItems;
+
+    /** Опциональный диалог NPC (WORLD_PLAN Этап 4); null, если мастер его не настроил. */
+    private NpcDialogueResponse dialogue;
+
+    /**
+     * Курс выкупа товаров торговцем в процентах от базовой цены (для показа цены продажи).
+     * null, если NPC не торговец. Значение приходит с бэкенда, чтобы клиент не дублировал константу.
+     */
+    private Integer buybackRatePercent;
+
+    /**
+     * Баланс золота взаимодействующего персонажа — чтобы игрок видел, хватает ли средств на покупку.
+     * null, если персонаж не задан (например, ГМ смотрит без персонажа) или у него нет кошелька золота.
+     */
+    private BigDecimal goldBalance;
 }

@@ -26,4 +26,7 @@ public class CreateQuestRequest {
     private String status;
 
     private Boolean isVisibleToPlayers;
+
+    /** Сдача квеста квестодателю сразу выдаёт награду (true) или ждёт подтверждения ГМа (false, по умолчанию). */
+    private Boolean autoCompleteOnTurnIn;
 }

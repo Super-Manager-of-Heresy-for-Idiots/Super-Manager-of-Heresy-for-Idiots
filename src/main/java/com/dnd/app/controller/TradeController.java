@@ -3,8 +3,10 @@ package com.dnd.app.controller;
 import com.dnd.app.dto.request.AddShopItemRequest;
 import com.dnd.app.dto.request.BuyItemRequest;
 import com.dnd.app.dto.request.SellItemRequest;
+import com.dnd.app.dto.request.UpdateShopSettingsRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.ShopItemResponse;
+import com.dnd.app.dto.response.ShopSettingsResponse;
 import com.dnd.app.dto.response.TradeResultResponse;
 import com.dnd.app.service.TradeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -80,6 +82,82 @@ public class TradeController {
      * @param auth входящее значение auth, используемое бизнес-сценарием
      * @return результат выполнения бизнес-операции
      */
+    /**
+     * Удаляет позицию из витрины торговца (только ГМ).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param shopItemId идентификатор позиции витрины
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @DeleteMapping("/stock/{shopItemId}")
+    @Operation(summary = "Remove an item from the merchant's shop (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<Void>>> removeShopItem(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @PathVariable UUID shopItemId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            tradeService.removeShopItem(campaignId, npcId, shopItemId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(null, "Shop item removed"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Восстанавливает запас витрины по базовым значениям (только ГМ).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/restock")
+    @Operation(summary = "Restock the merchant's shop to its baseline quantities (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<List<ShopItemResponse>>>> restockShop(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<ShopItemResponse> data = tradeService.restockShop(campaignId, npcId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Shop restocked"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Возвращает опциональные настройки экономики торговца (участники кампании).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @GetMapping("/settings")
+    @Operation(summary = "Get the merchant's optional economy settings (members)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ShopSettingsResponse>>> getShopSettings(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            ShopSettingsResponse data = tradeService.getShopSettings(campaignId, npcId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Обновляет опциональные настройки экономики торговца (только ГМ).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param npcId идентификатор npc, используемый для выбора нужного бизнес-объекта
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PutMapping("/settings")
+    @Operation(summary = "Update the merchant's optional economy settings (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<ShopSettingsResponse>>> updateShopSettings(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID npcId,
+            @Valid @RequestBody UpdateShopSettingsRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            ShopSettingsResponse data = tradeService.updateShopSettings(campaignId, npcId, request, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(data, "Shop settings updated"));
+        }, controllerTaskExecutor);
+    }
+
     @PostMapping("/buy")
     @Operation(summary = "Buy an item from the merchant for one of your characters")
     public CompletableFuture<ResponseEntity<ApiResponse<TradeResultResponse>>> buy(

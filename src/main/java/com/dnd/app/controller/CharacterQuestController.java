@@ -1,10 +1,12 @@
 package com.dnd.app.controller;
 
+import com.dnd.app.dto.request.SetObjectiveProgressRequest;
 import com.dnd.app.dto.response.ApiResponse;
 import com.dnd.app.dto.response.CharacterQuestResponse;
 import com.dnd.app.service.CharacterQuestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -64,6 +66,53 @@ public class CharacterQuestController {
         return CompletableFuture.supplyAsync(() -> {
             characterQuestService.abandonQuest(campaignId, characterId, questId, auth.getName());
             return ResponseEntity.ok(ApiResponse.ok(null, "Quest abandoned"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * ГМ подтверждает сдачу квеста, ждущего проверки (READY_FOR_TURN_IN): выдаёт награду и
+     * завершает запись журнала (WORLD_PLAN Этап 2: полный цикл квеста).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{questId}/confirm-turn-in")
+    @Operation(summary = "Confirm a pending quest turn-in and grant its reward (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterQuestResponse>>> confirmTurnIn(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @PathVariable UUID questId, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterQuestResponse response = characterQuestService.confirmTurnIn(
+                    campaignId, characterId, questId, auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Quest turn-in confirmed"));
+        }, controllerTaskExecutor);
+    }
+
+    /**
+     * Мастер выставляет прогресс персонажа по опциональной цели квеста (WORLD_PLAN Этап 3).
+     * @param campaignId идентификатор campaign, используемый для выбора нужного бизнес-объекта
+     * @param characterId идентификатор character, используемый для выбора нужного бизнес-объекта
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @param objectiveId идентификатор цели
+     * @param request входящие данные запроса для выполнения бизнес-сценария
+     * @param auth входящее значение auth, используемое бизнес-сценарием
+     * @return результат выполнения бизнес-операции
+     */
+    @PostMapping("/{questId}/objectives/{objectiveId}/progress")
+    @Operation(summary = "Set a character's progress on a quest objective (GM only)")
+    public CompletableFuture<ResponseEntity<ApiResponse<CharacterQuestResponse>>> setObjectiveProgress(
+            @PathVariable UUID campaignId,
+            @PathVariable UUID characterId,
+            @PathVariable UUID questId,
+            @PathVariable UUID objectiveId,
+            @Valid @RequestBody SetObjectiveProgressRequest request, Authentication auth) {
+        return CompletableFuture.supplyAsync(() -> {
+            CharacterQuestResponse response = characterQuestService.setObjectiveProgress(
+                    campaignId, characterId, questId, objectiveId, request.getCurrentCount(), auth.getName());
+            return ResponseEntity.ok(ApiResponse.ok(response, "Objective progress updated"));
         }, controllerTaskExecutor);
     }
 }

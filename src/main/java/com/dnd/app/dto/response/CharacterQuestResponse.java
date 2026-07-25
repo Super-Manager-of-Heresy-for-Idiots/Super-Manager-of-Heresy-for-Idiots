@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,8 @@ import java.util.UUID;
 public class CharacterQuestResponse {
     private UUID id;
     private UUID questId;
+    private UUID characterId;
+    private String characterName;
     private String title;
     private String description;
     /** Мастер-статус квеста в кампании (ACTIVE/COMPLETED/...). */
@@ -31,4 +34,6 @@ public class CharacterQuestResponse {
     private String givenByNpcName;
     private Instant acceptedAt;
     private Instant completedAt;
+    /** Опциональные цели квеста с прогрессом персонажа; null/пусто, если целей нет. */
+    private List<ObjectiveProgressResponse> objectives;
 }

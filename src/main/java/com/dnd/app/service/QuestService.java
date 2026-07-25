@@ -1,9 +1,13 @@
 package com.dnd.app.service;
 
 import com.dnd.app.domain.*;
+import com.dnd.app.domain.enums.CharacterQuestStatus;
+import com.dnd.app.domain.enums.ObjectiveType;
 import com.dnd.app.domain.enums.QuestStatus;
 import com.dnd.app.domain.enums.Role;
 import com.dnd.app.domain.enums.WebSocketEventType;
+import com.dnd.app.dto.request.CreateQuestObjectiveRequest;
+import com.dnd.app.dto.response.QuestObjectiveResponse;
 import com.dnd.app.dto.request.CompleteQuestRequest;
 import com.dnd.app.dto.request.CreateNoteRequest;
 import com.dnd.app.dto.request.CreateQuestRewardRequest;
@@ -58,6 +62,7 @@ public class QuestService {
     private final WalletService walletService;
     private final XpService xpService;
     private final CharacterQuestRepository characterQuestRepository;
+    private final QuestObjectiveRepository questObjectiveRepository;
 
     /**
      * Создает результат операции "create quest" в рамках бизнес-логики домена.
@@ -87,6 +92,7 @@ public class QuestService {
                 .description(request.getDescription())
                 .status(status)
                 .isVisibleToPlayers(request.getIsVisibleToPlayers() != null ? request.getIsVisibleToPlayers() : false)
+                .autoCompleteOnTurnIn(Boolean.TRUE.equals(request.getAutoCompleteOnTurnIn()))
                 .createdBy(user)
                 .build();
         quest = questRepository.save(quest);
@@ -152,6 +158,7 @@ public class QuestService {
         if (request.getTitle() != null) quest.setTitle(request.getTitle());
         if (request.getDescription() != null) quest.setDescription(request.getDescription());
         if (request.getIsVisibleToPlayers() != null) quest.setIsVisibleToPlayers(request.getIsVisibleToPlayers());
+        if (request.getAutoCompleteOnTurnIn() != null) quest.setAutoCompleteOnTurnIn(request.getAutoCompleteOnTurnIn());
         if (request.getStatus() != null) {
             QuestStatus newStatus;
             try {
@@ -353,6 +360,89 @@ public class QuestService {
         log.info("Quest reward deleted: rewardId={}, by={}", rewardId, username);
     }
 
+    // --- Objectives (optional, GM-authored) ---
+
+    /**
+     * Добавляет опциональную цель к квесту (только мастер). Цели необязательны: квест без целей
+     * сдаётся без ограничений.
+     * @param questId идентификатор квеста
+     * @param request данные цели
+     * @param username имя пользователя (мастер)
+     * @return созданная цель
+     */
+    @Transactional
+    public QuestObjectiveResponse addObjective(UUID questId, CreateQuestObjectiveRequest request, String username) {
+        User user = getUser(username);
+        CampaignQuest quest = findQuest(questId);
+        campaignService.enforceGmOrAdmin(quest.getCampaign(), user);
+
+        ObjectiveType type;
+        try {
+            type = ObjectiveType.valueOf(request.getObjectiveType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid objective type: " + request.getObjectiveType(), e);
+        }
+
+        QuestObjective objective = QuestObjective.builder()
+                .quest(quest)
+                .objectiveType(type)
+                .targetRef(request.getTargetRef())
+                .targetLabel(request.getTargetLabel())
+                .requiredCount(request.getRequiredCount() != null && request.getRequiredCount() > 0
+                        ? request.getRequiredCount() : 1)
+                .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : 0)
+                .build();
+        objective = questObjectiveRepository.save(objective);
+
+        log.info("Quest objective added: objectiveId={}, questId={}, type={}, by={}",
+                objective.getId(), questId, type, username);
+        return toObjectiveResponse(objective);
+    }
+
+    /**
+     * Список целей квеста (только мастер — это конфигурация; игроки видят прогресс через журнал).
+     * @param questId идентификатор квеста
+     * @param username имя пользователя (мастер)
+     * @return цели в порядке отображения
+     */
+    @Transactional(readOnly = true)
+    public List<QuestObjectiveResponse> listObjectives(UUID questId, String username) {
+        User user = getUser(username);
+        CampaignQuest quest = findQuest(questId);
+        campaignService.enforceGmOrAdmin(quest.getCampaign(), user);
+
+        return questObjectiveRepository.findByQuestIdOrderByOrderIndexAsc(questId).stream()
+                .map(this::toObjectiveResponse)
+                .toList();
+    }
+
+    /**
+     * Удаляет цель квеста (только мастер). Прогресс персонажей по этой цели удаляется каскадно.
+     * @param objectiveId идентификатор цели
+     * @param username имя пользователя (мастер)
+     */
+    @Transactional
+    public void deleteObjective(UUID objectiveId, String username) {
+        User user = getUser(username);
+        QuestObjective objective = questObjectiveRepository.findById(objectiveId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quest objective not found"));
+        campaignService.enforceGmOrAdmin(objective.getQuest().getCampaign(), user);
+
+        questObjectiveRepository.delete(objective);
+        log.info("Quest objective deleted: objectiveId={}, by={}", objectiveId, username);
+    }
+
+    private QuestObjectiveResponse toObjectiveResponse(QuestObjective objective) {
+        return QuestObjectiveResponse.builder()
+                .id(objective.getId())
+                .objectiveType(objective.getObjectiveType().name())
+                .targetRef(objective.getTargetRef())
+                .targetLabel(objective.getTargetLabel())
+                .requiredCount(objective.getRequiredCount())
+                .orderIndex(objective.getOrderIndex())
+                .build();
+    }
+
     // --- Completion & reward issuance ---
 
     /**
@@ -381,7 +471,61 @@ public class QuestService {
 
         UUID campaignId = campaign.getId();
         UUID recipientId = recipient.getId();
-        List<QuestReward> rewards = questRewardRepository.findByQuestId(questId);
+
+        RewardOutcome outcome = distributeRewards(quest, recipient, request.getXpAmount(), username);
+        int itemsGranted = outcome.itemsGranted();
+        long xpToGrant = outcome.xpGranted();
+
+        quest.setStatus(QuestStatus.COMPLETED);
+        quest = questRepository.save(quest);
+
+        // WORLD_PLAN Этап 2: если получатель брал квест в журнал — пометить запись завершённой.
+        // Важно закрывать и READY_FOR_TURN_IN: иначе запись зависла бы в очереди ожидающих сдач,
+        // а последующее подтверждение выдало бы награду второй раз.
+        characterQuestRepository.findByCharacterIdAndQuestId(recipientId, questId).ifPresent(entry -> {
+            CharacterQuestStatus status = entry.getStatus();
+            if (status == CharacterQuestStatus.ACCEPTED || status == CharacterQuestStatus.READY_FOR_TURN_IN) {
+                entry.setStatus(CharacterQuestStatus.COMPLETED);
+                entry.setCompletedAt(java.time.Instant.now());
+                characterQuestRepository.save(entry);
+            }
+        });
+
+        log.info("Quest completed: questId={}, recipientId={}, itemsGranted={}, xpGranted={}, by={}",
+                questId, recipientId, itemsGranted, xpToGrant, username);
+
+        if (Boolean.TRUE.equals(quest.getIsVisibleToPlayers())) {
+            webSocketEventService.sendCampaignEvent(WebSocketEventType.QUEST_UPDATED,
+                    campaignId, Map.of("questId", questId, "status", QuestStatus.COMPLETED.name()), user.getId());
+        }
+
+        return QuestCompletionResponse.builder()
+                .questId(questId)
+                .status(quest.getStatus().name())
+                .recipientCharacterId(recipientId)
+                .recipientCharacterName(recipient.getName())
+                .itemsGranted(itemsGranted)
+                .xpGranted(xpToGrant)
+                .build();
+    }
+
+    /**
+     * Раздаёт награды квеста конкретному персонажу (предметы, валюта, XP) в текущей транзакции.
+     * Не меняет мастер-статус квеста и не трогает журнал — это ответственность вызывающего флоу
+     * (ГМ-завершение {@link #completeQuest} или сдача квестодателю в CharacterQuestService).
+     * Авторизацию проверяет вызывающий код.
+     * @param quest квест-источник наград
+     * @param recipient персонаж-получатель
+     * @param xpOverride если задано — начислить столько XP вместо суммы XP-наград квеста
+     * @param username исполнитель (для аудита выдачи предметов/валюты/XP)
+     * @return сколько предметных наград выдано и сколько XP начислено
+     */
+    @Transactional
+    public RewardOutcome distributeRewards(CampaignQuest quest, PlayerCharacter recipient,
+                                           Long xpOverride, String username) {
+        UUID campaignId = quest.getCampaign().getId();
+        UUID recipientId = recipient.getId();
+        List<QuestReward> rewards = questRewardRepository.findByQuestId(quest.getId());
 
         int itemsGranted = 0;
         long rewardXp = 0L;
@@ -408,7 +552,7 @@ public class QuestService {
             }
         }
 
-        long xpToGrant = request.getXpAmount() != null ? request.getXpAmount() : rewardXp;
+        long xpToGrant = xpOverride != null ? xpOverride : rewardXp;
         if (xpToGrant > 0) {
             DistributeXpRequest xpRequest = DistributeXpRequest.builder()
                     .amount(xpToGrant)
@@ -417,35 +561,11 @@ public class QuestService {
                     .build();
             xpService.distributeXp(campaignId, xpRequest, username);
         }
+        return new RewardOutcome(itemsGranted, xpToGrant);
+    }
 
-        quest.setStatus(QuestStatus.COMPLETED);
-        quest = questRepository.save(quest);
-
-        // WORLD_PLAN Этап 2: если получатель брал квест в журнал — пометить запись завершённой.
-        characterQuestRepository.findByCharacterIdAndQuestId(recipientId, questId).ifPresent(entry -> {
-            if (entry.getStatus() == com.dnd.app.domain.enums.CharacterQuestStatus.ACCEPTED) {
-                entry.setStatus(com.dnd.app.domain.enums.CharacterQuestStatus.COMPLETED);
-                entry.setCompletedAt(java.time.Instant.now());
-                characterQuestRepository.save(entry);
-            }
-        });
-
-        log.info("Quest completed: questId={}, recipientId={}, itemsGranted={}, xpGranted={}, by={}",
-                questId, recipientId, itemsGranted, xpToGrant, username);
-
-        if (Boolean.TRUE.equals(quest.getIsVisibleToPlayers())) {
-            webSocketEventService.sendCampaignEvent(WebSocketEventType.QUEST_UPDATED,
-                    campaignId, Map.of("questId", questId, "status", QuestStatus.COMPLETED.name()), user.getId());
-        }
-
-        return QuestCompletionResponse.builder()
-                .questId(questId)
-                .status(quest.getStatus().name())
-                .recipientCharacterId(recipientId)
-                .recipientCharacterName(recipient.getName())
-                .itemsGranted(itemsGranted)
-                .xpGranted(xpToGrant)
-                .build();
+    /** Итог выдачи наград квеста: сколько предметных строк выдано и сколько XP начислено. */
+    public record RewardOutcome(int itemsGranted, long xpGranted) {
     }
 
     // --- Link/Unlink NPC ---
@@ -587,6 +707,7 @@ public class QuestService {
                 .description(quest.getDescription())
                 .status(quest.getStatus().name())
                 .isVisibleToPlayers(quest.getIsVisibleToPlayers())
+                .autoCompleteOnTurnIn(quest.getAutoCompleteOnTurnIn())
                 .notes(notes)
                 .artUrl(mediaUrlResolver.resolve(
                         com.dnd.app.domain.enums.MediaOwnerType.QUEST_ART, quest.getId(), null))

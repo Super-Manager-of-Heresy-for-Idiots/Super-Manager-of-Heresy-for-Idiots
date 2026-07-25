@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 4: опциональный диалог NPC. Мастер по желанию задаёт NPC дерево реплик
+      (root_node_id + tree_json — массив узлов с вариантами ответа). NPC без диалога работает
+      как прежде. Дерево хранится как JSON-текст и обходится на клиенте; действия вариантов
+      (перейти к квестам/лавке) лишь переключают уже защищённые на бэке разделы.
+      Один диалог на NPC (уникальный npc_id), удаляется каскадно вместе с NPC.
+    -->
+    <changeSet id="123-npc-dialogues" author="claude">
+        <createTable tableName="npc_dialogues">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="npc_id" type="uuid">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_npc_dialogues_npc"/>
+            </column>
+            <column name="root_node_id" type="varchar(64)"/>
+            <column name="tree_json" type="text"/>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="npc_dialogues"
+                baseColumnNames="npc_id"
+                referencedTableName="campaign_npcs"
+                referencedColumnNames="id"
+                constraintName="fk_npc_dialogues_npc"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

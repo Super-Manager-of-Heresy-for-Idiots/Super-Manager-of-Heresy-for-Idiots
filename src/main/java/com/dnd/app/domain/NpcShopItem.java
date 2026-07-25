@@ -42,6 +42,13 @@ public class NpcShopItem {
     @Builder.Default
     private Integer quantity = 1;
 
+    /**
+     * Базовый запас позиции для восстановления по команде мастера (WORLD_PLAN Этап 5).
+     * null — позиция не участвует в рестокинге (прежнее поведение).
+     */
+    @Column(name = "restock_quantity")
+    private Integer restockQuantity;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -59,7 +59,10 @@ Pagination uses Spring `Page<T>`: `content`, `totalElements`, `totalPages`, `num
 | `Rarity` † | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
-| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED` |
+| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `QUEST_TURNED_IN`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED`, `SHOP_UPDATED` |
+| `CharacterQuestStatus` | `ACCEPTED`, `READY_FOR_TURN_IN`, `COMPLETED`, `FAILED`, `ABANDONED` |
+| `ObjectiveType` | `KILL_MONSTER`, `COLLECT_ITEM`, `TALK_TO_NPC`, `VISIT_LOCATION`, `CUSTOM` |
+| `DialogueActionType` | `END`, `OPEN_SHOP`, `OFFER_QUEST` |
 
 † **Не закрытый enum, а homebrew-дружелюбный справочник.** Запросы/ответы по-прежнему
 используют строковый `code` (`"MAIN_HAND"`, `"COMMON"`, `"SLASHING"`), но homebrew-пакет может
@@ -448,10 +451,109 @@ Event payloads (the `data` field of `WebSocketEventPayload`):
 | `type` | `characterId` | `data` |
 |---|---|---|
 | `WALLET_CHANGED` | the affected character | `WalletEntryResponse` (the **new** balance of the changed currency: `currencyTypeId`, `currencyName`, `amount`, `goldEquivalent`) |
+| `SHOP_UPDATED` | — | `{ "npcId": UUID }` — a merchant's shop stock/prices changed (stock, buy, sell or remove) |
+| `QUEST_TURNED_IN` | the turning-in character | `{ "questId": UUID, "characterId": UUID, "npcId"?: UUID, "status": "COMPLETED" \| "READY_FOR_TURN_IN", "questTitle"?: string }` |
 
 `WALLET_CHANGED` is broadcast on `/topic/campaign.{campaignId}` to the whole campaign (GM + players) after the
 currency change commits. Treat the payload as a notification: the FE should refetch authoritative wallet state
 (`GET …/wallet`) and history (`GET …/wallet/history`) rather than trusting `data` as the only source of truth.
+
+`SHOP_UPDATED` is broadcast on `/topic/campaign.{campaignId}` after any change to a merchant's shop (stocking,
+buying, selling or removing an item). Treat it as a hint to refetch the shop (`GET …/npcs/{npcId}/shop`) and,
+if open, the aggregated interaction (`GET …/npcs/{npcId}/interact`). The payload carries only `npcId`.
+
+### Quest turn-in (WORLD_PLAN Stage 2)
+
+Players close the quest loop at a linked quest-giver NPC:
+
+- `POST /api/campaigns/{cid}/npcs/{npcId}/quests/{questId}/turn-in` — body `{ "characterId": UUID }`. The NPC must be
+  linked to the quest (`quest_npcs`) and the character must hold it as `ACCEPTED` (co-presence enforced for players).
+  If the quest has `autoCompleteOnTurnIn=true` the reward is granted immediately and the journal entry becomes
+  `COMPLETED`; otherwise it becomes `READY_FOR_TURN_IN` and awaits GM confirmation. Returns `CharacterQuestResponse`.
+- `POST /api/campaigns/{cid}/characters/{characterId}/quests/{questId}/confirm-turn-in` — **GM only**. Confirms a
+  `READY_FOR_TURN_IN` entry: grants the reward and marks it `COMPLETED`. Returns `CharacterQuestResponse`.
+- `GET /api/campaigns/{cid}/quests/pending-turn-ins` — **GM only**. Lists `CharacterQuestResponse` entries in the
+  campaign awaiting confirmation (`READY_FOR_TURN_IN`), each carrying `characterId`/`characterName`.
+
+`GET …/npcs/{npcId}/interact` now also returns `turnInQuests` (the character's `ACCEPTED`/`READY_FOR_TURN_IN` quests
+linked to that NPC) alongside `availableQuests`. `CampaignQuest` gains `autoCompleteOnTurnIn` (settable on
+create/update). All turn-in mutations emit `QUEST_TURNED_IN`.
+
+### Quest objectives (WORLD_PLAN Stage 3, optional / GM discretion)
+
+Objectives are an **optional** GM-authored checklist on a quest. A quest with **no** objectives behaves exactly as
+before (turn-in unrestricted). When a quest has objectives, a player turn-in requires all of them complete for that
+character. `COLLECT_ITEM` is evaluated automatically from the character's inventory (`targetRef` = item template id);
+progress for the other types is set by the GM (their discretion).
+
+- `GET /api/campaigns/{cid}/quests/{questId}/objectives` — **GM only**. Lists `QuestObjectiveResponse`
+  (`{ id, objectiveType, targetRef?, targetLabel?, requiredCount, orderIndex }`).
+- `POST /api/campaigns/{cid}/quests/{questId}/objectives` — **GM only**. Body
+  `{ objectiveType, targetRef?, targetLabel?, requiredCount?, orderIndex? }`. Returns `QuestObjectiveResponse`.
+- `DELETE /api/campaigns/{cid}/quests/{questId}/objectives/{objectiveId}` — **GM only**. Cascade-removes per-character progress.
+- `POST /api/campaigns/{cid}/characters/{characterId}/quests/{questId}/objectives/{objectiveId}/progress` — **GM only**.
+  Body `{ currentCount }`. Sets the character's progress on the objective; returns the enriched `CharacterQuestResponse`.
+
+`CharacterQuestResponse` now carries an optional `objectives: ObjectiveProgressResponse[]`
+(`{ objectiveId, objectiveType, targetLabel?, requiredCount, currentCount, completed }`), omitted when the quest has
+no objectives. It is populated in the journal (`GET …/characters/{cid}/quests`) and in `interact.turnInQuests`.
+
+### NPC dialogue (WORLD_PLAN Stage 4, optional / GM discretion)
+
+Dialogue is an **optional** GM-authored tree per NPC. An NPC **without** a dialogue behaves as before. The tree is a
+list of nodes `{ id, npcText, options: [{ text, nextNodeId?, actionType?, questId? }] }` with a `rootNodeId`. Traversal
+happens **client-side** (authored text only); an option either navigates (`nextNodeId`) or performs an action
+(`actionType`: `END` | `OPEN_SHOP` | `OFFER_QUEST`) that just switches the player to the already server-gated shop/quest
+sections. `OFFER_QUEST.questId` is an optional hint.
+
+- `GET /api/campaigns/{cid}/npcs/{npcId}/dialogue` — members/GM (players only for a visible NPC). Returns
+  `NpcDialogueResponse` (`{ rootNodeId, nodes }`) or `null` if not configured.
+- `PUT /api/campaigns/{cid}/npcs/{npcId}/dialogue` — **GM only**. Body `{ rootNodeId?, nodes }` replaces the whole tree
+  (validated: unique node ids, valid option targets/actions). An **empty `nodes`** array deletes the dialogue.
+- `DELETE /api/campaigns/{cid}/npcs/{npcId}/dialogue` — **GM only**. Removes the dialogue.
+
+`GET …/npcs/{npcId}/interact` now also returns an optional `dialogue: NpcDialogueResponse` (absent when the NPC has no
+dialogue).
+
+### Merchant economy (WORLD_PLAN Stage 5, optional / GM discretion)
+
+Three **optional** merchant settings. Each defaults to `null`, which preserves the previous behaviour:
+
+| Setting | Where | `null` means |
+|---|---|---|
+| `restockQuantity` | per shop line (`AddShopItemRequest` / `ShopItemResponse`) | the line is not restocked |
+| `merchantGold` | per merchant NPC | the merchant buys back without any limit (as before) |
+| `priceModifierPercent` | per merchant NPC | base prices (100 %) |
+
+- `POST /api/campaigns/{cid}/npcs/{npcId}/shop/restock` — **GM only**. Resets every line that has a `restockQuantity`
+  back to it; lines without one are untouched. Returns the shop list.
+- `GET /api/campaigns/{cid}/npcs/{npcId}/shop/settings` — members. Returns `ShopSettingsResponse`
+  (`{ merchantGold?, priceModifierPercent? }`).
+- `PUT /api/campaigns/{cid}/npcs/{npcId}/shop/settings` — **GM only**. Body
+  `{ merchantGold?, priceModifierPercent?, clearMerchantGold?, clearPriceModifier? }`; the `clear*` flags remove the
+  corresponding limit.
+
+Behaviour notes:
+- `ShopItemResponse.priceGold` is the **final** price including `priceModifierPercent`, and `buy` charges exactly that
+  (one shared resolution on the backend), so the player always pays what they see. The buy-back rate is **not**
+  affected by the modifier — it is `basePrice × buybackRatePercent`, and `interact` exposes `buybackRatePercent`
+  (currently `50`, `null` for non-merchants) so the client never hardcodes the rate.
+- With `merchantGold` set, `sell` fails with `400` when the merchant cannot afford the goods, and a successful sale
+  deducts from their purse; `buy` credits it.
+- A sold-out line that has a `restockQuantity` is kept at `quantity = 0` (instead of being deleted) so the baseline
+  survives for the next restock. Treat `quantity = 0` as "out of stock" in the UI.
+- `AddShopItemRequest.quantity` accepts **0**, which turns the request into a pure settings update for that line
+  (price / restock baseline) without adding stock. `clearRestockQuantity: true` removes the baseline.
+
+### Quest objective side effects
+
+`COLLECT_ITEM` objectives are **consumed on turn-in**: handing the quest in removes `requiredCount` of the target item
+template from the character's inventory (stack rows are locked while doing so). If the items are gone by then the
+turn-in fails with `400`. Once an entry is `READY_FOR_TURN_IN`/`COMPLETED`, `COLLECT_ITEM` progress is reported as
+satisfied (the items are already handed over), so the journal does not show it rolled back to `0`.
+
+The GM `completeQuest` flow closes a recipient's journal entry from **both** `ACCEPTED` and `READY_FOR_TURN_IN`, so a
+quest completed the old way cannot leave a pending turn-in that would pay the reward a second time.
 
 ## Removed or Not Present
 

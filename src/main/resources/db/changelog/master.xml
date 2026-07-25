@@ -223,4 +223,16 @@
     <!-- ROLL_PROMPT: запрошенные мастером проверки — окно броска у игрока, серверный d20, результат мастеру. -->
     <include file="db/changelog/120-roll-prompts.xml"/>
 
+    <!-- WORLD_PLAN Этап 2: сдача квеста квестодателю (campaign_quests.auto_complete_on_turn_in). -->
+    <include file="db/changelog/121-quest-turn-in.xml"/>
+
+    <!-- WORLD_PLAN Этап 3: опциональные цели квеста (quest_objectives + прогресс персонажа). -->
+    <include file="db/changelog/122-quest-objectives.xml"/>
+
+    <!-- WORLD_PLAN Этап 4: опциональный диалог NPC (npc_dialogues, дерево реплик в tree_json). -->
+    <include file="db/changelog/123-npc-dialogues.xml"/>
+
+    <!-- WORLD_PLAN Этап 5: опциональная экономика торговца (рестокинг, кошелёк, модификатор цен). -->
+    <include file="db/changelog/124-merchant-economy.xml"/>
+
 </databaseChangeLog>

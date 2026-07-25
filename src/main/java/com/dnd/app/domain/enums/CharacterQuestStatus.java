@@ -7,6 +7,8 @@ package com.dnd.app.domain.enums;
  */
 public enum CharacterQuestStatus {
     ACCEPTED,
+    /** Игрок сдал квест квестодателю, награда ждёт подтверждения ГМа (auto_complete_on_turn_in=false). */
+    READY_FOR_TURN_IN,
     COMPLETED,
     FAILED,
     ABANDONED

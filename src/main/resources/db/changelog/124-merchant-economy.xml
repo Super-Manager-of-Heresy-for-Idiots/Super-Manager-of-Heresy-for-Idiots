@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 5: опциональная экономика торговца. Все три настройки необязательны и
+      задаются мастером; NULL сохраняет прежнее поведение:
+        * npc_shop_items.restock_quantity  — базовый запас позиции; NULL = позиция не восстанавливается;
+        * campaign_npcs.merchant_gold      — кошелёк торговца; NULL = безлимитный выкуп (как раньше);
+        * campaign_npcs.price_modifier_percent — модификатор цен витрины в процентах; NULL/100 = базовые цены.
+    -->
+    <changeSet id="124-shop-item-restock-quantity" author="claude">
+        <addColumn tableName="npc_shop_items">
+            <column name="restock_quantity" type="integer"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="124-npc-merchant-economy" author="claude">
+        <addColumn tableName="campaign_npcs">
+            <column name="merchant_gold" type="numeric(12,2)"/>
+            <column name="price_modifier_percent" type="integer"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

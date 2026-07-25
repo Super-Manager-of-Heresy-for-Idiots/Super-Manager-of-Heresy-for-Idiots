@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      WORLD_PLAN Этап 2 (сдача квеста квестодателю): признак кампанийного квеста
+      auto_complete_on_turn_in. Если true — игрок, сдавая квест у связанного NPC,
+      сразу получает награду и запись журнала помечается COMPLETED. Если false —
+      запись переходит в READY_FOR_TURN_IN и ждёт подтверждения ГМа.
+      Новый персональный статус READY_FOR_TURN_IN хранится в существующем
+      character_quests.status (varchar(20)) и не требует изменения схемы.
+    -->
+    <changeSet id="121-quest-auto-complete-on-turn-in" author="claude">
+        <addColumn tableName="campaign_quests">
+            <column name="auto_complete_on_turn_in" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

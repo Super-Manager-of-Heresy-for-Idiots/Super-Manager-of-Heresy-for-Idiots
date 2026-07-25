@@ -24,4 +24,7 @@ public class UpdateQuestRequest {
     private String status;
 
     private Boolean isVisibleToPlayers;
+
+    /** Сдача квеста квестодателю сразу выдаёт награду (true) или ждёт подтверждения ГМа (false). */
+    private Boolean autoCompleteOnTurnIn;
 }
