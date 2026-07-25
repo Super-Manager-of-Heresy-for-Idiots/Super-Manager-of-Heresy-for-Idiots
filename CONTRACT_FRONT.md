@@ -59,10 +59,16 @@ Pagination uses Spring `Page<T>`: `content`, `totalElements`, `totalPages`, `num
 | `Rarity` † | `COMMON`, `UNCOMMON`, `RARE`, `VERY_RARE`, `LEGENDARY` |
 | `RewardType` | `SKILL`, `SUBCLASS`, `FEAT` |
 | `SkillActivation` | `PASSIVE`, `ACTIVE` |
-| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `QUEST_TURNED_IN`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED`, `SHOP_UPDATED` |
+| `WebSocketEventType` | `ITEM_GRANTED`, `ITEM_REMOVED`, `BUFF_APPLIED`, `BUFF_REMOVED`, `XP_GRANTED`, `HP_CHANGED`, `CHARACTER_UPDATED`, `NPC_REVEALED`, `NPC_HIDDEN`, `QUEST_UPDATED`, `QUEST_TURNED_IN`, `CAMPAIGN_STATUS_CHANGED`, `MEMBER_KICKED`, `WALLET_CHANGED`, `SHOP_UPDATED`, `CAMP_STARTED`, `CAMP_UPDATED`, `CAMP_PARTICIPANT_UPDATED`, `CAMP_REST_STARTED`, `CAMP_REST_COMPLETED`, `CAMP_EVENT_TRIGGERED`, `CAMP_INTERRUPTED`, `CAMP_ENDED` |
 | `CharacterQuestStatus` | `ACCEPTED`, `READY_FOR_TURN_IN`, `COMPLETED`, `FAILED`, `ABANDONED` |
 | `ObjectiveType` | `KILL_MONSTER`, `COLLECT_ITEM`, `TALK_TO_NPC`, `VISIT_LOCATION`, `CUSTOM` |
 | `DialogueActionType` | `END`, `OPEN_SHOP`, `OFFER_QUEST` |
+| `CampStatus` | `SETTING_UP`, `ACTIVE`, `RESTING`, `INTERRUPTED`, `COMPLETED` |
+| `CampParticipantState` | `NOT_RESTED`, `RESTING`, `RESTED`, `PARTIAL`, `FAILED` |
+| `CampEventType` | `AMBUSH`, `ENCOUNTER`, `STORY`, `WEATHER`, `CUSTOM` |
+| `CampInterruptReason` | `AMBUSH`, `EVENT`, `MANUAL` |
+| `CampActivityKind` | `SYSTEM`, `CUSTOM` |
+| `LocationRestSafety` | `SAFE`, `RISKY`, `DANGEROUS` |
 
 † **Не закрытый enum, а homebrew-дружелюбный справочник.** Запросы/ответы по-прежнему
 используют строковый `code` (`"MAIN_HAND"`, `"COMMON"`, `"SLASHING"`), но homebrew-пакет может
@@ -554,6 +560,155 @@ satisfied (the items are already handed over), so the journal does not show it r
 
 The GM `completeQuest` flow closes a recipient's journal entry from **both** `ACCEPTED` and `READY_FOR_TURN_IN`, so a
 quest completed the old way cannot leave a pending turn-in that would pay the reward a second time.
+
+## Camp (лагерь и привал)
+
+Базовый путь: `/api/campaigns/{campaignId}/camp`. Чтение доступно любому участнику кампании,
+все изменяющие действия — только мастеру кампании или администратору.
+
+### Endpoints
+
+| Method | Path | Body | Response | Notes |
+|---|---|---|---|---|
+| POST | `/api/campaigns/{cid}/camp` | `CreateCampRequest` | `CampSessionResponse` | Разбить лагерь, статус `SETTING_UP`. 400, если незавершённый привал уже есть |
+| GET | `/api/campaigns/{cid}/camp` | - | `CampSessionResponse` \| `null` | Текущий незавершённый привал; `data: null`, если привал не разбит |
+| GET | `/api/campaigns/{cid}/camp/history` | - | `List<CampSessionResponse>` | Архив привалов, свежие первыми |
+| GET | `/api/campaigns/{cid}/camp/{campId}` | - | `CampSessionResponse` | Конкретный привал, включая завершённые |
+| PUT | `/api/campaigns/{cid}/camp/{campId}` | `UpdateCampRequest` | `CampSessionResponse` | Название, описание, день, локация, состав |
+| PUT | `/api/campaigns/{cid}/camp/{campId}/watch-order` | `UpdateCampWatchOrderRequest` | `CampSessionResponse` | Полная перестановка дозора |
+| POST | `/api/campaigns/{cid}/camp/{campId}/start` | - | `CampSessionResponse` | `SETTING_UP` \| `INTERRUPTED` → `ACTIVE` |
+| POST | `/api/campaigns/{cid}/camp/{campId}/rest` | `StartCampRestRequest` | `CampRestSummaryResponse` | `ACTIVE` → `RESTING`; листы персонажей не меняются |
+| POST | `/api/campaigns/{cid}/camp/{campId}/rest/complete` | `CompleteCampRestRequest?` | `CampRestSummaryResponse` | Применяет отдых per-character; пустое тело — всем |
+| POST | `/api/campaigns/{cid}/camp/{campId}/interrupt` | `InterruptCampRequest?` | `CampSessionResponse` | `ACTIVE` \| `RESTING` → `INTERRUPTED` |
+| POST | `/api/campaigns/{cid}/camp/{campId}/partial-rest` | `ApplyPartialRestRequest?` | `CampRestSummaryResponse` | Только для `INTERRUPTED` |
+| POST | `/api/campaigns/{cid}/camp/{campId}/end` | - | `CampSessionResponse` | → `COMPLETED` (терминальный) |
+| GET | `/api/campaigns/{cid}/camp/{campId}/events` | - | `List<CampEventResponse>` | ГМ — все записи, игрок — только видимые |
+| POST | `/api/campaigns/{cid}/camp/{campId}/events` | `CreateCampEventRequest` | `CampSessionResponse` | Засада может создать бой и прервать привал |
+| POST | `/api/campaigns/{cid}/camp/{campId}/events/{eventId}/trigger` | - | `CampSessionResponse` | Срабатывание скрытой заготовки |
+| DELETE | `/api/campaigns/{cid}/camp/{campId}/events/{eventId}` | - | `Void` | Событие-причину прерывания удалить нельзя |
+| GET | `/api/campaigns/{cid}/camp/activities` | - | `List<CampActivityResponse>` | Системные + активности кампании |
+| POST | `/api/campaigns/{cid}/camp/activities` | `CreateCampActivityRequest` | `CampActivityResponse` | Кастомная активность кампании |
+| DELETE | `/api/campaigns/{cid}/camp/activities/{activityId}` | - | `Void` | Только кастомные; назначения снимаются |
+| PUT | `/api/campaigns/{cid}/camp/{campId}/participants/{characterId}/activity` | `AssignCampActivityRequest` | `CampSessionResponse` | Пустой `activityId` снимает активность |
+
+### State machine
+
+`SETTING_UP → ACTIVE → RESTING → COMPLETED`, ветка `INTERRUPTED` из `ACTIVE`/`RESTING`
+и возврат `INTERRUPTED → ACTIVE`. Единственный источник правды для интерфейса —
+поле `availableTransitions` ответа: кнопки мастера строятся из него, невозможных действий на
+экране не появляется. Инвариант: в кампании не более одного привала со статусом `<> COMPLETED`.
+
+### Request schemas
+
+| DTO | JSON fields |
+|---|---|
+| `CreateCampRequest` | `name`, `description?`, `dayNumber?`, `locationId?`, `participantCharacterIds?`, `watchSlotCount?`, `watchSchedule?: CampWatchSlotRequest[]` |
+| `UpdateCampRequest` | `name?`, `description?`, `dayNumber?`, `locationId?`, `clearLocation?`, `participantCharacterIds?` |
+| `UpdateCampWatchOrderRequest` | `watchSlotCount?`, `watchSchedule?: CampWatchSlotRequest[]` |
+| `CampWatchSlotRequest` | `slot`, `label?`, `characterId?` |
+| `StartCampRestRequest` | `restType` — `long` \| `short` \| `long_rest` \| `short_rest` |
+| `CompleteCampRestRequest` | `characterIds?` — пусто: всем, у кого отдых ещё не применён |
+| `InterruptCampRequest` | `reason?` (`CampInterruptReason`, по умолчанию `MANUAL`), `eventId?` |
+| `ApplyPartialRestRequest` | `characterIds?` |
+| `CreateCampEventRequest` | `type`, `title`, `description?`, `occurredLabel?`, `triggerNow?` (по умолчанию `true`), `visibleToPlayers?`, `createBattle?` (только `AMBUSH`), `battleName?`, `monsters?: [{ monsterId, count }]` |
+| `CreateCampActivityRequest` | `name`, `description?`, `iconCode?`, `skillCheckRef?` |
+| `AssignCampActivityRequest` | `activityId?` (пусто — снять активность), `note?` |
+
+### Response schemas
+
+| DTO | JSON fields |
+|---|---|
+| `CampSessionResponse` | `id`, `campaignId`, `name`, `description?`, `dayNumber?`, `status`, `visitedStatuses[]`, `availableTransitions[]`, `restType?`, `applyPartialRest`, `location?: LocationRefResponse`, `restSafety?`, `interruptReason?`, `interruptEventId?`, `interruptBattleId?`, `watchSlotCount`, `watchSchedule[]`, `participants[]`, `events[]`, `createdById`, `createdByUsername`, `startedAt?`, `restStartedAt?`, `restCompletedAt?`, `interruptedAt?`, `endedAt?`, `createdAt`, `updatedAt` |
+| `CampWatchSlotResponse` | `slot`, `label?`, `characterId?`, `characterName?` |
+| `CampParticipantResponse` | `id`, `characterId`, `characterName`, `ownerId?`, `ownerUsername?`, `avatarUrl?`, `totalLevel?`, `classLevels[]`, `state`, `currentHp?`, `maxHp?`, `tempHp?`, `hitDice[]`, `watchSlot?`, `watchSlotLabel?`, `activityId?`, `activityName?`, `activityIconCode?`, `activityNote?`, `restResult?: RestResult`, `restErrorCode?`, `restErrorMessage?`, `restedAt?` |
+| `CampEventResponse` | `id`, `type`, `title`, `description?`, `occurredLabel?`, `visibleToPlayers`, `battleId?`, `triggeredAt?`, `createdAt`, `createdByUsername?` |
+| `CampActivityResponse` | `id`, `campaignId?`, `kind`, `name`, `description?`, `iconCode?`, `skillCheckRef?` |
+| `CampRestSummaryResponse` | `campId`, `restType`, `partial`, `restedCount`, `failedCount`, `skippedCount`, `failures[]`, `camp: CampSessionResponse` |
+| `CampRestFailureResponse` | `characterId`, `characterName`, `errorCode`, `errorMessage?` |
+
+### Групповой отдых
+
+Отдых применяется **per-character**: каждый персонаж отдыхает в собственной транзакции
+(`REQUIRES_NEW`) поверх существующего `POST …/characters/{id}/rest`. Сбой одного участника не
+откатывает уже применённый отдых остальных — такие персонажи получают состояние `FAILED`,
+попадают в `failures[]` и повторяются точечно через `rest/complete` с `characterIds`.
+
+Лист персонажа и отметка «отдохнул» коммитятся в одной и той же вложенной транзакции,
+поэтому состояние участника в ответе всегда соответствует реально применённому отдыху,
+а `participants[].currentHp` отдаётся уже после восстановления.
+
+Коды ошибок участника (`restErrorCode`): `REST_TX_CONFLICT`, `REST_FORBIDDEN`,
+`REST_TARGET_MISSING`, `REST_REJECTED`, `REST_FAILED`.
+
+Прерванный привал по умолчанию восстановления не даёт. `partial-rest` — явное решение мастера;
+механически частичный отдых применяется как короткий привал, новых правил не вводится,
+участники получают состояние `PARTIAL`. Прерывание — ручное или засадой — всегда снимает
+участников с незавершённого отдыха (`RESTING` → `NOT_RESTED`).
+
+### Статус кампании
+
+Действия, продвигающие привал вперёд (разбивка, правки состава, дозор, старт, отдых,
+события, активности), требуют активной кампании и в паузе отвечают `400`. Прерывание и
+свёртывание привала доступны всегда — иначе приостановленная кампания оставила бы
+незавершённый привал навсегда и заблокировала разбивку следующего.
+
+### Видимость журнала
+
+Мастер и администратор получают все записи `events[]`, включая заготовки с
+`visibleToPlayers: false`. Игрокам скрытые записи не отдаются вовсе.
+
+### События журнала и засада
+
+Событие с `triggerNow: false` сохраняется как **скрытая заготовка** (`visibleToPlayers`
+принудительно `false`, `triggeredAt: null`) и открывается игрокам только вызовом `…/trigger`.
+
+`AMBUSH` с `createBattle: true` создаёт обычный бой (`ASSEMBLING`) в локации привала,
+добавляет в него монстров из `monsters[]` и переводит привал в `INTERRUPTED` с
+`interruptReason: AMBUSH`. Если state-machine перехода не допускает (например, привал
+ещё в `SETTING_UP`), событие просто остаётся в журнале, а статус не меняется.
+Никакой отдельной боевой механики лагерь не вводит — используются существующие
+`POST …/battles` и `POST …/battles/{id}/monsters`.
+
+### Даунтайм-активности
+
+Справочник состоит из системных активностей (`campaignId: null`, `kind: SYSTEM`,
+засеяны миграцией `125-camp`) и кастомных активностей кампании (`kind: CUSTOM`).
+Механических автоэффектов у активности нет: система фиксирует, чем занят персонаж,
+награды мастер выдаёт обычными инструментами (инвентарь, XP, эффекты).
+
+### Дозор
+
+Расписание дозора задаётся целиком: `watchSlotCount` + `watchSchedule[]`. Персонаж
+занимает ровно один слот, слоты вне переданного расписания остаются пустыми, а
+персонаж вне состава привала в дозор не назначается (`400`). Проверка дозорному —
+это обычный `POST …/roll-prompts`, отдельного эндпоинта у лагеря нет.
+
+Валидация запроса: повтор одного `slot` и один и тот же `characterId` в нескольких слотах
+отклоняются с `400`. Если `watchSchedule` не передан, назначения сохраняются, но участники,
+чей слот вышел за пределы уменьшенного `watchSlotCount`, снимаются с дозора.
+
+### WebSocket события лагеря
+
+Все — на `/topic/campaign.{campaignId}`. `data` — только сигнал: авторитетное состояние
+следует перечитать через `GET …/camp`.
+
+| `type` | `data` |
+|---|---|
+| `CAMP_STARTED` | `{ campId, status }` |
+| `CAMP_UPDATED` | `{ campId, status }` |
+| `CAMP_PARTICIPANT_UPDATED` | `{ campId, characterId }` |
+| `CAMP_REST_STARTED` | `{ campId, restType }` |
+| `CAMP_REST_COMPLETED` | `{ campId, restType, restedCount, failedCount, partial? }` |
+| `CAMP_EVENT_TRIGGERED` | `{ campId, eventId, type, battleId? }` |
+| `CAMP_INTERRUPTED` | `{ campId, reason }` |
+| `CAMP_ENDED` | `{ campId }` |
+
+### rest_safety на локации
+
+`CampaignLocation` получила поле `restSafety` (`SAFE` \| `RISKY` \| `DANGEROUS`, по умолчанию
+`RISKY`). Оно приходит в `LocationResponse.restSafety` и принимается в
+`CreateLocationRequest` / `UpdateLocationRequest`. Механику отдыха значение не меняет: оно
+управляет подсказками мастеру на экране лагеря (предложить бросок встречи или засады).
 
 ## Removed or Not Present
 

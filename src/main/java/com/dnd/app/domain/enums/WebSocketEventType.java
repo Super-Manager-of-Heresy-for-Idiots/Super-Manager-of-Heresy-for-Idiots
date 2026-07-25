@@ -43,5 +43,14 @@ public enum WebSocketEventType {
     // ROLL_PROMPT: мастер запрашивает проверку — окно броска у игрока, результат мастеру.
     ROLL_PROMPT_CREATED,
     ROLL_PROMPT_RESOLVED,
-    ROLL_PROMPT_CANCELLED
+    ROLL_PROMPT_CANCELLED,
+    // CAMP: лагерь и привал — состояние привала, состав, групповой отдых и журнал событий.
+    CAMP_STARTED,
+    CAMP_UPDATED,
+    CAMP_PARTICIPANT_UPDATED,
+    CAMP_REST_STARTED,
+    CAMP_REST_COMPLETED,
+    CAMP_EVENT_TRIGGERED,
+    CAMP_INTERRUPTED,
+    CAMP_ENDED
 }

@@ -51,6 +51,8 @@ public class LocationService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .isVisibleToPlayers(request.getIsVisibleToPlayers() != null ? request.getIsVisibleToPlayers() : false)
+                .restSafety(request.getRestSafety() != null
+                        ? request.getRestSafety() : com.dnd.app.domain.enums.LocationRestSafety.RISKY)
                 .createdBy(user)
                 .build();
         location = locationRepository.save(location);
@@ -116,6 +118,7 @@ public class LocationService {
         if (request.getName() != null) location.setName(request.getName());
         if (request.getDescription() != null) location.setDescription(request.getDescription());
         if (request.getIsVisibleToPlayers() != null) location.setIsVisibleToPlayers(request.getIsVisibleToPlayers());
+        if (request.getRestSafety() != null) location.setRestSafety(request.getRestSafety());
         location = locationRepository.save(location);
 
         log.info("Location updated: id={}, by={}", locationId, username);
@@ -183,6 +186,7 @@ public class LocationService {
                 .name(location.getName())
                 .description(location.getDescription())
                 .isVisibleToPlayers(location.getIsVisibleToPlayers())
+                .restSafety(location.getRestSafety() != null ? location.getRestSafety().name() : null)
                 .previewUrl(mediaUrlResolver.resolve(
                         com.dnd.app.domain.enums.MediaOwnerType.LOCATION_PREVIEW, location.getId(), null))
                 .createdAt(location.getCreatedAt())

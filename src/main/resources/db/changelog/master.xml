@@ -235,4 +235,10 @@
     <!-- WORLD_PLAN Этап 5: опциональная экономика торговца (рестокинг, кошелёк, модификатор цен). -->
     <include file="db/changelog/124-merchant-economy.xml"/>
 
+    <!-- CAMP Этап 1: лагерь и привал (сессия, участники, журнал событий, даунтайм-активности). -->
+    <include file="db/changelog/125-camp.xml"/>
+
+    <!-- CAMP Этап 1: метка безопасности привала на локации кампании (rest_safety). -->
+    <include file="db/changelog/126-location-rest-safety.xml"/>
+
 </databaseChangeLog>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      CAMP: метка безопасности привала — поле локации, а не отдельная сущность.
+      SAFE | RISKY | DANGEROUS. Механику система не применяет: значение управляет
+      подсказками мастеру на экране лагеря (бросить встречу / бросок засады).
+      Значение по умолчанию RISKY — нейтральная середина для уже существующих локаций.
+    -->
+    <changeSet id="126-location-rest-safety" author="claude">
+        <addColumn tableName="campaign_locations">
+            <column name="rest_safety" type="varchar(12)" defaultValue="RISKY">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

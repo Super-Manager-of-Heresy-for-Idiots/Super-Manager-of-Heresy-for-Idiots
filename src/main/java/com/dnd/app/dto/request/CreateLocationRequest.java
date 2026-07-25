@@ -1,5 +1,6 @@
 package com.dnd.app.dto.request;
 
+import com.dnd.app.domain.enums.LocationRestSafety;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,7 @@ public class CreateLocationRequest {
     private String description;
 
     private Boolean isVisibleToPlayers;
+
+    /** Метка безопасности привала (CAMP); по умолчанию RISKY. */
+    private LocationRestSafety restSafety;
 }

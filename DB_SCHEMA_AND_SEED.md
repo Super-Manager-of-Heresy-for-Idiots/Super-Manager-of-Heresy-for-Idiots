@@ -739,7 +739,17 @@ Ki Points (Monk), Sorcery Points (Sorcerer), Bardic Inspiration uses и т.п.
 - **`quest_npcs`** — N×N `(quest_id, npc_id)`, уник пары.
 - **`quest_locations`** — N×N `(quest_id, location_id)`, уник пары.
 - **`quest_rewards`** — `id, quest_id, item_template_id?, quantity, currency_type_id?, currency_amount (numeric 15,2)`. Одна награда — это либо предмет, либо валюта.
-- **`campaign_locations`** — `id, campaign_id, name, description, is_visible_to_players, created_by, …`.
+- **`campaign_locations`** — `id, campaign_id, name, description, is_visible_to_players, rest_safety (LocationRestSafety: `SAFE`/`RISKY`/`DANGEROUS`, по умолчанию `RISKY`), created_by, …`.
+
+## Лагерь и привал (CAMP)
+
+- **`camp_sessions`** — привал отряда: `id, campaign_id, location_id?, name, description, day_number?, status (CampStatus), rest_type? (long_rest/short_rest), apply_partial_rest, watch_slot_count, watch_schedule_json, interrupt_reason? (CampInterruptReason), interrupt_event_id?, created_by, started_at?, rest_started_at?, rest_completed_at?, interrupted_at?, ended_at?, …`.
+  Частичный уникальный индекс `uq_campsessions_active_per_campaign` по `campaign_id WHERE status <> 'COMPLETED'` держит инвариант «не более одного незавершённого привала на кампанию».
+- **`camp_participants`** — состав привала: `id, camp_session_id, character_id, state (CampParticipantState), watch_slot?, activity_id?, activity_note?, rest_result_json?, rest_error_code?, rest_error_message?, rested_at?, …`.
+  Уник `(camp_session_id, character_id)` и частичный уник `(camp_session_id, watch_slot) WHERE watch_slot IS NOT NULL` — один персонаж на слот дозора.
+- **`camp_events`** — журнал привала: `id, camp_session_id, type (CampEventType), title, description, occurred_label?, visible_to_players, battle_id?, triggered_at?, created_by, …`. Скрытая заготовка мастера — `visible_to_players = false` и `triggered_at IS NULL`.
+- **`camp_activities`** — справочник даунтайм-активностей: `id, campaign_id? (NULL = системная), name, description, icon_code?, skill_check_ref?, created_by?, …`.
+  Сид системных активностей — changeSet `125-camp-activities-seed` (готовка, ковка, разведка, переписывание свитка, молитва, травничество). Кастомные активности мастер создаёт через API.
 
 ## Homebrew
 

@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      CAMP: лагерь и привал. Отдельный агрегат camp_sessions поверх уже существующих
+      механик отдыха (RestOrchestrationService), склада и боя — со своей state-machine
+      SETTING_UP → ACTIVE → RESTING → COMPLETED и веткой INTERRUPTED.
+
+      camp_participants   — состав привала: состояние отдыха, слот дозора, даунтайм-активность,
+                            снимок RestResult и ошибка транзакции (отдых идёт per-character).
+      camp_events         — журнал привала; событие типа AMBUSH может создать бой (battle_id).
+      camp_activities     — справочник даунтайм-активностей: системные (campaign_id IS NULL)
+                            и кастомные для конкретной кампании.
+    -->
+    <changeSet id="125-camp-sessions" author="claude">
+        <createTable tableName="camp_sessions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Локация привала; NULL — отряд встал "в пути", вне справочника локаций. -->
+            <column name="location_id" type="uuid"/>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <!-- Игровой день кампании: свободная нумерация мастера. -->
+            <column name="day_number" type="integer"/>
+            <column name="status" type="varchar(12)" defaultValue="SETTING_UP">
+                <constraints nullable="false"/>
+            </column>
+            <!-- long_rest | short_rest — тип запущенного отдыха, NULL пока отдых не начат. -->
+            <column name="rest_type" type="varchar(20)"/>
+            <!-- Решение мастера при прерывании: засчитать ли частичный отдых. -->
+            <column name="apply_partial_rest" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <!--
+              Число слотов дозора и их расписание: [{"slot":1,"label":"20:00 — 22:30"}, …].
+              Значение по умолчанию 0 совпадает с доменным: расписание задаёт мастер,
+              «стандартного» числа слотов система не навязывает.
+            -->
+            <column name="watch_slot_count" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="watch_schedule_json" type="text"/>
+            <!-- AMBUSH | EVENT | MANUAL — причина перехода в INTERRUPTED. -->
+            <column name="interrupt_reason" type="varchar(20)"/>
+            <column name="interrupt_event_id" type="uuid"/>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="timestamp with time zone"/>
+            <column name="rest_started_at" type="timestamp with time zone"/>
+            <column name="rest_completed_at" type="timestamp with time zone"/>
+            <column name="interrupted_at" type="timestamp with time zone"/>
+            <column name="ended_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_sessions"
+                baseColumnNames="campaign_id"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                constraintName="fk_campsessions_campaign"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_sessions"
+                baseColumnNames="location_id"
+                referencedTableName="campaign_locations"
+                referencedColumnNames="id"
+                constraintName="fk_campsessions_location"
+                onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_sessions"
+                baseColumnNames="created_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_campsessions_created_by"/>
+
+        <createIndex tableName="camp_sessions" indexName="idx_campsessions_campaign_created">
+            <column name="campaign_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!--
+      Инвариант "один незавершённый привал на кампанию": частичный уникальный индекс
+      по campaign_id для всех статусов, кроме COMPLETED. Вынесен в отдельный changeSet,
+      потому что явный rollback заменяет автогенерируемый для всего changeSet целиком —
+      иначе откат создания таблицы перестал бы работать.
+    -->
+    <changeSet id="125-camp-sessions-unique-active" author="claude">
+        <sql>
+            CREATE UNIQUE INDEX uq_campsessions_active_per_campaign
+            ON camp_sessions (campaign_id)
+            WHERE status &lt;&gt; 'COMPLETED';
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS uq_campsessions_active_per_campaign;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="125-camp-activities" author="claude">
+        <createTable tableName="camp_activities">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- NULL — системная активность, доступная всем кампаниям. -->
+            <column name="campaign_id" type="uuid"/>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <!-- Код глифа для интерфейса (flame, sword, eye, scroll, …). -->
+            <column name="icon_code" type="varchar(40)"/>
+            <!-- Подсказка мастеру, какую проверку уместно запросить (ROLL_PROMPT). -->
+            <column name="skill_check_ref" type="varchar(60)"/>
+            <column name="created_by" type="uuid"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_activities"
+                baseColumnNames="campaign_id"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                constraintName="fk_campactivities_campaign"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_activities"
+                baseColumnNames="created_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_campactivities_created_by"/>
+
+        <createIndex tableName="camp_activities" indexName="idx_campactivities_campaign">
+            <column name="campaign_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="125-camp-participants" author="claude">
+        <createTable tableName="camp_participants">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="camp_session_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="character_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <!-- NOT_RESTED | RESTING | RESTED | PARTIAL | FAILED -->
+            <column name="state" type="varchar(12)" defaultValue="NOT_RESTED">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Номер слота дозора (1..watch_slot_count); NULL — не в дозоре. -->
+            <column name="watch_slot" type="integer"/>
+            <column name="activity_id" type="uuid"/>
+            <column name="activity_note" type="varchar(300)"/>
+            <!-- Снимок RestResult для итогового экрана привала. -->
+            <column name="rest_result_json" type="text"/>
+            <column name="rest_error_code" type="varchar(60)"/>
+            <column name="rest_error_message" type="varchar(500)"/>
+            <column name="rested_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_participants"
+                baseColumnNames="camp_session_id"
+                referencedTableName="camp_sessions"
+                referencedColumnNames="id"
+                constraintName="fk_campparticipants_session"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_participants"
+                baseColumnNames="character_id"
+                referencedTableName="characters"
+                referencedColumnNames="id"
+                constraintName="fk_campparticipants_character"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_participants"
+                baseColumnNames="activity_id"
+                referencedTableName="camp_activities"
+                referencedColumnNames="id"
+                constraintName="fk_campparticipants_activity"
+                onDelete="SET NULL"/>
+
+        <addUniqueConstraint
+                tableName="camp_participants"
+                columnNames="camp_session_id, character_id"
+                constraintName="uq_campparticipants_session_character"/>
+
+        <createIndex tableName="camp_participants" indexName="idx_campparticipants_session">
+            <column name="camp_session_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!--
+      Один персонаж на слот дозора внутри привала. Отдельный changeSet по той же причине,
+      что и уникальный индекс привала: явный rollback не должен подменять автогенерируемый
+      откат создания таблицы.
+    -->
+    <changeSet id="125-camp-participants-unique-watch-slot" author="claude">
+        <sql>
+            CREATE UNIQUE INDEX uq_campparticipants_session_watch_slot
+            ON camp_participants (camp_session_id, watch_slot)
+            WHERE watch_slot IS NOT NULL;
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS uq_campparticipants_session_watch_slot;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="125-camp-events" author="claude">
+        <createTable tableName="camp_events">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="camp_session_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <!-- AMBUSH | ENCOUNTER | STORY | WEATHER | CUSTOM -->
+            <column name="type" type="varchar(12)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="varchar(150)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <!-- Внутриигровое время события: свободная метка мастера («01:20»). -->
+            <column name="occurred_label" type="varchar(20)"/>
+            <!-- Заготовка события скрыта от игроков, пока мастер её не триггернул. -->
+            <column name="visible_to_players" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Бой, созданный из засады (AMBUSH), если мастер выбрал создание энкаунтера. -->
+            <column name="battle_id" type="uuid"/>
+            <column name="triggered_at" type="timestamp with time zone"/>
+            <column name="created_by" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_events"
+                baseColumnNames="camp_session_id"
+                referencedTableName="camp_sessions"
+                referencedColumnNames="id"
+                constraintName="fk_campevents_session"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_events"
+                baseColumnNames="battle_id"
+                referencedTableName="battles"
+                referencedColumnNames="id"
+                constraintName="fk_campevents_battle"
+                onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+                baseTableName="camp_events"
+                baseColumnNames="created_by"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_campevents_created_by"/>
+
+        <createIndex tableName="camp_events" indexName="idx_campevents_session_created">
+            <column name="camp_session_id"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <!-- Ссылка привала на событие-причину прерывания добавляется после создания camp_events. -->
+        <addForeignKeyConstraint
+                baseTableName="camp_sessions"
+                baseColumnNames="interrupt_event_id"
+                referencedTableName="camp_events"
+                referencedColumnNames="id"
+                constraintName="fk_campsessions_interrupt_event"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+    <!--
+      Системные даунтайм-активности (campaign_id IS NULL) — стартовый справочник,
+      доступный всем кампаниям. Мастер добавляет свои поверх, не трогая эти строки.
+    -->
+    <changeSet id="125-camp-activities-seed" author="claude">
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000001"/>
+            <column name="name" value="Готовка"/>
+            <column name="description" value="Горячая еда для отряда."/>
+            <column name="icon_code" value="flame"/>
+        </insert>
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000002"/>
+            <column name="name" value="Ковка / починка"/>
+            <column name="description" value="Ремонт снаряжения и оружия."/>
+            <column name="icon_code" value="sword"/>
+        </insert>
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000003"/>
+            <column name="name" value="Разведка окрестностей"/>
+            <column name="description" value="Осмотр местности вокруг привала."/>
+            <column name="icon_code" value="eye"/>
+            <column name="skill_check_ref" value="PERCEPTION"/>
+        </insert>
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000004"/>
+            <column name="name" value="Переписывание свитка"/>
+            <column name="description" value="Работа с текстами и заклинаниями."/>
+            <column name="icon_code" value="scroll"/>
+        </insert>
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000005"/>
+            <column name="name" value="Молитва"/>
+            <column name="description" value="Обращение к покровителю."/>
+            <column name="icon_code" value="sigil-2"/>
+        </insert>
+        <insert tableName="camp_activities">
+            <column name="id" value="e3a1c001-0000-4000-8000-000000000006"/>
+            <column name="name" value="Травничество"/>
+            <column name="description" value="Сбор трав и приготовление отваров."/>
+            <column name="icon_code" value="diamond"/>
+            <column name="skill_check_ref" value="SURVIVAL"/>
+        </insert>
+        <rollback>
+            <delete tableName="camp_activities">
+                <where>campaign_id IS NULL</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,5 +1,6 @@
 package com.dnd.app.dto.request;
 
+import com.dnd.app.domain.enums.LocationRestSafety;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +23,7 @@ public class UpdateLocationRequest {
     private String description;
 
     private Boolean isVisibleToPlayers;
+
+    /** Метка безопасности привала (CAMP): SAFE | RISKY | DANGEROUS. */
+    private LocationRestSafety restSafety;
 }

@@ -1,5 +1,6 @@
 package com.dnd.app.domain;
 
+import com.dnd.app.domain.enums.LocationRestSafety;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -38,6 +39,15 @@ public class CampaignLocation {
     @Column(name = "is_visible_to_players", nullable = false)
     @Builder.Default
     private Boolean isVisibleToPlayers = false;
+
+    /**
+     * Метка безопасности привала (CAMP): управляет подсказками мастеру на экране лагеря,
+     * саму механику отдыха не меняет.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rest_safety", nullable = false, length = 12)
+    @Builder.Default
+    private LocationRestSafety restSafety = LocationRestSafety.RISKY;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
