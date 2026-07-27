@@ -20,6 +20,7 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.SpeciesRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
+import com.dnd.app.repository.QuestNpcRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.UserRepository;
 import com.dnd.app.service.media.MediaUrlResolver;
@@ -54,6 +55,7 @@ class NpcServiceTest {
     @Mock private SpellRepository spellRepository;
     @Mock private MonsterRepository monsterRepository;
     @Mock private CampaignHomebrewRepository campaignHomebrewRepository;
+    @Mock private QuestNpcRepository questNpcRepository;
 
     @InjectMocks private NpcService npcService;
 

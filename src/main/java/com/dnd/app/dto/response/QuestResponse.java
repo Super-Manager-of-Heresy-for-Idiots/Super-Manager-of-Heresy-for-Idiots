@@ -31,6 +31,18 @@ public class QuestResponse {
     private String artUrl;
     private List<NoteResponse> notes;
     private List<?> rewards;
+    /** NPC-квестодатели, у которых игрок может взять и сдать этот квест. Заполняется только в детальном ответе. */
+    private List<NpcRef> linkedNpcs;
     private Instant createdAt;
     private Instant updatedAt;
+
+    /** Короткая ссылка на NPC-квестодателя. */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NpcRef {
+        private UUID id;
+        private String name;
+    }
 }

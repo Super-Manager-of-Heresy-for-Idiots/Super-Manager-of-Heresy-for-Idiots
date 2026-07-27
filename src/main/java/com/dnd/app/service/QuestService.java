@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -139,7 +140,27 @@ public class QuestService {
         if (!isGm && !Boolean.TRUE.equals(quest.getIsVisibleToPlayers())) {
             throw new ResourceNotFoundException("Quest not found");
         }
-        return toResponse(quest, isGm);
+        QuestResponse response = toResponse(quest, isGm);
+        // Квестодатели нужны только в карточке квеста — в списке они дали бы N+1 запрос.
+        response.setLinkedNpcs(resolveLinkedNpcs(questId));
+        return response;
+    }
+
+    /**
+     * Возвращает NPC-квестодателей, привязанных к квесту (таблица quest_npcs), либо null, если их нет.
+     * @param questId идентификатор quest, используемый для выбора нужного бизнес-объекта
+     * @return список коротких ссылок на NPC либо null
+     */
+    private List<QuestResponse.NpcRef> resolveLinkedNpcs(UUID questId) {
+        List<QuestResponse.NpcRef> npcs = questNpcRepository.findByQuestId(questId).stream()
+                .map(QuestNpc::getNpc)
+                .filter(Objects::nonNull)
+                .map(npc -> QuestResponse.NpcRef.builder()
+                        .id(npc.getId())
+                        .name(npc.getName())
+                        .build())
+                .toList();
+        return npcs.isEmpty() ? null : npcs;
     }
 
     /**
@@ -587,6 +608,13 @@ public class QuestService {
 
         if (!npc.getCampaign().getId().equals(quest.getCampaign().getId())) {
             throw new BadRequestException("NPC does not belong to the same campaign as the quest");
+        }
+
+        // Повторная привязка идемпотентна: уникальный индекс (quest_id, npc_id) иначе даёт 500.
+        boolean alreadyLinked = questNpcRepository.findByQuestId(questId).stream()
+                .anyMatch(l -> l.getNpc() != null && l.getNpc().getId().equals(npcId));
+        if (alreadyLinked) {
+            return;
         }
 
         QuestNpc link = QuestNpc.builder()

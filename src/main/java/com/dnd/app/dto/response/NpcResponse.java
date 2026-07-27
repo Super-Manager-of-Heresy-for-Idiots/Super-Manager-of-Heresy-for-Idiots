@@ -46,6 +46,9 @@ public class NpcResponse {
     /** Локация, в которой размещён NPC (WORLD_PLAN Этап 1), или null. */
     private Ref location;
 
+    /** Квесты, которые этот NPC выдаёт игрокам. Заполняется только в детальном ответе. */
+    private List<QuestRef> linkedQuests;
+
     private List<NoteResponse> notes;
     private Instant createdAt;
     private Instant updatedAt;
@@ -57,5 +60,16 @@ public class NpcResponse {
     public static class Ref {
         private UUID id;
         private String name;
+    }
+
+    /** Короткая ссылка на квест со статусом — для панели «Связанные квесты». */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class QuestRef {
+        private UUID id;
+        private String name;
+        private String status;
     }
 }

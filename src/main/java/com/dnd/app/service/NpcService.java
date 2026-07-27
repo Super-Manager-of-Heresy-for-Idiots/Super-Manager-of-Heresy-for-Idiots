@@ -20,6 +20,7 @@ import com.dnd.app.repository.ContentCharacterClassRepository;
 import com.dnd.app.repository.SpeciesRepository;
 import com.dnd.app.repository.MonsterRepository;
 import com.dnd.app.repository.NpcNoteRepository;
+import com.dnd.app.repository.QuestNpcRepository;
 import com.dnd.app.repository.SpellRepository;
 import com.dnd.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -53,6 +55,7 @@ public class NpcService {
     private final SpellRepository spellRepository;
     private final MonsterRepository monsterRepository;
     private final CampaignHomebrewRepository campaignHomebrewRepository;
+    private final QuestNpcRepository questNpcRepository;
 
     /**
      * Создает результат операции "create npc" в рамках бизнес-логики домена.
@@ -126,7 +129,10 @@ public class NpcService {
         if (!isGm && !Boolean.TRUE.equals(npc.getIsVisibleToPlayers())) {
             throw new ResourceNotFoundException("NPC not found");
         }
-        return toResponse(npc, isGm);
+        NpcResponse response = toResponse(npc, isGm);
+        // Связанные квесты нужны только в карточке NPC — в списке они дали бы N+1 запрос.
+        response.setLinkedQuests(resolveLinkedQuests(npcId, isGm));
+        return response;
     }
 
     /**
@@ -332,6 +338,24 @@ public class NpcService {
 
     private NpcResponse.Ref ref(UUID id, String name) {
         return NpcResponse.Ref.builder().id(id).name(name).build();
+    }
+
+    /**
+     * Возвращает квесты, привязанные к NPC (таблица quest_npcs), или null, если их нет.
+     * Игроку показываются только видимые квесты, чтобы карточка NPC не раскрывала скрытый сюжет.
+     */
+    private List<NpcResponse.QuestRef> resolveLinkedQuests(UUID npcId, boolean isGm) {
+        List<NpcResponse.QuestRef> quests = questNpcRepository.findByNpcId(npcId).stream()
+                .map(QuestNpc::getQuest)
+                .filter(Objects::nonNull)
+                .filter(q -> isGm || Boolean.TRUE.equals(q.getIsVisibleToPlayers()))
+                .map(q -> NpcResponse.QuestRef.builder()
+                        .id(q.getId())
+                        .name(q.getTitle())
+                        .status(q.getStatus() == null ? null : q.getStatus().name())
+                        .build())
+                .toList();
+        return quests.isEmpty() ? null : quests;
     }
 
     private String displayName(String localized, String fallback) {
